@@ -16,6 +16,8 @@
 --   NCBear_AnimTest(name)    einen Clip einmal abspielen ohne Kampf (Namen: NCBear_AnimTest() listet sie)
 --   NCBear_ZHealth(h, r)     allen Zielen (nur Zombies und feindliche Banditen) in r Kacheln das Leben h geben (Deckel 50)
 --   NCBear_KnockInfo()       Knockback-Zaehler und die letzten Flug-Messungen
+-- Sit, Eat und AnimTest drehen den Baeren beim Beginn zur Kamera (Kevin 08.11.: "in der position wo er zur kamera guckt also das
+-- ich den von vorne sehn kann"); ein schon sitzender oder fressender Baer wird nicht gedreht.
 
 local NEAR = 12            -- Baer um die eigene Figur
 local ZH_MAX = 50          -- NCBear_ZHealth: hoechstens so viele Zombies
@@ -65,10 +67,17 @@ local function report(ok, why)
 	say((ok and "bear " or "bear refuses: ") .. tostring(why))
 end
 
+-- Zur Kamera: Bildschirm unten = Welt +x/+y = SE (statisch, im Spiel ansehen). setDir an einem Tier: ButcheringUtil.lua:574.
+local function reportTurn(B, turn, ok, why)
+	if ok and turn then B.a:setDir(IsoDirections.SE) end                            -- ButcheringUtil.lua:574
+	report(ok, why)
+end
+
 function NCBear_Sit(sek)
 	local F, B = bear()
 	if not B then return end
-	report(F.Calm.Sit(B, sek))
+	local turn = (B.phase ~= "calm")
+	reportTurn(B, turn, F.Calm.Sit(B, sek))
 end
 
 function NCBear_Stand()
@@ -80,7 +89,8 @@ end
 function NCBear_Eat(sek)
 	local F, B = bear()
 	if not B then return end
-	report(F.Calm.Eat(B, sek))
+	local turn = (B.phase ~= "calm")
+	reportTurn(B, turn, F.Calm.Eat(B, sek))
 end
 
 function NCBear_Huff()
@@ -113,7 +123,7 @@ function NCBear_AnimTest(name)
 	end
 	local _, B = bear()
 	if not B then return end
-	report(F.Calm.Play(B, name))
+	reportTurn(B, true, F.Calm.Play(B, name))
 end
 
 -- Leben setzen: z:setHealth(h) wie Bandits BanditClientCommands.lua:36. Nur Ziele nach der harten Regel (F.IsTarget):

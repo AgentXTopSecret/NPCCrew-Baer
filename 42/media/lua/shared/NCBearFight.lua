@@ -24,6 +24,18 @@
 -- schreiben NCBearAct nur ueber diese Datei. Beim Uebernehmen nach NPC Crew (baer_uebernahme.py) nimmt das Skript sie heraus
 -- (Marke "TESTSCHNITTSTELLE" an jeder Stelle) und legt "log" auf den Crew-Logging-Schalter (BanditsNPC.Log); hier druckt
 -- die Flugsonde mit log = 1 (Vorgabe) in jedem Spiel.
+--
+-- LAERM (Lauf baer-laerm 08.11., Bericht _arbeit/baer_laerm/bau_bericht.md, Forschung forschung_laerm.md / _zustand.md):
+-- Weltgeraeusche mit Stress-Schalter (vor allem Zombies, die auf Zaun, Tuer, Fenster schlagen; Spieler-Schuesse) schicken
+-- den zahmen Baeren per IsoAnimal.respondToSound auf einen Fluchtweg. Die Engine bewertet neu, sobald er nicht laeuft; laeuft
+-- er (KI walk/pathfind/followwall) und hat er einen Laerm gemerkt, schweigt sie (das "Schild"). Lua kann den Wechsel
+-- idle -> pathfind nicht verhindern (OnTick kommt nach dem Animations-Uebergang), und jeder Ausflug startet unseren Knoten
+-- neu bei 0. Darum: im Anlauf den fremden Weg erkennen und durch unseren ersetzen (das Schild schuetzt dann unseren Weg);
+-- im Angriff und in der Ruhe je Fluchtbefehl EINEN Halt (fleeStop, fleeWait Bilder), ohne die Engine jedes zweite Bild neu
+-- fliehen zu lassen, und den Halt vor WalkingOnTheSpot beenden (sonst schickt ihn die Engine 0,63 s nach dem Stillstand
+-- selbst los); den Neustart erkennen, je Halt einmal zaehlen und die Clip-Uhr neu stellen; NOTLOESUNG: bricht Laerm einen
+-- Angriff wiederholt ab, setzt die Lua-Uhr den Treffer (clockHit, abschaltbar). Ein Spielertreffer laesst ihn weiter
+-- fliehen (endFight "hurt"). Nachbesserung: _arbeit/baer_laerm/fix_bericht.md.
 
 NCBearFight = NCBearFight or {}
 local F = NCBearFight
@@ -62,8 +74,14 @@ F.REAR_FACE = 1.0          -- beim Aufrichten so lange dem Ziel zudrehen (Sekund
 -- Angriffsgewichte (anim_spez.md 4.1): ganze Zahlen, ZombRand(summe); wSide kommt beim Hieb zur Seite des Ziels dazu.
 -- Knockback (anim_spez.md 2): knock = umwerfen ueberhaupt; knockBack = Engine-Taumeln nach hinten (Hiebe, Doppelschlag);
 -- knockKill = auch der toedliche Treffer taumelt (ungespielt); knockPush = eigenes Zurueckschieben in Kacheln, Rueckfall 2.8,
--- Vorgabe 0 (aus) -- nur einschalten, wenn knock: back im Spiel auf der Stelle faellt.
+-- Vorgabe 0,7 (Kevin 08.11. abends im Spiel: "soll der standard werden glaub 1 ist schon bisschen too much"); mit knockBack 1
+-- kommt das Schieben nur zu den echten Fluegen von vorn dazu (Flug rund 2,1 statt rund 1,7 Kacheln).
 -- Ruhe: sitChance je 20 s Pruefung (Prozent); huff = Alltags-Schnauben an/aus, Abstand huffMin + ZombRand(huffSpread + 1) s.
+-- Laerm (Kopf der Datei): fleeWait = so viele Bilder wartet fleeStop, nachdem es einen fremden Fluchtweg verworfen hat, bevor
+-- es die KI aus AnimalPathFindState holt (dort steht er still, das Schild ist an, der Laerm lebt 16 Bilder, WorldSound.init
+-- Offset 6; frueher, wenn WalkingOnTheSpot naht, fleeStop); 0 = jedes Bild stoppen wie vor baer-laerm (dann flieht er jedes zweite Bild neu, bis zu 9 Befehle je Schlag,
+-- jeder +Stress). clockHit 1 = Notloesung an: Treffer ueber die Lua-Uhr, wenn Laerm den Clip abbrach (0 = nie Schaden ohne
+-- Animations-Ereignis).
 F.T = {
 	radius = 10, banditRadius = 12, nextRadius = 8,
 	arrive = 1.1,
@@ -73,12 +91,13 @@ F.T = {
 	maulReach = 1.1, maulHalf = 30,
 	dmg = 1.0, dmgMain = 1.0, dmgSide = 0.6, dmgSlam = 0.9, dmgBite = 1.2, dmgMaul = 1.8,
 	sideMax = 3, slamMax = 5, hitCap = 6, knock = 1,
-	knockBack = 1, knockKill = 1, knockPush = 0,
+	knockBack = 1, knockKill = 1, knockPush = 0.7,
 	wSwipe = 25, wSide = 15, wBite = 30, wMaul = 70, wSlam = 40,
 	roarCD = 120, rearChance = 50, rearDist = 2.5, slamCD = 10, pause = 0.35,
 	leash = 25, fightMax = 90, restAfter = 20, noTarget = 3,
 	stuckTime = 3, stuckGain = 0.5, blockTime = 20, home = 5,
 	sitChance = 10, huff = 1, huffMin = 90, huffSpread = 150,
+	fleeWait = 18, clockHit = 1,
 	noise = 0, log = 1,
 }
 F.RANGE = {
@@ -96,6 +115,7 @@ F.RANGE = {
 	leash = { 5, 60 }, fightMax = { 10, 600 }, restAfter = { 0, 300 }, noTarget = { 1, 30 },
 	stuckTime = { 1, 10 }, stuckGain = { 0.1, 3 }, blockTime = { 1, 120 }, home = { 2, 30 },
 	sitChance = { 0, 100 }, huff = { 0, 1 }, huffMin = { 30, 900 }, huffSpread = { 0, 900 },
+	fleeWait = { 0, 60 }, clockHit = { 0, 1 },
 	noise = { 0, 60 }, log = { 0, 2 },
 }
 
@@ -127,6 +147,7 @@ local MAX_KLOG = 8
 
 -- Ruhe (anim_spez.md 6.2/6.3): Sperre der Engine loest bei 8000 (BaseAnimalBehavior.wanderIdle 0-39), wir erneuern bei 4000
 local BLOCK_REFRESH = 4000
+local BLOCK_HOLD_MAX = 7000   -- waehrend eines Halts erst hier erneuern (unter 8000 der Engine; gegen_bericht.md 6.1)
 local SIT_EVERY = 20       -- von selbst sitzen: Pruefung je Baer alle 20 s
 local SIT_MIN, SIT_SPREAD = 45, 105   -- Dauer 45 + ZombRand(106) s
 local SIT_QUIET = 3        -- so viele Suchtakte ohne Ziel vorher
@@ -152,6 +173,35 @@ local SND_BITE = "ZombieBite"            -- zombies/sounds_zombie_foley.txt:210
 local SND_KILL = "HeadSmash"             -- zombies/sounds_zombie_foley.txt:12
 local SND_MAX = 2                        -- Treffertoene je Angriff (mehr klingt nach Brei)
 
+-- Laerm (Kopf der Datei). Aktionszustaende, in denen er sich auf einem Weg bewegt (media/actiongroups/buck: walk, pathfind,
+-- followwall; die KI dazu ist AnimalWalkState/AnimalPathFindState/AnimalFollowWallState = isAnimalMoving, IsoAnimal 6065).
+local FLEE_STATES = { walk = true, pathfind = true, followwall = true }
+local FLEE_MOVED = 0.03    -- so weit (x + y) darf er im Halt (fleeStop) rutschen, dann sofort stoppen
+local NOISE_FRAMES = 17    -- ein Geraeusch wird 17 Bilder lang gesehen (lebt 16, WorldSound.init Offset 6; forschung_laerm.md)
+-- WalkingOnTheSpot.check (Jar, pruef_logik.md F1): steht ein Tier mit fertigem Weg still, zaehlt getMultiplier bis 30 (bei
+-- Spieltempo 4: 150), dann Failed -> die Engine schickt ihn zur Mitte der eigenen Kachel (walk). Der Halt endet WOTS_MARGIN
+-- Bilder vorher.
+local WOTS_LIMIT, WOTS_FAST, WOTS_MARGIN = 30, 150, 3
+local STRESS_WARN, STRESS_REARM, STRESS_SAY_GAP = 60, 50, 300   -- laute Zeile ab Stress 60, wieder scharf unter 50, alle 300 s
+-- Dauerlaerm: kommt ein Fluchtbefehl hoechstens LOUD_GAP Bilder nach dem Ende eines Halts, lebte der Laerm noch. Dieser Halt
+-- laesst nach fleeWait nicht los, sondern erneuert sich vor WalkingOnTheSpot (Stopp + bPathfind, kein neuer Fluchtbefehl,
+-- kein Stress), hoechstens LOUD_REARMS mal bzw. LOUD_FRAMES Bilder; dann loslassen und pruefen, ob es still ist.
+local LOUD_GAP, LOUD_REARMS, LOUD_FRAMES = 2, 3, 240
+local ACT_RESTARTS = 2     -- so oft darf ein Angriffs-Clip neu anlaufen (forschung_zustand.md 5 e1), dann Angriff zu Ende;
+                           -- gezaehlt je Halt (ein Halt kann den Knoten mehrmals neu starten), nicht je Zustandswechsel
+local NOISE_WAIT_MAX = 1.0 -- Pause vor dem naechsten Angriff wartet hoechstens so lange, bis er wieder steht
+local NOISE_HIT_GRACE = 0.3 -- Notloesung: so lange nach dem Treffermoment darf ein laufender Fluchtweg noch enden (Neustart)
+local NOISE_SAY_ACTS = 3   -- so viele Angriffe in Folge, die Laerm ohne jeden Treffer abbrach: eine laute Zeile ...
+local NOISE_SAY_GAP = 120  -- ... hoechstens alle 120 s (alle Baeren zusammen)
+local NOISE_THUMP_R = 40   -- Diagnose (log 2): Zombies im Zustand thump so weit um ihn zaehlen (Maschendraht 40, IsoObject.Thump)
+local CALM_NOISE_WINDOW, CALM_NOISE_MAX = 30, 4   -- mehr als 4 Stoerungen in 30 s: er gibt die Ruhe auf
+-- Anlauf: fremder Weg (forschung_laerm.md 4). Er entfernt sich vom Wegziel um mehr als REROUTE_GAIN ueber das schon
+-- Erreichte hinaus, oder steht STALL_TIME s ohne STALL_GAIN Fortschritt auf einem Weg: unser fleeTo neu, je Anlauf hoechstens
+-- REROUTE_MAX mal (Deckel; ein echter Umweg um den Zaun sieht genauso aus und bekommt so nur etwas mehr Zeit).
+local REROUTE_GAIN = 1.0
+local STALL_GAIN, STALL_TIME = 0.25, 1.5
+local REROUTE_MAX = 4
+
 F.enabled = (F.enabled ~= false)
 F.clock = F.clock or 0
 F.bears = F.bears or {}
@@ -160,7 +210,11 @@ F.blocked = F.blocked or {}
 F.blockedN = F.blockedN or 0
 F.nextScan = F.nextScan or 0
 F.nextSearch = F.nextSearch or 0
-F.stats = F.stats or { fights = 0, acts = 0, hits = 0, kills = 0, expired = 0, fleeStops = 0, calmExpired = 0 }
+F.stats = F.stats or { fights = 0, acts = 0, hits = 0, kills = 0, expired = 0, fleeStops = 0, calmExpired = 0,
+	noise = 0, noiseActs = 0, noiseCalm = 0, clockHits = 0, reroutes = 0, engineWalks = 0, loudHolds = 0 }
+F.ticks = F.ticks or 0     -- Bilder (je OnTick eins): fleeWait zaehlt Bilder, weil auch der Laerm Bilder lebt
+F.noiseSayT = F.noiseSayT or 0
+F.stressSayT = F.stressSayT or 0
 F.knockStats = F.knockStats or { back = 0, down = 0, vetoed = 0, side = 0, pushed = 0, killFly = 0 }
 F.knockWatch = F.knockWatch or {}
 F.knockLog = F.knockLog or {}
@@ -184,6 +238,11 @@ end
 
 local function fmt(x)
 	return string.format("%.2f", x)
+end
+
+-- Zaehler, auch wenn F.stats aus einem aelteren Stand ohne das Feld stammt
+local function count(k)
+	F.stats[k] = (F.stats[k] or 0) + 1
 end
 
 -- Groesse des Baeren (NCBear_Size): animal:getData():getSize(), ISPetAnimal.lua:31
@@ -374,10 +433,36 @@ end
 
 -- Die Engine zaehlt blockedFor nur hoch und setzt es nur bei false zurueck (Jar BaseAnimalBehavior.setBlockMovement 0-24,
 -- wanderIdle 0-39); B.blockRaw spiegelt diesen Zaehler (refreshBlock).
+-- Laeuft in diesem Bild ein Halt (fleeStop, Laerm), haengt er am Sperren mit (Nachbesserung baer-laerm):
+-- - true stoppt ihn (stopAllMovementNow): der Halt ist zu Ende (KI idle, Schild aus), ein danach kommender Fluchtbefehl ist
+--   neu (und gilt als Dauerlaerm). Ausnahme Halt "laut": durch den Stopp hindurch erhalten wie holdArm (bPathfind: die KI
+--   betritt im naechsten Bild wieder AnimalPathFindState vor respondToSound -- kein neuer Fluchtbefehl, kein Stress).
+-- - false (Ende von Kampf oder Ruhe, Anlauf): erst stoppen, sonst bliebe die KI in AnimalPathFindState stehen und
+--   WalkingOnTheSpot schickte ihn nach 0,63 s zur Kachelmitte (und setzt shouldFollowWall fuer immer).
 local function setBlock(B, on)
+	local E = B.flee
+	local live = E ~= nil and E.tick == F.ticks and E.armT ~= nil
+	if live and not on then
+		B.a:stopAllMovementNow()                                                     -- ISAnimalContextMenu.lua:760
+		F.stats.fleeStops = F.stats.fleeStops + 1
+		B.holdEndT = F.ticks
+		B.flee = nil
+	end
 	B.a:getBehavior():setBlockMovement(on)                                           -- ISPetAnimal.lua:36/:49
 	if not on or not B.blocked then B.blockRaw = 0 end
 	B.blocked = on
+	if on then
+		if live and E.loud and F.T.fleeWait > 0 then
+			-- IsoGameCharacter.setVariable(String, boolean): Vanilla ISMilkAnimal.lua:139, Bandits ZAMove.lua:31
+			B.a:setVariable("bPathfind", true)
+			E.idleN, E.acc, E.armT = 0, 0, F.ticks
+			E.x, E.y = B.a:getX(), B.a:getY()
+			E.away, E.back = nil, nil      -- eigene Stoerung wie bei holdArm im lauten Halt
+			return
+		end
+		if live then B.holdEndT = F.ticks end
+		B.flee = nil
+	end
 end
 
 -- Die Sperre der Engine laeuft bei blockedFor >= 8000 ab (Summe des rohen getMultiplier, bei Tempo 1 rund 167 s, im Schlaf nach
@@ -385,13 +470,59 @@ end
 local function refreshBlock(B)
 	if not B.blocked then return end
 	B.blockRaw = (B.blockRaw or 0) + F.rawMult
+	-- nicht mitten in einem Halt erneuern: true stoppt ihn und beendet den Halt (Integrator 08.11., gegen_bericht.md 6.1)
+	if B.flee and B.blockRaw < BLOCK_HOLD_MAX then return end
 	if B.blockRaw >= BLOCK_REFRESH then
 		local bh = B.a:getBehavior()
 		bh:setBlockMovement(false)                                                   -- ISPetAnimal.lua:49
 		bh:setBlockMovement(true)                                                    -- ISPetAnimal.lua:36
 		B.blockRaw = 0
+		-- true stoppt ihn (wie setBlock): Halt zu Ende; ein gleich folgender Fluchtbefehl gilt als Dauerlaerm
+		if B.flee and B.flee.tick == F.ticks then B.holdEndT = F.ticks end
+		B.flee = nil
 		sayMore("movement block renewed")
 	end
+end
+
+-- Wo steht der Clip (Laerm, Kopf der Datei)? Jeder Wechsel des Aktionszustands startet unseren Knoten neu bei 0
+-- (AnimLayer.transitionTo markiert alle lebenden Knoten auslaufend, findLiveNode ueberspringt sie; forschung_zustand.md 3).
+-- clipBegin beim Befehl: steht er schon in idle, laeuft der Clip ab jetzt; sonst (Ankunft aus walk/pathfind) erst ab dem
+-- ersten idle. clipWatch je Bild: "start" = erstes idle, "away" = idle verlassen, "back" = wieder idle (Clip ab 0).
+-- Ein Halt (fleeStop, B.flee) kann die Animation mehrmals hin und her schicken (walk -> idle -> pathfind -> idle; mit
+-- shouldFollowWall pathfind -> followwall -> idle); das ist EINE Stoerung: B.awayRepeat / B.backRepeat melden die
+-- Wiederholung im selben Halt (gezaehlt und gemeldet wird nur die erste, die Clip-Uhr stellt jedes "back" neu). Im lauten
+-- Halt (Dauerlaerm) zaehlt jede Erneuerung als eigene Stoerung (holdArm loescht die Marken).
+local function clipBegin(B)
+	B.clipOn = (B.a:getActionStateName() == "idle")                                 -- Bandits ZASmack.lua:486
+	B.away = false
+end
+
+local function clipWatch(B, st)
+	if st == "idle" then
+		if not B.clipOn then
+			B.clipOn = true
+			return "start"
+		end
+		if B.away then
+			B.away = false
+			local E = B.awayE
+			B.backRepeat = (E ~= nil and E.back == true)
+			if E then E.back = true end
+			return "back"
+		end
+		return nil
+	end
+	if B.clipOn and not B.away then
+		B.away = true
+		B.awayFlee = FLEE_STATES[st] == true
+		B.awayTick = F.ticks
+		local E = B.flee
+		B.awayE = E
+		B.awayRepeat = (E ~= nil and E.away == true)
+		if E then E.away = true end
+		return "away"
+	end
+	return nil
 end
 
 local function beginAct(B, act)
@@ -402,6 +533,8 @@ local function beginAct(B, act)
 	a:setVariable("NCBearAct", act)                                                  -- ISPetAnimal.lua:43
 	B.act, B.actT, B.hitDone, B.phase = act, 0, false, "act"
 	B.actLeft = nil
+	B.actTot, B.restarts, B.actFled = 0, 0, false   -- Laerm: Zeit seit dem Befehl, Neustarts, ein Fluchtweg brach den Clip
+	clipBegin(B)
 	B.lastAct = act            -- nie zweimal derselbe Clip hintereinander (ChooseAct)
 	F.stats.acts = F.stats.acts + 1
 	if act == "rear" then B.lastRoar = F.clock end
@@ -416,6 +549,8 @@ local function goApproach(B)
 	setBlock(B, false)
 	B.phase = "approach"
 	B.issueT = -1000
+	B.ix, B.iy = nil, nil      -- Wegziel des letzten fleeTo (Erkennung fremder Wege, updateApproach)
+	B.reroutes = 0
 	B.chkT = F.clock
 	B.chkD = B.target and distTo(B.a, B.target:getX(), B.target:getY()) or 0
 	if F.clock - (B.lastHuff or -1000) > HUFF_LOUD_GAP then
@@ -876,15 +1011,213 @@ function F.ApplyHit(B, act)
 	return hits, kills
 end
 
--- Flucht vor Laerm (IsoAnimal.respondToSound) hat keinen Schalter: im Nahkampf jede fremde Bewegung sofort beenden (Spez 2).
-local function fleeStop(B)
-	local st = B.a:getActionStateName()                                              -- Bandits ZASmack.lua:486 (Charakter)
-	if st == "walk" or st == "pathfind" then
-		B.a:stopAllMovementNow()                                                     -- ISAnimalContextMenu.lua:760
-		F.stats.fleeStops = F.stats.fleeStops + 1
-		sayMore("stopped a move we did not order (" .. st .. ")")
+-- Flucht vor Laerm (IsoAnimal.respondToSound) hat keinen Schalter (Spez 2). Im Nahkampf und in der Ruhe halten wir ihn an,
+-- mit EINEM Halt je Fluchtbefehl (B.flee; Lauf baer-laerm, Nachbesserung fix_bericht.md; Engine-Ablauf aus dem Jar:
+-- forschung_laerm.md 2.3, forschung_zustand.md 1.5, pruef_logik.md F1-F4, pruef_technik.md Befund 1):
+-- Beginn im ersten Bild eines Fluchtbefehls:
+--   pathfind (Linie versperrt): stoppen. Die KI steht noch in idle, der Stopp verwirft nur den Fluchtweg (PathFindBehavior2
+--     .reset, setPath2(null)); bPathfind bleibt, im naechsten Bild betritt sie AnimalPathFindState mit einer Anfrage zum
+--     eigenen Standort -- er laeuft nicht los. Solange die KI dort steht, ist das Schild an (respondToSound Offset 0-35:
+--     Laerm gemerkt und isAnimalMoving -> keine neue Flucht).
+--   walk (Linie frei, die KI ist schon in AnimalWalkState): stoppen und bPathfind setzen -> derselbe Zustand wie oben.
+-- Im Halt ist jedes Bild Fortsetzung, auch idle: aus walk geht die Animation erst nach idle, dann nach pathfind (to_idle vor
+--   to_pathfind); mit gesetztem shouldFollowWall (klebt im SP) pendelt sie pathfind -> followwall -> idle, bis die Anfrage
+--   antwortet. Danach steht er in idle, die KI bleibt in AnimalPathFindState (Succeeded ohne changeState).
+-- Ende: nach fleeWait Bildern stoppen (der Laerm ist vorbei): die KI geht nach idle, die Animation bleibt idle (kein
+--   Neustart). Frueher, bevor WalkingOnTheSpot anspricht (getMultiplier seit dem Stillstand, Grenze 30, Tempo 4: 150), sonst
+--   schickt ihn die Engine selbst zur Mitte der eigenen Kachel (walk, Neustart); lebt der Laerm dann noch, wird statt dessen
+--   neu gehalten (Stopp + bPathfind: neue Anfrage, kein neuer Fluchtbefehl). Rutscht er (FLEE_MOVED): sofort stoppen.
+-- walk mitten im Halt kommt von der Engine (WalkingOnTheSpot -> Failed -> bMoving, AnimalPathFindState.execute 13-71):
+--   neu halten bzw. nach dem Laerm stoppen; getrennt gezaehlt (engineWalks), nicht als Laerm.
+-- Dauerlaerm: kommt der naechste Fluchtbefehl gleich nach dem Ende eines Halts (LOUD_GAP), ist der Halt "laut": er laesst
+--   nach fleeWait nicht los, sondern erneuert sich vor WalkingOnTheSpot (hoechstens LOUD_REARMS mal, LOUD_FRAMES Bilder),
+--   auch durch beginAct/goSeek hindurch (setBlock); dann loslassen und pruefen. Jede Erneuerung ist eine Stoerung.
+-- Ohne Halt ist ein Fluchtbefehl auch idle/followwall mit gesetztem bPathfind (die Animation ging aus walk nach idle bzw.
+--   aus pathfind nach followwall, die KI ist noch idle); followwall ohne bPathfind ist der Nachlauf eines Stopps.
+-- Frueher stoppten wir jedes Bild: die Engine bewertete dann im naechsten Bild neu und floh wieder -- bis zu 9 Fluchtbefehle
+-- je Schlag, jeder +Stress (changeStress Radius x 0,05; Abbau nur getMultiplier/5500 je Update, IsoAnimal.updateStress).
+-- fleeWait 0 = genau das alte Verhalten. Rueckgabe: Aktionszustand, true wenn mit diesem Bild ein neuer Fluchtbefehl beginnt.
+-- Lua-Logik um belegte Aufrufe; was die Engine dabei tut, ist aus dem Jar abgeleitet und im Spiel ungeprueft.
+
+-- Grenze von WalkingOnTheSpot (Jar WalkingOnTheSpot.check Offset 0-31). Spieltempo wie Vanilla ISBaseIcon.lua:61-62
+-- (UIManager.getSpeedControls():getCurrentGameSpeed() samt Riegel) und ISBackButtonWheel.lua:25 (Ergebnis auf nil pruefen).
+local function wotsLimit()
+	if UIManager and UIManager.getSpeedControls then
+		local sc = UIManager.getSpeedControls()
+		if sc and sc:getCurrentGameSpeed() == 4 then return WOTS_FAST end
 	end
-	return st
+	return WOTS_LIMIT
+end
+
+local function holdStop(B, st, why)
+	B.a:stopAllMovementNow()                                                         -- ISAnimalContextMenu.lua:760
+	F.stats.fleeStops = F.stats.fleeStops + 1
+	sayMore("stopped a move we did not order (" .. st .. ", " .. why .. ")")
+end
+
+-- Halt (neu) setzen: Stopp + bPathfind -> im naechsten Bild betritt die KI AnimalPathFindState (IsoAnimal.update 29-61, vor
+-- respondToSound: das Schild bleibt) mit einer neuen Anfrage zum eigenen Standort (WalkingOnTheSpot beginnt neu).
+local function holdArm(B, E, st, why)
+	holdStop(B, st, why)
+	-- IsoGameCharacter.setVariable(String, boolean): Vanilla ISMilkAnimal.lua:139 (setVariable("milkanimalout", false)),
+	-- Bandits ZAMove.lua:31 (setVariable("bPathfind", true), am Zombie); gleiche Methode, gleiche Argumenttypen.
+	B.a:setVariable("bPathfind", true)
+	E.idleN, E.acc, E.armT = 0, 0, F.ticks
+	E.x, E.y = B.a:getX(), B.a:getY()
+	-- Dauerlaerm: jede Erneuerung ist eine eigene Stoerung (Angriff: Neustart-Deckel, Ruhe: CALM_NOISE_MAX); sonst gehoert
+	-- das Hin und Her eines Halts zu EINER Stoerung (clipWatch)
+	if E.loud then E.away, E.back = nil, nil end
+end
+
+-- Stress (getStress: ISMilkAnimal.lua:17): jeder Fluchtbefehl gibt +Radius x 0,05, der Abbau ist sehr langsam
+-- (pruef_logik.md Befund 5). Ab STRESS_WARN eine laute Zeile (alle Baeren zusammen hoechstens alle STRESS_SAY_GAP s, je Baer
+-- erst wieder unter STRESS_REARM). Ausgleich (changeStress, ISMilkAnimal.lua:28) ist NICHT eingebaut: Kevins Wort.
+local function stressNote(B)
+	local s = B.a:getStress()                                                        -- ISMilkAnimal.lua:17
+	if type(s) ~= "number" then return end
+	if s < STRESS_REARM then
+		B.stressArmed = true
+		return
+	end
+	if s < STRESS_WARN or B.stressArmed == false or F.clock < (F.stressSayT or 0) then return end
+	B.stressArmed = false
+	F.stressSayT = F.clock + STRESS_SAY_GAP
+	print("[NCBear] *** bear stress " .. fmt(s) .. " from noise: every flight order adds stress and it fades very slowly;"
+		.. " above 70 the bear may flee from the player (untested). No stress relief built in (needs Kevin's decision).")
+end
+
+-- Halt zu Ende: stoppen (KI nach idle, Schild aus); B.holdEndT merkt das Bild, damit ein sofort folgender Fluchtbefehl als
+-- Dauerlaerm erkannt wird (fleeStop, "laut")
+local function holdEnd(B, st, why)
+	holdStop(B, st, why)
+	B.flee = nil
+	B.holdEndT = F.ticks
+end
+
+local function fleeStop(B)
+	local a = B.a
+	local st = a:getActionStateName()                                                -- Bandits ZASmack.lua:486 (Charakter)
+	local E = B.flee
+	-- Luecke (andere Phase dazwischen) oder Stand vor der Nachbesserung (Lua-Reload): Halt verfallen
+	if E and (E.tick ~= F.ticks - 1 or not E.armT) then
+		E = nil
+		B.flee = nil
+	end
+	if E then
+		E.tick = F.ticks
+		local age = F.ticks - E.t0
+		if st ~= "idle" and not FLEE_STATES[st] then
+			B.flee = nil       -- anderer Zustand (z. B. Treffer-Reaktion): kein Halt mehr, nichts stoppen (wie vorher)
+			return st, false
+		end
+		local slid = math.abs(a:getX() - E.x) + math.abs(a:getY() - E.y)
+		if slid > FLEE_MOVED then
+			holdEnd(B, st, "moved " .. fmt(slid) .. " tiles while held")
+			return st, false
+		end
+		-- laut (Dauerlaerm): erneuern statt loslassen, hoechstens LOUD_REARMS mal und LOUD_FRAMES Bilder
+		local more = E.loud and E.rearms < LOUD_REARMS and age <= LOUD_FRAMES
+		if st == "walk" then
+			-- die KI steht in AnimalPathFindState (Schild): walk kommt von der Engine (WalkingOnTheSpot), nicht vom Laerm
+			count("engineWalks")
+			local since = E.backT and (F.ticks - E.backT) or -1
+			if (age <= NOISE_FRAMES or more) and F.T.fleeWait > 0 then
+				if E.loud then E.rearms = E.rearms + 1 end
+				holdArm(B, E, st, "engine walk " .. since .. " frames after back in idle, held again")
+			else
+				holdEnd(B, st, "engine walk " .. since .. " frames after back in idle")
+			end
+			return st, false
+		end
+		if st ~= "idle" then
+			-- pathfind/followwall: die Anfrage laeuft noch (kein Weg da, WalkingOnTheSpot zaehlt nicht). Antwortet sie nicht
+			-- binnen fleeWait Bildern seit dem letzten Setzen, loslassen.
+			E.idleN, E.acc = 0, 0
+			if F.ticks - E.armT > F.T.fleeWait then holdEnd(B, st, "held " .. age .. " frames, no answer") end
+			return st, false
+		end
+		-- idle: die Anfrage hat geantwortet (oder Zwischenbild); ab hier zaehlt WalkingOnTheSpot getMultiplier
+		if E.idleN == 0 then E.backT = F.ticks end
+		E.idleN = E.idleN + 1
+		E.acc = E.acc + F.rawMult
+		local near = E.acc + WOTS_MARGIN * F.rawMult > E.wl
+		if E.loud then
+			if near then
+				if more then
+					E.rearms = E.rearms + 1
+					holdArm(B, E, st, "continuous noise, held again (" .. E.rearms .. "/" .. LOUD_REARMS .. ")")
+				else
+					holdEnd(B, st, "continuous noise, let go after " .. age .. " frames to check")
+				end
+			end
+		elseif age > F.T.fleeWait then
+			holdEnd(B, st, "held " .. age .. " frames")
+		elseif near then
+			if age <= NOISE_FRAMES then
+				holdArm(B, E, st, "walking-on-the-spot limit near after " .. age .. " frames, held again")
+			else
+				holdEnd(B, st, "walking-on-the-spot limit near after " .. age .. " frames")
+			end
+		end
+		return st, false
+	end
+	-- Kein Halt. Ein neuer Fluchtbefehl ist pathfind oder walk; oder bPathfind steht schon, waehrend die Animation aus
+	-- pathfind nach followwall (shouldFollowWall) bzw. aus walk nach idle (to_idle vor to_pathfind) ging -- die KI ist dann
+	-- noch idle. getVariableBoolean("bPathfind"): Bandits ZAMove.lua:60 (am Zombie; gleiche Methode, gleiches Argument).
+	local flight = (st == "pathfind" or st == "walk")
+	if not flight and (st == "idle" or st == "followwall") then flight = a:getVariableBoolean("bPathfind") == true end
+	if not flight then
+		-- followwall ohne Fluchtbefehl: Nachlauf eines Stopps (pathfind -> followwall steht vor -> idle); der Stopp schadet nicht
+		if st == "followwall" then holdStop(B, st, "after a stop") end
+		return st, false
+	end
+	-- ein neuer Fluchtbefehl ("noise interruptions": im Angriff, in Pause, Suche, Ruhe). Kommt er gleich nach dem Ende eines
+	-- Halts, lebte der Laerm noch: Dauerlaerm, dieser Halt wird "laut" (erneuert sich statt loszulassen).
+	count("noise")
+	local loud = F.T.fleeWait > 0 and B.holdEndT ~= nil and F.ticks - B.holdEndT <= LOUD_GAP
+	E = { t0 = F.ticks, armT = F.ticks, tick = F.ticks, idleN = 0, acc = 0, wl = wotsLimit(), loud = loud, rearms = 0 }
+	B.flee = E
+	if loud then count("loudHolds") end
+	local why = "new flight order" .. (loud and " (continuous noise)" or "")
+	if st == "walk" and F.T.fleeWait > 0 then
+		holdArm(B, E, st, why .. ", clear line")
+	else
+		holdStop(B, st, why)       -- die KI ist noch idle: verwirft nur den Weg, bPathfind bleibt (fleeWait 0: wie frueher)
+		E.x, E.y = a:getX(), a:getY()
+	end
+	stressNote(B)
+	return st, true
+end
+
+-- Diagnose zum Laerm (nur log 2, einmal je Ausflug, nie je Bild): Stress des Baeren (getStress: ISMilkAnimal.lua:17) und
+-- Zombies, die gerade auf etwas schlagen (Aktionszustand "thump", media/actiongroups/zombie/thump; getActionStateName an
+-- Zombies: Bandits ZASmack.lua:486), im Umkreis NOISE_THUMP_R.
+local function noiseInfo(B)
+	if F.T.log < 2 then return "" end
+	local a = B.a
+	local s = a:getStress()                                                          -- ISMilkAnimal.lua:17
+	local ax, ay = a:getX(), a:getY()
+	local r2 = NOISE_THUMP_R * NOISE_THUMP_R
+	local n = 0
+	local list = getCell():getZombieList()                                         -- Bandits BanditZombie.lua:110
+	for i = 0, list:size() - 1 do
+		local z = list:get(i)
+		local dx, dy = z:getX() - ax, z:getY() - ay
+		if dx * dx + dy * dy <= r2 and z:getActionStateName() == "thump" then n = n + 1 end   -- Bandits ZASmack.lua:486
+	end
+	return ", stress " .. ((type(s) == "number") and fmt(s) or tostring(s)) .. ", zombies thumping within " .. NOISE_THUMP_R .. ": " .. n
+end
+
+-- EINE laute Zeile, wenn Laerm wiederholt Angriffe ohne jeden Treffer abbricht (B.noiseActs zaehlt nur solche; ein Treffer
+-- aus der Animation oder per Lua-Uhr setzt die Folge zurueck; alle Baeren zusammen hoechstens alle NOISE_SAY_GAP s)
+local function noiseLoud(B)
+	if (B.noiseActs or 0) < NOISE_SAY_ACTS or F.clock < F.noiseSayT then return end
+	F.noiseSayT = F.clock + NOISE_SAY_GAP
+	local S = F.stats
+	print("[NCBear] *** noise keeps interrupting the bear: " .. B.noiseActs .. " attacks in a row ended without a hit (driven into "
+		.. tostring(B.actLeft) .. "), " .. (S.noise or 0) .. " interruptions, " .. (S.clockHits or 0)
+		.. " attacks resolved by clock so far. Zombies banging on fences, doors or windows, or gunshots near the bear?"
+		.. " NCBear_FightInfo() shows the counters, NCBear_Tune(\"log\", 2) the details.")
 end
 
 -- Kampf zu Ende? (Spez 5.2 Punkt 5) Rueckgabe true, wenn beendet.
@@ -908,10 +1241,108 @@ local function decide(B)
 	beginAct(B, F.ChooseAct(B))
 end
 
-local function updateAct(B, dt)
+-- NOTLOESUNG (Lauf baer-laerm): kein Lua-Hebel verhindert, dass Laerm den Clip abbricht (forschung_zustand.md 1.6 und 3).
+-- Hat ein Fluchtweg den Clip gebrochen und kam der Treffer nicht aus der Animation, setzt die Lua-Uhr ihn, sobald seit dem
+-- Befehl mindestens der Treffermoment vergangen ist. Bild und Schaden laufen dann auseinander (forschung_zustand.md 5 d).
+-- Treffer nur ueber F.ApplyHit (Regel, Ebene, Weite, Kegel, Sicht, Wand wie immer). clockHit 0 schaltet es ab.
+local function clockHit(B, spec)
+	if F.T.clockHit < 1 or not spec.hitPc or B.hitDone or not B.actFled then return false end
+	if (B.actTot or 0) < spec.hitPc * spec.dur then return false end
+	if B.target and targetOk(B, B.target) then face(B, B.target) end
+	B.hitDone = true
+	count("clockHits")         -- steht in NCBear_FightInfo; die Trefferzeile kommt aus F.ApplyHit
+	sayMore(B.act .. ": clip broken by noise, hit set by the Lua clock (fallback)")
+	F.ApplyHit(B, B.act)
+	return true
+end
+
+-- Ende eines Angriffs. how: "done" (Ereignis), "hit" (Treffer war da, Laerm brach den Rest ab), "noise" (Fluchtweg brach
+-- ihn ab; Notloesung clockHit), "left" (anderer Zustand als idle, kein Fluchtweg), "missing" (volle Frist in idle).
+local function finishAct(B, how, st)
+	local spec = F.ACTS[B.act]
+	local act = B.act
+	if how == "done" or how == "hit" then
+		B.strikes, B.fails = 0, 0
+	elseif how == "noise" then
+		if clockHit(B, spec) then
+			B.strikes, B.fails = 0, 0
+		else
+			F.stats.expired = F.stats.expired + 1
+			B.fails = (B.fails or 0) + 1
+			sayMore(act .. " broken off by noise (" .. tostring(st or B.actLeft) .. "), no hit")
+		end
+	elseif how == "left" then
+		F.stats.expired = F.stats.expired + 1
+		B.fails = (B.fails or 0) + 1
+		-- er hat den Zustand idle verlassen (Schreck, kein Fluchtweg): das sagt nichts ueber die Clips (Pruefer Fund 7)
+		print("[NCBear] *** " .. act .. " did not finish in " .. fmt(spec.dur + F.FRIST) .. " s: the bear left idle (" .. tostring(st or B.actLeft) .. "); hit dropped")
+	else
+		F.stats.expired = F.stats.expired + 1
+		B.fails = (B.fails or 0) + 1
+		B.strikes = (B.strikes or 0) + 1
+		print("[NCBear] *** " .. act .. " did not finish in " .. fmt(spec.dur + F.FRIST) .. " s while idle (clip " .. spec.clip .. " missing in NCBear.glb?); hit dropped")
+	end
+	-- "attacks disturbed" zaehlt jeden gestoerten Angriff; die Folge fuer die laute Zeile nur die ohne jeden Treffer
+	if B.actFled then count("noiseActs") end
+	if B.actFled and not B.hitDone then
+		B.noiseActs = (B.noiseActs or 0) + 1
+		noiseLoud(B)
+	else
+		B.noiseActs = 0
+	end
+	clearAct(B)
+	B.phase = "pause"
+	B.pauseT0 = F.clock
+	if B.strikes >= FRIST_STRIKES then
+		print("[NCBear] *** " .. FRIST_STRIKES .. " attacks in a row never finished - fight clips probably missing. Bear rests 60 s.")
+		endFight(B, "clips missing?", 60)
+	elseif B.fails >= 2 * FRIST_STRIKES then
+		-- Deckel fuer die Zeilen oben: bricht jeder Angriff ab, hoechstens sechs, dann Ruhe
+		print("[NCBear] *** " .. B.fails .. " attacks in a row broke off (bear not idle). Bear rests 60 s.")
+		endFight(B, "attacks keep breaking off", 60)
+	end
+end
+
+-- Ereignis aus clipWatch im Angriff (Laerm, Kopf der Datei).
+local function actClip(B, ev, st)
+	if ev == "start" then
+		B.actT = 0             -- Ankunft: der Clip beginnt erst mit dem ersten idle
+		return
+	end
+	if ev == "away" then
+		if not B.awayRepeat then   -- im selben Halt nur einmal melden (clipWatch)
+			B.actLeft = st
+			sayMore(B.act .. " interrupted at " .. fmt(B.actT) .. " s: the bear left idle (" .. st .. ")" .. noiseInfo(B))
+		end
+		if B.awayFlee then B.actFled = true end
+		if B.act == "rear" then
+			-- Aufrichten nicht neu starten: das Bruellen kommt bei 0,81 s nach JEDEM Start (NCBear_Rear.xml PlaySound
+			-- m_TimePc 0,27 x 3,0 s) -> sonst Kevins "2x Schrei" (forschung_zustand.md 5 e2). Abklingzeit bleibt gesetzt.
+			-- Gezaehlt als gestoert; die Folge der Angriffe ohne Treffer (laute Zeile) bleibt, wie sie ist (kein Treffer geplant).
+			if B.awayFlee then count("noiseActs") end
+			clearAct(B)
+			goApproach(B)
+		elseif B.hitDone then
+			finishAct(B, "hit", st)   -- der Treffer war schon da: nicht den ganzen Hieb ohne Wirkung wiederholen
+		end
+		return
+	end
+	-- "back": der Knoten laeuft neu bei 0 (forschung_zustand.md 5 e1); hitDone bleibt (kein zweiter Treffer). Gezaehlt wird
+	-- je Stoerung einmal (B.backRepeat: derselbe Halt schickte die Animation nur noch einmal hin und her; clipWatch).
+	B.actT = 0
+	if B.backRepeat then return end
+	B.restarts = (B.restarts or 0) + 1             -- "or 0": B aus einem Stand vor baer-laerm (Lua-Reload)
+	sayMore(B.act .. " back in idle after " .. (F.ticks - (B.awayTick or F.ticks)) .. " frames, clip restarts (" .. B.restarts .. "/" .. ACT_RESTARTS .. ")")
+	if B.restarts > ACT_RESTARTS then
+		finishAct(B, B.actFled and "noise" or "left", B.actLeft)
+	end
+end
+
+local function updateAct(B, dt, st)
 	local a = B.a
 	local spec = F.ACTS[B.act]
 	B.actT = B.actT + dt
+	B.actTot = (B.actTot or 0) + dt
 	local faceUntil = spec.hitPc and (spec.hitPc * spec.dur) or F.REAR_FACE
 	if B.actT < faceUntil and not B.hitDone and B.target and targetOk(B, B.target) then face(B, B.target) end
 	-- getVariableString: ISWorldObjectContextMenu.lua:2624 (gelesen wird die Marke aus SetVariable, Spez 1.5)
@@ -922,34 +1353,39 @@ local function updateAct(B, dt)
 			F.ApplyHit(B, B.act)
 		end
 	end
-	local done = a:getVariableString("NCBearDone") == "true"
-	if done or B.actT > spec.dur + F.FRIST then
-		if done then
-			B.strikes, B.fails = 0, 0
+	local fleeing = FLEE_STATES[st] or (B.away and B.awayFlee)
+	if fleeing then
+		B.actFled = true
+		B.actLeft = B.actLeft or st
+	end
+	if a:getVariableString("NCBearDone") == "true" then
+		finishAct(B, "done", st)
+	elseif fleeing and spec.hitPc and not B.hitDone and F.T.clockHit >= 1
+		and B.actTot >= spec.hitPc * spec.dur + NOISE_HIT_GRACE then
+		-- NOTLOESUNG frueh: der Fluchtweg haelt ihn ueber den Treffermoment hinaus aus idle, ein Neustart kaeme zu spaet
+		finishAct(B, "noise", st)
+	elseif B.actT > spec.dur + F.FRIST then
+		-- B.actT laeuft seit dem letzten (Neu-)Start des Clips: wer jetzt in idle steht, hatte die volle Frist ungestoert
+		if fleeing then
+			finishAct(B, "noise", st)
+		elseif st ~= "idle" or B.away then
+			finishAct(B, "left", st)
 		else
-			F.stats.expired = F.stats.expired + 1
-			B.fails = (B.fails or 0) + 1
-			local st = a:getActionStateName()                                        -- Bandits ZASmack.lua:486
-			if B.actLeft or st ~= "idle" then
-				-- er hat den Zustand idle verlassen (Flucht, Schreck): das sagt nichts ueber die Clips (Pruefer Fund 7)
-				print("[NCBear] *** " .. B.act .. " did not finish in " .. fmt(spec.dur + F.FRIST) .. " s: the bear left idle (" .. tostring(B.actLeft or st) .. "); hit dropped")
-			else
-				B.strikes = (B.strikes or 0) + 1
-				print("[NCBear] *** " .. B.act .. " did not finish in " .. fmt(spec.dur + F.FRIST) .. " s while idle (clip " .. spec.clip .. " missing in NCBear.glb?); hit dropped")
-			end
-		end
-		clearAct(B)
-		B.phase = "pause"
-		B.pauseT0 = F.clock
-		if B.strikes >= FRIST_STRIKES then
-			print("[NCBear] *** " .. FRIST_STRIKES .. " attacks in a row never finished - fight clips probably missing. Bear rests 60 s.")
-			endFight(B, "clips missing?", 60)
-		elseif B.fails >= 2 * FRIST_STRIKES then
-			-- Deckel fuer die Zeile oben: bricht jeder Angriff ab, hoechstens sechs Zeilen, dann Ruhe
-			print("[NCBear] *** " .. B.fails .. " attacks in a row broke off (bear not idle). Bear rests 60 s.")
-			endFight(B, "attacks keep breaking off", 60)
+			finishAct(B, "missing", st)
 		end
 	end
+end
+
+-- Anrennen: unser Weg zum Ziel-Feld, Wegziel und Fortschritt merken (Erkennung fremder Wege in updateApproach).
+local function issueApproach(B, z)
+	local sq = z:getSquare()                                                         -- Bandits BanditUpdate.lua:1852
+	if not sq then return false end
+	B.a:fleeTo(sq)                                                                     -- ISMilkAnimal.lua:38
+	B.issueT = F.clock
+	B.ix, B.iy = z:getX(), z:getY()
+	local dI = distTo(B.a, B.ix, B.iy)
+	B.minI, B.bestI, B.progT = dI, dI, F.clock
+	return true
 end
 
 local function updateApproach(B)
@@ -965,14 +1401,32 @@ local function updateApproach(B)
 		beginAct(B, F.ChooseAct(B))
 		return
 	end
-	local st = a:getActionStateName()
+	local st = a:getActionStateName()                                                -- Bandits ZASmack.lua:486
 	local moved = B.ix and distTo(z, B.ix, B.iy) or 999
 	if F.clock - B.issueT >= REISSUE and (B.issueT < 0 or st == "idle" or moved > 1) then
-		local sq = z:getSquare()
-		if sq then
-			a:fleeTo(sq)                                                                 -- ISMilkAnimal.lua:38
-			B.issueT = F.clock
-			B.ix, B.iy = z:getX(), z:getY()
+		issueApproach(B, z)
+	elseif B.ix and FLEE_STATES[st] then
+		-- Fremder Weg (forschung_laerm.md 4): ein Laerm nach dem letzten Halt ersetzt still unseren Weg durch einen Fluchtweg
+		-- (respondToSound bewertet auch im Lauf, solange kein Laerm gemerkt ist). Erkennen am Abstand zu UNSEREM Wegziel
+		-- (B.ix/iy; das Ziel selbst darf weiterziehen): waechst er ueber das schon Erreichte, oder steht er ohne Fortschritt,
+		-- sofort fleeTo neu. fleeTo laesst den gemerkten Laerm stehen (IsoAnimal.fleeTo 0-68): solange er dann laeuft,
+		-- schuetzt das Schild UNSEREN Weg bis zur Ankunft. Nur beim Weglaufen zaehlt die Stuck-Uhr neu (Kapern ist kein Klemmen).
+		local dI = distTo(a, B.ix, B.iy)
+		if not B.minI then B.minI, B.bestI, B.progT = dI, dI, F.clock end   -- B aus einem Stand vor baer-laerm (Lua-Reload)
+		if dI < B.minI then B.minI = dI end
+		if dI < B.bestI - STALL_GAIN then B.bestI, B.progT = dI, F.clock end
+		local why = nil
+		if dI > B.minI + REROUTE_GAIN then
+			why = "runs off"
+		elseif F.clock - B.progT > STALL_TIME and F.clock - B.issueT > STALL_TIME then
+			why = "makes no progress"
+		end
+		if why and (B.reroutes or 0) < REROUTE_MAX and issueApproach(B, z) then
+			B.reroutes = (B.reroutes or 0) + 1
+			count("reroutes")
+			if why == "runs off" then B.chkT, B.chkD = F.clock, d end
+			sayMore("approach: the bear " .. why .. " (" .. st .. ", path taken over?), path to the target set again ("
+				.. B.reroutes .. "/" .. REROUTE_MAX .. ")" .. noiseInfo(B))
 		end
 	end
 	if F.clock - B.chkT >= F.T.stuckTime then
@@ -1039,6 +1493,7 @@ local function calmTo(B, sub, act)
 	clearMarks(B.a)
 	B.a:setVariable("NCBearAct", act or sub)                                         -- ISPetAnimal.lua:43
 	B.calm, B.calmT = sub, 0
+	clipBegin(B)
 	if sub == "sit" then B.nextHuff = F.clock + huffGap(HUFF_SIT_MUL) end
 end
 
@@ -1090,10 +1545,63 @@ local function autoSit(B)
 	say("sits down by itself")
 end
 
+-- Aufstehen fertig: Ruhe aus, wartet ein Ziel, Kampf
+local function standDone(B)
+	local z = B.calmNext
+	calmEnd(B, "stood up")
+	if z and targetOk(B, z) then startFight(B, z) end
+end
+
+-- Laerm in der Ruhe (Kopf der Datei): der Ausflug zeigte ihn stehend (Knoten pathfindWait/walk), zurueck in idle startet
+-- unser Knoten neu bei 0. Darum Aufstehen als fertig nehmen, aus dem Sitzen neu hinsetzen statt in die Sitzpose zu
+-- springen, Hinsetzen/Testclip mit neuer Uhr; Fressen ist eine Schleife. Mehr als CALM_NOISE_MAX Stoerungen in
+-- CALM_NOISE_WINDOW s: er gibt die Ruhe auf (sonst staendig hin und her). Rueckgabe true, wenn die Ruhe vorbei ist.
+local function calmBack(B)
+	local c = F.clock
+	if B.backRepeat then
+		-- dieselbe Stoerung (ein Halt schickte die Animation noch einmal hin und her): nicht neu zaehlen, nur die Uhr des neu
+		-- angelaufenen Clips stellen (aus "sit" wurde beim ersten "back" schon "sitdown")
+		if B.calm == "sitdown" or B.calm == "play" then B.calmT = 0 end
+		return false
+	end
+	if c - (B.calmNoiseT0 or -1000) > CALM_NOISE_WINDOW then B.calmNoiseT0, B.calmNoiseN = c, 0 end
+	B.calmNoiseN = (B.calmNoiseN or 0) + 1
+	local sub = B.calm
+	sayMore("calm " .. sub .. " back in idle after " .. (F.ticks - (B.awayTick or F.ticks)) .. " frames (" .. B.calmNoiseN .. " in " .. CALM_NOISE_WINDOW .. " s)")
+	if sub == "standup" then
+		standDone(B)
+		return true
+	end
+	if B.calmNoiseN > CALM_NOISE_MAX then
+		B.lastStandT = c           -- von selbst erst nach SIT_AFTER_STAND wieder sitzen
+		calmEnd(B, "too much noise")
+		say("too much noise to rest, the bear stands")
+		return true
+	end
+	if sub == "sit" then
+		B.calmDur = math.max(5, (B.calmUntil or c) - c)
+		calmTo(B, "sitdown")
+	elseif sub == "sitdown" or sub == "play" then
+		B.calmT = 0
+	end
+	return false
+end
+
 -- Phase calm. Kampf geht vor (anim_spez.md 6.4): sitzend erst aufstehen, fressend sofort los.
 local function updateCalm(B, dt, searchNow, pl)
 	local a = B.a
-	fleeStop(B)
+	local st = fleeStop(B)
+	local ev = clipWatch(B, st)
+	if ev == "away" then
+		if not B.awayRepeat then   -- im selben Halt nur einmal (clipWatch)
+			count("noiseCalm")
+			sayMore("calm " .. tostring(B.calm) .. " interrupted: the bear left idle (" .. st .. ")" .. noiseInfo(B))
+		end
+	elseif ev == "back" then
+		if calmBack(B) then return end
+	end
+	-- der Clip hatte nicht die volle Frist in idle: kein "Clip fehlt?" (Pruefer Fund 7)
+	local noisy = B.away or st ~= "idle"
 	B.calmT = B.calmT + dt
 	local sub = B.calm
 	if searchNow and B.calmNext == nil and F.clock >= B.restUntil and fightingCount() < MAX_FIGHTING then
@@ -1121,7 +1629,15 @@ local function updateCalm(B, dt, searchNow, pl)
 	local done = a:getVariableString("NCBearDone") == "true"                         -- ISWorldObjectContextMenu.lua:2624
 	local spec = F.ACTS[(sub == "play") and B.playAct or sub]
 	if sub == "sitdown" then
-		if done or B.calmT > spec.dur + F.FRIST then
+		if not done and noisy and B.calmT > spec.dur + F.FRIST then
+			-- Laerm hielt ihn die ganze Frist aus idle: er sass nie, steht also schon (kein Sprung in die Sitzpose)
+			if B.calmNext then
+				standDone(B)
+			else
+				B.lastStandT = F.clock     -- von selbst erst nach SIT_AFTER_STAND wieder sitzen
+				calmEnd(B, "noise")
+			end
+		elseif done or B.calmT > spec.dur + F.FRIST then
 			calmNote(B, done, sub)
 			if B.calmNext then
 				calmTo(B, "standup")
@@ -1136,16 +1652,14 @@ local function updateCalm(B, dt, searchNow, pl)
 		if F.clock >= B.calmUntil then calmEnd(B, "done eating") end
 	elseif sub == "standup" then
 		if done or B.calmT > spec.dur + F.FRIST then
-			calmNote(B, done, sub)
-			local z = B.calmNext
-			calmEnd(B, "stood up")
-			if z and targetOk(B, z) then startFight(B, z) end
+			if not noisy then calmNote(B, done, sub) end
+			standDone(B)
 		end
 	elseif sub == "play" then
 		if spec.loop then
 			if B.calmT >= spec.dur * PLAY_LOOP then calmEnd(B, "test clip played") end
 		elseif done or B.calmT > spec.dur + F.FRIST then
-			if not done then
+			if not done and not noisy then
 				print("[NCBear] *** test clip " .. spec.clip .. " did not finish in " .. fmt(spec.dur + F.FRIST) .. " s (missing in NCBear.glb?)")
 			end
 			calmEnd(B, "test clip played")
@@ -1172,18 +1686,30 @@ local function updateBear(B, dt, searchNow, pl)
 	refreshBlock(B)
 	local p = B.phase
 	if p == "act" then
+		-- Ankunft: bis zum ersten idle zaehlt nichts als Stoerung (clipBegin); danach jeder Ausflug (actClip)
 		local st = fleeStop(B)
-		if st ~= "idle" and B.actT > 0.5 then B.actLeft = st end   -- erst nach 0,5 s: das Anhalten beim Ankommen braucht Bilder
-		updateAct(B, dt)
+		local ev = clipWatch(B, st)
+		if ev then actClip(B, ev, st) end
+		if B.phase == "act" then updateAct(B, dt, st) end
 	elseif p == "pause" then
-		fleeStop(B)
-		if F.clock - B.pauseT0 >= F.T.pause then decide(B) end
+		local st, new = fleeStop(B)
+		if new then
+			sayMore("pause interrupted: the bear left idle (" .. st .. ")" .. noiseInfo(B))
+		end
+		-- den naechsten Angriff erst, wenn er wieder steht UND kein Halt mehr laeuft (beginAct stoppt ihn: Schild aus, der
+		-- Laerm koennte ihn neu fliehen lassen; idle kann mitten im Halt ein Zwischenbild sein), hoechstens NOISE_WAIT_MAX
+		local w = F.clock - B.pauseT0
+		-- (Dauerlaerm: nicht warten, der laute Halt laeuft durch beginAct hindurch weiter, setBlock)
+		if w >= F.T.pause and ((st == "idle" and (not B.flee or B.flee.loud)) or w >= NOISE_WAIT_MAX) then decide(B) end
 	elseif p == "approach" then
 		updateApproach(B)
 	elseif p == "seek" then
-		fleeStop(B)
+		local st, new = fleeStop(B)
+		if new then
+			sayMore("seek interrupted: the bear left idle (" .. st .. ")" .. noiseInfo(B))
+		end
 		if fightOver(B) then return end
-		if searchNow then
+		if searchNow and (not B.flee or B.flee.loud) then   -- nicht mitten im Halt (beginAct stoppt ihn), ausser Dauerlaerm
 			local z = pickTarget(B, F.T.nextRadius)
 			if z then
 				setTarget(B, z)
@@ -1315,6 +1841,7 @@ end
 
 local function tickBody(dt)
 	F.clock = F.clock + dt
+	F.ticks = F.ticks + 1
 	if F.clock >= F.nextScan then
 		F.nextScan = F.clock + SCAN_EVERY
 		scanBears()
@@ -1532,12 +2059,19 @@ function NCBear_FightInfo()
 	local K = F.knockStats
 	print("[NCBear] knock: back " .. K.back .. " (killing blows " .. K.killFly .. "), down " .. K.down .. " (bear at his side " .. (K.side or 0) .. ")"
 		.. ", back vetoed " .. K.vetoed .. ", pushed " .. K.pushed .. " | calm clips expired " .. (S.calmExpired or 0))
+	print("[NCBear] noise interruptions " .. (S.noise or 0) .. " (attacks disturbed " .. (S.noiseActs or 0)
+		.. ", of them resolved by clock " .. (S.clockHits or 0) .. ", sitting/eating " .. (S.noiseCalm or 0)
+		.. ") | continuous-noise holds " .. (S.loudHolds or 0) .. " | engine walks (walking on the spot, not noise) " .. (S.engineWalks or 0)
+		.. " | approach paths taken back " .. (S.reroutes or 0) .. " | fleeWait " .. tostring(F.T.fleeWait)
+		.. " frames, clockHit " .. ((F.T.clockHit >= 1) and "on" or "off"))
 	for i, B in ipairs(F.bears) do
 		local line = "  bear " .. i .. ": " .. B.phase .. (B.act and (" " .. B.act) or "") .. (B.calm and (" " .. B.calm) or "")
 		if B.target then line = line .. ", target at " .. fmt(distTo(B.a, B.target:getX(), B.target:getY())) end
 		line = line .. ", roar in " .. fmt(math.max(0, F.T.roarCD - (F.clock - B.lastRoar)))
 			.. " s, slam in " .. fmt(math.max(0, F.T.slamCD - (F.clock - B.lastSlam))) .. " s"
 		if F.clock < B.restUntil then line = line .. ", resting " .. fmt(B.restUntil - F.clock) .. " s" end
+		local stress = B.a:getStress()                                               -- ISMilkAnimal.lua:17
+		if type(stress) == "number" then line = line .. ", stress " .. fmt(stress) end
 		print(line)
 	end
 end
