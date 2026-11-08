@@ -1,0 +1,5 @@
+Baerenaufnahmen fuer NC Bear Test, heruntergeladen 07.11.2026 mit Kevins Freigabe (je Datei bestaetigt).
+Alle laut soundbible.com "Public Domain" (Werke von US-Bundesbehoerden).
+soundbible_241.wav  "Bear Growl And Roar"    Quelle fws.gov  http://soundbible.com/241-Bear-Growl-And-Roar.html   2.981.608 Byte, 15,5 s, 48 kHz Stereo
+soundbible_242.wav  "Bear Growl And Roar 2"  Quelle fws.gov  http://soundbible.com/242-Bear-Growl-And-Roar-2.html 3.992.852 Byte, 20,8 s, 48 kHz Stereo
+soundbible_868.wav  "Bear And Bear Cubs"     Quelle nps.gov  http://soundbible.com/868-Bear-And-Ber-Cubs.html       552.628 Byte, 6,2 s, 44,1 kHz Mono

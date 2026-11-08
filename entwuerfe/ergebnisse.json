@@ -1,0 +1,71 @@
+[
+ {
+  "label": "entwurf:Kontrollkaefig",
+  "agentId": "a5d1bcbd33bf2b936",
+  "result": {
+   "blocked": false,
+   "script": "C:/Users/Kevin/NPCCrew-Nebenprojekte/_arbeit/blender_test/baer/run_b/baer_b.py",
+   "ordner": "C:/Users/Kevin/NPCCrew-Nebenprojekte/_arbeit/blender_test/baer/run_b",
+   "bauweise": "Kopf als Kontrollkaefig: 221 von Hand gesetzte Punkte je Seite, gespiegelt, fast nur Quads, Subdivision Stufe 3 (24.545 Punkte), Crease an Lippe, Nasenpolster und Lidrand. Stirnabsatz, Augenhoehle (echtes Loch mit Lidschlaufen und Kugel dahinter), Lippenspalte und Maulinneres sind Geometrie. Das Maul oeffnet ueber Kaefig-Gewichte am Knochen kiefer. Nasenpolster mit Mittelfurche und Kommaloechern gehoert zum Kopfnetz, die Ohrschale ist ein eigener Kaefig am Knochen kopf. Der Kopf ist ein eigenes Netz und steckt ueberlappend im Halsstumpf des Koerpers, gleiche Knochen, Fell deckt die Naht; er ist nicht verschmolzen. Kopffell wird per Python je Elternhaar gekaemmt (Strich von der Nase nach hinten, Laenge je Punkt), Farbe kommt ueber eine UV-Maske, die im Haar ankommt. Fuenf Zehen im Bogen als Kaefig mit Ballen und kurzem Fell, Krallen als gebogene ovale Rohre mit Hornverlauf, Spitze kurz ueber dem Boden; Zaehne mit derselben Rohrform. Modi clay (nur Form), kopf (700x525, reduziertes Fell), ende (alle sechs Bilder plus hieb_nah.png), still und anim bleiben. Koerperfarbe leicht geaendert: weniger Rot, Beine etwas heller, Deckhaar am Hals reduziert.",
+   "runden": 13,
+   "schwaechen": [
+    "Von vorn wirkt das Gesicht noch wie ein glatter, fast runder Teller vor dem zotteligen Koerperfell; die Wange flaert zu wenig in die Halskrause.",
+    "Der Unterkiefer liest sich von vorn als helle Schmollippe, trotz Verschmaelerung.",
+    "Die Schnauze zieht im Frontbild ins Olive (gruenes Umgebungslicht); im Profil ist der helle Fleck auf der Schnauze etwas zu kraeftig.",
+    "Der Brauenwulst steckt im Netz, geht unter dem Fell aber fast unter; das Auge sitzt weniger tief als auf Kevins Fotos, und das dunkle Feld darum ist etwas fleckig.",
+    "Hieb: der Unterkiefer wirkt lang und schmal, der Mundwinkel etwas eckig, die Lefzen ziehen sich nicht hoch. Zaehne sind zu weiss und zu regelmaessig, die Gaumenriefen zu gleichmaessig, die Zunge ist nur eine flache Kugel.",
+    "Pfote: das Bein darueber ist fast schwarz, die Zehen wirken im Dunkel klobig, die Krallen sind sauber, aber recht glatt. Nah geprueft ist nur die rechte Vorderpfote; die Hinterpfoten habe ich nur im Ganzkoerperbild gesehen.",
+    "Einzelne helle Drahthaare an Hals und Brust bleiben sichtbar. Kopfhaar ist feiner als das ungekaemmte Koerperhaar; im Profil sieht man den Wechsel am Hals.",
+    "Das Frontbild hat eine eigene Sonne und +0,55 Belichtung, das Pfotenbild +0,45 und einen eigenen niedrigen Rasen; mit dem Originallicht waeren beide deutlich dunkler.",
+    "Animation nur in Stichproben geprueft: Modus anim als Kurzlauf mit drei Bildern um den Hieb, dazu Standbilder aus Gang, Stand und Hieb. Die komplette Folge ist nicht gerendert, die Nahtstelle am Hals bei Extrembiegung nicht geprueft.",
+    "Nicht spieltauglich: das Kopfnetz ist nicht reduziert, und in der Spielansicht wird der Koerper durch Decimate kahl (Meldung NO CD_ORIGSPACE), waehrend der Kopf Fell behaelt. Die Spielfassung braucht einen eigenen Weg."
+   ]
+  }
+ },
+ {
+  "label": "entwurf:Schnittfolge",
+  "agentId": "a965efb0c2d806cff",
+  "result": {
+   "blocked": false,
+   "script": "C:/Users/Kevin/NPCCrew-Nebenprojekte/_arbeit/blender_test/baer/run_a/baer_a.py",
+   "ordner": "C:/Users/Kevin/NPCCrew-Nebenprojekte/_arbeit/blender_test/baer/run_a",
+   "bauweise": "Kopf aus einer Schnittfolge: 23 Querschnittsringe mit Tabelle fuer Oberlinie, Unterlinie, Breite und Lippenhoehe, fein aufgeloest auf rund 78000 Punkte. Dazu analytische Verschiebungen fuer Brauenwulst, Stirnfurche, Jochbogen, Lippenpolster, Falte und Mittelfurche. Kopf 5 Prozent groesser als die Tabelle, also rund 0,525 m lang. Das Netz hat einen echten Mundschlitz: Oberlippe haengt ueber der Unterlippe, dahinter Mundhoehle mit Lippentasche, Zahnfleischwall und Gaumenfalten, ohne Loch. Gelenk \"kiefer\" liegt jetzt unter dem Ohr, die Haut geht am Mundwinkel weich mit. Die Haut zieht sich als Schale um eine echte Augenkugel; dunkle Lid-Haube mit Mandelschlitz, Oberlid schneidet oben ab, Iris dunkelbraun bis bernstein. Nase: eigenes feines Polarnetz mit Mittelfurche, Komma-Nasenloechern, Koernung und Anthrazit. Ohren: Schalen mit Oeffnung nach vorn-aussen. Kopf, Ohren, Zehen und Koerper sind EIN Netz, der Hals taucht ohne Boolean in den Schaedel. Fell: Strichrichtung je Flaeche ueber die UV-Karte (tangent_factor), Farbe je Haarwurzel ueber ein Farbattribut (kommt in Cycles an), drei Systeme mit fliessendem Laengenfeld (Schnauze 1,25 cm, Stirn rund 3,4 cm, Wange bis 15 cm im Nacken). Pfoten: je 5 Zehen im Bogen mit Sohle und kurzem Fell. Krallen als gebogene Rohre mit ovalem, abnehmendem Querschnitt (vorn bis 10 cm, hinten bis 6 cm), Hornverlauf dunkelbraun nach elfenbein-grau, Spitzen 7 mm ueber dem Boden. Nebenfund: das dichte Gesichtsnetz senkte die automatische Jitter-Stufe und machte das Koerperfell zu Schindeln, darum userjit fest auf 24. Modi kopf (schnell) und ende (1200x900, volle Dichte). Lauf, Hieb und Modus anim laufen; anim nur mit 2 Bildern je Ansicht geprueft.",
+   "runden": 14,
+   "schwaechen": [
+    "Ohren: inzwischen runde Schalen, aber etwas gross und innen fast schwarz. Das geforderte hellere laengere Innenhaar ist kaum zu sehen; im Ganzbild wirken sie wie dunkle Knubbel.",
+    "Schnauze: von weitem noch etwas lang und hundeartig. Ihr helleres, glattes Fell setzt sich sichtbar von Stirn und Wange ab.",
+    "Unterkiefer: von vorn eine sehr glatte, runde Schale, zu weich und etwas kuschelig. Kinn und Unterlippe haben kaum Eigenform.",
+    "Ueber dem Auge bleibt auf der Sonnenseite ein dunkler Fleck am Brauenhang. Er kommt von Strichrichtung und Glanz, nicht von der Farbe, und wirkt leicht wie eine Augenbraue.",
+    "Auge: in normaler Ansicht gut, in extremer Naehe (auge.png) wirkt der schwarze Lidrand grafisch, fast wie gezeichnet.",
+    "Hals: der Uebergang zum Kopf ist nur noch eine leichte Stufe. Das Koerperfell wird zum Kopf hin um bis zu 60 Prozent kuerzer, dadurch ist der Hals schlanker als in Kevins letzter Fassung.",
+    "Koerperfell minimal veraendert: weniger Rot, etwas dunkler, Beine eine Spur heller. Das ist nur eine Farbanpassung, trotzdem weicht es von der Fassung ab, die Kevin gefiel.",
+    "Offenes Maul: Zunge sehr glatt, Gaumen im Schatten fast schwarz, Lippenrand dort duenn und sauber, die Kieferoeffnung wirkt lang. Vorn am Unterkiefer stehen die Zaehne etwas eng.",
+    "Nase im reinen Profil klein, nur rund 4 cm dunkle Kuppe. Direkt ueber dem Polster liegt ein schmales Band fast nackter dunkler Haut.",
+    "Pfote: pfote.png nutzt +0,7 Belichtung und einen eigenen dichten Grasflecken, nur fuer dieses Bild. Das Beinfell bleibt sehr dunkel, im Ganzbild sind die Krallen nur klein zu sehen.",
+    "Spielfassung nicht behandelt: das Netz hat 184000 Dreiecke, mit Augen, Zaehnen und Krallen 287000. Der vorhandene Decimate-Schritt drueckt es auf 1400 und verliert dabei Lippe und Mundschlitz; Augen, Zaehne, Krallen sind separate Teile, die er nicht anfasst."
+   ]
+  }
+ },
+ {
+  "label": "entwurf:Abstandsfeld",
+  "agentId": "ae8df69e851745f67",
+  "result": {
+   "blocked": false,
+   "script": "C:/Users/Kevin/NPCCrew-Nebenprojekte/_arbeit/blender_test/baer/run_c/baer_c.py",
+   "ordner": "C:/Users/Kevin/NPCCrew-Nebenprojekte/_arbeit/blender_test/baer/run_c",
+   "bauweise": "Der Kopf ist ein eigenes Abstandsfeld in numpy: Ellipsoide, Kapseln, Superellipsen-Lofts mit weicher Vereinigung und Subtraktion für Stirnkerbe, Augenhöhle, Lippenspalte, Mundhöhle und Nasenfurche. Das Netz entsteht per Surface Nets und Newton-Projektion auf die Nullfläche (2,4 mm, rund 250.000 Flächen), Maul und Lippen gehören zu einem geschlossenen Netz. Unterkiefer und Lippen hängen über Gewichte am Knochen \"kiefer\". Nase und Lider haben eigene feine Felder (0,7 mm), dazu Augapfel mit Iris im Material, Zunge, Zahnfleischwulst und Zähne als Rohre. Das Kopffell sind Hair-Curves (rund 285.000 Strähnen) mit Strich, Länge, Melanin und Dichte aus dem Feld; sie hängen starr an kopf, kiefer und 7 neuen Hilfsknochen für die gespannte Backe. Je Pfote: 5 Zehen mit Ballen aus eigenem Feld, kurzes Fell, gebogene ovale Krallen mit Hornverlauf am Knochen pranke/fuss. Geändert am Körper: Hals schlanker, Pfoten kürzer, Fell am Kopf kürzer, weniger Rot. Modi: form, kopf, nah, ende, still, anim. anim lief bis BAER_ANIM_OK, aber nur als Probe mit jedem 45. Bild; still lief nicht einzeln.",
+   "runden": 20,
+   "schwaechen": [
+    "Kopf bewusst 10 % größer als vorgegeben: Ohrbasis bis Nase rund 0,55 m statt 0,50 m (KOPF_SK = 1.10), sonst wirkte er neben dem massigen Körper winzig. Auch so wirkt er in ganz.png noch eher klein.",
+    "In der Seitenansicht wirkt die Schnauze lang und hell, leicht schnabelartig (ganz.png, kopf_profil.png). Von vorn und im Dreiviertel liest sie sich deutlich besser als Bär.",
+    "Am Hals bleibt ein sichtbarer Wechsel von feinem Kopffell zu langem, grobem Körperfell, diagonal hinter dem Ohr. Kein harter Farbrand mehr, aber von vorn wirkt der Körper noch wie eine Kapuze um den Kopf, mit dunklem Band zwischen den Ohren.",
+    "Stirn und Schnauze wirken von vorn noch etwas plüschig und glatt, im Makro (nah_auge.png) die Haare dagegen stachelig. Die dunklen Stellen über den Augen lesen sich leicht als Augenbrauen.",
+    "Das Auge ist in normalen Ansichten nur ein dunkler Schlitz; Bernstein-Iris und Pupille erkennt man fast nur im Nahbild. Vom Lidrand verdeckt das Fell teils mehr als gewollt.",
+    "Offenes Maul: Zähne klein und regelmäßig, obere Schneidezähne kaum zu sehen. Am Mundwinkel liegen Haarfinger über der dunklen Dehnzone, an der Unterlippenspitze stehen einige Borsten und ein dunkler Keil. Auf der Gegenseite ragt Backenfell ins Bild.",
+    "Pfoten: unter dem Fell lesen sich die Zehen als Wülste, die Ballen sieht man nur von unten. Das Bein wirkt in pfote.png fast schwarz, der Übergang zur Pfote ist noch sichtbar.",
+    "Kopfhaare hängen starr am Knochen und folgen nicht dem Halsgewicht; bei starkem Aufrichten kann sich am Übergang etwas verschieben. Geprüft habe ich nur Standbilder und die Probe mit jedem 45. Bild.",
+    "Nicht spieltauglich: rund 250.000 Flächen und 285.000 Strähnen nur am Kopf. Der neue Decimate für die Spielansicht betrifft nur das Kopfnetz, die Strähnen bleiben; der Körper ist in dieser Ansicht wie im Ausgangsstand kahl. Beim Rendern der Ansicht meldet Blender NO CD_ORIGSPACE / error out of range."
+   ]
+  }
+ }
+]
