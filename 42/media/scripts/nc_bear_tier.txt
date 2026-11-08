@@ -1,0 +1,24 @@
+module Base
+{
+    animationsMesh NCBear
+    {
+        meshFile = Skinned/NCBear.glb,
+        keepMeshAnimations = true,
+    }
+
+    model NCBear_Body
+    {
+        mesh = Skinned/NCBear.glb,
+        shader = animalEffect,
+        static = false,
+        animationsMesh = NCBear,
+    }
+
+    model NCBearStag_Body
+    {
+        mesh = Skinned/NCBearDeer.glb,
+        shader = animalEffect,
+        static = false,
+        animationsMesh = Deer_Stag,
+    }
+}

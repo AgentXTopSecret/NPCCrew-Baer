@@ -1,0 +1,4 @@
+name=NC Bear Test
+id=NCBearTest
+author=Agent X Top Secret
+description=Nur zum Testen: stehendes Baeren-Modell als Gegenstand und lebender Baer als Tier. Der Baer kaempft im Einzelspieler gegen Zombies und feindliche Banditen (nie gegen Spieler, NPC-Crew-Begleiter, neutrale NPCs oder Tiere): Prankenhieb links und rechts, Biss, Biss am Boden und Doppelschlag im Wechsel, frontal Getroffene fliegen zurueck. Dazu Schnauben, Sitzen und Fressen (Testbefehle NCBear_Sit, NCBear_Stand, NCBear_Eat). Nur Wegwerf-Spielstand. Kein Teil von NPC Crew, nicht fuer den Workshop.

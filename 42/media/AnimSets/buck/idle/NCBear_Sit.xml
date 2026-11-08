@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animNode>
+	<m_Name>NCBearSit</m_Name>
+	<m_AnimName>NCBear_Sit</m_AnimName>
+	<m_Looped>true</m_Looped>
+	<m_BlendTime>0.10</m_BlendTime>
+	<m_SyncTrackingEnabled>false</m_SyncTrackingEnabled>
+	<m_ConditionPriority>10</m_ConditionPriority>
+	<m_Conditions>
+		<m_Name>NCBearAct</m_Name>
+		<m_Type>STRING</m_Type>
+		<m_Value>sit</m_Value>
+	</m_Conditions>
+</animNode>

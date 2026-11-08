@@ -1,0 +1,24 @@
+module NCBear
+{
+    imports
+    {
+        Base
+    }
+
+    model NCBear_World
+    {
+        mesh = WorldItems/NCBear,
+        texture = WorldItems/NCBear,
+        scale = 0.544,
+    }
+
+    item BearStatic
+    {
+        DisplayCategory = Junk,
+        ItemType = base:normal,
+        Weight = 1,
+        Icon = NCBear,
+        DisplayName = Test Bear (model),
+        WorldStaticModel = NCBear_World,
+    }
+}

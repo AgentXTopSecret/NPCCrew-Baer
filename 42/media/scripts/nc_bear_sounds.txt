@@ -1,0 +1,72 @@
+module Base
+{
+    sound NCBear_Roar
+    {
+        category = Animals,
+        clip
+        {
+            file = media/sound/NCBear_Roar.wav,
+            distanceMax = 150,
+        }
+    }
+
+    sound NCBear_Growl1
+    {
+        category = Animals,
+        clip
+        {
+            file = media/sound/NCBear_Growl1.wav,
+            distanceMax = 80,
+        }
+    }
+
+    sound NCBear_Growl2
+    {
+        category = Animals,
+        clip
+        {
+            file = media/sound/NCBear_Growl2.wav,
+            distanceMax = 80,
+        }
+    }
+
+    sound NCBear_Growl3
+    {
+        category = Animals,
+        clip
+        {
+            file = media/sound/NCBear_Growl3.wav,
+            distanceMax = 80,
+        }
+    }
+
+    sound NCBear_Huff
+    {
+        category = Animals,
+        clip
+        {
+            file = media/sound/NCBear_Huff.wav,
+            distanceMax = 30,
+        }
+    }
+
+    sound NCBear_HuffSoft
+    {
+        category = Animals,
+        clip
+        {
+            file = media/sound/NCBear_Huff.wav,
+            distanceMax = 20,
+        }
+    }
+
+    sound NCBear_Pain
+    {
+        category = Animals,
+        clip
+        {
+            file = media/sound/NCBear_Pain.wav,
+            distanceMax = 80,
+        }
+    }
+}
