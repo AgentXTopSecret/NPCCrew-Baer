@@ -1,4 +1,8 @@
-# Baer -- Stand und alles, was ansteht (08.11.2026 abends)
+# Baer -- Stand und alles, was ansteht (09.11.2026 nachmittags)
+
+> **09.11.2026 ~14:20 (neue Sitzung, neuer Account):** Lauf baer-fell FERTIG und in NCBearTest (ungespielt, Test
+> `spiel/anleitung_fell.md`); Forschungslauf baer-schlaf fertig (`begleiter/SCHLAF_PLAN.md`, Kevins Fragen K1-K21 offen).
+> `UEBERGABE.md` ist damit erledigt.
 
 Lies zuerst `../CLAUDE.md` (Grundregel: gebaut FUER NPC Crew, am Ende per Copy-Paste uebernehmbar, keine Cheat-/Testmenues kommen mit),
 dann **`begleiter/ENTSCHEIDUNGEN.md` (geht vor PLAN.md)**, dann `begleiter/PLAN.md` und `begleiter/KRITIK.md`.
@@ -32,9 +36,16 @@ dann **`begleiter/ENTSCHEIDUNGEN.md` (geht vor PLAN.md)**, dann `begleiter/PLAN.
    clockHit. Dazu knockPush-Vorgabe 0,7, Testbefehle drehen zur Kamera (SE), refreshBlock nicht mitten im Halt.
    **Offen, Kevins Wort:** Stress-Ausgleich mit `changeStress` (Vanilla-belegt, Spielregel); `setShouldFollowWall(false)` (nur Jar).
    Arbeitskopie und Attrappen: `../_arbeit/baer_laerm/` (`attrappe/anim/test_anim.lua`, `attrappe/kampf/test_fight.lua`).
-2. **Lauf baer-fell** (Kevins Startwort 08.11.): Hautdehnung Achsel/Brustunterseite (>3-fach), Fell "wie Hubbel" (Netz, Textur 2048,
-   Zotteln statt Beulen, Alpha-Haarkarten pruefen), **echte Sohlen mit Ballen** (Vorlage `begleiter/kevin_pfotenvorlage.png`, nur ansehen)
-   und **ausgearbeitete Unterseite** (Bauch, Brust, Achseln, Innenbeine, Kehle; Spielbild `begleiter/kevin_rear_unterseite.webp`).
+2. **Lauf baer-fell FERTIG, in NCBearTest seit 09.11. ~14:19, ungespielt.** Forschung, Netz, Textur (alte Sitzung), Pruefer Optik +
+   Technik, Nachbesserung, Gegenpruefer (neue Sitzung, 4 Agenten). Sohlen mit Ballen (Netz 8 mm + Textur), Unterseite hell und
+   ausgearbeitet (Back-Pose-Ansichten), Hautdehnung 99,5 % <= 2,45 (vorher bis 4,13), Achsel/Brust <= 3,02 (vorher 8,21), Ei im Aufrichten
+   behoben, Straehnen kraeftiger, Body-Textur bleibt 1024 (keine Mipmaps bei Tieren, 2048 flimmert). 15/15 Clips bit-gleich, Kopf
+   unveraendert, 18.930 Dreiecke. Berichte `spiel/fell_*.md`, Bild `spiel/fell_vorher_nachher.png`, Test `spiel/anleitung_fell.md`.
+   Sicherungen `backups/NCBearTest/NCBearTest_vor_fell_2026-11-09_141924.zip` / `..._mit_fell_..._141925.zip`. Skripte
+   `spiel/baer_{export,kampf,gewichte,textur}_fell.py`, Arbeitsdaten `../_arbeit/baer_fell/`. **Neue Clips -> `baer_gewichte_fell.py` neu
+   laufen lassen** (Gewichte sind auf genau diese 15 Clips abgestimmt). **Offen, Kevins Wort:** Zotteln am Umriss (Netz-Zotteln
+   verworfen: Noppen), Pranken-Form, Gesaessfalte schwach, Kopf-Variante B (`../_arbeit/baer_fell/textur/NCBear_kopf_variante*.png`),
+   eigenes Baby-Modell (`../_arbeit/baer_fell/baby/baby_vergleich.png`).
 3. **Clip-Runde auf dem neuen Netz:** Aufrichten (NCBear_Rear) neu (ganzer Koerper, kein Kragen, bleibt 3,0 s); **Sitzen Richtung (b)**
    (aufrecht, Hinterbeine weniger gespreizt, keine schwarzen Sohlen-Flecken zur Seite), Hinsetzen/Aufstehen nachziehen.
 4. **B5a Gegenwehr:** Zombies beissen den Baeren (Weg 2 aus `begleiter/angriff_fazit.md`, Engine laesst sie nicht selbst angreifen:
@@ -62,7 +73,13 @@ dann **`begleiter/ENTSCHEIDUNGEN.md` (geht vor PLAN.md)**, dann `begleiter/PLAN.
     (gebaut: nur geschlossene sperrt); Spruenge beim Treffer im Sitzen und beim Fressbeginn (`spiel/anim_fix.md` 'Unsicher, offen',
     `spiel/anim_review_gegen.md`, `spiel/kampf_fix.md`); `NCBear_Stand` sagte einmal "rest", 3 s nachdem sich ein Baer selbst setzte
     (`NCBear_FightInfo()` neben dem sitzenden Baeren lesen).
-12. **Nebenfund fuer NPC Crew (statisch, nicht gespielt):** eine Bandit-Kugel, die ein Tier trifft, beschaedigt im Einzelspieler den Spieler --
+12. **Neu 09.11. (Kevin): Schlafen** -- Schlaf-Animation (Hinlegen, Schlafen, Aufwachen), z Z z ueber dem schlafenden Baeren, leiser
+    Schlafton (nur freie Aufnahme, Download je Datei auf Kevins Ja), **Baerenbett** passend fuer den Erwachsenen (1,35), spaeter **Schlafen wie
+    die NPCs**. Forschungslauf `baer-schlaf` FERTIG 09.11. (8 Agenten, nichts gebaut/geladen): `begleiter/SCHLAF_PLAN.md`, Berichte
+    `spiel/schlaf_forschung_*.md`. Kern: Haltung Sphinx, Engine-Ruheplatz `idleAction = sit` mit den freien Clipnamen DeerStag_IdleToSitting/
+    SittingIdle/SittingToStanding; kein freier Schlafton gefunden (nichts laden, vorerst ohne Ton); Bett als 3D-Bodengegenstand ~2,5 x 1,6
+    Kacheln mit Rezept. **Kevins Fragen K1-K21 offen** (Abschnitt 7). ENTSCHEIDUNGEN.md ganz unten.
+13. **Nebenfund fuer NPC Crew (statisch, nicht gespielt):** eine Bandit-Kugel, die ein Tier trifft, beschaedigt im Einzelspieler den Spieler --
    erst messen; gehoert in die NPC-Crew-Sitzung, nicht hier bauen.
 
 ## Regeln (aus ../CLAUDE.md, kurz)

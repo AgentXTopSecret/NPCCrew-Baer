@@ -1,0 +1,1199 @@
+# Lauf baer-fell, Bauer Textur (08.11.2026). Neue Koerpertextur fuer das Netz aus baer_export_fell.py (netz/lowpoly_fell.blend).
+# Liest nur: baer_quelle_anim.py (Hochmodell, Fell), baer_export_fell.py (Hilfsfunktionen der Stufe backen), die alten Ansichten
+# (_arbeit/baer_spiel/ansichten), die Uebergabe des Netz-Bauers (_arbeit/baer_fell/netz/). Schreibt nur nach _arbeit/baer_fell/textur/
+# und _arbeit/baer_fell/mod/42/media/textures/. Kopf- und Krallen-Texel kommen unveraendert aus der alten 2048er.
+# Stufen (blender --background --factory-startup --python baer_textur_fell.py -- STUFE|AUFTRAG.json):
+#   AUFTRAG.json {"stufe": "ansichten", ...}  [GPU, nur ueber _arbeit/baer_fell/werkzeug/gpu_render.sh]: Hochmodell mit Fell, Fell nur
+#                fuer den Bake geaendert (Variante: Beine weniger Melanin, Haar rauer), 22 Koerper-Ansichten wie baer_export.py
+#                kamera_daten + 4 steile Unterseiten-Ansichten -> textur/ansichten; mit "pose": true Back-Pose (Beine gespreizt,
+#                back_pose_setzen) und 9 Ansichten von unten -> textur/ansichten_pose. Auftraege: textur/ansichten*_auftrag.json
+#   backen     Ansichten auf das neue Netz (Back-Pose-Ansichten auf das gleich posierte Netz), Ausgleich der Blickrichtung zum Haar,
+#              Farbabgleich ans alte Fell, Unterseite heller, Haarbuesche, Faltenschatten, Hals-Naht, Sohlen aus dem Ballen-Plan,
+#              Kopf/Krallen alt -> textur/NCBear_<BAER_TX_NAME>_2048.png und textur/NCBear_kopf_variante.png (nur Vergleich).
+#              BAER_TX_NUR_NEU=1: Gegenprobe mit alten Ansichten und alter Nacharbeit (= Zwischenstand des Netz-Bauers, +-1 sRGB).
+# Nachbesserung 09.11.2026 (_arbeit/baer_fell/fix_bericht.md): Ordner per Umgebung (BAER_TX_DIR, BAER_FELL_NETZ, BAER_TX_ANS), weiche
+#   Uebergaenge der Back-Pose-/Innenbein-Gewichte (keine scharfkantigen Flecken), Gesprenkel an Beinen/Hinterteil vor der Nacharbeit
+#   inselweise geglaettet, breitere/laengere Haarbuesche mit stabiler Haarrichtung (kein Wirbel am Schwanzansatz), Leiste/Unterseite
+#   hoechstens so hell wie der Ruecken (CAP_*), Pfoten/zu satte Fellfarbe entsaettigt, Sohle mit groesseren Ballen, glatterer Haut und
+#   Fellkranz aus Straehnen, Krallen-Lesefeld (2x2 bilinear, 2048 und 1024) mit den alten Texeln.
+# Statisch/offline gebaut und geprueft, nicht gespielt.
+import json
+import math
+import os
+import sys
+import time
+
+import bpy
+import numpy as np
+from mathutils import Vector
+
+HIER = r"C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel/"
+ARB = r"C:/Users/Kevin/NPCCrew-Nebenprojekte/_arbeit/baer_fell/"
+TX = os.environ.get("BAER_TX_DIR", ARB + "textur/")            # Ausgabe (Nachbesserung: umlenkbar, sonst ueberschreibt ein Nachbau die Lieferung)
+NETZ = os.environ.get("BAER_FELL_NETZ", ARB + "netz/")         # Netz, Karten, Sohlen-Plan, Zwischenstand
+ANS_DIR = os.environ.get("BAER_TX_ANS", ARB + "textur/")       # GPU-Ansichten (ansichten/, ansichten_pose/)
+EXPORT = HIER + "baer_export_fell.py"
+ANS_ALT = r"C:/Users/Kevin/NPCCrew-Nebenprojekte/_arbeit/baer_spiel/ansichten/"
+ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else ["backen"]
+T0 = time.time()
+
+
+def log(*a):
+    print("TEXTUR %.1fs" % (time.time() - T0), *a, flush=True)
+
+
+def lade_export():
+    """Hilfsfunktionen aus baer_export_fell.py (nur lesen): alles vor der Stufenwahl am Dateiende."""
+    src = open(EXPORT, encoding="utf-8").read()
+    marke = '\nif STUFE == "diagnose":'
+    assert src.count(marke) == 1
+    alt = sys.argv
+    sys.argv = [alt[0], "--", "keine"]
+    E = {"__name__": "baer_export_fell", "__file__": EXPORT}
+    exec(compile(src.split(marke)[0], EXPORT, "exec"), E)
+    sys.argv = alt
+    return E
+
+
+# ------------------------------------------------------------------ Kameras (wie baer_export.py kamera_daten, dazu Unterseite)
+C_B = (0.14, 0.0, 0.80)
+
+
+def _view(name, c, az, el, ortho, res, clip=None):
+    a, e = math.radians(az), math.radians(el)
+    d = (math.cos(e) * math.cos(a), math.cos(e) * math.sin(a), math.sin(e))
+    v = dict(name=name, c=[float(x) for x in c], d=[float(x) for x in d], ortho=ortho, res=res)
+    if clip is not None:
+        v["clip"] = float(clip)       # Abstand (Hochmodell-m) vor dem Mittelpunkt c, ab dem die Kamera sieht (Schnitt-Ansicht)
+    return v
+
+
+def kamera_koerper(res=2048):
+    """Genau die 22 Koerperkameras von baer_export.py:91-107."""
+    views = []
+    for az in range(0, 360, 45):
+        views.append(_view("k_h%03d" % az, C_B, az, 0, 3.5, res))
+    for az in range(0, 360, 60):
+        views.append(_view("k_o%03d" % az, C_B, az, 42, 3.5, res))
+    views.append(_view("k_top", C_B, 0.0, 89.5, 3.5, res))
+    for az in range(30, 390, 60):
+        views.append(_view("k_u%03d" % az, C_B, az, -38, 3.5, res))
+    views.append(_view("k_bot", C_B, 0.0, -89.5, 3.5, res))
+    return views
+
+
+POSE_HINTEN = float(os.environ.get("BAER_TX_POSE_HINTEN", "28"))   # Back-Pose: Oberschenkel so viele Grad nach aussen
+POSE_VORN = float(os.environ.get("BAER_TX_POSE_VORN", "22"))       # Back-Pose: Oberarme so viele Grad nach aussen
+
+
+def kamera_pose(res=2048):
+    """Ansichten der Back-Pose (Beine gespreizt): von unten auf Innenbeine, Achsel, Leiste, Bauch."""
+    views = []
+    for az in (0, 90, 180, 270):
+        views.append(dict(_view("p_s%03d" % az, C_B, az, -64, 3.5, res), pose=True))
+    for az in (60, 120, 240, 300):
+        views.append(dict(_view("p_u%03d" % az, C_B, az, -36, 3.5, res), pose=True))
+    views.append(dict(_view("p_bot", C_B, 0.0, -89.5, 3.5, res), pose=True))
+    return views
+
+
+def back_pose_setzen():
+    """Hochmodell-Skelett (baer_quelle_anim.py:1146-1189, ohne IK): Oberschenkel und Oberarme um die Laengsachse (x) nach aussen
+    drehen, Kinder folgen. Haut, Fell (Partikel nach dem Armature-Modifier) und an Knochen gehaengte Teile folgen."""
+    from mathutils import Matrix
+    ao = bpy.data.objects["skelett"]
+    assert np.abs(np.array(ao.matrix_world) - np.eye(4)).max() < 1e-9
+    for n, sg in (("L", 1.0), ("R", -1.0)):
+        for bname, winkel in (("schenkel" + n, POSE_HINTEN), ("oberarm" + n, POSE_VORN)):
+            pb = ao.pose.bones[bname]
+            H = ao.data.bones[bname].head_local
+            R = Matrix.Rotation(math.radians(winkel * sg), 4, "X")
+            pb.matrix = Matrix.Translation(H) @ R @ Matrix.Translation(-H) @ pb.matrix
+            bpy.context.view_layer.update()
+
+
+def pose_matrizen():
+    """Verformung je Knochen in der Back-Pose (Armature-Raum = Welt): pose.matrix @ bone.matrix_local^-1, dazu die Haut des
+    Hochmodells (Ruhe, Welt) und ihre Knochengewichte. Muss vor open_mainfile laufen (das Hochmodell verschwindet dann)."""
+    ao = bpy.data.objects["skelett"]
+    body = bpy.data.objects["baer_koerper"]
+    back_pose_setzen()
+    namen = [b.name for b in ao.data.bones]
+    D = np.stack([np.array(ao.pose.bones[n].matrix @ ao.data.bones[n].matrix_local.inverted()) for n in namen])
+    gi = {vg.index: namen.index(vg.name) for vg in body.vertex_groups if vg.name in namen}
+    nb = len(body.data.vertices)
+    W = np.zeros((nb, len(namen)))
+    for v in body.data.vertices:
+        for g in v.groups:
+            if g.group in gi:
+                W[v.index, gi[g.group]] = g.weight
+    W /= np.maximum(W.sum(1, keepdims=True), 1e-9)
+    M = np.array(body.matrix_world)
+    Vb = np.array([tuple(v.co) for v in body.data.vertices]) @ M[:3, :3].T + M[:3, 3]
+    return dict(D=D, W=W, Vb=Vb, namen=namen)
+
+
+def pose_netz(PM, V):
+    """Spielnetz (Hochmodell-Masse) in die Back-Pose: Gewichte des naechsten Hautpunkts, lineares Skinning. Gibt Punkte und 3x3 je Punkt."""
+    from mathutils.kdtree import KDTree
+    kd = KDTree(len(PM["Vb"]))
+    for i, p in enumerate(PM["Vb"]):
+        kd.insert(p, i)
+    kd.balance()
+    nah = np.array([kd.find(p)[1] for p in V])
+    Wv = PM["W"][nah]
+    Mv = np.einsum("nb,bij->nij", Wv, PM["D"])
+    Vp = np.einsum("nij,nj->ni", Mv[:, :3, :3], V) + Mv[:, :3, 3]
+    return Vp, Mv[:, :3, :3]
+
+
+def kamera_unterseite(res=2048, schnitt=False):
+    """Zusatz fuer die Unterseite: steile Blicke von unten (64 Grad) in Achsel, Leiste, Bauch und Innenbeine aus vier Richtungen.
+    schnitt=True: Schnitt-Ansichten (Kamera-Clip an der Mittelebene) - probiert (probe/p2) und verworfen: der Schnitt geht durch
+    das dichte Fell zwischen den Beinen, das Bild ist dort schwarz."""
+    views = []
+    for az in (0, 90, 180, 270):
+        views.append(_view("u_s%03d" % az, C_B, az, -64, 3.5, res))
+    if schnitt:
+        for az, el in ((90, -12), (270, -12), (90, -40), (270, -40)):
+            views.append(_view("u_c%03d_e%+03d" % (az, el), C_B, az, el, 3.5, res, clip=0.0))
+    return views
+
+
+# ------------------------------------------------------------------ Fellfarbe nur fuer den Bake
+GRUND = {}
+
+
+def fell_merken():
+    hm = bpy.data.materials["haar"]
+    for n in hm.node_tree.nodes:
+        if n.type == "MAP_RANGE":
+            GRUND[("haar", n.name)] = (n.inputs["To Min"].default_value, n.inputs["To Max"].default_value)
+        if n.type == "BSDF_HAIR_PRINCIPLED":
+            GRUND[("haar_bsdf", n.name)] = (n.inputs["Roughness"].default_value, n.inputs["Radial Roughness"].default_value)
+    fm = bpy.data.materials["fell"]
+    for n in fm.node_tree.nodes:
+        if n.type == "MAP_RANGE":
+            GRUND[("fell", n.name)] = (n.inputs["To Min"].default_value, n.inputs["To Max"].default_value)
+
+
+def _diffus_zweig(nt, mel_out, rand_out, bsdf):
+    """Diffuse Farbe aus Melanin wie Cycles: sigma = q*(Eu*(1-r)+Pheo*r), q = -ln(1-m), r = 0,25; Albedo = exp(-sqrt(sigma)*f(beta))
+    mit f(0,8) = 4,286 (Chiang). Ergebnis: Faser ohne Blickrichtungs-Abhaengigkeit, gemischt per Faktor mit der Haar-BSDF."""
+    N, L = nt.nodes, nt.links
+    eins = N.new("ShaderNodeMath")
+    eins.operation = "SUBTRACT"
+    eins.inputs[0].default_value = 1.0
+    L.new(mel_out, eins.inputs[1])
+    mx = N.new("ShaderNodeMath")
+    mx.operation = "MAXIMUM"
+    mx.inputs[1].default_value = 0.0001
+    L.new(eins.outputs[0], mx.inputs[0])
+    lg = N.new("ShaderNodeMath")
+    lg.operation = "LOGARITHM"
+    lg.inputs[1].default_value = math.e
+    L.new(mx.outputs[0], lg.inputs[0])
+    ng = N.new("ShaderNodeMath")
+    ng.operation = "MULTIPLY"
+    ng.inputs[1].default_value = -1.0
+    L.new(lg.outputs[0], ng.inputs[0])
+    sq = N.new("ShaderNodeMath")
+    sq.operation = "SQRT"
+    L.new(ng.outputs[0], sq.inputs[0])
+    cc = N.new("ShaderNodeCombineColor")
+    for i, a in enumerate((2.923, 3.867, 5.622)):
+        m1 = N.new("ShaderNodeMath")
+        m1.operation = "MULTIPLY"
+        m1.inputs[1].default_value = -a
+        L.new(sq.outputs[0], m1.inputs[0])
+        ex = N.new("ShaderNodeMath")
+        ex.operation = "EXPONENT"
+        L.new(m1.outputs[0], ex.inputs[0])
+        L.new(ex.outputs[0], cc.inputs[i])
+    zf = N.new("ShaderNodeMapRange")
+    zf.inputs["To Min"].default_value = 0.88
+    zf.inputs["To Max"].default_value = 1.12
+    L.new(rand_out, zf.inputs["Value"])
+    mu = N.new("ShaderNodeMix")
+    mu.data_type = "RGBA"
+    mu.blend_type = "MULTIPLY"
+    [i for i in mu.inputs if i.name == "Factor" and i.type == "VALUE"][0].default_value = 1.0
+    L.new(cc.outputs[0], [i for i in mu.inputs if i.name == "A" and i.type == "RGBA"][0])
+    L.new(zf.outputs[0], [i for i in mu.inputs if i.name == "B" and i.type == "RGBA"][0])
+    df = N.new("ShaderNodeBsdfDiffuse")
+    L.new([o for o in mu.outputs if o.type == "RGBA"][0], df.inputs["Color"])
+    ms = N.new("ShaderNodeMixShader")
+    ms.name = "bake_mix"
+    L.new(bsdf.outputs[0], ms.inputs[1])
+    L.new(df.outputs[0], ms.inputs[2])
+    L.new(ms.outputs[0], N["Material Output"].inputs["Surface"])
+    return ms
+
+
+def fell_vorbereiten():
+    """Einmal je Sitzung: Werte merken, Diffus-Zweig einbauen (Faktor 0 = wie vorher), Zehenhaar eigenes Material."""
+    fell_merken()
+    hm = bpy.data.materials["haar"]
+    nt = hm.node_tree
+    hb = [n for n in nt.nodes if n.type == "BSDF_HAIR_PRINCIPLED"][0]
+    mel_out = hb.inputs["Melanin"].links[0].from_socket
+    hi = [n for n in nt.nodes if n.type == "HAIR_INFO"][0]
+    ms = _diffus_zweig(nt, mel_out, hi.outputs["Random"], hb)
+    ms.inputs[0].default_value = 0.0
+    # Zehenhaar (Kopfhaar-Material hk) bekommt eine Kopie, damit Kopf und Hals unveraendert bleiben
+    hk = bpy.data.materials["haar_kopf"]
+    hz = hk.copy()
+    hz.name = "haar_zeh"
+    ntz = hz.node_tree
+    hbz = [n for n in ntz.nodes if n.type == "BSDF_HAIR_PRINCIPLED"][0]
+    src = hbz.inputs["Melanin"].links[0].from_socket
+    sub = ntz.nodes.new("ShaderNodeMath")
+    sub.operation = "SUBTRACT"
+    sub.use_clamp = True
+    sub.name = "zeh_hell"
+    sub.inputs[1].default_value = 0.0
+    ntz.links.new(src, sub.inputs[0])
+    ntz.links.new(sub.outputs[0], hbz.inputs["Melanin"])
+    hiz = [n for n in ntz.nodes if n.type == "HAIR_INFO"][0]
+    msz = _diffus_zweig(ntz, sub.outputs[0], hiz.outputs["Random"], hbz)
+    msz.inputs[0].default_value = 0.0
+    n_z = 0
+    for o in bpy.data.objects:
+        if o.type == "CURVES" and o.name.startswith("haar_") and not (o.name.startswith("haar_kopf") or o.name.startswith("haar_kiefer")):
+            o.data.materials.clear()
+            o.data.materials.append(hz)
+            n_z += 1
+    log("Zehenhaar-Objekte mit eigenem Material:", n_z)
+
+
+def fell_variante(var):
+    """Variante relativ zu den gemerkten Werten. Schluessel: bein_mel (0,13), ruecken_mel (0,12), spitze_mel (0,20), rough (0,34),
+    radial (0,80), haut_bein (0,62), diffus (0 = Haar-BSDF wie vorher, 1 = nur diffus), zeh_hell (0)."""
+    hm = bpy.data.materials["haar"]
+    for n in hm.node_tree.nodes:
+        if n.type == "MAP_RANGE" and ("haar", n.name) in GRUND:
+            c, d = GRUND[("haar", n.name)]
+            if abs(c - 0.13) < 1e-6 and abs(d) < 1e-9:
+                n.inputs["To Min"].default_value = var.get("bein_mel", 0.13)
+            elif abs(c) < 1e-9 and abs(d - 0.12) < 1e-6:
+                n.inputs["To Max"].default_value = var.get("ruecken_mel", 0.12)
+            elif abs(c) < 1e-9 and abs(d - 0.2) < 1e-6:
+                n.inputs["To Max"].default_value = var.get("spitze_mel", 0.2)
+            elif abs(c - 0.74) < 1e-6 and abs(d - 0.90) < 1e-6:
+                o = var.get("mel_off", 0.0)
+                n.inputs["To Min"].default_value = 0.74 + o
+                n.inputs["To Max"].default_value = 0.90 + o
+        if n.type == "BSDF_HAIR_PRINCIPLED":
+            n.inputs["Roughness"].default_value = var.get("rough", 0.34)
+            n.inputs["Radial Roughness"].default_value = var.get("radial", 0.8)
+        if n.name == "bake_mix":
+            n.inputs[0].default_value = var.get("diffus", 0.0)
+    fm = bpy.data.materials["fell"]
+    for n in fm.node_tree.nodes:
+        if n.type == "MAP_RANGE" and ("fell", n.name) in GRUND:
+            c, d = GRUND[("fell", n.name)]
+            if abs(c - 0.62) < 1e-6:
+                n.inputs["To Min"].default_value = var.get("haut_bein", 0.62)
+    hz = bpy.data.materials["haar_zeh"]
+    hz.node_tree.nodes["zeh_hell"].inputs[1].default_value = var.get("zeh_hell", 0.0)
+    for n in hz.node_tree.nodes:
+        if n.type == "MIX_SHADER":
+            n.inputs[0].default_value = var.get("diffus", 0.0)
+
+
+def neutrale_welt(scene, oben=1.05, unten=0.72):
+    """Wie baer_export.py:69-87 (Licht der alten Ansichten)."""
+    w = bpy.data.worlds.new("backlicht")
+    w.use_nodes = True
+    nt = w.node_tree
+    tc = nt.nodes.new("ShaderNodeTexCoord")
+    sp = nt.nodes.new("ShaderNodeSeparateXYZ")
+    mr = nt.nodes.new("ShaderNodeMapRange")
+    mr.clamp = True
+    mr.inputs["From Min"].default_value = -1.0
+    mr.inputs["From Max"].default_value = 1.0
+    mr.inputs["To Min"].default_value = unten
+    mr.inputs["To Max"].default_value = oben
+    nt.links.new(tc.outputs["Generated"], sp.inputs[0])
+    nt.links.new(sp.outputs[2], mr.inputs["Value"])
+    nt.nodes["Background"].inputs[0].default_value = (1, 1, 1, 1)
+    nt.links.new(mr.outputs[0], nt.nodes["Background"].inputs[1])
+    scene.world = w
+
+
+def stufe_ansichten(auf):
+    E = lade_export()
+    Q = E["quelle"]("spiel")
+    log("Hochmodell steht")
+    scene = bpy.context.scene
+    scene.render.engine = "CYCLES"
+    prefs = bpy.context.preferences.addons["cycles"].preferences
+    prefs.compute_device_type = "OPTIX"
+    prefs.get_devices()
+    for d in prefs.devices:
+        d.use = d.type == "OPTIX"
+    assert any(d.use and "4090" in d.name for d in prefs.devices), "keine RTX 4090 mit OptiX"
+    print("BILD Geraete", [d.name for d in prefs.devices if d.use], flush=True)
+    scene.cycles.device = "GPU"
+    scene.cycles.samples = auf.get("samples", 96)
+    scene.cycles.use_denoising = True
+    scene.cycles.denoiser = "OPTIX"
+    scene.cycles.denoising_input_passes = "RGB_ALBEDO_NORMAL"
+    scene.cycles.use_adaptive_sampling = False
+    scene.cycles.max_bounces = 8
+    scene.view_settings.view_transform = "Standard"
+    scene.view_settings.look = "None"
+    neutrale_welt(scene)
+    scene.render.film_transparent = True
+    scene.render.use_persistent_data = True
+    im = scene.render.image_settings
+    im.file_format = "OPEN_EXR"
+    im.color_mode = "RGBA"
+    im.color_depth = "32"
+    im.exr_codec = "ZIP"
+    fell_vorbereiten()
+    if auf.get("pose"):
+        back_pose_setzen()
+        log("Back-Pose gesetzt: hinten %.0f, vorn %.0f Grad" % (POSE_HINTEN, POSE_VORN))
+    res = auf.get("res", 2048)
+    alle = {v["name"]: v for v in kamera_koerper(res) + kamera_unterseite(res, auf.get("schnitt", False)) + kamera_pose(res)}
+    namen = auf.get("views") or list(alle)
+    cam_d = bpy.data.cameras.new("bake")
+    cam_d.type = "ORTHO"
+    cam = bpy.data.objects.new("bake", cam_d)
+    scene.collection.objects.link(cam)
+    scene.camera = cam
+    erg = {}
+    for vname, var in auf["varianten"].items():
+        fell_variante(var)
+        aus = auf["aus"] if len(auf["varianten"]) == 1 else os.path.join(auf["aus"], vname)
+        os.makedirs(aus, exist_ok=True)
+        kam = []
+        for nm in namen:
+            v = alle[nm]
+            kam.append(v)
+            out = os.path.join(aus, nm + ".exr")
+            if os.path.exists(out) and not auf.get("neu", False):
+                continue
+            cam_d.ortho_scale = v["ortho"]
+            c, d = Vector(v["c"]), Vector(v["d"])
+            cam.location = c + d * 12.0
+            cam.rotation_mode = "QUATERNION"
+            cam.rotation_quaternion = (-d).to_track_quat("-Z", "Y")
+            cam_d.clip_start = 0.1 if "clip" not in v else 12.0 - v["clip"]
+            cam_d.clip_end = 40.0
+            scene.render.resolution_x = scene.render.resolution_y = v["res"]
+            scene.render.filepath = out
+            t = time.time()
+            bpy.ops.render.render(write_still=True)
+            img = bpy.data.images.load(out)
+            img.colorspace_settings.name = "Non-Color"
+            w_, h_ = img.size
+            a = np.empty(w_ * h_ * 4, dtype=np.float32)
+            img.pixels.foreach_get(a)
+            bpy.data.images.remove(img)
+            a = a.reshape(h_, w_, 4)
+            al = a[..., 3]
+            m = al > 0.45
+            lum = float(((a[..., :3][m] / al[m][:, None]) @ np.array((0.2126, 0.7152, 0.0722))).mean()) if m.any() else 0.0
+            erg["%s/%s" % (vname, nm)] = lum
+            print("BILD", vname, nm, "Helligkeit linear %.4f" % lum, "%.1fs" % (time.time() - t), flush=True)
+        json.dump(kam, open(os.path.join(aus, "kameras.json"), "w"), indent=1)
+        json.dump(var, open(os.path.join(aus, "variante.json"), "w"), indent=1)
+    json.dump(erg, open(os.path.join(auf["aus"], "helligkeit_%s.json" % auf.get("name", "lauf")), "w"), indent=1)
+    print("BILD_OK", len(erg), flush=True)
+
+
+# ------------------------------------------------------------------ Stufe backen
+# Stellschrauben (alle ueber die Umgebung BAER_TX_<NAME> aenderbar, Vorgabe = gebaute Fassung)
+def _par(n, v):
+    return float(os.environ.get("BAER_TX_" + n, v))
+
+
+P_EXP = _par("EXP", 10.0)         # Gewicht cos^P_EXP (bisher 7; schaerfer = weniger Mischung, weniger Schmiere)
+A_REF = _par("A_REF", 0.5)        # Bezugs-Blickwinkel zur Haarrichtung fuer den Ausgleich (0,5 = Ruecken von oben)
+UNTEN_LIFT = _par("UNTEN", 0.45)  # Unterseite (Normale nach unten, Innenbein, Achsel, Leiste, Bauch) heller
+BEIN_LIFT = _par("BEIN", 0.20)    # Unterbeine heller (gegen schwarze Pranken im Spiel-Licht)
+STR_AMP = _par("STRAEHNE", 0.30)  # Haarbuesche: Helligkeitshub (Nachbesserung 09.11.: 0,15 -> 0,30, Buesche breiter und laenger)
+RUHIG_K = _par("RUHIG", 0.80)     # Nachbesserung: Gesprenkel an Beinen/Hinterteil/gegen die Haarspitzen so stark glaetten (0 = aus)
+CAP_L = _par("CAP_LEISTE", 0.95)  # Nachbesserung: Leiste/Innenbein hinten hoechstens so hell (x Ruecken, Mittel ueber wenige cm)
+CAP_U = _par("CAP_UNTEN", 1.08)   # Nachbesserung: uebrige Unterseite (Kehle, Achsel, Innenbein vorn, Brust, Bauch) hoechstens so hell
+SAT_MAX = _par("SAT_MAX", 0.56)   # Nachbesserung: Saettigung (max-min)/max des Fells hoechstens so hoch (rostorange Pfoten)
+AO_K = _par("AO", 0.38)           # Faltenschatten: so viel dunkler in tiefen Falten (offene Flaeche 0)
+SCHAERFE = _par("SCHAERFE", 0.85) # Unschaerfemaske wie bisher
+KONTRAST_D = _par("KONTRAST", 0.55)  # Gesprenkel daempfen, wo nur Ansichten gegen die Haarspitzen sehen
+NUR_NEU = os.environ.get("BAER_TX_NUR_NEU", "") == "1"   # Gegenprobe: 1 = alte Ansichten, kein Ausgleich (wie baer-anim)
+AUSNAME = os.environ.get("BAER_TX_NAME", "fell")
+ANS_NEU = ANS_DIR + "ansichten/"
+ANS_POSE = ANS_DIR + "ansichten_pose/"
+POSE_W = _par("POSE_W", 2.0)          # Gewicht der Back-Pose-Ansichten (0 = aus)
+KARTEN = NETZ + "karten/karten_2048.npz"
+BESTAND_PNG = ARB + "bestand/NCBear_2048.png"   # Nachbesserung: 2048er des Stands in NCBearTest (Krallen-Lesefeld)
+SOHLE_JSON = NETZ + "sohle_layout.json"
+ZWISCHEN_PNG = NETZ + "zwischen_fell/42/media/textures/WorldItems/NCBear.png"
+NAHT_A, NAHT_B, NAHT_C = _par("NAHT_A", 0.035), _par("NAHT_B", 0.07), _par("NAHT_C", 0.20)   # Hals (Abstand zur Kopfhuelle,
+#   Hochmodell-m): bis A altes Fell, A..B Uebergang, bis C Farbe grob an das alte Fell angeglichen
+INNEN_TOL = _par("INNEN_TOL", 0.010)   # Innenbeine: Tiefen-Toleranz der waagerechten Ansichten (sonst 0,030)
+INNEN_W = _par("INNEN_W", 0.15)        # Innenbeine: Gewicht der waagerechten Ansichten
+K_SEITE = _par("K_SEITE", 3.0)         # Gewicht exp(-K (a - 0,55)): Haar von der Seite gesehen bevorzugen
+INNENBEIN = (6, 7)                # Regionen ohne waagerechte Ansichten (Bauchluecke, W5)
+
+
+def sst(a, b, x):
+    t = np.clip((x - a) / (b - a), 0.0, 1.0)
+    return t * t * (3.0 - 2.0 * t)
+
+
+def srgb_inv(s):
+    s = np.clip(s, 0.0, 1.0)
+    return np.where(s <= 0.04045, s / 12.92, ((s + 0.055) / 1.055) ** 2.4)
+
+
+def png_laden(pfad):
+    img = bpy.data.images.load(pfad)
+    img.colorspace_settings.name = "Non-Color"
+    w, h = img.size
+    a = np.empty(w * h * 4, dtype=np.float32)
+    img.pixels.foreach_get(a)
+    bpy.data.images.remove(img)
+    return a.reshape(h, w, 4)[..., :3]
+
+
+def png_schreiben(pfad, col):
+    H, W = col.shape[:2]
+    img = bpy.data.images.new(os.path.basename(pfad), W, H, alpha=False)
+    img.colorspace_settings.name = "Non-Color"
+    rgba = np.ones((H, W, 4), dtype=np.float32)
+    rgba[..., :3] = np.clip(col, 0.0, 1.0)
+    img.pixels.foreach_set(rgba.ravel())
+    os.makedirs(os.path.dirname(pfad), exist_ok=True)
+    img.filepath_raw = pfad
+    img.file_format = "PNG"
+    img.save()
+    bpy.data.images.remove(img)
+
+
+def wachsen(m, n):
+    m = m.copy()
+    for _ in range(n):
+        g = m.copy()
+        g[1:] |= m[:-1]
+        g[:-1] |= m[1:]
+        g[:, 1:] |= m[:, :-1]
+        g[:, :-1] |= m[:, 1:]
+        m = g
+    return m
+
+
+def abstand_innen(m, n):
+    """Texel-Abstand (4er-Nachbarschaft) vom Rand der Maske nach innen, bis n."""
+    d = np.zeros(m.shape, dtype=np.float32)
+    cur = m.copy()
+    for k in range(1, n + 1):
+        e = cur.copy()
+        e[1:] &= cur[:-1]
+        e[:-1] &= cur[1:]
+        e[:, 1:] &= cur[:, :-1]
+        e[:, :-1] &= cur[:, 1:]
+        d[cur & ~e] = k - 0.5
+        cur = e
+        if not cur.any():
+            break
+    d[cur] = n
+    return d
+
+
+def haarrichtung(Q, P, Nn):
+    """Haarrichtung des Hochmodells (Partikel: Normale x normal_factor + object_align, baer_quelle_anim.py:1692-1694):
+    Deckhaar am Rumpf, Beinfell an den Beinen (Gruppe d_bein wie :1591-1595)."""
+    z, x = P[:, 2], P[:, 0]
+    bein = 1.0 - sst(Q["lz"](0.22), Q["lz"](0.56), z)
+    bein = np.where((x > -0.25) & (x < 0.12), bein * 0.15, bein)
+    hr = Nn * 0.066 + np.array((-0.052, 0.0, -0.036))
+    hb = Nn * 0.046 + np.array((-0.012, 0.0, -0.028))
+    h = hr * (1.0 - bein)[:, None] + hb * bein[:, None]
+    return h / np.maximum(np.linalg.norm(h, axis=1, keepdims=True), 1e-9), bein
+
+
+def haar_tangente(h, Nn):
+    """Nachbesserung 09.11.: Haarrichtung in der Flaeche fuer die gemalten Buesche. Wo das Haar fast senkrecht aus der Flaeche steht
+    (Schwanzansatz, Hinterteil), ist die projizierte Richtung instabil (Wirbel); dort weich auf 'abwaerts in der Flaeche' ueberblenden."""
+    ht = h - np.einsum("ij,ij->i", h, Nn)[:, None] * Nn
+    lh = np.linalg.norm(ht, axis=1)
+    ab = np.array((0.0, 0.0, -1.0))
+    dt = ab[None, :] - Nn[:, 2:3] * Nn
+    ld = np.linalg.norm(dt, axis=1)
+    hinten = np.array((-1.0, 0.0, 0.0))
+    dh = hinten[None, :] - Nn[:, 0:1] * Nn
+    dt = np.where((ld < 0.2)[:, None], dh, dt)
+    ld = np.linalg.norm(dt, axis=1)
+    b = sst(0.25, 0.60, lh)
+    d = b[:, None] * ht / np.maximum(lh, 1e-9)[:, None] + (1.0 - b)[:, None] * dt / np.maximum(ld, 1e-9)[:, None]
+    return d / np.maximum(np.linalg.norm(d, axis=1, keepdims=True), 1e-9)
+
+
+def glaetten_insel(img, pos, inn, runden, d_max):
+    """Nachbesserung 09.11.: Weichzeichnen im Texturraum nur zwischen Texeln derselben Insel (3D-Abstand der Nachbarn < d_max,
+    Hochmodell-m); 5-Punkt-Stern, Mitte doppelt. runden 18 ~ sigma 2,5 Texel (2048)."""
+    c = img.astype(np.float32).copy()
+    ok_n = []
+    for ax, sh in ((0, 1), (0, -1), (1, 1), (1, -1)):
+        pn = np.roll(pos, sh, ax)
+        mn = np.roll(inn, sh, ax)
+        ok_n.append((mn & inn & (((pn - pos) ** 2).sum(-1) < d_max * d_max)).astype(np.float32))
+    wsum = 2.0 + sum(ok_n)
+    for _ in range(runden):
+        acc = c * 2.0
+        for (ax, sh), o in zip(((0, 1), (0, -1), (1, 1), (1, -1)), ok_n):
+            acc += np.roll(c, sh, ax) * o[..., None]
+        c = np.where(inn[..., None], acc / wsum[..., None], c)
+    return c
+
+
+def buesche_3d(P, Nn, h_t, zelle=0.030, sig_l=0.045, sig_q=0.0075, n_max=0.03, saat=23, block=200000):
+    """Nachbesserung 09.11.: Haarbuesche als Summe einzelner gestreckter Flecken um zufaellige Mittelpunkte eines 3D-Gitters (Zelle
+    'zelle', Hochmodell-m, je Zelle ein Busch mit Zufallslage). Je Texel die Buesche der 27 Nachbarzellen: Abstand in der Flaeche
+    laengs der eigenen Haarrichtung (sig_l) und quer (sig_q); Buesche hinter einer duennen Stelle (Abstand laengs der Normale > n_max)
+    zaehlen nicht. Ergebnis busch 0..1 (Maximum) und spitze (vorderes Ende des Busches)."""
+    n = len(P)
+    busch = np.zeros(n, dtype=np.float32)
+    spitze = np.zeros(n, dtype=np.float32)
+    t_q = np.cross(Nn, h_t)
+    t_q /= np.maximum(np.linalg.norm(t_q, axis=1, keepdims=True), 1e-9)
+
+    def zh(ix, iy, iz, k):
+        return np.mod(np.sin(ix * 12.9898 + iy * 78.233 + iz * 37.719 + k * 4.581) * 43758.5453, 1.0)
+
+    for s0 in range(0, n, block):
+        sl = slice(s0, min(s0 + block, n))
+        Pb, Hb, Qb, Nb = P[sl], h_t[sl], t_q[sl], Nn[sl]
+        g = np.floor(Pb / zelle)
+        bb = np.zeros(len(Pb), dtype=np.float32)
+        sp = np.zeros(len(Pb), dtype=np.float32)
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                for dz in (-1, 0, 1):
+                    ix, iy, iz = g[:, 0] + dx, g[:, 1] + dy, g[:, 2] + dz
+                    C = np.stack(((ix + zh(ix, iy, iz, 1)) * zelle, (iy + zh(ix, iy, iz, 2)) * zelle, (iz + zh(ix, iy, iz, 3)) * zelle), 1)
+                    d = Pb - C
+                    dn = np.abs(np.einsum("ij,ij->i", d, Nb))
+                    dl = np.einsum("ij,ij->i", d, Hb)
+                    dq = np.einsum("ij,ij->i", d, Qb)
+                    st = 0.65 + 0.35 * zh(ix, iy, iz, 4)
+                    sl_ = sig_l * (0.75 + 0.5 * zh(ix, iy, iz, 5))
+                    w = np.exp(-(dl / sl_) ** 2 - (dq / sig_q) ** 2) * st * (dn < n_max) * (zh(ix, iy, iz, 6) > 0.12)
+                    w = w.astype(np.float32)
+                    bb = np.maximum(bb, w)
+                    sp = np.maximum(sp, w * sst(0.2, 1.0, dl / sl_).astype(np.float32))
+        busch[sl] = bb
+        spitze[sl] = sp
+    return busch, spitze
+
+
+def merkmale(a, dz, c, bein):
+    return np.stack((a, a * a, dz, c, a * bein, dz * bein), 1)
+
+
+def ao_punkte(V, T, Nv, n_strahl=64, weit=0.26):
+    """Umgebungsverdeckung je Punkt am Spielnetz (Hochmodell-Masse), nur nahe Flaechen (Falten), mathutils-BVH."""
+    from mathutils.bvhtree import BVHTree
+    bvh = BVHTree.FromPolygons([tuple(map(float, p)) for p in V], [tuple(map(int, t)) for t in T])
+    rng = np.random.default_rng(5)
+    # kosinusgewichtete Halbkugel, feste Richtungen je Punkt (gedreht)
+    u1, u2 = rng.random(n_strahl), rng.random(n_strahl)
+    r_, ph = np.sqrt(u1), 2 * math.pi * u2
+    L = np.stack((r_ * np.cos(ph), r_ * np.sin(ph), np.sqrt(1 - u1)), 1)
+    occ = np.zeros(len(V))
+    for i in range(len(V)):
+        n = Nv[i]
+        a = np.array((1.0, 0, 0)) if abs(n[0]) < 0.9 else np.array((0, 1.0, 0))
+        t1 = np.cross(n, a)
+        t1 /= np.linalg.norm(t1)
+        t2 = np.cross(n, t1)
+        D = L[:, 0:1] * t1 + L[:, 1:2] * t2 + L[:, 2:3] * n
+        o = Vector(V[i] + n * 0.004)
+        s = 0.0
+        for d in D:
+            hit = bvh.ray_cast(o, Vector(d), weit)
+            if hit[0] is not None:
+                s += 1.0 - (hit[3] / weit) ** 2
+        occ[i] = s / n_strahl
+    return occ
+
+
+SOHLE_Q = _par("SOHLE_Q", 0.87)   # Nachbesserung 09.11.: Ballen so viel groesser gemalt (q x 0,87 = ~15 % groesser je Achse)
+
+
+def sohlen_malen(col, maske, my, mx, K, plan_json, S_fell, fell_pfote=None):
+    """Sohlen-Texel (karten sohle_pfote > 0) aus dem Ballen-Plan des Netzes malen: dunkelgraue Lederhaut, Ballen heller mit runder
+    Kante, Furchen dunkel, feine Lederstruktur, Fellkranz am Inselrand. Nach Kevins Foto (nur angesehen) nachgezeichnet."""
+    pf = K["sohle_pfote"][::-1]                # Kartenzeile 0 = oben -> Rasterzeile 0 = unten
+    xyz = K["sohle_xyz"][::-1]
+    plan = json.load(open(plan_json))["pfoten"]
+    namen = {1: "VL", 2: "VR", 3: "HL", 4: "HR"}
+    E_ = lade_export_cache()
+    inner = abstand_innen(pf > 0, 40)
+    for pid, pn in namen.items():
+        m = pf == pid
+        if not m.any():
+            continue
+        X, Y, Z = xyz[m, 0].astype(np.float64), xyz[m, 1].astype(np.float64), xyz[m, 2].astype(np.float64)
+        pl = [(b["name"], b["cx"], b["cy"], b["ax"], b["ay"], b["biegung"]) for b in plan[pn]["ballen"]]
+        q, wer = E_["ballen_q"](pl, X, Y)
+        q = q * SOHLE_Q    # Nachbesserung: Ballen groesser (Kevins Foto: grosse Ballen, wenig Sohlenhaut dazwischen)
+        # Leder: Ballen hell (Kuppe), Kante dunkler, Furche dunkel; dunkelgrau, ganz leicht warm
+        kuppe = 1.0 - sst(0.20, 0.95, q)
+        # Furche nur schmal zwischen den Ballen (dunkel), weiter weg Sohlenhaut (Nachbesserung: heller, glatter)
+        furche = sst(0.90, 1.08, q) * (1.0 - sst(1.18, 1.45, q))
+        haut = sst(1.18, 1.45, q)
+        L_ = 0.345 + 0.070 * kuppe - 0.160 * furche - 0.050 * haut
+        # Ballenrand: schmale dunkle Linie, wo die Kuppe in die Furche kippt
+        L_ -= 0.040 * np.exp(-((q - 1.0) / 0.08) ** 2)
+        # Lederstruktur: weiche Zellen ~1-2 cm (Nachbesserung: groesser und schwaecher; vorher wirkten die Risse im Spiel wie Reifenprofil)
+        rg = np.random.default_rng(11 + pid)
+        n1 = np.zeros(len(X))
+        n2 = np.zeros(len(X))
+        for _ in range(7):
+            w_ = rg.uniform(0, math.pi)
+            f_ = rg.uniform(300, 480)
+            n1 += np.cos((X * math.cos(w_) + Y * math.sin(w_)) * f_ + rg.uniform(0, 6.3))
+            w_ = rg.uniform(0, math.pi)
+            n2 += np.cos((X * math.cos(w_) + Y * math.sin(w_)) * rg.uniform(140, 240) + rg.uniform(0, 6.3))
+        riss = np.exp(-(n1 / 0.75) ** 2)
+        L_ += (0.008 * n2 - 0.012 * riss) * (1.0 - 0.6 * furche)
+        # Groesse Sohlenballen: zwei, drei Querfalten wie auf dem Foto
+        gross = np.array([pl[int(w)][0] in ("sohle", "ferse", "handwurzel") for w in wer]) & (q < 0.9)
+        falte = np.exp(-((np.sin((X - np.array([pl[int(w)][1] for w in wer])) * 210.0 + Y * 18.0)) / 0.18) ** 2)
+        L_ -= 0.022 * falte * gross
+        farbe = L_[:, None] * np.array((1.04, 1.0, 0.97))
+        # Fellkranz (Nachbesserung 09.11.): Straehnen, die vom Rand nach innen ueber die Sohle reichen (je Straehne eigene Laenge),
+        # statt eines gepunkteten Rings; Farbe = Fell der eigenen Pfote (Median), zur Straehnenmitte heller
+        di = inner[m]
+        th = np.arctan2(Y - Y.mean(), X - X.mean())
+        nstr = 64.0
+        kw = (th + math.pi) / (2.0 * math.pi) * nstr
+        kk = np.floor(kw)
+        fr = kw - kk
+        hk = np.mod(np.sin(kk * 12.9898 + pid * 78.233) * 43758.5453, 1.0)
+        lang = 6.0 + 12.0 * hk
+        quer = np.exp(-((fr - 0.5) / (0.30 + 0.12 * hk)) ** 2)
+        strahl = (1.0 - sst(0.55 * lang, lang, di)) * quer
+        fellanteil = np.maximum(1.0 - sst(2.0, 5.0, di), strahl)
+        fellanteil = np.maximum(fellanteil, np.maximum(furche, haut) * (1.0 - sst(6.0, 14.0, di)) * 0.35)
+        if fell_pfote is not None and pid in fell_pfote:
+            S_rand = fell_pfote[pid][None, :] * (0.80 + 0.35 * quer * (1.0 - np.clip(di / lang, 0.0, 1.0)))[:, None]
+        else:
+            S_rand = S_fell[m]
+        out = farbe * (1.0 - fellanteil[:, None]) + S_rand * fellanteil[:, None]
+        col[m] = out.astype(np.float32)
+        log("SOHLE %s: Texel %d, Ballen-Luma Median %.0f, Furchen-Luma Median %.0f (sRGB 0-255)" % (
+            pn, int(m.sum()), np.median(L_[q < 0.6]) * 255 if (q < 0.6).any() else -1, np.median(L_[(q > 1.0) & (q < 1.2)]) * 255 if ((q > 1.0) & (q < 1.2)).any() else -1))
+    return pf > 0
+
+
+_E_CACHE = {}
+
+
+def lade_export_cache():
+    if "E" not in _E_CACHE:
+        _E_CACHE["E"] = lade_export()
+    return _E_CACHE["E"]
+
+
+def stufe_backen():
+    E = lade_export_cache()
+    Q = E["quelle"]("form")
+    TEX = E["TEX"]
+    mit_pose = (not NUR_NEU) and POSE_W > 0 and os.path.exists(ANS_POSE + "kameras.json")
+    PM = pose_matrizen() if mit_pose else None          # vor open_mainfile: braucht Skelett und Haut des Hochmodells
+    bpy.ops.wm.open_mainfile(filepath=NETZ + "lowpoly_fell.blend")
+    ob = bpy.data.objects["NCBear"]
+    me = ob.data
+    VF, T = E["netz_arrays"](me)
+    V = E["f2h"](VF)
+    m_ = len(T)
+    LT = np.empty(m_ * 3, dtype=np.int64)
+    me.loop_triangles.foreach_get("loops", LT)
+    LT = LT.reshape(m_, 3)
+    PT = np.empty(m_, dtype=np.int64)
+    me.loop_triangles.foreach_get("polygon_index", PT)
+    gp = np.empty(len(me.polygons), dtype=np.int32)
+    me.attributes["gegend"].data.foreach_get("value", gp)
+    gegend = gp[PT]
+    sp_ = np.empty(len(me.polygons), dtype=np.int32)
+    me.attributes["sohle"].data.foreach_get("value", sp_)
+    sohle_t = sp_[PT]
+    uv = np.empty(len(me.loops) * 2, dtype=np.float64)
+    me.uv_layers.active.data.foreach_get("uv", uv)
+    uv = uv.reshape(-1, 2)
+    Ed = E["kanten"](T)
+    Vg = E["glatt_feld"](V, Ed, len(V), 8, 0.6)
+    N = E["v_normalen"](Vg, T)
+    pos, nrm, tri = E["raster_uv"](uv[LT], T, V, N, TEX)
+    maske = tri >= 0
+    my, mx = np.nonzero(maske)
+    tt = tri[maske]
+    P = pos[maske].astype(np.float64)
+    Nn = nrm[maske].astype(np.float64)
+    Nn /= np.maximum(np.linalg.norm(Nn, axis=1, keepdims=True), 1e-9)
+    n_t = len(P)
+    log("UV gerastert, Texel", n_t)
+    K = np.load(KARTEN)
+    region = K["region"][::-1][maske]
+    rumpf_t = gegend[tt] == 0
+    L_ = Q["w2l"](P)
+    hb = Q["huelle_basis"](L_[:, 0], L_[:, 1], L_[:, 2])
+    kopf_maske = 1.0 - sst(0.02, 0.20, hb)
+    h_dir, bein = haarrichtung(Q, P, Nn)
+    # ---------------------------------------------------------- Ansichten sammeln
+    if NUR_NEU:
+        views = [dict(v, pfad=ANS_ALT + v["name"] + ".exr") for v in json.load(open(ANS_ALT + "kameras.json"))]
+    else:
+        views = [dict(v, pfad=ANS_NEU + v["name"] + ".exr") for v in json.load(open(ANS_NEU + "kameras.json"))]
+        views += [dict(v, pfad=ANS_ALT + v["name"] + ".exr") for v in json.load(open(ANS_ALT + "kameras.json")) if v["name"].startswith("h_")]
+        if mit_pose:
+            views += [dict(v, pfad=ANS_POSE + v["name"] + ".exr", pose=True) for v in json.load(open(ANS_POSE + "kameras.json"))]
+    innenbein = np.isin(region, INNENBEIN)
+    # Baryzentrische Lage je Texel (fuer glatte Felder ueber das Netz: Regionen, Verdeckung, Naht-Farbabgleich)
+    A0, A1, A2 = V[T[tt, 0]], V[T[tt, 1]], V[T[tt, 2]]
+    v0, v1, v2 = A1 - A0, A2 - A0, P - A0
+    d00, d01, d11 = (v0 * v0).sum(1), (v0 * v1).sum(1), (v1 * v1).sum(1)
+    d20, d21 = (v2 * v0).sum(1), (v2 * v1).sum(1)
+    den = np.maximum(d00 * d11 - d01 * d01, 1e-18)
+    bv = np.clip((d11 * d20 - d01 * d21) / den, 0, 1)
+    bw = np.clip((d00 * d21 - d01 * d20) / den, 0, 1)
+    bu = np.clip(1.0 - bv - bw, 0, 1)
+    bs = np.maximum(bu + bv + bw, 1e-9)
+    BARY = np.stack((bu / bs, bv / bs, bw / bs), 1)
+    del A0, A1, A2, v0, v1, v2, d00, d01, d11, d20, d21, den, bv, bw, bu, bs
+
+    def feld_texel(werte_p):
+        """Punktfeld (n,) oder (n,k) -> je Texel baryzentrisch."""
+        w = werte_p[T[tt]]
+        if w.ndim == 2:
+            return (w * BARY).sum(1)
+        return (w * BARY[:, :, None]).sum(1)
+
+    def feld_glatt(werte_texel, runden, nur=None):
+        """Texelwerte -> Mittel je Dreieck -> je Punkt -> ueber Kanten geglaettet -> je Texel (stetig ueber UV-Naehte)."""
+        wt = np.ones(n_t) if nur is None else nur.astype(np.float64)
+        x = werte_texel if werte_texel.ndim == 2 else werte_texel[:, None]
+        cnt = np.bincount(tt, weights=wt, minlength=len(T))
+        tri_m = np.stack([np.bincount(tt, weights=wt * x[:, k], minlength=len(T)) for k in range(x.shape[1])], 1)
+        vc = np.zeros(len(V))
+        vs = np.zeros((len(V), x.shape[1]))
+        for j in range(3):
+            vc += np.bincount(T[:, j], weights=cnt, minlength=len(V))
+            for k in range(x.shape[1]):
+                vs[:, k] += np.bincount(T[:, j], weights=tri_m[:, k], minlength=len(V))
+        vp = vs / np.maximum(vc, 1e-9)[:, None]
+        hat = vc > 1e-9
+        # leere Punkte aus den Nachbarn fuellen, dann glaetten
+        for _ in range(80):
+            if hat.all():
+                break
+            nb = np.zeros_like(vp)
+            nc = np.zeros(len(V))
+            for e0, e1 in ((Ed[:, 0], Ed[:, 1]), (Ed[:, 1], Ed[:, 0])):
+                h_ = hat[e1]
+                for k in range(vp.shape[1]):
+                    nb[:, k] += np.bincount(e0[h_], weights=vp[e1[h_], k], minlength=len(V))
+                nc += np.bincount(e0[h_], minlength=len(V))
+            neu_ = (~hat) & (nc > 0)
+            if not neu_.any():
+                break
+            vp[neu_] = nb[neu_] / nc[neu_][:, None]
+            hat = hat | neu_
+        if runden:
+            vp = E["glatt_feld"](vp, Ed, len(V), runden, 0.5)
+        out = feld_texel(vp)
+        return out if werte_texel.ndim == 2 else out[:, 0]
+
+    # Back-Pose: Spielnetz mit den Hautgewichten des Hochmodells in dieselbe Pose (Beine gespreizt), Texel, Normalen, Haarrichtung
+    if mit_pose:
+        V_p, M3 = pose_netz(PM, V)
+        Np_v = E["v_normalen"](E["glatt_feld"](V_p, Ed, len(V), 8, 0.6), T)
+        P_p = feld_texel(V_p)
+        Nn_p = feld_texel(Np_v)
+        Nn_p /= np.maximum(np.linalg.norm(Nn_p, axis=1, keepdims=True), 1e-9)
+        h_p = np.zeros_like(h_dir)
+        for i_ in range(3):
+            h_p += BARY[:, i_:i_ + 1] * np.einsum("nij,nj->ni", M3[T[tt, i_]], h_dir)
+        h_p /= np.maximum(np.linalg.norm(h_p, axis=1, keepdims=True), 1e-9)
+        # nur fuer die Unterseite: Achsel, Leiste, Innenbeine, Bauch, Normale nach unten; nicht Kopf, nicht Sohle
+        pose_ok = rumpf_t & (sohle_t[tt] == 0) & (np.isin(region, (4, 5, 6, 7, 9)) | (Nn[:, 2] < -0.3)) & (kopf_maske < 0.05)
+        log("Back-Pose: Punkte bewegt im Mittel %.1f cm, max %.1f cm (Hochmodell); Texel fuer Pose-Ansichten %d" % (
+            np.linalg.norm(V_p - V, axis=1).mean() * 100, np.linalg.norm(V_p - V, axis=1).max() * 100, int(pose_ok.sum())))
+    # Nachbesserung 09.11.: weiche Gewichte statt harter Grenzen je Dreieck (die Region der Karte gilt je Dreieck; harte Schalter gaben
+    # scharfkantige helle Flecken, Pruefer Optik minor 4)
+    if NUR_NEU:
+        inn_w = innenbein.astype(np.float64)
+    else:
+        inn_w = np.clip(feld_glatt(innenbein.astype(np.float64), 8, nur=rumpf_t), 0.0, 1.0) * rumpf_t
+        if mit_pose:
+            reg_p = np.clip(feld_glatt(np.isin(region, (4, 5, 6, 7, 9)).astype(np.float64), 8, nur=rumpf_t), 0.0, 1.0)
+            pose_w = (np.maximum(reg_p, sst(-0.15, -0.45, Nn[:, 2])) * rumpf_t * (sohle_t[tt] == 0)
+                      * (1.0 - sst(0.0, 0.05, kopf_maske)))
+            pose_ok = pose_w > 0.02
+    S_idx, S_c, S_b, S_cs, S_v = [], [], [], [], []
+    t0 = time.time()
+    for vi, v in enumerate(views):
+        av = E["Ansicht"](v)
+        kopf = av.name.startswith("h_")
+        ist_p = bool(v.get("pose"))
+        Vv, Pv, Nv = (V_p, P_p, Nn_p) if ist_p else (V, P, Nn)
+        Z = E["minfilter"](E["zbuffer"](av, Vv, T, 1024))
+        rgba = E["lade_exr"](v["pfad"])
+        u, vv, dep = av.pix(Pv)
+        k = 1024.0 / av.res
+        iu = np.clip(np.floor(u * k).astype(np.int64), 0, 1023)
+        iv = np.clip(np.floor(vv * k).astype(np.int64), 0, 1023)
+        tol = np.full(n_t, 0.014 if kopf else 0.030)
+        waag = (not NUR_NEU) and av.name.startswith("k_h")
+        if waag:
+            tol = tol - (0.030 - INNEN_TOL) * inn_w   # W5: waagerechte Ansichten sehen an den Innenbeinen durch die Bauchluecke (weich)
+        sicht = dep <= Z[iv, iu] + tol
+        cs = np.clip(Nv @ av.d, 0.0, 1.0)
+        ok = sicht & (cs >= 0.2)
+        if ist_p:
+            ok &= pose_ok
+        if kopf:
+            ok &= kopf_maske > 1e-4
+            if not NUR_NEU:
+                ok &= ~rumpf_t    # alte Kopfansichten (alter Shader) nur noch fuer Kopf-Texel; den Hals macht die Naht-Mischung
+        idx = np.nonzero(ok)[0]
+        col, inn = E["bilinear"](rgba, u[idx], vv[idx])
+        al = col[:, 3]
+        base = inn * (al > 0.45) * al * al
+        if kopf:
+            base = base * kopf_maske[idx] * 7.0
+        if waag:
+            base = base * (1.0 - (1.0 - INNEN_W) * inn_w[idx])
+        if ist_p:
+            base = base * POSE_W * pose_w[idx]
+        g = base > 1e-6
+        idx = idx[g]
+        S_idx.append(idx.astype(np.int32))
+        S_c.append((col[g, :3] / np.maximum(al[g], 1e-3)[:, None]).astype(np.float32))
+        S_b.append(base[g].astype(np.float32))
+        S_cs.append(cs[idx].astype(np.float32))
+        S_v.append(np.full(len(idx), vi, dtype=np.int16))
+        del rgba
+    log("Ansichten gesammelt: %d, Proben %d, %.1fs" % (len(views), sum(len(a) for a in S_idx), time.time() - t0))
+    I_ = np.concatenate(S_idx)
+    C_ = np.concatenate(S_c)
+    B_ = np.concatenate(S_b)
+    CS = np.concatenate(S_cs)
+    VI = np.concatenate(S_v)
+    del S_idx, S_c, S_b, S_cs, S_v
+    D_ = np.array([v["d"] for v in views])[VI]
+    ist_kopfsicht = np.array([v["name"].startswith("h_") for v in views])[VI]
+    G = B_ * CS ** P_EXP
+    lum = C_ @ np.array((0.2126, 0.7152, 0.0722), dtype=np.float32)
+    a_ = np.einsum("ij,ij->i", D_, h_dir[I_]).astype(np.float32)
+    ist_pose = np.array([bool(v.get("pose")) for v in views])[VI]
+    if ist_pose.any():
+        a_[ist_pose] = np.einsum("ij,ij->i", D_[ist_pose], h_p[I_[ist_pose]]).astype(np.float32)
+        log("Back-Pose: Proben %d (%.1f %% des Gewichts an den Pose-Texeln)" % (int(ist_pose.sum()), 100.0 * float(
+            (B_ * CS ** P_EXP)[ist_pose].sum() / max((B_ * CS ** P_EXP)[pose_ok[I_]].sum(), 1e-9))))
+    # ---------------------------------------------------------- Ausgleich Blickrichtung zum Haar (nur neue Koerperansichten)
+    gain = np.ones(len(I_), dtype=np.float32)
+    fit = {}
+    if not NUR_NEU:
+        X = merkmale(a_, D_[:, 2].astype(np.float32), CS, bein[I_].astype(np.float32))
+        sel = (~ist_kopfsicht) & rumpf_t[I_] & (kopf_maske[I_] < 0.05) & (sohle_t[tt[I_]] == 0) & (lum > 2e-4) & (G > 1e-3)
+        sel &= (I_ % 3) == 0
+        Xs, ys, ws, ts = X[sel].astype(np.float64), np.log(lum[sel]).astype(np.float64), G[sel].astype(np.float64), I_[sel]
+        uniq, ti = np.unique(ts, return_inverse=True)
+        sw = np.bincount(ti, weights=ws)
+        alpha = np.bincount(ti, weights=ws * ys) / np.maximum(sw, 1e-12)
+        beta = np.zeros(X.shape[1])
+        for it in range(12):
+            r = ys - alpha[ti]
+            A = (Xs * ws[:, None]).T @ Xs + np.eye(X.shape[1]) * 1e-3 * ws.sum()
+            beta = np.linalg.solve(A, (Xs * ws[:, None]).T @ r)
+            alpha = np.bincount(ti, weights=ws * (ys - Xs @ beta)) / np.maximum(sw, 1e-12)
+        res0 = ys - np.bincount(ti, weights=ws * ys)[ti] / sw[ti]
+        res1 = ys - alpha[ti] - Xs @ beta
+        fit = dict(beta=beta.round(4).tolist(), proben=int(len(ys)), texel=int(len(uniq)),
+                   streu_vorher=float(np.sqrt((ws * res0 ** 2).sum() / ws.sum())), streu_nachher=float(np.sqrt((ws * res1 ** 2).sum() / ws.sum())))
+        log("AUSGLEICH beta [a, a2, dz, cos, a*bein, dz*bein] =", fit["beta"], "log-Streuung %.3f -> %.3f" % (fit["streu_vorher"], fit["streu_nachher"]))
+        Xr = merkmale(np.full(len(I_), A_REF, np.float32), np.zeros(len(I_), np.float32), np.ones(len(I_), np.float32), bein[I_].astype(np.float32))
+        gain = np.exp(np.clip((Xr - X) @ beta.astype(np.float32), math.log(0.33), math.log(3.0))).astype(np.float32)
+        gain[ist_kopfsicht] = 1.0
+        # Ansichten bevorzugen, die das Haar von der Seite sehen (gegen die Haarspitzen = dunkle Luecken zwischen den Bueschen)
+        G = G * np.where(ist_kopfsicht, 1.0, np.exp(-K_SEITE * np.maximum(a_ - 0.55, 0.0))).astype(np.float32)
+
+    def mischen(fak_neu):
+        f = np.where(ist_kopfsicht[:, None], 1.0, fak_neu[None, :]).astype(np.float32) * gain[:, None]
+        cc = C_ * f
+        sw = np.bincount(I_, weights=G, minlength=n_t)
+        lin = np.stack([np.bincount(I_, weights=G * cc[:, k], minlength=n_t) for k in range(3)], 1) / np.maximum(sw, 1e-12)[:, None]
+        lu = cc @ np.array((0.2126, 0.7152, 0.0722), dtype=np.float32)
+        m1 = np.bincount(I_, weights=G * lu, minlength=n_t) / np.maximum(sw, 1e-12)
+        m2 = np.bincount(I_, weights=G * lu * lu, minlength=n_t) / np.maximum(sw, 1e-12)
+        streu = np.sqrt(np.maximum(m2 - m1 * m1, 0.0)) / np.maximum(m1, 1e-5)
+        return lin, sw > 1e-5, m1, streu
+
+    HELL, GAMMA = E["HELL"], E["GAMMA"]
+    fak = np.ones(3, dtype=np.float32)
+    zw = png_laden(ZWISCHEN_PNG)[my, mx]
+    ref = (region == 11) & (P[:, 2] > 0.75) & (kopf_maske < 0.02)
+    if not NUR_NEU:
+        # Belichtung/Farbe der neuen Ansichten an das alte Fell anpassen (Ruecken/Flanke oben, ohne Nacharbeit-Zonen)
+        lin0, ges0, _, _ = mischen(fak)
+        lin_zw = srgb_inv(np.power(np.clip(zw / HELL, 0, 1), 1.0 / GAMMA))
+        fak = (np.median(lin_zw[ref], 0) / np.maximum(np.median(lin0[ref], 0), 1e-6)).astype(np.float32)
+        log("Farbabgleich an das alte Fell (linear, je Kanal):", fak.round(3), "Texel", int(ref.sum()))
+    lin, gesehen, lum_t, streu_t = mischen(fak)
+    gut = np.bincount(I_[(CS >= 0.8) & (G > 1e-6)], minlength=n_t) > 0     # bester Blickwinkel < 37 Grad
+    sw_ = np.bincount(I_, weights=G, minlength=n_t)
+    a_eff = np.bincount(I_, weights=G * a_, minlength=n_t) / np.maximum(sw_, 1e-12)
+    log("Projektion fertig, gesehen %.4f der Texel" % gesehen.mean())
+    S = E["srgb"](lin)
+    S = np.power(np.clip(S, 0.0, 1.0), GAMMA) * HELL
+    # ---------------------------------------------------------- Nacharbeit Rumpf
+    kopfm = 1.0 - sst(0.0, 0.14, hb)
+    ring = sst(0.15, -0.05, L_[:, 0]) * (1.0 - sst(0.015, 0.11, hb))
+    kontrast = np.zeros(n_t)
+    if NUR_NEU:
+        kralle = (gegend == 2)[tt].astype(np.float64)
+        S = E["gesicht_nacharbeit"](Q, S, P, kralle)
+    else:
+        # Nachbesserung 09.11.: Gesprenkel (helle Haarschlaufen aus Ansichten gegen die Haarspitzen, 'Frottee') an Beinen, Hinterteil und
+        # gegen die Haarspitzen gesehenen Flaechen VOR der Nacharbeit inselweise glaetten; die gemalten Buesche kommen danach
+        hint_w = np.clip(feld_glatt((region == 10).astype(np.float64), 8, nur=rumpf_t), 0.0, 1.0)
+        # (Pfoten unten um die Sohle: voll glaetten, dort war der Fellkranz ein gepunkteter Ring)
+        ruhig = (np.maximum(np.maximum(sst(0.62, 0.86, a_eff), 0.85 * np.maximum(bein, hint_w)), 1.0 - sst(0.04, 0.12, P[:, 2]))
+                 * rumpf_t * (sohle_t[tt] == 0) * (1.0 - kopfm))
+        if RUHIG_K > 0:
+            t1 = time.time()
+            img = np.zeros((TEX, TEX, 3), dtype=np.float32)
+            img[my, mx] = S
+            bl = glaetten_insel(img, pos, maske, 18, 0.012)[my, mx].astype(np.float64)
+            del img
+            k_r = (RUHIG_K * ruhig)[:, None]
+            S = S * (1.0 - k_r) + bl * k_r
+            del bl
+            log("NACHBESSERUNG Gesprenkel geglaettet: Texel mit Anteil > 0,5: %.3f, %.1fs" % (float((RUHIG_K * ruhig > 0.5).mean()), time.time() - t1))
+        # Hals wie gesicht_nacharbeit (baer_export_fell.py:422-430), damit die Naht zum alten Kopf passt
+        S = S * (1.0 - 0.10 * kopfm[:, None])
+        S = S * (1.0 + (0.20 * ring)[:, None] * np.array((1.12, 1.0, 0.82)))
+        weg_kopf = 1.0 - kopfm
+        rumpf_f = rumpf_t.astype(np.float64)
+        # Unterseite: Normale nach unten, dazu Achsel/Leiste/Innenbeine/Bauch (Regionen des Netzes, ueber das Netz geglaettet)
+        reg_u = feld_glatt(np.isin(region, (4, 5, 6, 7, 9)).astype(np.float64), 12, nur=rumpf_t)
+        unten = np.maximum(sst(-0.10, -0.70, Nn[:, 2]), reg_u * 0.8)
+        # Unterbeine (wie baer-anim x1,30/x1,42, jetzt sanfter, weil das Fell dort schon heller gerendert ist)
+        tief = 1.0 - sst(0.04, 0.45, P[:, 2])
+        S = S * (1.0 + (UNTEN_LIFT * unten + BEIN_LIFT * tief) * weg_kopf)[:, None]
+        # Nachbesserung 09.11.: weiche Felder Leiste/Innenbein hinten (k57) und uebrige Unterseite (kU) fuer Deckel und Farbton
+        k57 = np.clip(feld_glatt(np.isin(region, (5, 7)).astype(np.float64), 10, nur=rumpf_t), 0.0, 1.0) * weg_kopf * rumpf_f
+        kU = np.clip(feld_glatt(np.isin(region, (3, 4, 6, 8, 9)).astype(np.float64), 10, nur=rumpf_t), 0.0, 1.0) * weg_kopf * rumpf_f
+        # Haarbuesche laengs der Haarrichtung: Wurzel dunkel, Spitze heller. Nachbesserung 09.11.: einzelne Buesche um zufaellige 3D-Punkte
+        # (buesche_3d; vorher ein Gitter in projizierten Koordinaten -> Ringe um den Schwanzansatz), ~1,3 cm breit und ~8 cm lang (Spielmass),
+        # also 3-6 Texel breit in der 1024er; Richtung stabil (haar_tangente, ueber das Netz geglaettet); ueberall etwa gleich stark statt an
+        # Unterseite/Hinterteil staerker; keine hellen Spitzen an Unterseite/Leiste
+        h_t = haar_tangente(h_dir, Nn)
+        h_t = feld_glatt(h_t, 4)
+        h_t = h_t - np.einsum("ij,ij->i", h_t, Nn)[:, None] * Nn
+        h_t /= np.maximum(np.linalg.norm(h_t, axis=1, keepdims=True), 1e-9)
+        t1 = time.time()
+        busch, spitze = buesche_3d(P, Nn, h_t)
+        busch = busch.astype(np.float64)
+        spitze = spitze.astype(np.float64)
+        str_k = STR_AMP * (1.0 - 0.15 * ruhig) * weg_kopf * rumpf_f * (sohle_t[tt] == 0)
+        S = S * (1.0 + str_k * (busch - busch.mean()) * 1.6)[:, None]
+        S = S + (str_k * 0.30 * spitze * (1.0 - unten) * (1.0 - k57))[:, None] * np.array((0.20, 0.14, 0.075))
+        log("NACHBESSERUNG Buesche: Hub %.2f, Anteil Busch > 0,5: %.3f, %.1fs" % (STR_AMP, float((busch > 0.5).mean()), time.time() - t1))
+        # Faltenschatten aus der Verdeckung des Spielnetzes (nur nahe Flaechen): offene Flaeche bleibt, tiefe Falte bis -AO_K
+        t1 = time.time()
+        occ_v = ao_punkte(V, T, N)
+        occ_v = E["glatt_feld"](occ_v[:, None], Ed, len(V), 2, 0.5)[:, 0]
+        occ = feld_texel(occ_v)
+        falte = sst(0.22, 0.62, occ) * weg_kopf * rumpf_f
+        S = S * (1.0 - AO_K * falte)[:, None]
+        log("Faltenschatten: Verdeckung je Punkt %.1fs, Texel mit Falte > 0,5: %.4f" % (time.time() - t1, (falte > 0.5).mean()))
+        # Nachbesserung 09.11.: Unterseite hoechstens so hell wie der Ruecken (Mittel ueber wenige cm; die Struktur bleibt). Die Aufhellung
+        # war fuer die Ruhehaltung gerechnet; beim Aufrichten/Sitzen dreht die Leiste zur Kamera und leuchtete als goldenes "V" (major 1)
+        lumw = np.array((0.2126, 0.7152, 0.0722))
+        Lt = S @ lumw
+        ref_l = float(np.median(Lt[ref]))
+        cb = np.median(S[ref] / np.maximum(Lt[ref], 1e-4)[:, None], 0)
+        cb = cb / float(cb @ lumw)
+        Llow = feld_glatt(Lt, 3, nur=rumpf_t)
+        l57_vor = float(np.median(Lt[k57 > 0.8])) if (k57 > 0.8).any() else -1.0
+        f57 = np.minimum(1.0, CAP_L * ref_l / np.maximum(Llow, 1e-4))
+        fU = np.minimum(1.0, CAP_U * ref_l / np.maximum(Llow, 1e-4))
+        S = S * ((1.0 - k57 * (1.0 - f57)) * (1.0 - (1.0 - k57) * kU * (1.0 - fU)))[:, None]
+        # Farbton: Leiste wie der Ruecken (kein Gold), Pfoten grau-braun (nicht rostorange), zu satte Texel begrenzen
+        Lt = S @ lumw
+        S = S * (1.0 - 0.5 * k57)[:, None] + (Lt[:, None] * cb[None, :]) * (0.5 * k57)[:, None]
+        pfote = (1.0 - sst(0.10, 0.30, P[:, 2])) * weg_kopf * rumpf_f
+        cp = np.array((1.10, 1.0, 0.86))
+        cp = cp / float(cp @ lumw)
+        S = S * (1.0 - 0.6 * pfote)[:, None] + (Lt[:, None] * cp[None, :]) * (0.6 * pfote)[:, None]
+        Lt = S @ lumw
+        mxv = S.max(1)
+        sat = (mxv - S.min(1)) / np.maximum(mxv, 1e-4)
+        zu = np.clip((sat - SAT_MAX) / np.maximum(sat, 1e-4), 0.0, 1.0) * rumpf_f * weg_kopf * sst(0.22, 0.32, mxv)   # dunkle Texel bleiben
+        S = S * (1.0 - zu)[:, None] + (Lt[:, None] * cb[None, :]) * zu[:, None]
+        log("NACHBESSERUNG Unterseite: Ruecken-Luma %.3f; Leiste (k57 > 0,8) Median %.3f -> %.3f; Texel mit Saettigung gedeckelt %d" % (
+            ref_l, l57_vor, float(np.median((S @ lumw)[k57 > 0.8])) if (k57 > 0.8).any() else -1.0, int((zu > 0).sum())))
+        # Wo nur Ansichten gegen die Haarspitzen sehen (Hinterteil, Hinterseite der Beine): feines Gesprenkel daempfen
+        kontrast = ruhig     # Nachbesserung: dieselbe Maske wie die Glaettung oben (dort weniger nachschaerfen)
+        # Naht zum alten Kopf: (1) Farbe des Halses grob an das alte Fell (geglaettete Felder, Verhaeltnis je Kanal), (2) direkt an
+        # der Naht weich ins alte Fell (gleiche UV, alte Ansichten = Zwischenstand des Netz-Bauers)
+        hals = rumpf_t & (hb < NAHT_C + 0.05)
+        Sg = feld_glatt(np.log(np.maximum(S, 1e-3)), 6, nur=hals)
+        Zg = feld_glatt(np.log(np.maximum(zw, 1e-3)), 6, nur=hals)
+        w_far = (1.0 - sst(NAHT_B, NAHT_C, hb)) * rumpf_f
+        S = S * np.exp(np.clip(Zg - Sg, -0.7, 0.7) * w_far[:, None])
+        w_naht = (1.0 - sst(NAHT_A, NAHT_B, hb)) * rumpf_f
+        S = S * (1.0 - w_naht[:, None]) + zw * w_naht[:, None]
+    S = np.clip(S, 0.0, 1.0)
+    col = np.zeros((TEX, TEX, 3), dtype=np.float32)
+    frei = np.ones((TEX, TEX), dtype=bool)
+    col[my[gesehen], mx[gesehen]] = S[gesehen].astype(np.float32)
+    frei[my[gesehen], mx[gesehen]] = False
+    r_ = E["fuellen"](col, frei, maske, 400)
+    if (frei & maske).any():
+        col[frei & maske] = S[gesehen].mean(0)
+        frei[frei & maske] = False
+    E["fuellen"](col, frei, np.ones_like(maske), 14)
+    col[frei] = S[gesehen].mean(0)
+    if not NUR_NEU and RUHIG_K <= 0:
+        km = np.zeros((TEX, TEX), dtype=np.float32)
+        km[my, mx] = (KONTRAST_D * kontrast).astype(np.float32)
+        weich = col.copy()
+        for _ in range(2):
+            weich = (np.roll(weich, 1, 0) + np.roll(weich, -1, 0) + np.roll(weich, 1, 1) + np.roll(weich, -1, 1) + weich * 2.0) / 6.0
+        col = col - (col - weich) * km[..., None]
+    kmap = np.full((TEX, TEX), SCHAERFE, dtype=np.float32)
+    kmap[my, mx] = (SCHAERFE * (1.0 - 0.9 * ring) * (1.0 - 0.7 * kontrast)).astype(np.float32)
+    col = E["unscharf"](col, kmap)
+    # ---------------------------------------------------------- Sohlen
+    sohle_m = np.zeros((TEX, TEX), dtype=bool)
+    if not NUR_NEU:
+        S_fell = col.copy()
+        # Nachbesserung: Fellfarbe je Pfote = Median des Rumpf-Fells unten an dieser Pfote (Spielmass z < 7 cm, 16 cm um die Sohle)
+        Pf = E["h2f"](P)
+        pf_k = K["sohle_pfote"][::-1]
+        xyz_k = K["sohle_xyz"][::-1]
+        fell_pfote = {}
+        for pid_ in (1, 2, 3, 4):
+            mk = pf_k == pid_
+            if not mk.any():
+                continue
+            c_ = np.nanmean(xyz_k[mk], 0)
+            sel_ = rumpf_t & (sohle_t[tt] == 0) & (Pf[:, 2] < 0.07) & (np.hypot(Pf[:, 0] - c_[0], Pf[:, 1] - c_[1]) < 0.16)
+            if sel_.sum() > 50:
+                fell_pfote[pid_] = np.median(col[my[sel_], mx[sel_]], 0).astype(np.float32)
+        log("NACHBESSERUNG Pfotenfell je Pfote (sRGB):", {k: (v * 255).round(0).tolist() for k, v in fell_pfote.items()})
+        sohle_m = sohlen_malen(col, maske, my, mx, K, SOHLE_JSON, S_fell, fell_pfote)
+    # ---------------------------------------------------------- Kopf und Krallen: alte Texel (wie baer_export_anim.py)
+    A = png_laden(E["ALT_PNG"])
+    behalte = maske & (gegend[np.maximum(tri, 0)] != 0)
+    rumpf_m = maske & (gegend[np.maximum(tri, 0)] == 0)
+    setzen = wachsen(behalte, 6) & ~wachsen(rumpf_m, 2)
+    col[setzen] = A[setzen]
+    log("Alte Texel fuer Kopf und Krallen: %d, Ueberlappung Kopf/Rumpf-Inseln %d" % (int(setzen.sum()), int((behalte & rumpf_m).sum())))
+    if not NUR_NEU:
+        # Nachbesserung 09.11. (Pruefer Technik m3): Krallen-UV sind fast Punkte; das Spiel liest bilinear 2x2 Texel. Liegt dieses Lesefeld
+        # (in der 2048er und in der 1024er = 2x2-Mittel der 2048er, baer_kampf_fell.py) in einer Rumpf-Insel, dort die alten Texel,
+        # damit die Krallen genau wie vorher aussehen. Zeile = v x Aufloesung (Zeile 0 unten wie col).
+        uvk = uv[LT[gegend == 2].ravel()]
+        fp = np.zeros((TEX, TEX), dtype=bool)
+        for res in (TEX, TEX // 2):
+            f_ = TEX // res
+            x0 = np.floor(uvk[:, 0] * res - 0.5).astype(np.int64)
+            y0 = np.floor(uvk[:, 1] * res - 0.5).astype(np.int64)
+            for dx in (0, 1):
+                for dy in (0, 1):
+                    xx = np.clip(x0 + dx, 0, res - 1)
+                    yy = np.clip(y0 + dy, 0, res - 1)
+                    for ex in range(f_):
+                        for ey in range(f_):
+                            fp[yy * f_ + ey, xx * f_ + ex] = True
+        # Bezug = die Textur, die heute im Spiel ist (NCBearTest, eb717769 = bestand/NCBear_2048.png); ALT_PNG ist der Stand vor baer-anim
+        # (Kopf-/Krallen-Inseln gleich, Rumpf anders)
+        Bst = png_laden(BESTAND_PNG)
+        zus = fp & ~setzen
+        col[fp] = Bst[fp]
+        log("NACHBESSERUNG Krallen-Lesefeld: Texel %d, davon zusaetzlich alt %d (davon in Rumpf-Inseln %d)" % (
+            int(fp.sum()), int(zus.sum()), int((zus & rumpf_m).sum())))
+    for x0, y0, w_, h_ in E["SPERR_FLECKEN"]:
+        ys = slice(TEX - 2 * (y0 + h_), TEX - 2 * y0)
+        xs = slice(2 * x0, 2 * (x0 + w_))
+        assert int(maske[ys, xs].sum()) == 0
+    log("Flecken Gaumen/Zunge/Zahn frei")
+    log("Textur Mittel sRGB", (col[maske].mean(0) * 255).round(1))
+    aus = TX + "NCBear_%s_2048.png" % AUSNAME
+    png_schreiben(aus, col)
+    log("Textur", aus)
+    # ---------------------------------------------------------- Messdaten fuer mess_textur.py
+    np.savez_compressed(TX + "mess/texel_%s.npz" % AUSNAME, my=my.astype(np.int16), mx=mx.astype(np.int16), region=region, gegend=gegend[tt].astype(np.int8),
+                        sohle=sohle_t[tt].astype(np.int8), N=Nn.astype(np.float32), P=E["h2f"](P).astype(np.float32), lum=lum_t.astype(np.float32),
+                        streu=streu_t.astype(np.float32), gesehen=gesehen, gut=gut, kopf_maske=kopf_maske.astype(np.float32),
+                        zw=zw.astype(np.float32))
+    json.dump(dict(fit=fit, farbabgleich=fak.tolist(), param=dict(P_EXP=P_EXP, A_REF=A_REF, UNTEN=UNTEN_LIFT, BEIN=BEIN_LIFT, STRAEHNE=STR_AMP,
+                                                                  AO=AO_K, SCHAERFE=SCHAERFE, NUR_NEU=NUR_NEU, KONTRAST=KONTRAST_D,
+                                                                  K_SEITE=K_SEITE, INNEN_TOL=INNEN_TOL, INNEN_W=INNEN_W, POSE_W=POSE_W,
+                                                                  POSE_HINTEN=POSE_HINTEN, POSE_VORN=POSE_VORN, NAHT=(NAHT_A, NAHT_B, NAHT_C)),
+                   ansichten=[v["pfad"] for v in views]), open(TX + "mess/backen_%s.json" % AUSNAME, "w"), indent=1)
+    if not NUR_NEU:
+        kopf_variante(E, Q, col, maske, my, mx, tt, gegend, P)
+    log("BACKEN_OK")
+
+
+def kopf_variante(E, Q, col, maske, my, mx, tt, gegend, P):
+    """Nur zum Vergleich (Kevin waehlt): Augen sichtbar (dunkle Mandel statt Schlitz, Lidrand, leichter Hoehlenschatten) und Gesicht
+    etwas dunkler. Gleiche Textur, nur Kopf-Texel geaendert; die Vorgabe bleibt die alte Kopf-Textur."""
+    TEX = E["TEX"]
+    kopf_t = gegend[tt] == 1
+    Pk = P[kopf_t]
+    L = Q["w2l"](Pk)
+    a, b, c = L[:, 0], L[:, 1], L[:, 2]
+    B = np.abs(b)
+    hb = Q["huelle_basis"](a, b, c)
+    kopf = (hb < 0.03).astype(np.float64)
+    x, y, z = Q["_acht"](a, B, c, Q["AUGE"], Q["AU"], Q["AV"], Q["AW"])
+    sp = Q["spalt2d"](y * 0.92, z * 0.80)          # Spalte groesser: offenes Auge statt Schlitz
+    vorn = sst(-0.022, -0.005, x) * kopf
+    auge = (1.0 - sst(0.0010, 0.0042, sp)) * vorn
+    lid = (1.0 - sst(0.0042, 0.0105, sp)) * vorn * (1.0 - auge)
+    hoehle = (1.0 - sst(0.008, 0.034, np.sqrt(y * y + z * z))) * vorn
+    R = Q["regionen"](a, b, c)
+    gesicht = sst(0.02, 0.22, a) * kopf * (1.0 - R["innen"])
+    S = col[my[kopf_t], mx[kopf_t]].astype(np.float64)
+    S = S * (1.0 - 0.13 * gesicht)[:, None]
+    S = S * (1.0 - 0.22 * hoehle)[:, None]
+    S = S * (1.0 - 0.55 * lid)[:, None]
+    iris = np.array((0.055, 0.034, 0.022)) * (1.0 + 0.6 * sst(0.0035, 0.0005, -sp))[:, None]
+    S = S * (1.0 - auge[:, None]) + iris * auge[:, None]
+    neu = col.copy()
+    neu[my[kopf_t], mx[kopf_t]] = np.clip(S, 0, 1).astype(np.float32)
+    # Rand der Kopf-Inseln (6 px, dort liegen in der Vorgabe dieselben alten Texel): Verhaeltnis neu/alt der Nachbarn mitnehmen,
+    # sonst bleibt an den UV-Naehten des Kopfes ein heller Saum
+    R = np.ones_like(col)
+    insel = np.zeros(maske.shape, dtype=bool)
+    insel[my[kopf_t], mx[kopf_t]] = True
+    R[insel] = neu[insel] / np.maximum(col[insel], 1e-4)
+    rand = wachsen(insel, 6) & ~insel & ~wachsen(maske & ~insel, 2)
+    frei = rand.copy()
+    E["fuellen"](R, frei, rand, 8)
+    neu[rand] = np.clip(col[rand] * R[rand], 0, 1)
+    png_schreiben(TX + "NCBear_kopf_variante.png", neu)
+    log("Kopf-Variante: Texel geaendert %d (Auge %d, Lidrand %d)" % (int((np.abs(neu - col).sum(2) > 1e-4).sum()), int((auge > 0.5).sum()), int((lid > 0.5).sum())))
+
+
+if ARGS[0].endswith(".json"):
+    AUF = json.load(open(ARGS[0]))
+    if AUF["stufe"] == "ansichten":
+        stufe_ansichten(AUF)
+    else:
+        raise SystemExit("Stufe %r unbekannt" % AUF["stufe"])
+elif ARGS[0] == "backen":
+    stufe_backen()
+else:
+    raise SystemExit("Stufe %r gibt es hier nicht" % ARGS[0])
