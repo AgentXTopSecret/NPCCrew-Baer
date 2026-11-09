@@ -22,7 +22,7 @@ Zuerst `../CLAUDE.md`, dann `STAND.md`, dann `begleiter/ENTSCHEIDUNGEN.md` (ganz
 ## So weitermachen
 1. Netz (`bau_netz.md`) und Textur (`bau_textur.md`) sind fertig -- beide Berichte zuerst lesen.
 2. Die fehlenden Stufen als NEUEN Workflow laufen lassen: Pruefer (Optik, Technik) -> Nachbesserung -> Gegenpruefer. Auftraege und den
-   gemeinsamen Kontext (CTX, GPU-Regeln: nie rendern, wenn ProjectZomboid laeuft; Sperre `gpu.lock`) aus dem Skript uebernehmen.
+   gemeinsamen Kontext (CTX, GPU-Regeln: Sperre `gpu.lock`; die alte Regel 'nie rendern, wenn ProjectZomboid laeuft' hat Kevin am 09.11. geloescht) aus dem Skript uebernehmen.
    Hoechstens 10 Agenten je Workflow; vorher Verbrauch pruefen und Kevin die Zahl nennen.
 3. Selbst nachpruefen (GLB mit `../_arbeit/baer_spiel/harness` Dump.java lesen, Clips bit-gleich, Kopf unveraendert, Bilder ansehen).
 4. Nur wenn Kevin NICHT spielt: Test-Mod sichern (Zip nach `C:/Users/Kevin/Zomboid/backups/NCBearTest/`), nur die Mod-Dateien aus

@@ -1,4 +1,7 @@
-# Baer -- Stand und alles, was ansteht (09.11.2026 nachmittags)
+# Baer -- Stand und alles, was ansteht (10.11.2026 00:10)
+
+> **10.11.2026 00:04:** Lauf baer-pfoten FERTIG und in NCBearTest (ungespielt, Test `spiel/anleitung_pfote.md`). Als Naechstes
+> Lauf 2c (Gebiss, Zunge, ganze Beine) -- Kevin 09.11.: "wenn der worklow durch ist mach direkt weiter".
 
 > **09.11.2026 ~14:20 (neue Sitzung, neuer Account):** Lauf baer-fell FERTIG und in NCBearTest (ungespielt, Test
 > `spiel/anleitung_fell.md`); Forschungslauf baer-schlaf fertig (`begleiter/SCHLAF_PLAN.md`, Kevins Fragen K1-K21 offen).
@@ -45,7 +48,25 @@ dann **`begleiter/ENTSCHEIDUNGEN.md` (geht vor PLAN.md)**, dann `begleiter/PLAN.
    `spiel/baer_{export,kampf,gewichte,textur}_fell.py`, Arbeitsdaten `../_arbeit/baer_fell/`. **Neue Clips -> `baer_gewichte_fell.py` neu
    laufen lassen** (Gewichte sind auf genau diese 15 Clips abgestimmt). **Offen, Kevins Wort:** Zotteln am Umriss (Netz-Zotteln
    verworfen: Noppen), Pranken-Form, Gesaessfalte schwach, Kopf-Variante B (`../_arbeit/baer_fell/textur/NCBear_kopf_variante*.png`),
-   eigenes Baby-Modell (`../_arbeit/baer_fell/baby/baby_vergleich.png`).
+   eigenes Baby-Modell (`../_arbeit/baer_fell/baby/baby_vergleich.png`; **Kevin 09.11. ~16:09: Gesicht des Jungtiers nach
+   `begleiter/kevin_babygesicht_vorlage.webp`** -- runder Kopf, grosse runde Ohren, kurze helle Schnauze, ENTSCHEIDUNGEN.md ganz unten).
+2b. **Lauf baer-pfoten FERTIG, in NCBearTest seit 10.11. 00:04, ungespielt** (Kevin 09.11.: "wie ein abgesaegtes Bein"; 9 Agenten:
+   Referenz, Bestand, Spezifikation, Netz, Textur, Pruefer Optik + Technik, Nachbesserung, Gegenpruefer). Bein laeuft unter 36 cm zum
+   Gelenk schmal zu (~19 cm), Hinterfuss mit Ferse, langer ovaler Sohle und 5 Zehen, Vorderpranke mit quer liegendem Ballen und
+   Handwurzelballen; Gewichte trennen am Gelenk. 15/15 Clips bit-gleich (selbst nachgezaehlt gegen das alte GLB), Skelett gleich, Kopf
+   unveraendert, 19.426 Dreiecke. 5 Dateien (GLB 5066fa67, Deer 1f704054, FBX 0cab0ff6, Body 4ae148df, WorldItems 603ee699).
+   Berichte `spiel/pfote_*.md`, Bild `spiel/pfote_vorher_nachher.png`, Test `spiel/anleitung_pfote.md`, Sicherungen
+   `backups/NCBearTest/NCBearTest_vor_pfote_2026-11-10_000429.zip` / `..._mit_pfote_...`. Skripte `spiel/baer_{quelle,export,kampf,
+   gewichte,textur}_pfote.py`, Arbeitsdaten `../_arbeit/baer_pfote/` (Bezug `fix1/bau4/textur/zw_fell_2048.png` behalten).
+   **Schwaeche, geht in Lauf 2c:** ueber dem Gelenk wird das Bein auf kurzer Strecke wieder dick ("Glocke", `spiel/pfote_kegel.png`),
+   weil der Lauf das Bein nur unter 36 cm aendern durfte. **Angenommene Abweichungen von der SPEZ (Kevins Wort offen):** Falten im
+   Liegen 136 statt <= 120 (Flaeche wie baer-fell), 13 Rumpfpunkte bis 2,3 cm daneben (unsichtbar). **Clip-Runde:** Pranke beim
+   Aufrichten von vorn klotzig (Handflaeche nach vorn drehen), Hinterfuss im Renn-Rueckschwung schmal, Liegen schwebt 4 mm, `Toe0`
+   abrollen lassen. Die Pruef-Agenten haben trotz geloeschter Regel nur bei geschlossenem Spiel gerendert (Vorsicht, kein Fehler).
+2c. **NEU (Kevin 09.11. ~16:05): Gebiss, Zunge und ganze Beine realistisch.** Zaehne beim Bruellen wie auf `begleiter/kevin_bruellen_vorlage.webp`
+   (lange gebogene Eckzaehne, Schneidezahnreihe, schwarze Lefzen zurueckgezogen), Zunge flach und rosa im Unterkiefer; Beine nicht mehr
+   "wie Baumstaemme" (Schulterbuckel, Unterarm zum Gelenk schmaler, Oberschenkel in den Hintern, Fellzotteln). Eigener Lauf NACH
+   baer-pfoten (Kevin 09.11.: direkt weitermachen, keine Pause); nimmt die "Glocke" aus 2b mit; Einzelheiten ENTSCHEIDUNGEN.md ganz unten.
 3. **Clip-Runde auf dem neuen Netz:** Aufrichten (NCBear_Rear) neu (ganzer Koerper, kein Kragen, bleibt 3,0 s); **Sitzen Richtung (b)**
    (aufrecht, Hinterbeine weniger gespreizt, keine schwarzen Sohlen-Flecken zur Seite), Hinsetzen/Aufstehen nachziehen.
 4. **B5a Gegenwehr:** Zombies beissen den Baeren (Weg 2 aus `begleiter/angriff_fazit.md`, Engine laesst sie nicht selbst angreifen:
@@ -84,5 +105,5 @@ dann **`begleiter/ENTSCHEIDUNGEN.md` (geht vor PLAN.md)**, dann `begleiter/PLAN.
 
 ## Regeln (aus ../CLAUDE.md, kurz)
 Je Version ein Workflow (Plan, Bau, Pruefer, Nachbesserung, Gegenpruefer, Integrator), hoechstens 10 Agenten je Workflow. Renders auf der
-4090, nie waehrend Kevin spielt. Downloads nur mit Dateiname, Quelle, Groesse und Kevins Ja je Datei. Nichts aus fremden Mods kopieren.
+4090, auch bei laufendem Spiel (Kevin 09.11.); nie in eine Test-Mod kopieren, mit der er gerade spielt. Downloads nur mit Dateiname, Quelle, Groesse und Kevins Ja je Datei. Nichts aus fremden Mods kopieren.
 Nach jeder fertigen Version: `python C:/Users/Kevin/Claude-Gedaechtnis/sichern.py`, dann commit + `git push` in beiden Repos.

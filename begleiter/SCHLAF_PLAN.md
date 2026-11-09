@@ -157,7 +157,7 @@ Vorbild: erst mehrmals den Kopf heben und schauen, dann aufstehen (Murie, refere
 - **Grenze:** 9 Agenten, unter der Grenze von 10.
 - **Regeln aus baer-anim** (referenz 4): Gelenkgrenzen, Klemmungen im Bericht, Boden hoechstens ~2 mm, Fussgleiten unter 0,01 Kacheln,
   hoechstens zehn Runden.
-- **Renders:** nur auf der 4090, nie waehrend Kevin spielt, nie gleichzeitig mit einem anderen Render.
+- **Renders:** nur auf der 4090, auch bei laufendem Spiel (Kevin 09.11.: alte Regel geloescht), nie gleichzeitig mit einem anderen Render.
 - **Baby-Modell:** Waehlt Kevin ein eigenes (`_arbeit/baer_fell/baby/`), braucht es dieselben drei Clips. Ob dafuer dasselbe Skelett und
   dieselben Clips reichen, ist **ungeprueft**.
 
