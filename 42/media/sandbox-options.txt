@@ -1,0 +1,159 @@
+VERSION = 1,
+
+/*
+ * NPC Crew -- bear cubs (B1a: find and tame a cub). Page BanditsNPC ("NPC Crew").
+ * Every value is read by BanditsNPC.Bear.Opt with a fallback to the default below; in multiplayer the server's values count.
+ */
+
+/* Main switch: off = no new cubs (forest and bait); cubs already in the world stay tameable. */
+option BanditsNPC.BearCubsEnabled
+{
+	type = boolean, default = true,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearCubsEnabled,
+}
+
+/* 1 off, 2 rare (2 % per in-game hour), 3 normal (5 %), 4 often (12 %), 5 very often (30 %); rolled every 10 in-game minutes with a sixth of that. */
+option BanditsNPC.BearCubForestRate
+{
+	type = enum, numValues = 5, default = 3,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearCubForestRate,
+	valueTranslation = BanditsNPC_BearCubForestRate,
+}
+
+/* Tiles to EVERY player when a cub appears. */
+option BanditsNPC.BearCubMinDistance
+{
+	type = integer, min = 15, max = 60, default = 30,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearCubMinDistance,
+}
+
+/* Tiles to the player the cub appears for. Code clamps to at least min + 5 and at most 65 (about 76 tiles are loaded). */
+option BanditsNPC.BearCubMaxDistance
+{
+	type = integer, min = 20, max = 65, default = 50,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearCubMaxDistance,
+}
+
+/* At most this many UNTAMED cubs at once in the world. */
+option BanditsNPC.BearCubWorldCap
+{
+	type = integer, min = 1, max = 32, default = 8,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearCubWorldCap,
+}
+
+/* Tamed bears per player (Kevin 08.11.2026: one). */
+option BanditsNPC.BearMaxPerPlayer
+{
+	type = integer, min = 1, max = 4, default = 1,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearMaxPerPlayer,
+}
+
+/* Bait spot (honey or fish) on or off. */
+option BanditsNPC.BearBaitEnabled
+{
+	type = boolean, default = true,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearBaitEnabled,
+}
+
+/* At the latest after this many counted nights the bait is ripe. */
+option BanditsNPC.BearBaitNights
+{
+	type = integer, min = 1, max = 7, default = 3,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearBaitNights,
+}
+
+/* Percent on the first counted night, rising evenly to 100 on the last (40 / 70 / 100). */
+option BanditsNPC.BearBaitFirstChance
+{
+	type = integer, min = 0, max = 100, default = 40,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearBaitFirstChance,
+}
+
+/* Bar points per feeding (bar 0..100). */
+option BanditsNPC.BearTameFeedPoints
+{
+	type = integer, min = 1, max = 100, default = 14,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearTameFeedPoints,
+}
+
+/* Bar points per petting. */
+option BanditsNPC.BearTamePetPoints
+{
+	type = integer, min = 0, max = 100, default = 8,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearTamePetPoints,
+}
+
+/* Percent more when the previous counted action was the OTHER one. */
+option BanditsNPC.BearTameMixBonus
+{
+	type = integer, min = 0, max = 200, default = 50,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearTameMixBonus,
+}
+
+/* Percent more for favourite food (honey, fish). */
+option BanditsNPC.BearTameFavoriteBonus
+{
+	type = integer, min = 0, max = 200, default = 50,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearTameFavoriteBonus,
+}
+
+/* Feedings needed before the bar may fill; until then it holds at 99 (Kevin: 3-5 feedings). */
+option BanditsNPC.BearTameMinFeedings
+{
+	type = integer, min = 0, max = 10, default = 3,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearTameMinFeedings,
+}
+
+/* In-game minutes between two counted feedings of the same cub. */
+option BanditsNPC.BearFeedCooldownMinutes
+{
+	type = integer, min = 0, max = 2880, default = 120,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearFeedCooldownMinutes,
+}
+
+/* In-game minutes between two pettings (also after taming). */
+option BanditsNPC.BearPetCooldownMinutes
+{
+	type = integer, min = 0, max = 2880, default = 60,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearPetCooldownMinutes,
+}
+
+/* Never fed and this many in-game hours without contact: the cub wanders off. 0 = never. */
+option BanditsNPC.BearCubVanishHours
+{
+	type = integer, min = 0, max = 240, default = 36,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearCubVanishHours,
+}
+
+/* In-game days after your bear died without a new cub (Kevin 08.11.2026: 7). */
+option BanditsNPC.BearDeathLockDays
+{
+	type = integer, min = 0, max = 60, default = 7,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearDeathLockDays,
+}
+
+/* Diagnosis lines [TC-BEAR] in the console; real errors are always written. */
+option BanditsNPC.BearLog
+{
+	type = boolean, default = false,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearLog,
+}

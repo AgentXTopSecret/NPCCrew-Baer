@@ -1,0 +1,872 @@
+if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: laeuft im Einzelspieler und auf dem Server
+
+--
+-- NPC Crew -- Baer, Schreiber (B1a, PLAN_ZAEHMEN.md 2, 5, 6.2.3, 7).
+--
+-- Takte (Langsam-Takt alle 10 Spielminuten, Hirn-Takt alle 1,5 s Echtzeit), Bitten der Clients (B.Handle), die drei
+-- Abschluesse der Zeitaktionen (B.FeedComplete, B.PetComplete, B.BaitComplete), Erscheinen (B.AppearFor), Koeder-Morgen,
+-- Verschwinden, Tod, Vermisst, Sicht verschicken.
+--
+-- Der Code ist im Einzelspieler und auf dem Server DERSELBE. Was der Schreiber tut, glaubt er nie einem Client: eine Bitte
+-- benennt nur (welcher Koederplatz), Besitz / Balken / Zeiten stehen im Register (server/BanditsNPCBearRegistry.lua).
+-- Engine-Griffe in die Welt stehen in server/BanditsNPCBearWorld.lua; hier nur die, die zu einem Vorgang gehoeren
+-- (Futter nehmen, Streicheln zaehlen, Abstand, Hand und Tempo der Spieler), jeder mit Fundstelle.
+-- Statisch geprueft, nicht gespielt.
+--
+
+BanditsNPC = BanditsNPC or {}
+BanditsNPC.Bear = BanditsNPC.Bear or {}
+local B = BanditsNPC.Bear
+
+B._brainAt = B._brainAt or nil      -- Echtzeit des letzten Hirn-Takts
+B._scanAt = B._scanAt or nil        -- Echtzeit des letzten Suchlaufs
+B._live = B._live or false          -- gab es beim letzten Hirn-Takt etwas zu tun (Eintraege, reife Koeder)?
+B._pp = B._pp or {}                 -- [uid] = { x, y } Ort jedes Spielers beim letzten Hirn-Takt ("steht still")
+B._sig = B._sig or {}               -- [uid] = Text: welche Jungen (mit OnlineID) der Spieler zuletzt in Reichweite hatte
+
+-- ---------------------------------------------------------------------------
+-- Meldungen
+-- ---------------------------------------------------------------------------
+local function note(k, t, v, tone)
+    return { k = k, t = t, v = v, tone = tone }
+end
+
+-- Welche Gruende eine Zahl tragen (Plan 6.2.6): Wartezeit in Stunden, Sperre in Tagen.
+local WHY_T = {
+    UI_BN_Bear_Why_FeedWait = "wait",
+    UI_BN_Bear_Why_PetWait = "wait",
+    UI_BN_Bear_Why_Locked = "days",
+}
+
+local function tellWhy(player, whyKey, whyVal)
+    if not player or whyKey == nil then return end
+    local t = WHY_T[whyKey]
+    local v = nil
+    if t ~= nil then v = whyVal end
+    B.Tell(player, note(whyKey, t, v, "bad"))
+end
+
+local function tellKey(pkey, n, players)
+    if pkey == nil then return end
+    local p, _ = B.PlayerByKey(pkey, players)
+    if p then B.Tell(p, n) end
+end
+
+local function isTame(st)
+    return st == "tame" or st == "missing"
+end
+
+-- Schluessel der Spieler, die gerade da sind (Uhren des Langsam-Takts, Welt-Deckel B.CountWild).
+local function onlineSet(players)
+    local online = {}
+    for i = 1, #players do online[players[i].key] = true end
+    return online
+end
+
+-- Sicht eines Spielers bauen und schicken (Plan 5.6).
+function B.PushView(player)
+    if not player then return end
+    B.SendView(player, B.BuildView(player))
+end
+
+-- Geaenderte Eintraege an die betroffenen Spieler: alle, die Schluessel finder / bond / owner, alle in B.CFG.tellDist um
+-- einen geaenderten Ort. Hoechstens eine Sendung je Spieler und Takt (sent: schon bediente uid).
+function B.FlushViews(players, sent)
+    local d = B._dirty
+    if not d or not d.any then return end
+    players = players or B.Players()
+    sent = sent or {}
+    for i = 1, #players do
+        local e = players[i]
+        if not sent[e.uid] then
+            local want = d.all or d.keys[e.key] == true
+            if not want then
+                for j = 1, d.n do
+                    local sp = d.spots[j]
+                    if B.DistXY(e.x, e.y, sp.x, sp.y) <= B.CFG.tellDist then
+                        want = true
+                        break
+                    end
+                end
+            end
+            if want then
+                B.PushView(e.p)
+                sent[e.uid] = true
+            end
+        end
+    end
+    B._dirty = { any = false, all = false, keys = {}, spots = {}, n = 0 }
+end
+
+-- ---------------------------------------------------------------------------
+-- Erscheinen (Plan 5.1, 5.2): der EINE Weg, ein Junges in die Welt zu setzen. Rufer im Kern: Wald-Wurf und Koeder.
+-- Rueckgabe: rec oder nil, why (Textschluessel oder ein kurzer Grund der Engine-Seite).
+-- ---------------------------------------------------------------------------
+function B.AppearFor(pkey, src, x, y, z)
+    local reg = B.Reg()
+    if not reg then return nil, "noreg" end
+    if not B.IsWriter() then return nil, "nowriter" end
+    if pkey == nil or x == nil or y == nil then return nil, "noargs" end
+    local now = B.Now()
+    local ok, why, _ = B.MayAppear(B.SlotsOf(pkey, now), now)
+    if not ok then return nil, why end
+    if B.CountWild(onlineSet(B.Players())) >= B.Opt("BearCubWorldCap") or B.CountRecs() >= B.CFG.maxRecs then
+        return nil, "UI_BN_Bear_Why_Full"
+    end
+    x, y, z = math.floor(x), math.floor(y), math.floor(z or 0)
+    local animal, cwhy = B.CreateCub(x, y, z)
+    if not animal then return nil, cwhy end
+    local rec, rwhy = B.NewRec(src, pkey, animal, x, y, z, now)
+    if not rec then
+        B.RemoveCub(animal)
+        return nil, rwhy
+    end
+    if src == "bait" then
+        rec.hx, rec.hy, rec.hz = x, y, z
+    end
+    B.Commit(rec)
+    local players = B.Players()
+    local p, e = B.PlayerByKey(pkey, players)
+    if p then
+        if src == "bait" then
+            B.Tell(p, note("UI_BN_Bear_Bait_Came", nil, nil, "good"))
+        else
+            B.Tell(p, note("UI_BN_Bear_Note_Heard", "dir", B.DirOf(x - e.x, y - e.y), nil))
+            rec.hintAt = now
+        end
+    end
+    B.Log("appear " .. rec.id .. " " .. tostring(src) .. " for " .. tostring(pkey) .. " at " .. x .. "," .. y)
+    B.FlushViews(players)
+    return rec, nil
+end
+
+-- ---------------------------------------------------------------------------
+-- Gemeinsame Pruefung von Fuettern und Streicheln (Plan 5.3 Schritt 1-2). Rueckgabe: rec oder nil (dann schon gemeldet).
+-- getAnimalType: Vanilla shared/Definitions/animal/ButcheringUtil.lua:13. isExistInTheWorld:
+-- shared/TimedActions/Animals/ISAddAnimalInTrailer.lua:29. isDead am Tier:
+-- server/Traps/STrapGlobalObject.lua:238. character:getSquare():DistTo(animal:getSquare()) < 3:
+-- shared/TimedActions/Animals/ISPetAnimal.lua:6 (dieselbe Pruefung wie Vanillas Streicheln).
+-- ---------------------------------------------------------------------------
+local function handCheck(character, animal)
+    if not B.IsWriter() or not character or not animal then return nil end
+    if animal:getAnimalType() ~= B.CUB then return nil end
+    if not animal:isExistInTheWorld() or animal:isDead() then
+        tellWhy(character, "UI_BN_Bear_Why_Gone")
+        return nil
+    end
+    local here = character:getSquare()
+    local there = animal:getSquare()
+    if not here or not there or here:DistTo(there) >= B.CFG.reach then
+        tellWhy(character, "UI_BN_Bear_Why_Far")
+        return nil
+    end
+    local rec, why = B.RecOf(animal)
+    if not rec then
+        if why == "full" then tellWhy(character, "UI_BN_Bear_Why_Full") else tellWhy(character, "UI_BN_Bear_Why_Gone") end
+        return nil
+    end
+    return rec
+end
+
+-- Ein Stueck aus dem Inventar nehmen, genau so wie Vanilla in complete():
+-- removeFromHands / getInventory():Remove / sendRemoveItemFromContainer: shared/Camping/TimedActions/ISAddFuelAction.lua:66-68.
+-- contains: shared/TimedActions/Animals/ISFeedAnimalFromHand.lua:6. Rueckgabe true nur, wenn das Stueck danach WIRKLICH weg ist.
+local function takeOne(character, food)
+    local inv = character:getInventory()
+    character:removeFromHands(food)
+    inv:Remove(food)
+    sendRemoveItemFromContainer(inv, food)
+    if inv:contains(food) then
+        B.Err("take: the food is still in the inventory after Remove, nothing credited")
+        return false
+    end
+    return true
+end
+
+-- Ort des Tiers als ganze Kachel. getX/getY/getZ am Tier: Vanilla shared/Definitions/animal/ButcheringUtil.lua:575-577.
+local function tileOf(animal)
+    return math.floor(animal:getX()), math.floor(animal:getY()), math.floor(animal:getZ())
+end
+
+-- Meldungen nach einer Gutschrift (Plan 5.3 Schritt 7).
+local function tellGain(character, res, class)
+    local k = "UI_BN_Bear_Note_Gain"
+    if res.mixed then
+        k = "UI_BN_Bear_Note_GainMix"
+    elseif class == "fav" then
+        k = "UI_BN_Bear_Note_GainFav"
+    end
+    B.Tell(character, note(k, "num", math.floor(res.gain), "good"))
+    if res.first then B.Tell(character, note("UI_BN_Bear_Note_FirstFed", nil, nil, "good")) end
+    if res.tamed then B.Tell(character, note("UI_BN_Bear_Note_Tamed", nil, nil, "good")) end
+    if res.need > 0 then B.Tell(character, note("UI_BN_Bear_Why_MoreFood", "num", res.need, nil)) end
+end
+
+-- ---------------------------------------------------------------------------
+-- Fuettern (Plan 5.3). Gerufen aus BanditsNPCBearFeedAction:complete() -- im Mehrspieler auf dem Server mit dem Stueck
+-- des SERVERS. Alle Pruefungen hier, nehmen und gutschreiben in EINEM Aufruf. Ablehnung: Meldung, false, nichts verbraucht.
+-- ---------------------------------------------------------------------------
+function B.FeedComplete(character, animal, food)
+    if not food then return false end
+    local rec = handCheck(character, animal)
+    if not rec then return false end
+    local pkey = B.PlayerKey(character)
+    local now = B.Now()
+    local ok, whyKey, whyVal = B.CheckFeed(rec, pkey, B.SlotsOf(pkey, now), now)
+    if not ok then
+        tellWhy(character, whyKey, whyVal)
+        return false
+    end
+    if not character:getInventory():contains(food) then
+        tellWhy(character, "UI_BN_Bear_Why_NoItem")
+        return false
+    end
+    local class, fwhy = B.FoodClass(food)
+    if class == nil then
+        tellWhy(character, fwhy or "UI_BN_Bear_Why_NotFood")
+        return false
+    end
+    local wasTame = isTame(rec.st)
+    if not takeOne(character, food) then return false end
+    -- ab hier ist das Stueck weg: gutschreiben im selben Aufruf, ohne Engine-Wurf dazwischen
+    local res = B.ApplyGain(rec, pkey, "feed", class, now)
+    local x, y, z = tileOf(animal)
+    rec.x, rec.y, rec.z = x, y, z
+    rec.hx, rec.hy, rec.hz = x, y, z
+    rec.idleH = 0
+    rec.goneP = nil
+    B.Commit(rec)
+    if wasTame then
+        -- am zahmen Jungen nur Abklingzeit und Meldung (Plan 11), wie B.PetComplete (Nachbesserung B4)
+        B.Tell(character, note("UI_BN_Bear_Note_Happy", nil, nil, "good"))
+    else
+        tellGain(character, res, class)
+    end
+    B.Log("feed " .. rec.id .. " " .. tostring(pkey) .. " +" .. tostring(res.gain) .. (res.mixed and " mix" or "")
+        .. " " .. tostring(class) .. " tame " .. tostring(rec.tame) .. " st " .. tostring(rec.st))
+    B.FlushViews()
+    return true
+end
+
+-- ---------------------------------------------------------------------------
+-- Streicheln (Plan 5.4). Kein Gegenstand im Spiel. Am gezaehmten Jungen nur Abklingzeit und "Es geniesst das".
+-- animal:petAnimal(character): Vanilla shared/TimedActions/Animals/ISPetAnimal.lua:70 (in complete(), also Server / SP);
+-- hebt die Engine-Akzeptanz (nicht der Balken), wirkt laut Jar nur bei abgelaufenem Vanilla-petTimer.
+-- ---------------------------------------------------------------------------
+function B.PetComplete(character, animal)
+    local rec = handCheck(character, animal)
+    if not rec then return false end
+    local pkey = B.PlayerKey(character)
+    local now = B.Now()
+    local ok, whyKey, whyVal = B.CheckPet(rec, pkey, B.SlotsOf(pkey, now), now)
+    if not ok then
+        tellWhy(character, whyKey, whyVal)
+        return false
+    end
+    local wasTame = isTame(rec.st)
+    local res = B.ApplyGain(rec, pkey, "pet", nil, now)
+    animal:petAnimal(character)
+    rec.idleH = 0
+    rec.goneP = nil
+    B.Commit(rec)
+    if wasTame then
+        B.Tell(character, note("UI_BN_Bear_Note_Happy", nil, nil, "good"))
+    else
+        tellGain(character, res, nil)
+    end
+    B.Log("pet " .. rec.id .. " " .. tostring(pkey) .. " +" .. tostring(res.gain) .. (res.mixed and " mix" or "")
+        .. " tame " .. tostring(rec.tame) .. " st " .. tostring(rec.st))
+    B.FlushViews()
+    return true
+end
+
+-- ---------------------------------------------------------------------------
+-- Koeder auslegen (Plan 5.2). Gerufen aus BanditsNPCBearBaitAction:complete(). Der Platz ist unsichtbar (Plan 0.4):
+-- das Stueck wird verbraucht, der Platz steht nur im Register.
+-- getCell():getGridSquare(x, y, z): Vanilla server/Animal/ISPickDungCursor.lua:104. square:DistTo(square): ISPetAnimal.lua:6.
+-- ---------------------------------------------------------------------------
+local function baitSpotWhy(character, x, y, z)
+    local sq = getCell():getGridSquare(x, y, z)
+    local here = character:getSquare()
+    if sq == nil or here == nil or here:DistTo(sq) > B.CFG.baitReach then return "UI_BN_Bear_Why_Far" end
+    local fits, _ = B.SquareFits(sq)
+    if not fits then return "UI_BN_Bear_Bait_Inside" end
+    if not B.NearForest(x, y, z, B.CFG.baitEdge) then return "UI_BN_Bear_Bait_NotForest" end
+    return nil
+end
+
+local function baitTooClose(reg, x, y)
+    for _, bait in pairs(reg.baits) do
+        if B.DistXY(x, y, bait.x, bait.y) < B.CFG.baitApart then return true end
+    end
+    return false
+end
+
+function B.BaitComplete(character, food, x, y, z)
+    local reg = B.Reg()
+    if not reg or not B.IsWriter() or not character or not food then return false end
+    x, y, z = tonumber(x), tonumber(y), tonumber(z)
+    if x == nil or y == nil then return false end
+    x, y, z = math.floor(x), math.floor(y), math.floor(z or 0)
+    if B.Opt("BearBaitEnabled") ~= true then
+        tellWhy(character, "UI_BN_Bear_Bait_Off")
+        return false
+    end
+    local spotWhy = baitSpotWhy(character, x, y, z)
+    if spotWhy then
+        tellWhy(character, spotWhy)
+        return false
+    end
+    local pkey = B.PlayerKey(character)
+    local now = B.Now()
+    local ok, whyKey, whyVal = B.CheckBait(B.SlotsOf(pkey, now), now)
+    if not ok then
+        tellWhy(character, whyKey, whyVal)
+        return false
+    end
+    if B.CountBaits() >= B.CFG.maxBaits then
+        tellWhy(character, "UI_BN_Bear_Why_Full")
+        return false
+    end
+    if baitTooClose(reg, x, y) then
+        tellWhy(character, "UI_BN_Bear_Bait_TooClose")
+        return false
+    end
+    if not character:getInventory():contains(food) then
+        tellWhy(character, "UI_BN_Bear_Why_NoItem")
+        return false
+    end
+    local class, fwhy = B.FoodClass(food)
+    if class == nil and fwhy == "UI_BN_Bear_Why_Rotten" then
+        tellWhy(character, fwhy)
+        return false
+    end
+    local isBait, kind = B.IsBaitFood(food)
+    if not isBait then
+        tellWhy(character, "UI_BN_Bear_Bait_BadFood")
+        return false
+    end
+    if not takeOne(character, food) then return false end
+    local bait = B.NewBait(pkey, x, y, z, kind, now, B.IsNight())
+    if not bait then
+        -- kann nur ohne Register passieren, das oben geprueft ist; trotzdem laut melden (Stueck ist weg)
+        B.Err("bait: could not enter the spot after taking the food")
+        return false
+    end
+    B.Tell(character, note("UI_BN_Bear_Bait_Placed", nil, nil, "good"))
+    B.Log("bait " .. bait.id .. " " .. tostring(pkey) .. " " .. tostring(kind) .. " at " .. x .. "," .. y)
+    B.FlushViews()
+    return true
+end
+
+-- ---------------------------------------------------------------------------
+-- Bitten der Clients (Plan 6.2.6). Im Einzelspieler ruft B.Ask diese Funktion direkt.
+-- ---------------------------------------------------------------------------
+function B.Handle(player, command, args)
+    if not player or not B.IsWriter() then return end
+    if type(args) ~= "table" then return end
+    if command == "Hello" then
+        B.PushView(player)
+        return
+    end
+    if command == "BaitDrop" then
+        local reg = B.Reg()
+        if not reg then return end
+        local pkey = B.PlayerKey(player)
+        local bait = nil
+        if type(args.id) == "string" then bait = reg.baits[args.id] end
+        if bait and bait.owner == pkey then
+            B.DropBait(bait)
+            B.Tell(player, note("UI_BN_Bear_Bait_Dropped", nil, nil, nil))
+            B.Log("bait " .. tostring(bait.id) .. " given up by " .. tostring(pkey))
+        end
+        B.PushView(player)
+        return
+    end
+end
+
+-- Events.OnClientCommand.Add(function(module, command, player, args)): Vanilla server/ClientCommands.lua:1357; Filter auf das
+-- eigene Modul zuerst wie server/Foraging/forageServer.lua:56-57.
+-- Eine leer gesendete Tabelle kommt als nil an (Vanilla server/ClientCommands.lua:1349 "if args then", client/ServerCommands.lua:211);
+-- deshalb nil wie {} behandeln (Nachbesserung B1). Jede Bitte prueft ihre Felder selbst.
+local function onClientCommand(module, command, player, args)
+    if module ~= B.CMD then return end
+    if isClient() then return end
+    if args == nil then args = {} end
+    if type(args) ~= "table" then return end
+    B.Handle(player, command, args)
+end
+
+-- ---------------------------------------------------------------------------
+-- Koeder: ein Morgen (Plan 5.2). Steht jemand naeher als baitKeep, zaehlt die Nacht nicht. ZombRand(n): Vanilla
+-- shared/TimedActions/Animals/ISMilkAnimal.lua:25.
+-- ---------------------------------------------------------------------------
+function B.BaitDawn(bait, now, players)
+    if not bait or bait.ready then return end
+    players = players or B.Players()
+    local nd = B.NearestPlayerDist(bait.x, bait.y, players)
+    if nd ~= nil and nd < B.CFG.baitKeep then
+        bait.miss = (tonumber(bait.miss) or 0) + 1
+        if bait.miss >= B.CFG.baitExtra then
+            B.DropBait(bait)
+            tellKey(bait.owner, note("UI_BN_Bear_Bait_Expired", nil, nil, "bad"), players)
+            B.Log("bait " .. tostring(bait.id) .. " expired after " .. tostring(bait.miss) .. " disturbed mornings")
+            return
+        end
+        if bait.warnAt == nil or now - bait.warnAt >= 24 then
+            bait.warnAt = now
+            tellKey(bait.owner, note("UI_BN_Bear_Bait_Near", nil, nil, nil), players)
+        end
+        B.Touch(nil, bait.owner)
+        return
+    end
+    bait.nights = (tonumber(bait.nights) or 0) + 1
+    local chance = B.BaitChance(bait.nights)
+    if ZombRand(100) < chance then bait.ready = true end
+    B.Touch(nil, bait.owner)
+    B.Log("bait " .. tostring(bait.id) .. " night " .. tostring(bait.nights) .. " chance " .. tostring(chance)
+        .. " ready " .. tostring(bait.ready))
+end
+
+-- ---------------------------------------------------------------------------
+-- Langsam-Takt (Plan 7): alle 10 Spielminuten.
+-- ---------------------------------------------------------------------------
+
+-- Ist jemand (bei "fed": nur bond) innerhalb contactDist? Und ist der Spieler online, fuer den die Uhr laeuft?
+local function contactOf(rec, players, online)
+    local onlyKey = nil
+    if rec.st == "fed" then onlyKey = rec.bond end
+    local contact = false
+    for i = 1, #players do
+        local e = players[i]
+        if (onlyKey == nil or e.key == onlyKey) and B.DistXY(rec.x, rec.y, e.x, e.y) <= B.CFG.contactDist then
+            contact = true
+            break
+        end
+    end
+    local key = rec.finder
+    if rec.st == "fed" then key = rec.bond end
+    local relevant
+    if key ~= nil then relevant = online[key] == true else relevant = #players > 0 end
+    return contact, relevant
+end
+
+-- Wimmer-Hinweis an den Finder eines noch nicht entdeckten Jungen (hoechstens je B.CFG.hintH).
+local function hint(rec, players, now)
+    if rec.st ~= "new" or rec.finder == nil then return end
+    if rec.hintAt ~= nil and now - rec.hintAt < B.CFG.hintH then return end
+    local p, e = B.PlayerByKey(rec.finder, players)
+    if not p then return end
+    local d = B.DistXY(e.x, e.y, rec.x, rec.y)
+    if d <= B.CFG.contactDist or d > B.CFG.hintDist then return end
+    rec.hintAt = now
+    B.Tell(p, note("UI_BN_Bear_Note_Heard", "dir", B.DirOf(rec.x - e.x, rec.y - e.y), nil))
+end
+
+local function slowRec(rec, dt, players, online, now)
+    if rec.st == "missing" then
+        if rec.owner ~= nil and online[rec.owner] then
+            rec.missH = (tonumber(rec.missH) or 0) + dt
+            if rec.missH >= B.CFG.missingH then B.Close(rec, "lost") end
+        end
+        return
+    end
+    local contact, relevant = contactOf(rec, players, online)
+    if contact and rec.goneP then
+        rec.goneP = nil
+        B.Touch(rec)
+    end
+    local step = B.VanishStep(rec, dt, contact, relevant)
+    if step == "go" and not rec.goneP then
+        rec.goneP = true
+        B.Touch(rec)
+        B.Log("vanish due " .. rec.id .. " idle " .. tostring(rec.idleH) .. " h")
+    elseif step == "release" then
+        local old = B.ReleaseBond(rec)
+        B.Commit(rec)
+        tellKey(old, note("UI_BN_Bear_Note_Abandoned", nil, nil, "bad"), players)
+        B.Log("abandoned " .. rec.id .. " by " .. tostring(old))
+    end
+    -- ein faelliges Junges in einer nicht geladenen Gegend ist ausser Sicht und weit weg: Eintrag schliessen. Das Tier
+    -- (falls es im gespeicherten Gebiet steht) traegt dann einen Spiegel ohne Eintrag; B.ScanAnimals entfernt es, sobald
+    -- es geladen und unbeobachtet ist.
+    if rec.goneP and not B.AreaLoaded(rec.x, rec.y) then
+        B.Close(rec, "vanish")
+        return
+    end
+    hint(rec, players, now)
+end
+
+-- Wald-Wurf je Spielerschluessel (Plan 5.1): erst wuerfeln, nur bei Erfolg einen Platz suchen.
+local function forestRolls(players, now)
+    if B.Opt("BearCubsEnabled") ~= true then return end
+    local pct = B.CFG.forestRate[B.Opt("BearCubForestRate")] or 0
+    if pct <= 0 then return end
+    local done = {}
+    for i = 1, #players do
+        local e = players[i]
+        if not done[e.key] then
+            done[e.key] = true
+            local ok, _, _ = B.MayAppear(B.SlotsOf(e.key, now), now)
+            if ok and B.CountWild(onlineSet(players)) < B.Opt("BearCubWorldCap") and ZombRand(10000) < pct * 100 / 6 then
+                local sq = B.PickForestSquare(e, players)
+                if sq then
+                    -- square:getX(): Vanilla shared/Traps/TrapSystem.lua:12
+                    B.AppearFor(e.key, "forest", sq:getX(), sq:getY(), sq:getZ())
+                else
+                    B.Log("forest roll for " .. tostring(e.key) .. " found no square")
+                end
+            end
+        end
+    end
+end
+
+-- Koeder: Nacht merken, beim Morgengrauen einen Morgen zaehlen.
+local function baitNights(reg, players, now)
+    local night = B.IsNight()
+    local list = {}
+    for _, bait in pairs(reg.baits) do list[#list + 1] = bait end
+    for i = 1, #list do
+        local bait = list[i]
+        if night then
+            bait.wasNight = true
+        elseif bait.wasNight then
+            bait.wasNight = false
+            B.BaitDawn(bait, now, players)
+        end
+    end
+end
+
+local function slowTickBody()
+    local reg = B.Reg()
+    if not reg then return end
+    local now = B.Now()
+    local at = tonumber(reg.at)
+    local dt = 0
+    if at ~= nil then dt = now - at end
+    if dt < 0 then dt = 0 end
+    if dt > B.CFG.maxDtH then dt = B.CFG.maxDtH end
+    reg.at = now
+    local players = B.Players()
+    local online = onlineSet(players)
+    B.CleanLocks(now)
+    local list = {}
+    for _, rec in pairs(reg.cubs) do list[#list + 1] = rec end
+    for i = 1, #list do
+        local rec = list[i]
+        if reg.cubs[rec.id] == rec then slowRec(rec, dt, players, online, now) end
+    end
+    forestRolls(players, now)
+    baitNights(reg, players, now)
+    B.FlushViews(players)
+end
+
+function B.SlowTick()
+    -- pcall um EIGENEN Code (alle Engine-Aufrufe darin sind belegt, keine Tarnkappe): ein Fehler soll laut, aber gedrosselt
+    -- kommen (B.ErrEvery). pcall ist eine Lua-Grundfunktion (keine Engine-Methode; Vanilla und Bandits benutzen sie nicht),
+    -- im gespielten NCTurretTest shared/BanditsNPCTurretCrew.lua:128 unter Kahlua in Gebrauch.
+    local ok, err = pcall(slowTickBody)
+    if not ok then B.ErrEvery("slow", 60000, "slow tick: " .. tostring(err)) end
+end
+
+-- ---------------------------------------------------------------------------
+-- Hirn-Takt (Plan 6.7, 7): Verhalten, Kontakt, Tod, Verschwinden vollziehen, reife Koeder, Sicht.
+-- ---------------------------------------------------------------------------
+
+-- Hand und Tempo eines Spielers, je Takt einmal. getPrimaryHandItem: Vanilla server/BuildingObjects/ISEmptyGraves.lua:18.
+-- isRunning / isSprinting: Vanilla client/Foraging/ISBaseIcon.lua:702, Bandits shared/PlayerDamageModel.lua:81.
+local function playerInfo(e, cache)
+    local info = cache[e.uid]
+    if info then return info end
+    local p = e.p
+    local item = p:getPrimaryHandItem()
+    local food = false
+    if item ~= nil then food = (B.FoodClass(item) ~= nil) end
+    local fast = p:isRunning() or p:isSprinting()
+    local last = B._pp[e.uid]
+    local still = last ~= nil and B.DistXY(last.x, last.y, e.x, e.y) < B.CFG.stillEps
+    info = { key = e.key, x = e.x, y = e.y, food = food, fast = fast == true, still = still }
+    cache[e.uid] = info
+    return info
+end
+
+local function asP(info, d)
+    return { key = info.key, x = info.x, y = info.y, dist = d, food = info.food, fast = info.fast, still = info.still }
+end
+
+-- Wer zaehlt als "Lock-Spieler" (Futter in der Hand), wer als "mate" (Finder / bond / Besitzer)?
+local function keysOf(rec)
+    if rec.st == "fed" then return rec.bond, rec.bond end
+    if isTame(rec.st) then return rec.owner, rec.owner end
+    return nil, rec.finder
+end
+
+-- Umgebung eines Jungen fuer B.Decide. Rueckgabe: env, Abstand des naechsten Spielers, dessen Eintrag.
+local function buildEnv(rec, cx, cy, players, cache)
+    local cfg = B.CFG
+    local lureKey, mateKey = keysOf(rec)
+    local nearD, nearE = nil, nil
+    local lureD, lureI = nil, nil
+    local mateD, mateE = nil, nil
+    for i = 1, #players do
+        local e = players[i]
+        local d = B.DistXY(cx, cy, e.x, e.y)
+        if nearD == nil or d < nearD then nearD, nearE = d, e end
+        if d <= cfg.lureDist and (lureKey == nil or e.key == lureKey) then
+            local info = playerInfo(e, cache)
+            if info.food and not info.fast and (lureD == nil or d < lureD) then lureD, lureI = d, info end
+        end
+        if mateKey ~= nil and e.key == mateKey and d <= cfg.mateDist and (mateD == nil or d < mateD) then mateD, mateE = d, e end
+    end
+    local env = {}
+    if nearE then
+        if nearD <= cfg.contactDist then
+            env.near = asP(playerInfo(nearE, cache), nearD)
+        else
+            env.near = { key = nearE.key, x = nearE.x, y = nearE.y, dist = nearD, food = false, fast = false, still = false }
+        end
+    end
+    if lureI then env.lure = asP(lureI, lureD) end
+    if mateE then env.mate = { key = mateE.key, x = mateE.x, y = mateE.y, dist = mateD, food = false, fast = false, still = false } end
+    return env, nearD, nearE
+end
+
+-- Entscheidung ausfuehren (Plan 6.7 "Ausfuehren").
+local function steer(rec, a, d, ms)
+    local s = B.Ses(rec.id)
+    if d.act == "hold" then
+        B.Hold(rec, a, true)
+    elseif d.act == "flee" or d.act == "come" or d.act == "home" then
+        local moved = B.MoveTo(rec, a, d.tx, d.ty, rec.z)
+        if moved and d.rule == 5 then s.curiousAt = ms end
+        if moved and d.lead then
+            rec.hx, rec.hy = math.floor(d.tx), math.floor(d.ty)
+        end
+    elseif s.held then
+        B.Hold(rec, a, false)
+    end
+end
+
+-- Ein geladenes, lebendes Junges.
+local function liveRec(rec, a, players, cache, ms)
+    local x, y, z = tileOf(a)
+    rec.x, rec.y, rec.z = x, y, z
+    rec.missN = 0
+    rec.missAt = nil
+    if rec.st == "missing" then
+        rec.st = "tame"
+        rec.missH = 0
+        B.Commit(rec)
+        tellKey(rec.owner, note("UI_BN_Bear_Note_Back", nil, nil, "good"), players)
+    end
+    local cx, cy = a:getX(), a:getY()
+    local env, nearD, nearE = buildEnv(rec, cx, cy, players, cache)
+    local contact = nearD ~= nil and nearD <= B.CFG.contactDist
+    if rec.goneP and contact then
+        rec.goneP = nil
+        B.Touch(rec)
+    end
+    if rec.goneP and (rec.st == "new" or rec.st == "shy") then
+        if (nearD == nil or nearD >= B.CFG.vanishKeep) and not B.SeenInSP(a:getSquare(), players) then
+            B.RemoveCub(a)
+            B.Close(rec, "vanish")
+            return
+        end
+    end
+    if rec.st == "new" and contact then
+        rec.st = "shy"
+        B.Commit(rec)
+        B.Tell(nearE.p, note("UI_BN_Bear_Note_Seen", nil, nil, "good"))
+        B.Log("seen " .. rec.id .. " by " .. tostring(nearE.key))
+    end
+    local s = B.Ses(rec.id)
+    local big = B.CFG.curiousMs + 1
+    local c = {
+        st = rec.st, src = rec.src, x = cx, y = cy, hx = rec.hx, hy = rec.hy, held = s.held,
+        sinceMoveMs = (s.moveAt ~= nil) and (ms - s.moveAt) or big,
+        sinceCuriousMs = (s.curiousAt ~= nil) and (ms - s.curiousAt) or big,
+    }
+    local d = B.Decide(c, env)
+    steer(rec, a, d, ms)
+    B.MoveWatch(rec, a)
+end
+
+-- Erster Durchgang: Tod sehen, Objekte holen, entscheiden, ob ein Suchlauf noetig ist. Rueckgabe: Liste ohne Objekt, Suchlauf
+-- (je B.CFG.scanMs), Suchlauf nur fuer vermisste Zahme (seltener, je scanMs x B.CFG.missScanMul; Nachbesserung B6).
+local function resolve(list)
+    local missing = {}
+    local need = false
+    local needSlow = false
+    for i = 1, #list do
+        local rec = list[i]
+        local s = B._s[rec.id]
+        local o = s and s.obj
+        if o ~= nil and o:isDead() then
+            -- Tod nur am in dieser Sitzung gemerkten Objekt (Plan 0.8); "fehlt" ist nie "tot"
+            B.Close(rec, "dead")
+        elseif B.FindAnimal(rec) == nil then
+            missing[#missing + 1] = rec
+            if B.AreaLoaded(rec.x, rec.y) then
+                if rec.st == "missing" then needSlow = true else need = true end
+            end
+        end
+    end
+    return missing, need, needSlow
+end
+
+-- Nach einem Suchlauf: wer immer noch fehlt und dessen Gegend geladen ist, bekommt einen Fehlversuch. Ein angefuettertes
+-- Junges ("fed", bond und Balken haengen daran) wird erst geschlossen, wenn es AUCH seit B.CFG.fedMissH Spielstunden fehlt:
+-- Tiere kommen nach den Kacheln ueber einen eigenen Lader zurueck (FE 1.4, Dauer ungeprueft). Nachbesserung B3.
+local function countMisses(missing, players, now)
+    for i = 1, #missing do
+        local rec = missing[i]
+        if B.Reg().cubs[rec.id] == rec and B.FindAnimal(rec) == nil and rec.st ~= "missing" and B.AreaLoaded(rec.x, rec.y) then
+            rec.missN = (tonumber(rec.missN) or 0) + 1
+            if tonumber(rec.missAt) == nil then rec.missAt = now end
+            local longEnough = rec.st ~= "fed" or now - tonumber(rec.missAt) >= B.CFG.fedMissH
+            if rec.missN >= B.CFG.missScans and longEnough then
+                if rec.st == "tame" then
+                    rec.st = "missing"
+                    rec.missH = 0
+                    rec.missN = 0
+                    rec.missAt = nil
+                    B.Commit(rec)
+                    tellKey(rec.owner, note("UI_BN_Bear_Note_Missing", nil, nil, "bad"), players)
+                else
+                    B.Close(rec, "lost")
+                end
+            end
+        end
+    end
+end
+
+-- Reife Koeder: Junges erscheinen lassen, wenn die Kachel geladen ist und niemand nah ist / hinsieht.
+local function baitAppear(reg, players)
+    local list = {}
+    for _, bait in pairs(reg.baits) do
+        if bait.ready then list[#list + 1] = bait end
+    end
+    local due = (B.Opt("BearBaitNights") + B.CFG.baitExtra + 1) * 24      -- Spielstunden ab dem Auslegen (Nachbesserung B5)
+    local nowH = B.Now()
+    for i = 1, #list do
+        local bait = list[i]
+        local sq = getCell():getGridSquare(bait.x, bait.y, bait.z)
+        local nd = B.NearestPlayerDist(bait.x, bait.y, players)
+        local t0 = tonumber(bait.t0)
+        if t0 ~= nil and nowH - t0 >= due then
+            -- ein reifer Platz haengt nicht still (Plan 5.2): kam das Junge in dieser Frist nicht (Kachel nie geladen, Besitzer
+            -- hat noch ein Junges ...), verfaellt der Platz mit Meldung -- auch fuer abwesende Besitzer (Deckel maxBaits)
+            B.DropBait(bait)
+            tellKey(bait.owner, note("UI_BN_Bear_Bait_Expired", nil, nil, "bad"), players)
+            B.Log("bait " .. tostring(bait.id) .. " expired while ready")
+        elseif sq ~= nil and (nd == nil or nd >= B.CFG.baitAppear) and not B.SeenInSP(sq, players) then
+            local now = B.Now()
+            local ok, why, _ = B.MayAppear(B.SlotsOf(bait.owner, now), now)
+            if not ok and why ~= "UI_BN_Bear_Why_HasCub" then
+                -- Besitzer nicht mehr berechtigt (Baer, Sperre, ausgeschaltet): Platz verfaellt mit Meldung
+                B.DropBait(bait)
+                tellKey(bait.owner, note("UI_BN_Bear_Bait_Expired", nil, nil, "bad"), players)
+            elseif ok then
+                local spot = B.FreeSquareNear(bait.x, bait.y, bait.z, B.CFG.baitRing, players)
+                if spot then
+                    local rec, _ = B.AppearFor(bait.owner, "bait", spot:getX(), spot:getY(), spot:getZ())
+                    if rec then
+                        rec.hx, rec.hy, rec.hz = bait.x, bait.y, bait.z
+                        B.Commit(rec)
+                        B.DropBait(bait)
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- Eine Sicht nachschicken, wenn ein Spieler neu in die Reichweite eines Jungen kommt oder sich dessen OnlineID aendert.
+local function pushNewSights(reg, players, oids)
+    local sent = {}
+    local sigs = {}
+    for i = 1, #players do
+        local e = players[i]
+        local parts = {}
+        for id, rec in pairs(reg.cubs) do
+            if B.DistXY(e.x, e.y, rec.x, rec.y) <= B.CFG.tellDist then
+                parts[#parts + 1] = id .. "@" .. tostring(oids[id] or -1)
+            end
+        end
+        if #parts > 1 then table.sort(parts) end
+        local sig = table.concat(parts, ",")
+        -- auch beim ERSTEN Takt eines Spielers (B._sig[uid] nil): ein neu verbundener Spieler bekommt so seine Sicht, selbst wenn
+        -- sein "Hello" verloren ging (Nachbesserung B1)
+        if B._sig[e.uid] ~= sig then
+            B.PushView(e.p)
+            sent[e.uid] = true
+        end
+        sigs[e.uid] = sig
+    end
+    B._sig = sigs                      -- nur die Spieler von jetzt: waechst nicht
+    return sent
+end
+
+local function brainTickBody(ms)
+    local reg = B.Reg()
+    if not reg then return end
+    local players = B.Players()
+    local list = {}
+    for _, rec in pairs(reg.cubs) do list[#list + 1] = rec end
+    local missing, need, needSlow = resolve(list)
+    local every = B.CFG.scanMs
+    if not need then every = B.CFG.scanMs * B.CFG.missScanMul end
+    if (need or needSlow) and (B._scanAt == nil or ms - B._scanAt < 0 or ms - B._scanAt >= every) then
+        B._scanAt = ms
+        B.ScanAnimals(players)
+        countMisses(missing, players, B.Now())
+    end
+    local cache = {}
+    local oids = {}
+    for i = 1, #list do
+        local rec = list[i]
+        if reg.cubs[rec.id] == rec then
+            local a = B.FindAnimal(rec)
+            if a then
+                liveRec(rec, a, players, cache, ms)
+                -- getOnlineID am Tier: Vanilla shared/Definitions/animal/ButcheringUtil.lua:614 (isServer-Zweig)
+                if reg.cubs[rec.id] == rec then oids[rec.id] = a:getOnlineID() end
+            end
+        end
+    end
+    baitAppear(reg, players)
+    local pp = {}
+    for i = 1, #players do pp[players[i].uid] = { x = players[i].x, y = players[i].y } end
+    B._pp = pp
+    local sent = pushNewSights(reg, players, oids)
+    B.FlushViews(players, sent)
+    local live = B.CountRecs() > 0
+    if not live then
+        for _, bait in pairs(reg.baits) do
+            if bait.ready then live = true end
+        end
+    end
+    B._live = live
+end
+
+-- force ueberspringt nur die Echtzeit-Drossel. getTimestampMs: Vanilla server/Foraging/forageServer.lua:456.
+function B.BrainTick(force)
+    local ms = getTimestampMs()
+    if not force and B._brainAt ~= nil and ms - B._brainAt >= 0 then
+        local every = B.CFG.idleMs
+        if B._live then every = B.CFG.brainMs end
+        if ms - B._brainAt < every then return end
+    end
+    B._brainAt = ms
+    local ok, err = pcall(brainTickBody, ms)          -- pcall: siehe B.SlowTick
+    if not ok then B.ErrEvery("brain", 60000, "brain tick: " .. tostring(err)) end
+end
+
+-- ---------------------------------------------------------------------------
+-- Takte einhaengen. Events.EveryTenMinutes.Add: Vanilla server/Traps/STrapSystem.lua:134. Events.OnTick.Add: Vanilla
+-- server/Foraging/forageServer.lua:502 (mit Echtzeit-Drossel :455-461). Ueber kleine Huellen, damit spaeter ersetzte
+-- Funktionen (B.SlowTick, B.BrainTick) gelten.
+-- ---------------------------------------------------------------------------
+Events.EveryTenMinutes.Add(function() B.SlowTick() end)
+Events.OnTick.Add(function() B.BrainTick(false) end)
+Events.OnClientCommand.Add(onClientCommand)

@@ -1,0 +1,19 @@
+module Base
+{
+    /* NPC Crew -- Baer: Modell des Jungen ncbearcub (B1a, PLAN_ZAEHMEN.md 6.1 Nr. 9). Form: NCBearTest scripts/nc_bear_tier.txt:3-15. */
+    /* Muss in module Base bleiben (bodyModel der Tierart ohne Punkt). Textur kommt aus der Rasse (texture = NCBearCub). */
+    /* Gleiche 15 Clip-Namen wie der Erwachsene, animset buck. Kommentare nur innerhalb des Blocks wie Vanilla xui-Skripte. */
+    animationsMesh NCBearCub
+    {
+        meshFile = Skinned/NCBearCub.glb,
+        keepMeshAnimations = true,
+    }
+
+    model NCBearCub_Body
+    {
+        mesh = Skinned/NCBearCub.glb,
+        shader = animalEffect,
+        static = false,
+        animationsMesh = NCBearCub,
+    }
+}
