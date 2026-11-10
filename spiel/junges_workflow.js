@@ -194,7 +194,19 @@ Dauern, Abtastzeiten, Dreiecke, Einfluesse, Dehnung, Boden, Importer laedt).
 Ergebnis: ${W}/bau_koerper.md (was gebaut, Datei:Zeile, Messwerte gegen SPEZ, Befehle der Kette zum Wiederholen, was nicht erreicht wurde),
 Bilder ${W}/bilder/koerper_*.png, GLB-Stand unter ${W}/glb_koerper/. Ehrlich melden, wenn etwas noch nach Fass, Saeule, Menschenfuss oder
 verkleinertem Erwachsenen aussieht.
-Rueckgabe: Kurzfassung mit Messwerten, offenen Punkten und Dateipfaden.`, { label: 'bau:koerper', phase: 'Bau' })
+Rueckgabe: Kurzfassung mit Messwerten, offenen Punkten und Dateipfaden.
+
+FORTSETZUNG (10.11.2026 20:10): Dieser Auftrag lief schon einmal von etwa 17:50 bis 18:11 und wurde wegen des Verbrauchs-Limits MITTEN in
+der Arbeit abgebrochen. Es liegt deshalb ein UNGEPRUEFTER TEILSTAND deines Vorgaengers mit demselben Auftrag auf der Platte:
+${B}/spiel/baer_form_junges.py (angefangenes Skript), ${W}/koerper/ (lp_junges.npz, mass.json, skelett.json), dazu evtl. ${W}/werkzeug/,
+${W}/sitz/, ${W}/render/, ${W}/log/; ${W}/glb_koerper/ ist noch leer. Lies den Teilstand zuerst, pruefe ihn gegen ${W}/SPEZ_JUNGES.md und
+baue darauf weiter, statt neu anzufangen -- aber verlass dich auf nichts ungeprueft: eine Datei kann mitten im Schreiben abgebrochen sein
+(Ende ansehen, Skript einmal durchlaufen lassen), und nichts davon ist gemessen oder angesehen. Existiert ${W}/gpu.lock, obwohl kein
+blender.exe laeuft, ist es ein Rest vom Abbruch (rmdir).`, { label: 'bau:koerper', phase: 'Bau' })
+if (!koerper) {
+  log('Abbruch nach Bau Koerper: kein Ergebnis (Limit oder Fehler).')
+  return { fr, fb, spez, koerper: null, kopf: null, textur: null, abbruch: 'Bau Koerper ohne Ergebnis' }
+}
 
 const kopf = await agent(`${CTX}
 
@@ -214,6 +226,10 @@ dass beim Fressen und Bruellen nur der Mund oeffnet (kein Entenschnabel, keine Z
 Die Arbeit des Koerper-Bauers darf nicht verloren gehen: seine Messwerte am Ende nachmessen, ganze Kette bis zum GLB, feste Regeln nachmessen.
 Ergebnis: ${W}/bau_kopf.md, Bilder ${W}/bilder/kopf_*.png, GLB-Stand unter ${W}/glb_kopf/.
 Rueckgabe: Kurzfassung mit Messwerten, offenen Punkten und Dateipfaden.`, { label: 'bau:kopf', phase: 'Bau' })
+if (!kopf) {
+  log('Abbruch nach Bau Kopf: kein Ergebnis (Limit oder Fehler).')
+  return { fr, fb, spez, koerper, kopf: null, textur: null, abbruch: 'Bau Kopf ohne Ergebnis' }
+}
 
 const textur = await agent(`${CTX}
 

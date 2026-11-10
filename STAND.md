@@ -2,6 +2,76 @@
 
 > **Neuer Account oder neue Sitzung? Zuerst `UEBERGABE.md` (10.11. ~11:00): wo wir stehen, was Kevin testen muss, offene Fragen, was als Naechstes kommt.**
 
+> **10.11.2026 21:28: B1a "FINDEN UND ZAEHMEN" IST IN NCBearTest -- UNGESPIELT.** Etappe 2 (4 Opus-Agenten, Workflow `wf_9beab0a4-ae9`):
+> 17 Befunde, 15 geschlossen (darunter der MP-Blocker B1 "Hello mit leerer Tabelle" und die majors A1 `removeAnimal` am Server, A2
+> `serverStart/serverStop`), Gegenpruefer: **bereit fuer den ersten SP-Test, kein Blocker**; Pruefer 15/0, Gesamt-Attrappe 261/0, Probe mit
+> `--vor-b5a` OK. Einbau: 40 Dateien byte-gleich (39 neu, nur `Translate/EN/IG_UI.json` ueberschrieben), Beschreibung in beiden `mod.info`
+> ersetzt, Sicherungen `Zomboid/backups/NCBearTest/NCBearTest_vor_zaehmen_2026-11-10_212816.zip` und `..._mit_zaehmen_...`; das Spiel lief
+> nicht. **Kevins Test: `spiel/anleitung_zaehmen.md`** (Wegwerf-Spielstand, `-debug`, `NCBear_CubFood()`, `NCBear_CubHere()`).
+> Das Junge traegt noch das ALTE Entwurfs-Modell als Platzhalter (das neue kommt aus dem Generator, gleiche Dateinamen).
+> Berichte: `spiel/zaehmen_*.md` (zuerst `zaehmen_gegen_bericht.md`). **Offen, nur Mehrspieler:** A3 (`getObjectListForLua`, `getAnimalID`,
+> `isRotten/isBurnt` am Server ohne Server-Beleg -> Kevins Wort je Methode oder MP-Test), B2 (Uhren laufen nur, solange der Finder online
+> ist), N1-N4 klein. **Fragen an Kevin:** B2 Uhren auch offline? B5 reifer Koeder verfaellt nach 8 Spieltagen ok? A3 wie oben.
+> Echte Uebernahme nach NPC Crew bleibt gesperrt bis B5a (24 Altlasten der alten `NCBear*`-Dateien).
+>
+> **10.11.2026 ~21:15: GENERATOR-PROBELAUF FERTIG, Stufe 2 laeuft.** ComfyUI v0.44.0 + TRELLIS.2 laufen lokal (kein weiterer Download),
+> Bericht `../_arbeit/baer_gen/PROBELAUF.md`, Startskript `tools/gen_trellis.py` + `tools/trellis2_ablauf_api.json`. Rohmodelle
+> `../_arbeit/baer_gen/aus/A_roh.glb`, `E_roh.glb` (je 700.000 Dreiecke, ein Teil, Beine getrennt; A 303 s / 21,4 GB, E 174 s / 18,6 GB
+> Grafikspeicher). Blaetter `spiel/gen_A_rundum_roh.png`, `gen_E_rundum_roh.png` (nicht in Git) -- Kevin gezeigt. **Claudes Urteil nach
+> eigenem Ansehen: Form und Proportion erstmals wirklich baerenhaft (E von der Seite gut), aber NICHT schoen:** A Fell als Stachel-Geometrie,
+> Textur viel zu blass, Pfoten kahl; E weisser Stachel-Fleck auf dem Scheitel, Lappen am Hinterteil, Flossen-Hinterpfoten. Stufe 2
+> (Opus-Agent seit ~21:12): je Bild 5+ Varianten mit anderen Seeds, bestes waehlen, Stacheln glaetten, auf 20.000 Dreiecke, Textur 1024
+> backen, Farbe ans Foto angleichen, Blaetter in Spielgroesse -> `../_arbeit/baer_gen/STUFE2.md`, `bilder/A_spielnetz.png`,
+> `E_spielnetz.png`, `aus/A_spielnetz.glb`, `E_spielnetz.glb`. Danach erst Skelett/Clips. Das Spiel lief um 21:10 nicht.
+>
+> **10.11.2026 20:50: STAND DER DREI STRAENGE.** Verbrauch 20:46: 5 h 44 %, Woche alle 39 %, **Woche Fable 72 %** (+6 Punkte in 14 min) --
+> deshalb laeuft ab jetzt ALLES Neue auf Opus, und Claudes eigene Runden bleiben kurz (der Verlauf dieser Sitzung ist gross und kostet Fable).
+> 1. **baer-zaehmen Etappe 1 FERTIG** (6 Agenten, 0 Fehler): Staging `../_arbeit/baer_zaehmen/mod/` 40 Dateien (15 Lua `BanditsNPCBear*` +
+>    Bench `NCBearBenchCub.lua`, 21 Textdateien in 7 Sprachen, `sandbox-options.txt`, `nc_bear_cub.txt`, Platzhalter-Modell), Bericht
+>    `../_arbeit/baer_zaehmen/bau_uebernahme.md` (Pruefer 0 Fehler, Gesamt-Attrappe 175/0, Trockenlauf rot nur mit den 24 Altlasten, Probe
+>    mit `--vor-b5a` OK), neu `tools/baer_uebernahme.py` und `NAEHTE.md`. Claudes Stichprobe: luacheck 15/0, kein Testbefehl ausserhalb der
+>    Bench, `addAnimal`/`remove` nur in `BanditsNPCBearWorld.lua`. **Nebenfund: das Spiel ist laut Forschung 42.22.2** (Bandits hat einen
+>    Ordner `42.22`, nachgesehen) -- Zeilennummern aelterer Unterlagen sind verschoben. **Etappe 2 laeuft** seit 20:48: Workflow
+>    `wf_9beab0a4-ae9` (Task `wrmx0e3gl`; Pruefer A Belege/Regeln, Pruefer B Logik/SP-MP, Nachbesserung, Gegenpruefer; 4 Agenten, alle Opus),
+>    Berichte kommen nach `../_arbeit/baer_zaehmen/pruef_a.md`, `pruef_b.md`, `nachbesserung.md`, `gegen_bericht.md`,
+>    `anleitung_zaehmen_entwurf.md`. Danach: Einbau in NCBearTest (nur wenn Kevin nicht spielt), Commit + Push.
+> 2. **Generator:** alle sechs Dateien da, Groesse und SHA256 stimmen (20:45). Ein Opus-Agent richtet seit 20:48 ComfyUI ein
+>    (`C:/Users/Kevin/Tools/ComfyUI/ComfyUI_windows_portable/`), baut den Ablauf nur mit TRELLIS.2, erzeugt `../_arbeit/baer_gen/aus/A_roh.glb`
+>    und `E_roh.glb`, rendert Rundum-Blaetter `../_arbeit/baer_gen/bilder/A_rundum.png` / `E_rundum.png`, Bericht
+>    `../_arbeit/baer_gen/PROBELAUF.md`, Startskript `tools/gen_trellis.py`. Claude sieht die Blaetter selbst an, bevor Kevin sie bekommt.
+> 3. **baer-junges (Skript-Modell) ANGEHALTEN 20:47** mitten im Koerper-Schritt (Task wzy7o3n1j gestoppt; frueher als angekuendigt, wegen
+>    der Fable-Woche). Teilstand: `spiel/baer_form_junges.py`, `baer_export_junges.py`, `baer_gewichte_junges.py`,
+>    `../_arbeit/baer_junges/glb_koerper/v1.glb`. Fortsetzen ginge mit `resumeFromRunId wf_b8e6ce94-a1a` (nur diese Sitzung) -- nur falls der
+>    Generator-Weg scheitert.
+>
+> **10.11.2026 20:32: GENERATOR-WEG GESTARTET auf Kevins Wort** (*"Ja, alle sechs"*, *"nimm A fuers baby und E fuer den grossen und mach das
+> bitte richtig schoen von allen seiten"*). Die sechs Dateien (ComfyUI v0.44.0 + TRELLIS.2, 10,24 GB) laden seit 20:28 nach
+> `C:/Users/Kevin/Tools/ComfyUI/_download/` (Skript `laden.sh` dort: prueft Groesse und SHA256, setzt Abbrueche fort; Hintergrund-Task
+> br5oq1pey). Vorlagen geladen: `begleiter/vorlage_A_junges.jpg` (Junges) und `begleiter/vorlage_E_gross.jpg` (GROSSER Baer -- auch der
+> Erwachsene soll neu aus dem Generator kommen), Zuschnitte `../_arbeit/baer_gen/eingang/`. Naechste Schritte: SHA pruefen, entpacken nach
+> `Tools/ComfyUI/`, Modelle nach `models/{diffusion_models,vae,clip_vision,background_removal}`, Ablauf NUR mit TRELLIS.2 bauen (Pixal3D ist
+> in der EU gesperrt), Probelauf, dann Netz -> 20.000 Dreiecke -> Skelett/Clips, Rundum-Renders aus der Spielkamera fuer Kevin.
+> Laeufe 20:32: baer-zaehmen Kern + Oberflaeche FERTIG (Opus), Uebernahme-Skript laeuft; baer-junges noch im Koerper-Schritt. Claudes Plan:
+> baer-junges NACH dem Koerper-Schritt anhalten (Kopf und Textur per Skript waeren mit dem Generator ueberholt; Skelett-Masse und Clips
+> bleiben nutzbar), Kevin ist das angekuendigt. Verbrauch 20:32: 5 h 31 %, Woche alle 35 %, **Woche Fable 66 %**.
+>
+> **10.11.2026 ~20:25: Bild-zu-3D-Generator recherchiert auf Kevins Wort** -> `begleiter/BILD_ZU_3D.md` (Empfehlung TRELLIS.2 ueber ComfyUI,
+> sechs Downloads zusammen 10,24 GB mit Quelle und Groesse, acht Baerenbilder A-H, Blatt `begleiter/auswahl_baerenbilder.jpg`).
+> Verbrauch ~20:20: 5 h 25 %, Woche alle 33 %, Woche Fable 64 %.
+>
+> **10.11.2026 nach 20:10: LIMIT-WAECHTER GELOESCHT auf Kevins Wort** (Cron `80551232`, CronDelete). Die beiden Laeufe laufen weiter, aber
+> NIEMAND haelt sie mehr vor dem 5-h-Limit an und nichts setzt nach einem Reset von selbst fort; die Abbruch-Riegel in den Skripten bleiben.
+>
+> **10.11.2026 20:10: BEIDE LAEUFE FORTGESETZT (Wecker 20:04).** Verbrauch 20:04: 5 h 3 % (Reset 01:00), Woche alle 28 %, Woche Fable 55 %.
+> Neue Task-IDs: baer-junges `wzy7o3n1j`, baer-zaehmen `ws1rh2ogz` (Run-IDs unveraendert). Die drei fertigen Agenten je Lauf kamen aus dem
+> Zwischenspeicher; neu gestartet sind `bau:koerper` bzw. `bau:kern` + `bau:oberflaeche`, je mit einem FORTSETZUNG-Absatz im Auftrag (Teilstand
+> ansehen und weiterbauen). **Rechnung:** die 72 min bis 18:11 kosteten 4,1 Mio. Tokens = rund 47 Punkte der Fable-Woche; der Rest beider
+> Laeufe samt Etappe 2 passt NICHT mehr in die Fable-Woche. Deshalb (Claudes Entscheidung, Kevin kann sie umwerfen): **baer-zaehmen laeuft ab
+> jetzt auf Opus** (`model: 'opus'` bei bau:kern, bau:oberflaeche, bau:uebernahme), baer-junges bleibt auf Fable (das Modell ist Kevins
+> wunder Punkt). Dazu Abbruch-Riegel in beiden Skripten (liefert ein Bauer nichts, startet der naechste nicht). **Limit-Waechter** Cron
+> `80551232` alle 10 min: haelt bei 5 h >= 85 % sauber an und stellt einen Wecker 4 min nach dem Reset; bei Woche Fable >= 95 % stoppt nur
+> baer-junges, bei Woche alle >= 95 % alles. Kopien der geaenderten Skripte: `spiel/junges_workflow.js`, `spiel/zaehmen_workflow.js`.
+>
 > **10.11.2026 18:11: BEIDE LAEUFE ANGEHALTEN (TaskStop), Fortsetzung automatisch um 20:04** (Kevin 18:10: *"bin bei 94% 5std limit gleich
 > wird triggert die sperre kannste die sachen abspweicherund und um 20:00 uhr automatisch beginnen ?"*). Verbrauch beim Anhalten: 5 h 97 %
 > (Reset 20:00), Woche alle 26 %, **Woche Fable 52 %** (beim Start 5 %). Fertig auf der Platte: baer-junges -- beide Forschungen und

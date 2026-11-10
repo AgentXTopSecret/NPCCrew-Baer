@@ -205,7 +205,14 @@ hinter einem Schalter. Nach dem Bau: alle vier Lua-Pruefer auf deine Dateien, Ze
 (${W}/attrappe/kern/), Ergebnis ansehen.
 Ergebnis: ${W}/bau_kern.md (Dateien, was jede tut, Engine-Aufrufe mit Fundstelle als Tabelle, SP- und MP-Zweig je Vorgang, Pruefer-Ausgaben,
 Attrappen-Ergebnis, was nicht gebaut oder ungeprueft ist).
-Rueckgabe: Kurzfassung mit Dateiliste, offenen Punkten und Abweichungen von der Schnittstelle.`, { label: 'bau:kern', phase: 'Bau' }),
+Rueckgabe: Kurzfassung mit Dateiliste, offenen Punkten und Abweichungen von der Schnittstelle.
+
+FORTSETZUNG (10.11.2026 20:10): Dieser Auftrag lief schon einmal von etwa 17:35 bis 18:11 und wurde wegen des Verbrauchs-Limits MITTEN in
+der Arbeit abgebrochen. Unter ${W}/mod/42/media/lua/shared und .../lua/server (und evtl. ${W}/attrappe/kern/) liegt deshalb ein UNGEPRUEFTER
+TEILSTAND deines Vorgaengers mit demselben Auftrag. Lies ihn zuerst ganz, pruefe ihn gegen ${W}/PLAN_ZAEHMEN.md und baue darauf weiter, statt
+neu anzufangen. Verlass dich auf keine Datei ungelesen: eine Datei kann mitten im Schreiben abgebrochen sein (Ende der Datei ansehen), und
+kein Pruefer ist bisher gelaufen. ${W}/schnittstelle_aenderungen.md existiert schon -- lesen, nur anhaengen. Die Dateien unter lua/client,
+Translate und die Bench-Datei gehoeren dem anderen Bauer (auch ein Teilstand): nur lesen.`, { label: 'bau:kern', phase: 'Bau', model: 'opus' }),
   () => agent(`${CTX}
 
 PLAN (Kurzfassung; verbindlich ist ${W}/PLAN_ZAEHMEN.md, GANZ lesen; Belege ${W}/forschung_engine.md, Bestand ${W}/forschung_bestand.md):
@@ -223,9 +230,21 @@ nur Zeichen, die in Vanilla-CN vorkommen (pruefen und belegen). Nach dem Bau: al
 moeglich (${W}/attrappe/ober/).
 Ergebnis: ${W}/bau_oberflaeche.md (Dateien, Engine-Aufrufe mit Fundstelle als Tabelle, Text-Schluessel je Sprache gezaehlt, Pruefer-Ausgaben,
 was nicht gebaut oder ungeprueft ist).
-Rueckgabe: Kurzfassung mit Dateiliste, offenen Punkten und Abweichungen von der Schnittstelle.`, { label: 'bau:oberflaeche', phase: 'Bau' }),
+Rueckgabe: Kurzfassung mit Dateiliste, offenen Punkten und Abweichungen von der Schnittstelle.
+
+FORTSETZUNG (10.11.2026 20:10): Dieser Auftrag lief schon einmal von etwa 17:35 bis 18:11 und wurde wegen des Verbrauchs-Limits MITTEN in
+der Arbeit abgebrochen. Unter ${W}/mod/42/media/lua/client (auch ISUI/ und die Bench-Datei NCBearBenchCub.lua), evtl. Translate, Sandbox-Texte
+und ${W}/attrappe/ober/ liegt deshalb ein UNGEPRUEFTER TEILSTAND deines Vorgaengers mit demselben Auftrag. Lies ihn zuerst ganz, pruefe ihn
+gegen ${W}/PLAN_ZAEHMEN.md und baue darauf weiter, statt neu anzufangen. Verlass dich auf keine Datei ungelesen: eine Datei kann mitten im
+Schreiben abgebrochen sein (Ende der Datei ansehen), und kein Pruefer ist bisher gelaufen. Was laut Plan zu deinem Teil gehoert und noch
+fehlt (z. B. Translate in sieben Sprachen, Sandbox-Texte), baust du. ${W}/schnittstelle_aenderungen.md existiert schon -- lesen, nur
+anhaengen. Die Dateien unter lua/shared und lua/server gehoeren dem anderen Bauer (auch ein Teilstand): nur lesen.`, { label: 'bau:oberflaeche', phase: 'Bau', model: 'opus' }),
 ])
 log(`Bau: Kern ${kern ? 'ok' : 'FEHLT'}, Oberflaeche ${ober ? 'ok' : 'FEHLT'}`)
+if (!kern || !ober) {
+  log('Abbruch vor dem Uebernahme-Skript: ein Bauer hat nichts geliefert (Limit oder Fehler).')
+  return { fe, fb, plan, kern, ober, ueber: null, abbruch: 'Bauer ohne Ergebnis' }
+}
 
 const ueber = await agent(`${CTX}
 
@@ -257,6 +276,6 @@ DEINE AUFGABE (Zusammenbau + Uebernahme-Skript):
    Livestock-Panel, Sandbox-Seite, UI.json, Tier-Menue, V-Taste spaeter), jeder Aufsatz in OnGameBoot, keine NPC-Crew-Datei wird geaendert;
    erlaubte Fundstellen des Trockenlaufs.
 Ergebnis: ${W}/bau_uebernahme.md (Tabelle Zusammenbau, behobene Luecken, Pruefer-Ausgaben, Trockenlauf- und Probe-Ausgabe, offene Punkte).
-Rueckgabe: Kurzfassung mit Dateiliste des Stagings (Anzahl, neu/ueberschreibt), Ergebnis von Trockenlauf und Probe, offenen Punkten.`, { label: 'bau:uebernahme', phase: 'Bau' })
+Rueckgabe: Kurzfassung mit Dateiliste des Stagings (Anzahl, neu/ueberschreibt), Ergebnis von Trockenlauf und Probe, offenen Punkten.`, { label: 'bau:uebernahme', phase: 'Bau', model: 'opus' })
 
 return { fe, fb, plan, kern, ober, ueber }
