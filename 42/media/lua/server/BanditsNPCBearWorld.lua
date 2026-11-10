@@ -229,12 +229,12 @@ function B.CreateCub(x, y, z)
         return nil, "noanimal"
     end
     animal:addToWorld()
-    -- isExistInTheWorld: Vanilla shared/TimedActions/Animals/ISAddAnimalInTrailer.lua:29. Die Engine verwirft ein neues Tier z. B., wenn in
-    -- 4 Kacheln schon eines mit derselben AnimalID steht.
-    if not animal:isExistInTheWorld() then
-        B.Err("create: the new cub is not in the world at " .. tostring(x) .. "," .. tostring(y))
-        return nil, "notinworld"
-    end
+    -- KEINE Pruefung mit isExistInTheWorld direkt nach addToWorld (Kevins Test 10.11.2026: "no cub: notinworld", console.txt
+    -- "[TC-BEAR] *** create: the new cub is not in the world"): die Engine haengt ein neues Tier erst beim naechsten Update in die
+    -- Liste seiner Kachel (Jar 42.22.2 IsoAnimal.isExistInTheWorld = square.getMovingObjects().contains(this)); im selben Bild ist
+    -- die Antwort deshalb immer falsch. Vanilla prueft hier auch nicht (server/ClientCommands.lua:809-810,
+    -- client/DebugUIs/DebugContextMenu.lua:1466-1467), ebenso der gespielte Erwachsene (NCBearTest client/NCBearSpawn.lua:56).
+    -- Fehlt das Tier wirklich, findet es der Suchlauf nicht und der Eintrag wird als verloren geschlossen.
     return animal, nil
 end
 
