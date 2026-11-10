@@ -2,6 +2,14 @@
 
 > **Neuer Account oder neue Sitzung? Zuerst `UEBERGABE.md` (10.11. ~11:00): wo wir stehen, was Kevin testen muss, offene Fragen, was als Naechstes kommt.**
 
+> **10.11.2026 ~21:50: ERSTER SPIELTEST B1a, Fehler 1 behoben.** Kevin: `NCBear_CubHere()` -> *"no cub: not inworld"* (console.txt:5454
+> `[TC-BEAR] *** create: the new cub is not in the world at 11073,9713`). Ursache: `B.CreateCub` fragte direkt nach `addToWorld()`
+> `isExistInTheWorld()`; die Engine haengt ein neues Tier erst beim naechsten Update in die Kachel-Liste (Jar 42.22.2), im selben Bild also
+> immer falsch. Korrektur: Pruefung entfernt (`server/BanditsNPCBearWorld.lua:231-238`; Vanilla und der gespielte Erwachsene pruefen dort
+> auch nicht), Pruefer 0, Attrappen 261/0 und 133/0, in der Test-Mod nach Kevins "Spiel ist zu". **Lehre:** was "im selben Bild" nach einem
+> Engine-Aufruf gilt, kann keine Attrappe zeigen -- solche Sofort-Gegenproben nur mit Spielbeleg. Kevin testet nach Neustart weiter
+> (`spiel/anleitung_zaehmen.md`, frischer Spielstand).
+>
 > **10.11.2026 21:28: B1a "FINDEN UND ZAEHMEN" IST IN NCBearTest -- UNGESPIELT.** Etappe 2 (4 Opus-Agenten, Workflow `wf_9beab0a4-ae9`):
 > 17 Befunde, 15 geschlossen (darunter der MP-Blocker B1 "Hello mit leerer Tabelle" und die majors A1 `removeAnimal` am Server, A2
 > `serverStart/serverStop`), Gegenpruefer: **bereit fuer den ersten SP-Test, kein Blocker**; Pruefer 15/0, Gesamt-Attrappe 261/0, Probe mit
