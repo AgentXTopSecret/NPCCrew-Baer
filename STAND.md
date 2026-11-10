@@ -1,7 +1,44 @@
-# Baer -- Stand und alles, was ansteht (10.11.2026 00:10)
+# Baer -- Stand und alles, was ansteht (10.11.2026 10:45)
+
+> **10.11.2026 10:37: Lauf baer-2c FERTIG und in NCBearTest (ungespielt, Test `spiel/anleitung_2c.md`).** GLB 08ec7806, Deer 91f0c60e, FBX
+> da08d469, Body 4cfdb177, WorldItems a640e4cd; 12 Clips byte-gleich, SitDown/Sit/StandUp neu (gleiche Dauer/Proben), Skelett/inverseBind gleich,
+> 19.806 Dreiecke (von Claude nachgezaehlt). Sicherungen `Zomboid/backups/NCBearTest/NCBearTest_vor_2c_2026-11-10_103718.zip` / `_mit_2c_...`.
+> Gegenpruefer: ready=false, aber keine feste Regel gebrochen und in jedem Bild klar besser (Sitzen eng nach Vorlage, Hinterfuss kurz/dunkel,
+> keine Hose-in-Stiefeln, Gebiss mit 4 Eckzaehnen + 6+6 Schneidezaehnen, flache Zunge). **Kevins Entscheidungen offen: G1 Buckel hinter dem Kopf
+> tiefer?, G2 Kopf-Rand-Farbe angleichen (Kopf-Texel)?, G3 Kopf im Sitzen geradeaus?** Dazu Baby: Augen groesser? Rumpf kuerzer? Berichte
+> `spiel/2c_*.md`, `spiel/baby_*.md`, Bilder `spiel/2c_vorher_nachher.png`, `spiel/baby_entwurf.png`. Woche danach 93 %.
 
 > **10.11.2026 00:04:** Lauf baer-pfoten FERTIG und in NCBearTest (ungespielt, Test `spiel/anleitung_pfote.md`). Als Naechstes
 > Lauf 2c (Gebiss, Zunge, ganze Beine) -- Kevin 09.11.: "wenn der worklow durch ist mach direkt weiter".
+> **10.11.2026 00:11: Lauf baer-2c GESTARTET** (Workflow wf_966982af-cb0, 10 Agenten: 2 Forschung, Spezifikation, Bau Beine, Bau Gebiss,
+> Textur, 2 Pruefer, Nachbesserung, Gegenpruefer). Arbeitsordner `../_arbeit/baer_2c/` (Skript des Laufs `workflow_baer_2c.js`, Ergebnis
+> `mod/42/media/`, Abnahme `gegen_bericht.md`), neue Skriptkopien `spiel/*_2c.py`. NICHTS davon ist in NCBearTest, bis der Lauf fertig,
+> selbst nachgeprueft und eingebaut ist (Resume geht nur in der Sitzung, die ihn gestartet hat). Verbrauch beim Start: 5 h 46 %, Woche 63 %.
+> **10.11.2026 ~01:10: Kevin hat baer-pfoten gespielt** (Sitzen, Aufrichten): Hinterfuss wie ein Menschenfuss, Kopf passt im Sitzen nicht zum
+> Koerper (Kragen), Beine zu weit auseinander, Uebergang "Hose in Stiefeln" (ENTSCHEIDUNGEN.md ganz unten). Lauf 2c dafuer angehalten und als
+> **v2 fortgesetzt** (`../_arbeit/baer_2c/workflow_baer_2c_v2.js`): Forschung aus dem Zwischenspeicher, neu Spezifikation, Bau Koerper, Bau Sitzen
+> (Sitz-Clips nach `begleiter/kevin_sitzvorlage.png`), Bau Gebiss, Textur, Pruefer, Nachbesserung, Gegenpruefer = 10 Agenten (+1 abgebrochener
+> Planer). Verbrauch bei der Fortsetzung: 5 h 29 %, Woche 71 %.
+> **10.11.2026 ~01:40: Lauf baer-baby GESTARTET, parallel zu 2c** (Kevin: "Jetzt parallel"; Workflow wf_a286bbfd-037, 4 Agenten:
+> Spezifikation, Bau, Pruefer, Nachbesserung). ENTWURF des Jungen nach `begleiter/kevin_babygesicht_vorlage.webp` (eigenes Gesicht, Junges-
+> Proportionen, Renders, Weg ins Spiel empfohlen), nichts in die Mod. Ordner `../_arbeit/baer_baby/` (Skript `workflow_baer_baby.js`, Blatt
+> fuer Kevin `bilder/kevin_baby_entwurf.png`), Skriptkopien `spiel/*_baby.py`. Verbrauch beim Start: 5 h 38 %, Woche 73 % (Risiko: Wochenlimit
+> vor Ende beider Laeufe -- Kevin weiss es und hat entschieden).
+> **10.11.2026 ~04:35: baer-baby FERTIG (Entwurf, nicht im Spiel).** `../_arbeit/baer_baby/entwurf/NCBearCub.glb` (MD5 6c3f0a96, 19.806
+> Dreiecke, 26 Knochen und 15 Clip-Namen wie der Erwachsene, Clips per Skript umgerechnet) + `NCBearCub.png`; Blatt fuer Kevin
+> `bilder/kevin_baby_entwurf.png` (ohne Foto, von Claude angesehen: klar ein Junges mit eigenem Gesicht; Augen kleiner als im Foto, Rumpf
+> lang wie ein Fass, Koerper-Baustellen aus 2c noch drin). Weg ins Spiel (B1): eigene Tierart `bearcub` -> `bear` wie Vanilla Kitz/Kalb
+> (`DeerDefinitions.lua:7-11`), modData geht beim Wachsen NICHT mit (B1 reicht Besitzer/Zaehmen selbst weiter). Kevins Fragen: Gesicht ok/
+> Augen groesser?, Schrittweite 0,777 oder 1,0, Halbstark-Modell, zwei Abweichungen (Unterlid dunkel, Ohrrand fellfarben). Berichte
+> `SPEZ_BABY.md`, `bau_baby.md`, `pruef_baby.md`, `fix_baby.md`; Skripte `spiel/baer_*_baby.py`.
+> **10.11.2026 ~04:35: Lauf 2c ANGEHALTEN (Limits: 5 h 96 %, Woche 89 %).** Fertig und im Zwischenspeicher: Forschung (2), Spezifikation, Bau
+> Koerper (Hose-in-Stiefeln im Ton weg, Rumpf 0,79 statt 0,93 m, Hinterfuss 29,3 statt 43 cm, Clips und Kopf bit-gleich; offen: Achsel-Dehnung
+> 3,51 > 3,5, Falten liegend 254 > 136, Kragen haengt am neuen Sitzen). Bau Sitzen lief 32 min und wird beim Fortsetzen neu gestartet. Fortsetzen
+> NUR in dieser Sitzung: Workflow mit scriptPath = Skript des Laufs (Kopie `../_arbeit/baer_2c/workflow_baer_2c_v2.js`) und resumeFromRunId
+> wf_966982af-cb0. Rest: Sitzen, Gebiss, Textur, Pruefer, Nachbesserung, Gegenpruefer (6 Agenten, grob 12-18 % der Woche).
+> **10.11.2026 ~05:15: Lauf 2c FORTGESETZT** (Skript v3: Hinweis an den neu startenden Sitz-Bauer). Grund: Kevins Regel aus der NPC-Crew-
+> Hauptsitzung (uebermittelt): weiterarbeiten bis Wochenlimit 98 %, dann sofort stoppen, speichern, Uebergabe fuer einen anderen Account
+> -> `UEBERGABE_LIMIT.md` (vorbereitet). Die Hauptsitzung schickt das Stopp-Signal. Woche beim Fortsetzen 89 %, 5 h 0 %.
 
 > **09.11.2026 ~14:20 (neue Sitzung, neuer Account):** Lauf baer-fell FERTIG und in NCBearTest (ungespielt, Test
 > `spiel/anleitung_fell.md`); Forschungslauf baer-schlaf fertig (`begleiter/SCHLAF_PLAN.md`, Kevins Fragen K1-K21 offen).
