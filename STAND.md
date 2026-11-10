@@ -2,6 +2,28 @@
 
 > **Neuer Account oder neue Sitzung? Zuerst `UEBERGABE.md` (10.11. ~11:00): wo wir stehen, was Kevin testen muss, offene Fragen, was als Naechstes kommt.**
 
+> **10.11.2026 18:11: BEIDE LAEUFE ANGEHALTEN (TaskStop), Fortsetzung automatisch um 20:04** (Kevin 18:10: *"bin bei 94% 5std limit gleich
+> wird triggert die sperre kannste die sachen abspweicherund und um 20:00 uhr automatisch beginnen ?"*). Verbrauch beim Anhalten: 5 h 97 %
+> (Reset 20:00), Woche alle 26 %, **Woche Fable 52 %** (beim Start 5 %). Fertig auf der Platte: baer-junges -- beide Forschungen und
+> `SPEZ_JUNGES.md`, Bau Koerper war mittendrin (`spiel/baer_form_junges.py` ist ein TEILSTAND, nicht committet); baer-zaehmen -- beide
+> Forschungen und `PLAN_ZAEHMEN.md`, Bau Kern/Oberflaeche waren mittendrin (Staging `../_arbeit/baer_zaehmen/mod/` unfertig). Fortsetzen geht NUR
+> in dieser Sitzung: Workflow mit `scriptPath` (Sitzungsordner `...\workflows\scripts\baer-junges-bau-wf_b8e6ce94-a1a.js` bzw.
+> `baer-zaehmen-bau-wf_318e2ac4-9be.js`) + `resumeFromRunId` (`wf_b8e6ce94-a1a`, `wf_318e2ac4-9be`), Skripte dafuer unveraendert lassen. Der
+> Wecker (Cron b826bc4c, nur solange die Claude-App offen bleibt) setzt fort und stellt einen Limit-Waechter (alle 12 min; haelt bei 5 h >= 90 %
+> sauber an und weckt nach dem naechsten Reset; bei Woche >= 98 % Schluss). Ist die Sitzung weg: beide Laeufe mit den Skripten
+> `spiel/junges_workflow.js` / `spiel/zaehmen_workflow.js` neu starten (fertige Berichte in den Arbeitsordnern liegen lassen und nutzen).
+>
+> **10.11.2026 ~17:00 (neuer Account, neue Sitzung): ZWEI LAEUFE GESTARTET auf Kevins Wort** (ENTSCHEIDUNGEN.md ganz unten), je in zwei
+> Etappen, zusammen je 10 Agenten. **baer-junges** (Modell des Jungen neu und hochwertig auf Stand 2c): Etappe 1 Workflow wf_b8e6ce94-a1a
+> (Forschung 2, Spezifikation, Bau Koerper+Clips, Bau Kopf, Bau Textur), Ordner `../_arbeit/baer_junges/`, Skripte `spiel/baer_*_junges.py`,
+> Ergebnis `mod/42/media/` (NCBearCub.glb + NCBearCub.png), Blatt `bilder/kevin_junges.png`. **baer-zaehmen** (Code B1a: Junges finden und
+> zaehmen, Tierart `ncbearcub`, neue Dateien `BanditsNPCBear*`): Etappe 1 Workflow wf_318e2ac4-9be (Forschung 2, Plan, Bau Kern, Bau
+> Oberflaeche, Uebernahme-Skript), Ordner `../_arbeit/baer_zaehmen/` (Staging `mod/`, Plan `PLAN_ZAEHMEN.md`), dazu `tools/baer_uebernahme.py`
+> und `NAEHTE.md`. Skripte der Laeufe: `spiel/junges_workflow.js`, `spiel/zaehmen_workflow.js`. Etappe 2 je Lauf (Pruefer 2, Nachbesserung,
+> Gegenpruefer) startet Claude, nachdem er die Zwischenstaende selbst angesehen hat. NICHTS davon ist in NCBearTest, bis beides fertig,
+> nachgeprueft und eingebaut ist. Fortsetzen geht nur in dieser Sitzung (scriptPath + resumeFromRunId). Verbrauch beim Start (dieses Konto):
+> 5 h 7 %, Woche 3 %.
+
 > **10.11.2026 10:37: Lauf baer-2c FERTIG und in NCBearTest (ungespielt, Test `spiel/anleitung_2c.md`).** GLB 08ec7806, Deer 91f0c60e, FBX
 > da08d469, Body 4cfdb177, WorldItems a640e4cd; 12 Clips byte-gleich, SitDown/Sit/StandUp neu (gleiche Dauer/Proben), Skelett/inverseBind gleich,
 > 19.806 Dreiecke (von Claude nachgezaehlt). Sicherungen `Zomboid/backups/NCBearTest/NCBearTest_vor_2c_2026-11-10_103718.zip` / `_mit_2c_...`.
