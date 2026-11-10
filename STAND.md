@@ -1,4 +1,6 @@
-# Baer -- Stand und alles, was ansteht (10.11.2026 10:45)
+# Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
+
+> **Neuer Account oder neue Sitzung? Zuerst `UEBERGABE.md` (10.11. ~11:00): wo wir stehen, was Kevin testen muss, offene Fragen, was als Naechstes kommt.**
 
 > **10.11.2026 10:37: Lauf baer-2c FERTIG und in NCBearTest (ungespielt, Test `spiel/anleitung_2c.md`).** GLB 08ec7806, Deer 91f0c60e, FBX
 > da08d469, Body 4cfdb177, WorldItems a640e4cd; 12 Clips byte-gleich, SitDown/Sit/StandUp neu (gleiche Dauer/Proben), Skelett/inverseBind gleich,
@@ -42,7 +44,7 @@
 
 > **09.11.2026 ~14:20 (neue Sitzung, neuer Account):** Lauf baer-fell FERTIG und in NCBearTest (ungespielt, Test
 > `spiel/anleitung_fell.md`); Forschungslauf baer-schlaf fertig (`begleiter/SCHLAF_PLAN.md`, Kevins Fragen K1-K21 offen).
-> `UEBERGABE.md` ist damit erledigt.
+> Die damalige `UEBERGABE.md` (09.11.) ist damit erledigt.
 
 Lies zuerst `../CLAUDE.md` (Grundregel: gebaut FUER NPC Crew, am Ende per Copy-Paste uebernehmbar, keine Cheat-/Testmenues kommen mit),
 dann **`begleiter/ENTSCHEIDUNGEN.md` (geht vor PLAN.md)**, dann `begleiter/PLAN.md` und `begleiter/KRITIK.md`.
@@ -100,11 +102,10 @@ dann **`begleiter/ENTSCHEIDUNGEN.md` (geht vor PLAN.md)**, dann `begleiter/PLAN.
    Liegen 136 statt <= 120 (Flaeche wie baer-fell), 13 Rumpfpunkte bis 2,3 cm daneben (unsichtbar). **Clip-Runde:** Pranke beim
    Aufrichten von vorn klotzig (Handflaeche nach vorn drehen), Hinterfuss im Renn-Rueckschwung schmal, Liegen schwebt 4 mm, `Toe0`
    abrollen lassen. Die Pruef-Agenten haben trotz geloeschter Regel nur bei geschlossenem Spiel gerendert (Vorsicht, kein Fehler).
-2c. **NEU (Kevin 09.11. ~16:05): Gebiss, Zunge und ganze Beine realistisch.** Zaehne beim Bruellen wie auf `begleiter/kevin_bruellen_vorlage.webp`
-   (lange gebogene Eckzaehne, Schneidezahnreihe, schwarze Lefzen zurueckgezogen), Zunge flach und rosa im Unterkiefer; Beine nicht mehr
-   "wie Baumstaemme" (Schulterbuckel, Unterarm zum Gelenk schmaler, Oberschenkel in den Hintern, Fellzotteln). Eigener Lauf NACH
-   baer-pfoten (Kevin 09.11.: direkt weitermachen, keine Pause); nimmt die "Glocke" aus 2b mit; Einzelheiten ENTSCHEIDUNGEN.md ganz unten.
-3. **Clip-Runde auf dem neuen Netz:** Aufrichten (NCBear_Rear) neu (ganzer Koerper, kein Kragen, bleibt 3,0 s); **Sitzen Richtung (b)**
+2c. **Lauf baer-2c FERTIG, in NCBearTest seit 10.11. 10:37, ungespielt** (Gebiss, Zunge, ganze Beine + Kevins Spieltest vom 10.11.:
+   Sitzen nach Vorlage, Hinterfuss, Kopf/Kragen, Beine eng, keine Hose-in-Stiefeln). Test `spiel/anleitung_2c.md`, Berichte `spiel/2c_*.md`.
+   **Offen, Kevins Wort: G1 Buckel hinter dem Kopf, G2 Kopfrand-Farbe, G3 Kopf schaut im Sitzen nach oben** (`UEBERGABE.md` Abschnitt 3).
+3. **Clip-Runde auf dem neuen Netz:** Aufrichten (NCBear_Rear) neu (ganzer Koerper, kein Kragen, bleibt 3,0 s); Lefzen beim Bruellen; **Sitzen Richtung (b) ist mit 2c ERLEDIGT**
    (aufrecht, Hinterbeine weniger gespreizt, keine schwarzen Sohlen-Flecken zur Seite), Hinsetzen/Aufstehen nachziehen.
 4. **B5a Gegenwehr:** Zombies beissen den Baeren (Weg 2 aus `begleiter/angriff_fazit.md`, Engine laesst sie nicht selbst angreifen:
    Probe 08.11. abends, Zombie bleibt bei 0,24 Kacheln ohne Ziel stehen), feindliche Banditen greifen ihn an.
