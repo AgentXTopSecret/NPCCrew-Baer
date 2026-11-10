@@ -1,1 +1,2 @@
+- [Stockfoto-Regel ist nicht von Kevin](stockfoto-regel-nicht-von-kevin.md) — er erlaubt, den Bären nach einem Bild komplett nachzubauen; Einschränkung nie ihm zuschreiben
 - [Kevins Vorlage ist der Maßstab](kevin-vorlage-ist-massstab.md) — Modelle nach seinem Bild und der Spielkamera bauen und prüfen, nicht nach Literatur-Maßen
