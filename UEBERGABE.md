@@ -32,6 +32,8 @@ Ergebnis zuerst, "statisch geprueft, nicht gespielt", nach jeder Mod-Aenderung s
 
 ## 2. Was Kevin testen muss (vorher Spiel neu starten, -debug; rote Fehler? `C:/Users/Kevin/Zomboid/console.txt`)
 1. **`spiel/anleitung_b1c.md`** -- Mitfahren, Call to me, Laerm, Verstecken, Markierung oben, Karten-Symbol, Optionen (Optionen -> Mods).
+   **Teil C (Auto) spaeter** (Kevin 11.11.: *"das mit dem auto muss ich spaeter mal testen irgentwann hab jz kein auto hier ;D"*). Auto im
+   Debug: Rechtsklick Boden > Debug > Main > "Spawn Vehicle" (Vanilla `DebugContextMenu.lua:60`).
 2. **`spiel/anleitung_b1d.md`** -- `NCBear_CubGrow(tage)`, `NCBear_CubStats()`; Achtung: ueber 0,35 rutschen die Pfoten (bekannt, M3).
 3. **Junges-Modell im Spiel ansehen** (sein gezaehmtes Junges traegt das neue Modell) und mit `NCBear_Vergleich()` neben das alte Junge,
    den 2c-Baeren und die Generator-Standmodelle stellen -> Kevin entscheidet altes oder neues Junges und Farbe des grossen Baeren.
