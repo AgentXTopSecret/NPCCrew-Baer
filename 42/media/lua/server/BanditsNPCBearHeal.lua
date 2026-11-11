@@ -35,9 +35,12 @@ end
 
 -- Felder des Spiegels v2 (PLAN_B1C.md 2.2) ausser v / ep (die setzt B.MarkOf). Nur Zahlen, Texte, Wahrheitswerte.
 -- Nicht im Spiegel: Lage (das Tier IST die Lage), aid (das Tier kennt sie selbst), Sitzungs-Uhren, ride, idleH, goneP, miss*, hintAt.
+-- B1d (PLAN_B1D.md 2.3): + Wachstum, Fuetter-Bonus, Erfahrung (Fassung bleibt B.MARK_V = 2; Leser nehmen fehlende Felder als "nicht
+-- da"). Nicht im Spiegel: hp / hpB (das Tier traegt sein Leben selbst, NUR JAR dec/IsoAnimal.java:1340), gAt, Sitzung.
 local MARK_FIELDS = {
     "u", "id", "nr", "gen", "r", "kind", "src", "st", "finder", "bond", "owner", "tame", "fedN", "petN", "last",
     "feedAt", "petAt", "born", "tamedAt", "mode", "name", "hx", "hy", "hz",
+    "g", "gF", "gFd", "gFn", "xAgi", "xVit", "xCon", "xFgt", "xFsh", "xNos",
 }
 
 local function plain(v)
@@ -228,7 +231,9 @@ function B.Restore(o, mark, players)
         tame = B.Round1(num(mark.tame, 0, 100) or 0), fedN = math.floor(num(mark.fedN, 0) or 0),
         petN = math.floor(num(mark.petN, 0) or 0), last = last,
         feedAt = num(mark.feedAt), petAt = num(mark.petAt),
-        born = num(mark.born) or now, tamedAt = num(mark.tamedAt),
+        -- Nachbesserung B1d B1: Weltstunden sind nie negativ und nie spaeter als jetzt -- geklemmt, denn tamedAt traegt im
+        -- Mehrspieler den Wachstums-Deckel (server/BanditsNPCBearGrow.lua B.GrowFromMark "restore")
+        born = num(mark.born, 0, now) or now, tamedAt = num(mark.tamedAt, 0, now),
         idleH = 0, goneP = nil, missN = 0, missAt = nil, missH = 0, hintAt = nil,
         x = x, y = y, z = z,
         hx = hx, hy = hy, hz = hz,
@@ -239,6 +244,8 @@ function B.Restore(o, mark, players)
     }
     if st == "tame" then rec.tame = 100 end
     if st ~= "tame" then rec.mode = nil end
+    -- B1d (PLAN_B1D.md 2.4 "restore"): Wachstum und Erfahrung aus dem Spiegel, geklemmt; im Mehrspieler g gedeckelt (Grow.lua)
+    if st == "tame" and B.GrowFromMark then B.GrowFromMark(rec, mark, "restore") end
     B.InsertRec(rec, o)
     B.Err("heal: entry " .. tostring(id) .. " (" .. st .. ", owner " .. tostring(owner) .. ") restored from the mark on the animal")
     local key = owner or bond
@@ -337,7 +344,7 @@ function B.TakeNewerMark(rec, mark)
     rec.petN = math.floor(num(mark.petN, 0) or 0)
     rec.last = nil
     if mark.last == "feed" or mark.last == "pet" then rec.last = mark.last end
-    rec.feedAt, rec.petAt, rec.tamedAt = num(mark.feedAt), num(mark.petAt), num(mark.tamedAt)
+    rec.feedAt, rec.petAt, rec.tamedAt = num(mark.feedAt), num(mark.petAt), num(mark.tamedAt, 0, now)   -- tamedAt: wie B.Restore (B1d B1)
     rec.mode = nil
     if st == "tame" and (mark.mode == "follow" or mark.mode == "stay") then rec.mode = mark.mode end
     rec.name = nil
@@ -353,6 +360,8 @@ function B.TakeNewerMark(rec, mark)
         rec.healed.r = mr                                           -- eine noch aeltere Kopie ist danach nie "neuer"
     end
     B.Err("heal: entry " .. id .. " updated from a newer mark on the animal (" .. tostring(was) .. " -> " .. st .. ")")
+    -- B1d (PLAN_B1D.md 2.4 "newer"): g und Erfahrung = das Groessere, Fuetter-Bonus aus dem Spiegel (Grow.lua)
+    if st == "tame" and B.GrowFromMark then B.GrowFromMark(rec, mark, "newer") end
     B.Touch(rec)
     return true
 end

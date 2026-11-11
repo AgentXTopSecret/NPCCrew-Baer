@@ -10,7 +10,13 @@
 --
 -- Bauart der Scheu (Plan 0.1): NICHT wild. Ein wildes Tier flieht unter 3 Kacheln immer, Fuettern aus der Hand waere damit
 -- nicht zuverlaessig. "Scheu" ist ein Zustand im Register; das Weglaufen macht der Takt des Schreibers.
--- Kein Wachsen in B1a: eine Stufe gleich dem Artnamen, ohne nextStage (dann kein Stufenwechsel, isBaby() ist falsch).
+-- Eine Stufe gleich dem Artnamen, ohne nextStage (dann kein Stufenwechsel, isBaby() ist falsch). Das Wachsen (B1d) macht NICHT die
+-- Engine, sondern das Register (rec.g, server/BanditsNPCBearGrow.lua); die Engine bekommt nur die Groesse (B.ApplySize).
+-- B1d (PLAN_B1D.md 0.3, Weg B, Frage F1): minSize 0,35 / maxSize 1,35 und ageToGrow 36500. Grund (NUR JAR, forschung_b1d.md 0.2,
+-- 1.2-1.3): die Engine klemmt die Groesse beim Laden, bei der Mehrspieler-Erstuebertragung, je Alterstag (growUp) und in einer Tierzone
+-- auf [minSize, maxSize] -- bei min = max fiele jede gesetzte Groesse dort auf 0,35 zurueck. Neue Koerper starten weiter bei minSize 0,35
+-- (initSize endet mit setSize(0.1F), dec/AnimalData.java:1353-1358); das Engine-Wachsen je Alterstag ist (max - min) / ageToGrow x Leben
+-- = praktisch 0. Lehnt Kevin F1 ab, werden nur maxSize und ageToGrow zurueckgedreht (das Nachsetzen je Hirn-Takt deckt beides).
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -23,7 +29,8 @@ AnimalDefinitions.animals = AnimalDefinitions.animals or {}     -- DeerDefinitio
 local CUB = "ncbearcub"
 local BREED = "brown"
 
--- Gene wie beim Erwachsenen (NCBearDefs.lua:16-26), ohne maxSize: dann ist die Groesse genau minSize = maxSize.
+-- Gene wie beim Erwachsenen (NCBearDefs.lua:16-26), ohne maxSize-Gen: dann sind die Grenzen genau minSize / maxSize der Definition
+-- (NUR JAR dec/AnimalData.java:1717-1751).
 -- meatRatio ist Pflicht fuer den Tod (Vanilla ButcheringUtil).
 local genes = {
     meatRatio = "meatRatio",
@@ -62,7 +69,8 @@ breeds[BREED] = {
 }
 
 local stages = {}
-stages[CUB] = { ageToGrow = 60 }          -- Eintrag gleich dem Artnamen, ageToGrow >= 1; kein nextStage (Wachsen ist B1b)
+-- B1d: ageToGrow 36500 (100 Jahre; ganze Zahl, NUR JAR dec/AnimalDefinitions.java:813-814) -> die Engine waechst selbst nicht
+stages[CUB] = { ageToGrow = 36500 }       -- Eintrag gleich dem Artnamen; kein nextStage (Wachsen: Register, B1d)
 
 AnimalDefinitions.animals[CUB] = {
     bodyModel = "NCBearCub_Body",         -- model-Skript in module Base (scripts/nc_bear_cub.txt)
@@ -73,7 +81,7 @@ AnimalDefinitions.animals[CUB] = {
     breeds = breeds,
     genes = genes,
     minSize = 0.35,                       -- Kevin: Jungtier 0,35; das Netz ist bei 1,0 gebaut
-    maxSize = 0.35,
+    maxSize = 1.35,                       -- B1d (Weg B, F1): Kevin "mach den finalen baeren doch auf 1,35" (ENTSCHEIDUNGEN.md:10)
     animalSize = 0.1,                     -- nach dem Kitz (DeerDefinitions.lua:65-66); ungespielt
     collisionSize = 0.24,
     shadoww = 0.4,                        -- DeerDefinitions.lua:68 (Kitz: fm/bm 1, hier 0.8)

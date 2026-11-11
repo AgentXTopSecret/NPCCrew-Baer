@@ -8,6 +8,13 @@
 -- Small / Medium / Large fuer Schild UND Balken (Balken und Abstaende wachsen mit dem Verhaeltnis der Schrifthoehen). Gelesen nur
 -- beim Listenbau (hoechstens 1 x je Sekunde). Ein mitfahrendes Junges (Sicht "ride") hat keinen Koerper: kein Suchlauf seinetwegen.
 -- U.CubObj / U.CubPos geben anderen Anzeigen (Markierung, Karte) die lebende Client-Kopie aus derselben Tabelle -- ohne eigenen Suchlauf.
+-- B1d (PLAN_B1D.md 1.6, 4, 6.6): ueber jedem gezaehmten Jungen bis zu fuenf Zeilen, jede einzeln waehlbar (Kevin 11.11.2026: "jeden
+-- wert einzelnd ... im balken oder als zahl"). Der Block waechst vom Anker nach oben, von unten: Ausdauer -> Leben -> Alter-Zeile ->
+-- Zustand -> Name. Name + Zustand an "TagShow" (B1c), Leben an "TagHealth" (1 Aus / 2 Balken / 3 Zahl), Ausdauer an "TagStamina",
+-- Alter an "TagAge". Die Zahlen kommen fertig aus der Sicht (sz hp hpMax sta staMax day nst nxt, der Kern rechnet); fehlt ein Wert,
+-- faellt seine Zeile weg; ist ALLES aus, bekommt das zahme Junge keinen Eintrag (zaehlt nicht gegen hudMax). Der Anker waechst mit
+-- der gezeigten Groesse (tagZ x sz / tagBase). Nur auf dem MP-Client: im Listenbau die Groesse der Client-Kopie aus der Sicht
+-- nachsetzen (B.ApplySize, Kern) -- das laufende Tierpaket der Engine traegt keine Groesse (PLAN_B1D.md 0.4).
 --
 -- Reine Anzeige: liest nur B.View (die Sicht, die der Schreiber diesem Spieler geschickt hat) und fragt nie den Server.
 -- Einzelspieler und Mehrspieler laufen gleich; im Mehrspieler stammen alle Zahlen vom Server. Der dedizierte Server laedt client/ nicht.
@@ -20,9 +27,13 @@
 --     B.CFG.hudMax Junge in B.CFG.hudDist Kacheln, dazu fertige Texte. Die Objektliste der Zelle wird nur durchsucht, wenn ein
 --     Junges aus der Sicht noch kein Objekt hat, und dann hoechstens einmal je Sekunde (nach fuenf vergeblichen Laeufen alle 5 s).
 --   * Je Bild wird nur aus der fertigen Liste gezeichnet: je Balken zwei Umrechnungen, zwei Rechtecke, ein Rahmen, zwei Texte
---     (jeder mit Schatten); je Namensschild zwei Umrechnungen und zwei Texte (mit Schatten: vier drawTextCentre). Keine Suche,
+--     (jeder mit Schatten); je Namensschild zwei Umrechnungen und zwei Texte (mit Schatten: vier drawTextCentre). B1d: je Schild
+--     hoechstens 12 Zeichenaufrufe (Name, Zustand, Alter je 2 Texte, Leben und Ausdauer je Balken mit 3 oder Zahl mit 2) -- bei
+--     hudMax 6 also hoechstens 72 je Bild; Zeilen-Lagen, Fuellbreiten und Texte stehen schon fertig im Eintrag. Keine Suche,
 --     kein getText, keine Tabelle je Bild. Kein Sichtfeld-Test: ein folgendes Junges laeuft HINTER dem Spieler (Plan 2.3).
---   * Bei mehr als einem lokalen Spieler (geteilter Bildschirm) wird nichts gezeichnet.
+--   * Bei mehr als einem lokalen Spieler (geteilter Bildschirm) wird nichts gezeichnet; auf dem MP-Client wird die Liste trotzdem
+--     gebaut (Groessen-Probe, Nachbesserung B1d B6). Grenzen (ehrlich): ein Junges ausserhalb der Sicht (fremde ab tellDist 60 Kacheln)
+--     und eine ausgeblendete Oberflaeche (ob prerender dann laeuft: ungeprueft) bekommen keine Probe -- die Kopie behaelt ihre Groesse.
 -- Jeder Engine-Aufruf hat eine Vanilla-Fundstelle (Kommentar daneben). Statisch geprueft, nicht gespielt.
 --
 
@@ -52,6 +63,10 @@ local BAR_H = 7
 local BAIT_DIST = 25        -- Kacheln: so nah steht das Schild ueber dem eigenen Koederplatz
 local BAIT_Z = 0.3
 local TAG_Z = 0.18          -- Rueckfall fuer B.CFG.tagZ (Anker von Balken und Schild ueber dem Boden des Tiers, Plan 2.2)
+local TAG_BASE = 0.35       -- B1d: Rueckfall fuer B.CFG.tagBase (die Groesse, fuer die tagZ gemessen ist, PLAN_B1D.md 1.2 Punkt 2)
+local ZK_MAX = 5            -- B1d: Deckel fuer den Anker-Faktor sz / tagBase (gegen Unsinn in der Sicht; 1,35 / 0,35 = 3,9)
+-- B1d: Anzeige-Arten der Werte (U.Opt "TagHealth" / "TagStamina", Index der Auswahl, V:client/PZAPI/ModOptions.lua:137)
+local SHOW_OFF, SHOW_BAR, SHOW_NUM = 1, 2, 3
 
 local panel = nil
 local fontH = nil           -- Hoehe UIFont.Small (Zeile 1, Balken-Texte)
@@ -79,6 +94,8 @@ local S = {
     prev = {},      -- id -> letzter gesehener Zustand (fuer "gerade gezaehmt")
     flash = {},     -- id -> ms, bis wann "Gezaehmt!" steht
     tier = nil,     -- B1c: Groessenstufe der aktuellen Liste (tiers[1..3]); nil = noch keine Liste
+    -- B1d: Anzeige-Optionen der aktuellen Liste (einmal je Liste gelesen; EINE Tabelle, nie neu angelegt)
+    md = { tags = true, hp = SHOW_BAR, sta = SHOW_OFF, age = true },
 }
 
 local function reset()
@@ -142,6 +159,51 @@ local function tagsWanted()
     local opt = U.Opt
     if not opt then return true end
     return opt("TagShow", true) ~= false
+end
+
+-- B1d: Anzeige-Art eines Werts (1 Aus / 2 Balken / 3 Zahl). Fehlt die Options-Datei oder steht Unsinn in ModOptions.ini (Vanilla
+-- laedt jede Zahl, V:client/PZAPI/ModOptions.lua:319-320): die Vorgabe.
+local function showMode(id, def)
+    local opt = U.Opt
+    if not opt then return def end
+    local v = tonumber(opt(id, def))
+    if v == nil then return def end
+    v = math.floor(v)
+    if v < SHOW_OFF or v > SHOW_NUM then return def end
+    return v
+end
+
+-- B1d: Alter-Zeile zeigen? (fehlt die Options-Datei: ja)
+local function ageWanted()
+    local opt = U.Opt
+    if not opt then return true end
+    return opt("TagAge", true) ~= false
+end
+
+-- B1d: traegt die Sicht die Zahlen fuer eine Zeile? (Zahl und nicht NaN; der Kern schickt ganze Zahlen)
+local function isNum(v)
+    return type(v) == "number" and v == v
+end
+
+local function hasHp(c)
+    return isNum(c.hp) and isNum(c.hpMax)
+end
+
+local function hasSta(c)
+    return isNum(c.sta) and isNum(c.staMax)
+end
+
+local function hasAge(c)
+    return isNum(c.day)
+end
+
+-- B1d: hat ein gezaehmtes Junges mit den Optionen dieser Liste (md) ueberhaupt eine Zeile? Sonst bekommt es keinen Eintrag.
+local function tameShown(c, md)
+    if md.tags then return true end
+    if md.hp ~= SHOW_OFF and hasHp(c) then return true end
+    if md.sta ~= SHOW_OFF and hasSta(c) then return true end
+    if md.age and hasAge(c) then return true end
+    return false
 end
 
 -- ---------------------------------------------------------------------------
@@ -233,11 +295,80 @@ local function describeTag(e, meKey)
     end
 end
 
+-- B1d: Wert-Zeile (Leben oder Ausdauer) aus Prozent (0..100) und Hoechstwert (Punkte) -- als Fuellbreite des Balkens oder als Text
+-- "<jetzt>/<hoechst>". Gibt fill, text (eins davon nil).
+local function valueLine(mode, pct, most, key, barW)
+    pct = math.floor(pct)
+    if pct < 0 then pct = 0 end
+    if pct > 100 then pct = 100 end
+    if mode == SHOW_BAR then
+        return math.floor(barW * pct / 100), nil
+    end
+    most = math.floor(most)
+    if most < 0 then most = 0 end
+    return nil, U.T(key, math.floor(pct * most / 100 + 0.5), most)
+end
+
+-- B1d (PLAN_B1D.md 1.6, 6.6): die Werte-Zeilen eines gezaehmten Jungen und die Lage JEDER Zeile als Abstand ihrer Oberkante ueber
+-- dem Anker (Pixel), von unten nach oben: Ausdauer, Leben, Alter, Zustand (darueber der Name). Zeilenhoehe Balken t.barH + t.gap2,
+-- Textzeile t.h2 + 1. Ohne Werte-Zeilen sitzt der Zustand wie in B1b/B1c mit der Unterkante am Anker.
+local function describeValues(e, c, md, t)
+    e.showName = md.tags
+    e.hpFill, e.hpText, e.staFill, e.staText, e.ageLine = nil, nil, nil, nil, nil
+    if md.hp ~= SHOW_OFF and hasHp(c) then
+        e.hpFill, e.hpText = valueLine(md.hp, c.hp, c.hpMax, "UI_BN_Bear_Tag_Health", t.barW)
+    end
+    if md.sta ~= SHOW_OFF and hasSta(c) then
+        e.staFill, e.staText = valueLine(md.sta, c.sta, c.staMax, "UI_BN_Bear_Tag_Stamina", t.barW)
+    end
+    if md.age and hasAge(c) then
+        local day = math.floor(c.day)
+        if c.nst ~= nil then
+            local left = math.floor(tonumber(c.nxt) or 1)
+            if left < 1 then left = 1 end
+            e.ageLine = U.T("UI_BN_Bear_Tag_Age", day, U.StageName(c.nst), left)
+        else
+            e.ageLine = U.T("UI_BN_Bear_Tag_AgeDone", day)
+        end
+    end
+    local up = 0
+    if e.staFill then
+        e.ySta = up + t.barH
+        up = up + t.barH + t.gap2
+    elseif e.staText then
+        e.ySta = up + t.h2
+        up = up + t.h2 + 1
+    end
+    if e.hpFill then
+        e.yHp = up + t.barH
+        up = up + t.barH + t.gap2
+    elseif e.hpText then
+        e.yHp = up + t.h2
+        up = up + t.h2 + 1
+    end
+    if e.ageLine then
+        e.yAge = up + t.h2
+        up = up + t.h2 + 1
+    end
+    e.yState = up + t.h2
+end
+
 -- Die fertigen Texte eines Eintrags (einmal je Liste, nie je Bild).
 local function describe(e, meKey, nowH)
     local c = e.c
+    e.zk = 1
     if c.st == "tame" then
         describeTag(e, meKey)
+        describeValues(e, c, S.md, S.tier or tierOf(1))
+        -- B1d: Anker waechst mit der gezeigten Groesse (PLAN_B1D.md 1.2 Punkt 2); fehlt sz (Kern ohne B1d): wie bisher.
+        local base = tonumber(B.CFG.tagBase) or TAG_BASE
+        if base <= 0 then base = TAG_BASE end
+        local sz = c.sz
+        if isNum(sz) and sz > 0 then
+            local zk = sz / base
+            if zk > ZK_MAX then zk = ZK_MAX end
+            e.zk = zk
+        end
         return
     end
     local pct = math.floor(tonumber(c.tame) or 0)
@@ -306,6 +437,10 @@ local function rebuild(now)
     end
 
     -- 1. Zustandswechsel merken; fehlt einem gewuenschten Jungen das Objekt?
+    -- B1d (PLAN_B1D.md 0.4, 6.6): nur auf dem MP-Client die Groesse jeder lebenden Kopie eines zahmen Jungen aus der Sicht nachsetzen
+    -- (B.ApplySize, Kern: schreibt nur bei einer Abweichung). Im Einzelspieler ist die Kopie das Objekt des Schreibers -> nie.
+    -- isClient(): V:client/ISUI/ISWorldObjectContextMenu.lua:1435. Fehlt B.ApplySize (Kern ohne B1d): keine Probe.
+    local probe = isClient() and B.ApplySize ~= nil
     local need = false
     local any = false
     for id, c in pairs(cubs) do
@@ -315,9 +450,14 @@ local function rebuild(now)
             S.flash[id] = now + FLASH_MS
         end
         S.prev[id] = c.st
-        if wanted(c) and not alive(S.objs[id]) then
-            S.objs[id] = nil
-            need = true
+        if wanted(c) then
+            local obj = S.objs[id]
+            if not alive(obj) then
+                S.objs[id] = nil
+                need = true
+            elseif probe and c.st == "tame" and isNum(c.sz) then
+                B.ApplySize(obj, c.sz)
+            end
         end
     end
     -- Die Sicht kennt weder ein Junges noch einen Koederplatz: nichts zu tun, kein Engine-Aufruf.
@@ -352,15 +492,21 @@ local function rebuild(now)
 
     -- 3. Eintraege: die naechsten hudMax in hudDist Kacheln. B1c: Anzeige-Optionen einmal je Liste lesen (U.Opt, je Wert
     -- hoechstens 1 x je Sekunde); "Namensschilder aus" laesst gezaehmte Junge weg (sie zaehlen dann auch nicht gegen hudMax).
+    -- B1d: dazu Leben / Ausdauer / Alter; ein gezaehmtes Junges bekommt nur dann einen Eintrag, wenn mindestens EINE seiner Zeilen
+    -- gezeigt wird (tameShown) -- Name aus, Leben als Balken: nur der Balken.
     S.tier = tierOf(tierWanted())
-    local showTags = tagsWanted()
+    local md = S.md
+    md.tags = tagsWanted()
+    md.hp = showMode("TagHealth", SHOW_BAR)
+    md.sta = showMode("TagStamina", SHOW_OFF)
+    md.age = ageWanted()
     local cfg = B.CFG
     local reach = cfg.hudDist or 20
     local max = cfg.hudMax or 6
     local found = {}
     for id, c in pairs(cubs) do
         local a = S.objs[id]
-        if a ~= nil and wanted(c) and (showTags or c.st ~= "tame") and alive(a) then
+        if a ~= nil and wanted(c) and (c.st ~= "tame" or tameShown(c, md)) and alive(a) then
             local dx = a:getX() - px                    -- client/TimedActions/ISContextualActions.lua:100
             local dy = a:getY() - py
             local d2 = dx * dx + dy * dy
@@ -401,15 +547,45 @@ end
 -- 1 px darueber (Plan 2.2). Gerade gezaehmt: Zeile 2 blinkt gruen "Tamed!" (450 von 700 ms an), danach der Zustand.
 -- B1c: Schriften und Hoehen aus der Groessenstufe t (Stufe 1 = Small / NewSmall wie B1b). drawTextCentre mit UIFont.Medium:
 -- V:client/ISUI/ISFitnessUI.lua:204; mit UIFont.Large: V:client/Chat/ISAlert.lua:35.
+-- B1d: Wert-Balken (Leben rot, Ausdauer gelb) mit der Oberkante bei top; Masse der Groessenstufe t, Hintergrund und Rahmen wie der
+-- Zaehm-Balken (drawRect / drawRectBorder (x, y, w, h, a, r, g, b): V:client/ISUI/ISUIElement.lua:1191 / :1219). Ohne Text.
+local function valueBar(self, sx, top, fill, t, r, g, b)
+    local bw, bh = t.barW, t.barH
+    local bx = sx - bw / 2
+    self:drawRect(bx - 1, top - 1, bw + 2, bh + 2, 0.65, 0, 0, 0)
+    if fill > 0 then
+        self:drawRect(bx, top, fill, bh, 0.95, r, g, b)
+    end
+    self:drawRectBorder(bx - 1, top - 1, bw + 2, bh + 2, 0.9, 0.85, 0.85, 0.80)
+end
+
+-- B1d: das ganze Schild eines gezaehmten Jungen. Die Lagen (e.yState, e.yAge, e.yHp, e.ySta = Oberkante ueber dem Anker) stehen
+-- fertig im Eintrag (describeValues); gezeichnet wird von oben nach unten, damit Name und Zustand wie in B1b/B1c zuerst kommen.
+-- Ohne Werte-Zeilen ist e.yState = t.h2: genau das Schild von B1c.
 local function drawTag(self, e, sx, sy, now, t)
-    local y2 = sy - t.h2
-    text(self, e.line1, sx, y2 - 1 - t.h1, e.r, e.g, e.b, 0.95, t.f1)
-    if now < e.till then
-        if (now % 700) < 450 then
-            text(self, e.flashLine, sx, y2, 0.55, 1.0, 0.55, 1.0, t.f2)
+    if e.showName then
+        local y2 = sy - e.yState
+        text(self, e.line1, sx, y2 - 1 - t.h1, e.r, e.g, e.b, 0.95, t.f1)
+        if now < e.till then
+            if (now % 700) < 450 then
+                text(self, e.flashLine, sx, y2, 0.55, 1.0, 0.55, 1.0, t.f2)
+            end
+        else
+            text(self, e.line2, sx, y2, 0.78, 0.78, 0.74, 0.80, t.f2)
         end
-    else
-        text(self, e.line2, sx, y2, 0.78, 0.78, 0.74, 0.80, t.f2)
+    end
+    if e.ageLine then
+        text(self, e.ageLine, sx, sy - e.yAge, 0.78, 0.78, 0.74, 0.80, t.f2)
+    end
+    if e.hpFill then
+        valueBar(self, sx, sy - e.yHp, e.hpFill, t, 0.85, 0.20, 0.20)
+    elseif e.hpText then
+        text(self, e.hpText, sx, sy - e.yHp, 0.96, 0.64, 0.62, 0.90, t.f2)
+    end
+    if e.staFill then
+        valueBar(self, sx, sy - e.ySta, e.staFill, t, 0.95, 0.80, 0.25)
+    elseif e.staText then
+        text(self, e.staText, sx, sy - e.ySta, 0.96, 0.88, 0.56, 0.90, t.f2)
     end
 end
 
@@ -437,6 +613,7 @@ end
 -- isoToScreenX/Y(Spielernummer, x, y, z): client/Fishing/TensionUI.lua:11-12 (erstes Argument eine Zahl).
 -- drawRect / drawRectBorder (x, y, w, h, a, r, g, b): client/ISUI/ISUIElement.lua:1191 / :1219.
 -- Anker fuer Balken UND Schild: a:getZ() + B.CFG.tagZ (Plan 2.2; je Bild gelesen, damit ein geaenderter Stellwert sofort wirkt).
+-- B1d: beim gezaehmten Jungen mal e.zk = gezeigte Groesse / tagBase (im Listenbau gerechnet; wilde Junge 1).
 local function draw(self, now)
     local cfg = B.CFG
     local lift = tonumber(cfg.tagZ) or TAG_Z
@@ -448,7 +625,7 @@ local function draw(self, now)
         if a:isExistInTheWorld() then
             local x = a:getX()
             local y = a:getY()
-            local z = a:getZ() + lift
+            local z = a:getZ() + lift * (e.zk or 1)
             local sx = math.floor(isoToScreenX(0, x, y, z))
             local sy = math.floor(isoToScreenY(0, x, y, z))
             if e.tag then
@@ -477,7 +654,10 @@ function Hud:prerender()
     ISPanel.prerender(self)
     if not B.View or not B.CFG or not B.T then return end
     -- Geteilter Bildschirm: lieber nichts als auf der falschen Haelfte. getNumActivePlayers: client/Fishing/FishingHandler.lua:6.
-    if getNumActivePlayers() > 1 then return end
+    -- Nachbesserung B1d B6: auf dem MP-Client wird die Liste trotzdem gebaut (nur nicht gezeichnet) -- sie traegt die Groessen-Probe
+    -- der Client-Kopien (rebuild Schritt 1). isClient(): V:client/ISUI/ISWorldObjectContextMenu.lua:1435 (nur bei geteiltem Bildschirm).
+    local split = getNumActivePlayers() > 1
+    if split and not isClient() then return end
     local now = getTimestampMs()                        -- client/Foraging/ISBaseIcon.lua:485
     if S.dirty or now - S.listAt >= LIST_MS or now < S.listAt then
         if not fontH then
@@ -500,6 +680,7 @@ function Hud:prerender()
         end
         rebuild(now)
     end
+    if split then return end
     if S.n > 0 or S.bait then
         draw(self, now)
     end

@@ -37,7 +37,15 @@
 --   NCBear_CubRide()         Mitfahren: ride, gen, Sitzung (offMs, lostMs, failN), ich im Fahrzeug
 --   NCBear_CubCallReset()    Abklingzeit von "Call to me" fuer alle Jungen zuruecksetzen
 --   NCBear_CubInfo()         druckt zusaetzlich u, gen, r, ride, healed je Eintrag und v/ep des Registers
--- Rechtsklick auf eine Kachel, Untermenue "NC Bear": zehn Eintraege "Cub: ...". Texte hier sind englische Literale.
+-- B1d (PLAN_B1D.md 1.7):
+--   NCBear_CubGrow(tage)     mein naechstes zahmes Junges um so viele Wachstumstage weiter (Vorgabe 5; negativ = zurueck, geklemmt
+--                            auf 0 .. ausgewachsen) -- ueber B.GrowSetG (Stufen-Meldung, Commit, Groesse sofort), danach eine Zeile
+--   NCBear_CubStats()        alles zum Wachsen drucken: Tag, Groesse innen / gezeigt, Stufe, Leben, Ausdauer, Schaden, Traglast,
+--                            Faehigkeiten (XP / Stufe), Ausweichen, Kampf-Bonus, Fang-Chance, Warnweite, Fuetter-Bonus, Engine-Werte
+--   NCBear_CubXp(key, xp)    Erfahrung einer Faehigkeit absolut setzen (agi vit con fgt fsh nos; B.SkillSet)
+--   NCBear_CubHurt(pct)      Leben auf pct Prozent setzen (1..100; B.GrowSetHp) -- Heilen und Balken pruefen
+--   NCBear_CubInfo()         druckt zusaetzlich g, hp, hpB und die Erfahrung je Eintrag
+-- Rechtsklick auf eine Kachel, Untermenue "NC Bear": zwoelf Eintraege "Cub: ...". Texte hier sind englische Literale.
 -- Jeder Engine-Aufruf hat eine Vanilla-Fundstelle (Kommentar daneben). Statisch geprueft, nicht gespielt.
 --
 
@@ -306,6 +314,13 @@ local function infoRec(p, rec, now)
     if type(rec.ride) == "table" then ride = "since " .. num(rec.ride.at) .. " h" end
     out("     u " .. big(rec.u) .. " gen " .. tostring(rec.gen) .. " r " .. tostring(rec.r) .. " ride " .. ride
         .. " healed " .. healed)
+    -- B1d: Wachstum, Leben, Erfahrung (nur Register-Felder, roh)
+    if rec.g ~= nil or rec.hp ~= nil or rec.xCon ~= nil then
+        out("     g " .. tostring(rec.g) .. " hp " .. tostring(rec.hp) .. " hpB " .. tostring(rec.hpB) .. " xp agi " .. tostring(rec.xAgi)
+            .. " vit " .. tostring(rec.xVit) .. " con " .. tostring(rec.xCon) .. " fgt " .. tostring(rec.xFgt) .. " fsh "
+            .. tostring(rec.xFsh) .. " nos " .. tostring(rec.xNos) .. " feed bonus " .. tostring(rec.gF) .. " (" .. tostring(rec.gFn)
+            .. " on day " .. tostring(rec.gFd) .. ")")
+    end
 end
 
 function NCBear_CubInfo()
@@ -429,6 +444,11 @@ function NCBear_CubSet(field, value)
             .. " zedSafe zedCalmMs zedFlee hideGap hideNear hideOwnerMax zedScanMax zedTickMs zedKeepMs guardMoveMs guardRepath"
             .. " guardRenewMs), ride (rideOffMsSP rideOffMsMP rideSpeedMax rideRing rideLostMs rideFailLog callRing viewMoveTiles"
             .. " viewMoveMs), marker (markerMs markerAfterMs markerDur markerShift), map (mapMiniPx mapWorldMin mapWorldMax mapListMs)")
+        out("B1d groups: growth (cubMaxSize bodySwap sizeEps tagBase growCommitH feedGrowFav feedGrowOk feedGrowSnack feedGrowDay"
+            .. " feedGrowMax), values (vitPerLv conPerLv dodgeBase fishBase fishMax noseBase noseStep), skills (xpPerMin xpBucketMin"
+            .. " xpHitTaken xpHitDealt xpFishTry xpFishCatch xpSniff conTilesPerXp conBreathXp conBreathMs conStepMax), stamina and"
+            .. " health (staRunCost staRegen staViewStep hpEps hpCommit); the tables growCurve stageAt statAt hpAt staAt carryAt"
+            .. " dmgAt xpNeed are not settable here")
         return
     end
     if type(value) ~= type(cfg[field]) or type(value) == "table" then
@@ -750,6 +770,137 @@ function NCBear_CubCallReset()
 end
 
 -- ---------------------------------------------------------------------------
+-- B1d: Wachsen, Werte, Faehigkeiten, Leben (PLAN_B1D.md 1.7). Alles ueber die Kern-Wege (B.GrowSetG, B.SkillSet, B.GrowSetHp: Stufen-
+-- Meldung, Commit, Groesse/Leben am Tier sofort); gelesen wird mit B.StatsOf / B.SkillProgress (rein, shared).
+-- ---------------------------------------------------------------------------
+
+-- Zahl mit d Nachkommastellen (sonst als Text).
+local function fix(v, d)
+    if type(v) ~= "number" then return tostring(v) end
+    return string.format("%." .. tostring(d or 2) .. "f", v)
+end
+
+-- Kern mit B1d geladen? (shared/BanditsNPCBearStats.lua + server/BanditsNPCBearGrow.lua)
+local function growReady()
+    if not B.StatsOf or not B.GrowSetG or not B.GrowSetHp or not B.SkillSet or not B.SkillProgress or not B.SKILLS then
+        out("the bear core has no growth (BanditsNPCBearStats.lua / BanditsNPCBearGrow.lua not loaded)")
+        return false
+    end
+    return true
+end
+
+-- Mein naechstes zahmes Junges oder nil mit einer Zeile.
+local function myGrowRec()
+    local p, key, reg = ready()
+    if not p then return nil end
+    if not growReady() then return nil end
+    local rec = myTame(p, key, reg)
+    if not rec then
+        say("no tamed cub of yours (NCBear_CubTame(100) first)")
+        return nil
+    end
+    return rec, p
+end
+
+-- Eine kurze Zeile: Tag, Groesse innen / gezeigt, Stufe, Leben.
+local function growLine(rec)
+    local st = B.StatsOf(rec)
+    local hp = tonumber(rec.hp)
+    local life = "health unknown (first check of the body pending) / " .. fix(st.hpMax, 0)
+    if hp then life = "health " .. fix(hp * 100, 0) .. "% = " .. fix(hp * st.hpMax, 0) .. " / " .. fix(st.hpMax, 0) end
+    local nxt = "full-grown"
+    if st.next ~= nil then nxt = tostring(st.next) .. " in " .. tostring(st.nextDays) .. " day(s)" end
+    return "cub " .. tostring(rec.id) .. ": day " .. tostring(st.day) .. ", size inner " .. fix(st.s, 3) .. " / shown " .. fix(st.sz, 3)
+        .. ", stage " .. tostring(st.stage) .. " (next " .. nxt .. "), " .. life
+end
+
+function NCBear_CubGrow(days)
+    local rec, p = myGrowRec()
+    if not rec then return end
+    days = tonumber(days) or 5
+    local D = B.GrowDays()
+    local g = tonumber(rec.g) or 0
+    local want = g + days / D
+    if want < 0 then want = 0 end
+    if want > 1 then want = 1 end
+    B.GrowSetG(rec, want)
+    B.BrainTick(true)
+    push(p)
+    say(growLine(rec))
+end
+
+function NCBear_CubStats()
+    local rec = myGrowRec()
+    if not rec then return end
+    local st = B.StatsOf(rec)
+    local D = B.GrowDays()
+    out("--- cub stats " .. tostring(rec.id) .. " (" .. tostring(rec.name) .. "), owner " .. tostring(rec.owner) .. " ---")
+    local cal = "-"
+    if type(rec.tamedAt) == "number" then cal = fix((B.Now() - rec.tamedAt) / 24, 1) end
+    out("growth g " .. fix(st.g, 4) .. " = day " .. tostring(st.day) .. " of " .. tostring(D) .. " (calendar days since taming " .. cal
+        .. ") | size inner " .. fix(st.s, 3) .. " / shown " .. fix(st.sz, 3) .. " (body " .. tostring(st.body) .. ")")
+    local nxt = "none (full-grown)"
+    if st.next ~= nil then nxt = tostring(st.next) .. " in " .. tostring(st.nextDays) .. " day(s)" end
+    out("stage " .. tostring(st.stage) .. ", next " .. nxt)
+    local hp = tonumber(rec.hp)
+    local life = "health unknown (taken from the body on the next check)"
+    if hp then life = "health " .. fix(hp, 3) .. " = " .. fix(hp * st.hpMax, 1) .. " / " .. fix(st.hpMax, 1) end
+    out(life .. " | hpB " .. tostring(rec.hpB))
+    local s = B._s and B._s[rec.id]
+    local sta = s and tonumber(s.sta)
+    local stam = "stamina full (no session yet) " .. fix(st.staMax, 1) .. " / " .. fix(st.staMax, 1)
+    if sta then stam = "stamina " .. fix(sta, 3) .. " = " .. fix(sta * st.staMax, 1) .. " / " .. fix(st.staMax, 1) .. " (session)" end
+    out(stam .. " | damage factor " .. fix(st.dmg, 3) .. " | carry " .. fix(st.carry, 1))
+    for i = 1, #B.SKILLS do
+        local k = B.SKILLS[i]
+        local L, xpIn, need = B.SkillProgress(rec, k)
+        local f = B.SKILL_FIELD and B.SKILL_FIELD[k]
+        out("  skill " .. k .. ": xp " .. fix(f and tonumber(rec[f]) or 0, 1) .. ", level " .. tostring(L) .. ", "
+            .. fix(xpIn, 1) .. " / " .. tostring(need) .. " in this level")
+    end
+    out("dodge " .. fix(st.dodge, 1) .. "% | fight bonus +" .. fix(st.fightBonus, 1) .. "% | catch chance " .. fix(st.fish, 1)
+        .. "% | warning range " .. fix(st.nose, 1) .. " tiles")
+    out("feed bonus gF " .. tostring(rec.gF) .. " (" .. tostring(rec.gFn) .. " on day " .. tostring(rec.gFd) .. ")")
+    local a = B.FindAnimal(rec)
+    if a then
+        -- animal:getData():getSize(): V:client/ISUI/Animal/ISAnimalUI.lua:31; animal:getHealth(): V:client/ISUI/Animal/ISAnimalUI.lua:15
+        out("engine: size " .. fix(a:getData():getSize(), 3) .. " health " .. fix(a:getHealth(), 3) .. " (living animal)")
+    else
+        out("engine: no living animal (riding, not loaded or missing)")
+    end
+end
+
+function NCBear_CubXp(key, xp)
+    if not ready() or not growReady() then return end
+    if type(key) ~= "string" or not (B.SKILL_FIELD and B.SKILL_FIELD[key]) then
+        out("NCBear_CubXp(key, xp). Keys: " .. table.concat(B.SKILLS, " ") .. " (xp 0 .. " .. tostring(B.XpCum and B.XpCum(10)) .. ")")
+        return
+    end
+    local v = tonumber(xp)
+    if v == nil then
+        out("NCBear_CubXp: xp must be a number")
+        return
+    end
+    local rec, p = myGrowRec()
+    if not rec then return end
+    local L = B.SkillSet(rec, key, v)
+    push(p)
+    say("cub " .. tostring(rec.id) .. ": " .. key .. " xp " .. fix(B.SkillXp and B.SkillXp(rec, key) or v, 1) .. ", level " .. tostring(L))
+end
+
+function NCBear_CubHurt(pct)
+    local rec, p = myGrowRec()
+    if not rec then return end
+    local v = tonumber(pct) or 50
+    v = math.floor(v)
+    if v < 1 then v = 1 end
+    if v > 100 then v = 100 end
+    B.GrowSetHp(rec, v / 100)
+    push(p)
+    say(growLine(rec))
+end
+
+-- ---------------------------------------------------------------------------
 -- Rechtsklick: Eintraege im vorhandenen Untermenue "NC Bear" (NCBearTest.lua nimmt Funktionen aus NCBearMenu.extra an und
 -- ruft sie nur im Einzelspieler). Keine alte Datei wird geaendert.
 -- ---------------------------------------------------------------------------
@@ -763,6 +914,8 @@ local function menuOrphan() NCBear_CubOrphan() end
 local function menuSweep() NCBear_CubSweep() end
 local function menuForget() NCBear_CubForget() end
 local function menuCallReset() NCBear_CubCallReset() end
+local function menuGrow() NCBear_CubGrow(5) end
+local function menuStats() NCBear_CubStats() end
 
 NCBearMenu = NCBearMenu or {}
 NCBearMenu.extra = NCBearMenu.extra or {}
@@ -778,4 +931,6 @@ table.insert(NCBearMenu.extra, function(sub, square, player)
     sub:addOption("Cub: remove orphans now", square, menuSweep)
     sub:addOption("Cub: forget entry (keep mark)", square, menuForget)
     sub:addOption("Cub: reset call cooldown", square, menuCallReset)
+    sub:addOption("Cub: grow 5 days", square, menuGrow)
+    sub:addOption("Cub: stats", square, menuStats)
 end)

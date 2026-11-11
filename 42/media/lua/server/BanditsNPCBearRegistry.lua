@@ -25,6 +25,7 @@ local reg = nil                 -- gesetzt in OnInitGlobalModData; vorher wartet
 B._s = B._s or {}               -- Sitzung je Eintrag: [id] = { obj, held, moveAt, curiousAt, chk, f }
                                 -- f (B1b) = { held, orderAt, tx, ty, bestD, bestAt, stuck, retryAt }: Folgen, nie gespeichert
                                 -- B1c: + calmUntil, ownUntil, walk, g (Zombie-Wache), ride (Mitfahren), vx, vy, vAt (Lage der Sicht)
+                                -- B1d: + sta, breathAt, kx, ky, kAt, kAcc, staV, staVAt, xb, gDirty, swapErrAt (Wachsen, Ausdauer)
 B._healUntil = B._healUntil or 0    -- B1c: Echtzeit-Ende des Heil-Fensters nach InitRegistry (PLAN_B1C.md 1.1 Schritt 2)
 B._healScanAt = B._healScanAt or nil
 B._rev = B._rev or 0            -- zaehlt jede Aenderung, die eine Sicht betrifft
@@ -160,6 +161,12 @@ function B.InitRegistry()
                 rec.ride = nil
             end
         end
+    end
+    -- B1d (PLAN_B1D.md 2.2): Wachstum, Fuetter-Bonus, Leben, Erfahrung nachtragen / klemmen (server/BanditsNPCBearGrow.lua). Ein
+    -- B1c-Eintrag ohne g bekommt es aus tamedAt (nur Diagnose-Zeile); Fehlerzeilen nur bei Unsinn. Wilde Eintraege: alle B1d-Felder nil.
+    if B.GrowFix then
+        local now = B.Now()
+        for _, rec in pairs(r.cubs) do B.GrowFix(rec, now, true) end
     end
     bad = {}
     for bid, bait in pairs(r.baits) do
@@ -545,6 +552,7 @@ end
 -- B1c (PLAN_B1C.md 4.1): je Eintrag x, y (ganze Kacheln, letzte bekannte Stelle), ride (true = faehrt mit) und fuer den Besitzer
 -- callWait (Sekunden Rest der "Call to me"-Abklingzeit, aufgerundet; fehlt = bereit). Das wilde Junge des Finders steht IMMER in
 -- seiner Sicht (Bildschirm-Markierung). N3: ein Konto ohne Schluessel bekommt nur Junge in tellDist.
+-- B1d (PLAN_B1D.md 4.1): je gezaehmtem Eintrag zusaetzlich sz, hp, hpMax, sta, staMax, day, stg, nst, nxt (B.GrowView).
 -- ---------------------------------------------------------------------------
 local function viewEntry(rec, pkey, ms)
     local oid = -1
@@ -564,12 +572,15 @@ local function viewEntry(rec, pkey, ms)
     end
     local ride = nil
     if rec.ride ~= nil then ride = true end
-    return {
+    local t = {
         id = rec.id, oid = oid, st = rec.st, tame = rec.tame, fedN = rec.fedN, petN = rec.petN, last = rec.last,
         feedAt = rec.feedAt, petAt = rec.petAt, bond = rec.bond, owner = rec.owner, src = rec.src,
         name = rec.name, mode = mode,
         x = math.floor(tonumber(rec.x) or 0), y = math.floor(tonumber(rec.y) or 0), ride = ride, callWait = callWait,
     }
+    -- B1d (PLAN_B1D.md 4.1): fertige Zahlen sz hp hpMax sta staMax day stg nst nxt, nur gezaehmt (server/BanditsNPCBearGrow.lua)
+    if rec.st == "tame" and B.GrowView then B.GrowView(rec, t) end
+    return t
 end
 
 -- Das wilde Junge des Finders (Form B.SlotsOf "wild"): ungebunden, new/shy, nicht faellig.

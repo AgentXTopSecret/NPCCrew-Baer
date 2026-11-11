@@ -239,6 +239,8 @@ function B.FeedComplete(character, animal, food)
     rec.hx, rec.hy, rec.hz = x, y, z
     rec.idleH = 0
     rec.goneP = nil
+    -- B1d (PLAN_B1D.md 1.1 Schritt 4): gutes Fuettern beschleunigt das Wachsen ein wenig (gedeckelt, server/BanditsNPCBearGrow.lua)
+    if wasTame and B.GrowFeed then B.GrowFeed(rec, class, now) end
     B.Commit(rec)
     if wasTame then
         -- am zahmen Jungen nur Abklingzeit und Meldung (Plan 11), wie B.PetComplete (Nachbesserung B4)
@@ -579,6 +581,15 @@ local function slowTickBody()
     end
     forestRolls(players, now)
     baitNights(reg, players, now)
+    -- B1d (PLAN_B1D.md 1.1 Schritt 2): Wachsen und Leben der gezaehmten Jungen (server/BanditsNPCBearGrow.lua). Nachbesserung B1d B2:
+    -- eigene Schleife NACH den B1a-B1c-Schritten -- wirft ein B1d-Schritt (animal:getHealth() ist am Tier am MP-Server unbelegt,
+    -- PLAN_B1D.md 8 Nr. 4), sind sie in diesem Takt schon durch; die Sicht bleibt in B._dirty und geht mit dem naechsten Hirn-Takt hinaus.
+    if B.GrowSlow then
+        for i = 1, #list do
+            local rec = list[i]
+            if reg.cubs[rec.id] == rec then B.GrowSlow(rec, dt, online, now, players) end
+        end
+    end
     B.FlushViews(players)
 end
 
@@ -739,6 +750,7 @@ local function liveRec(rec, a, players, cache, ms)
     -- B1c (PLAN_B1C.md 1.2 Schritt 1): gezaehmte Junge stehen auf der Laerm-Wache (server/BanditsNPCBearGuard.lua)
     if rec.st == "tame" and B.CalmWatch then B.CalmWatch(rec, a, ms) end
     local cx, cy = a:getX(), a:getY()
+    -- B1d (B.GrowLive: Groesse, Leben, Ausdauer/Kondition) laeuft seit der Nachbesserung B1d B2 am Ende von brainTickBody
     local env, nearD, nearE = buildEnv(rec, cx, cy, players, cache, ms)
     local contact = nearD ~= nil and nearD <= B.CFG.contactDist
     if rec.goneP and contact then
@@ -905,7 +917,7 @@ end
 
 -- B1c-Reihenfolge (PLAN_B1C.md 6.3): 1 Mitfahrende (B.RideStep), 2 resolve / Folgen ohne Objekt / B1a-Suchlauf, 3 Heil-Fenster-
 -- Suchlauf, 4 Liste der geladenen Jungen -> EINE Zombie-Suche (B.GuardScan), 5 liveRec je Junges, 6 Spieler-Orte und deren Zeit
--- (B._pp, B._ppAt). Restliche Schritte wie B1b.
+-- (B._pp, B._ppAt). Restliche Schritte wie B1b. B1d: 7 B.GrowLive je Junges als allerletzter Schritt (Nachbesserung B1d B2).
 local function brainTickBody(ms)
     local reg = B.Reg()
     if not reg then return end
@@ -996,6 +1008,21 @@ local function brainTickBody(ms)
     if not scanned and (B._orphAt == nil or ms - B._orphAt < 0 or ms - B._orphAt >= B.CFG.orphanScanMs) then
         B._orphAt = ms
         B.ScanAnimals(players)
+    end
+    -- 7 (B1d, PLAN_B1D.md 1.1 Schritt 3): je geladenem, gezaehmtem Jungen B.GrowLive (server/BanditsNPCBearGrow.lua) -- Groesse
+    -- nachsetzen, fehlendes Leben holen, Ausdauer/Kondition. Nachbesserung B1d B2: als LETZTER Schritt, damit ein B1d-Fehler
+    -- (animal:getHealth() ist am Tier am MP-Server unbelegt, PLAN_B1D.md 8 Nr. 4) Folgen, Verstecken, Koeder, Sichten und Suchlaeufe nicht
+    -- mitreisst; was GrowLive in die Sicht legt, geht mit dem naechsten Takt hinaus. Nur, wer noch derselbe Eintrag mit demselben Objekt
+    -- ist (nicht geschlossen, nicht eingestiegen, nicht an einen anderen Koerper gebunden); Ort aus Schritt 4 (e.x, e.y, dieser Takt).
+    if B.GrowLive then
+        for i = 1, #loaded do
+            local e = loaded[i]
+            local rec = e.rec
+            local s = B._s[rec.id]
+            if reg.cubs[rec.id] == rec and rec.st == "tame" and rec.ride == nil and s ~= nil and s.obj == e.a then
+                B.GrowLive(rec, e.a, e.x, e.y, ms)
+            end
+        end
     end
 end
 

@@ -82,6 +82,8 @@ function B.PlaceCub(rec, x, y, z, why)
     end
     B.Commit(rec)                       -- r + 1 (der Spiegel folgt gleich, mit diesem r)
     B.WriteMark(rec, a)
+    -- B1d (PLAN_B1D.md 3.1): Groesse und Leben SOFORT aus dem Register an den neuen Koerper (server/BanditsNPCBearGrow.lua)
+    if B.GrowBody then B.GrowBody(rec, a) end
     if B.CalmDrop then B.CalmDrop(rec.id) end
     if B._zed then B._zed[rec.id] = nil end
     B.Log("place " .. tostring(rec.id) .. " (" .. tostring(why) .. ") at " .. tostring(rec.x) .. "," .. tostring(rec.y)

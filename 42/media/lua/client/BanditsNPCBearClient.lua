@@ -1,6 +1,7 @@
 --
 -- NPC Crew -- Baer, Client-Seite der Befehle und Meldungen (B1a, PLAN_ZAEHMEN.md 5.6, 6.2.4, 6.2.6; B1b, PLAN_B1B.md 5.4:
--- Namen fuer das Schild, neue Texte; B1c, PLAN_B1C.md 6.4/6.7: neue Texte, Ankunftszeit der Sicht U.viewAt).
+-- Namen fuer das Schild, neue Texte; B1c, PLAN_B1C.md 6.4/6.7: neue Texte, Ankunftszeit der Sicht U.viewAt; B1d, PLAN_B1D.md
+-- 6.5/6.7: Meldungen "stage" (Stufe erreicht) und "skill" (Faehigkeit gestiegen), U.StageName, Texte fuer Schild und Optionen).
 --
 -- Laeuft im Einzelspieler und auf jedem MP-Client (der dedizierte Server laedt client/ nicht). Diese Datei entscheidet NICHTS:
 -- sie nimmt die Sicht ("Sync") und die Meldungen ("Note") des Schreibers an, zeigt Meldungen ueber der Figur und bittet beim
@@ -135,10 +136,41 @@ U.EN = {
     UI_BN_Bear_MO_TagShowTip = "Name and state. The taming bar always shows.",
     UI_BN_Bear_MO_TagSize = "Size of the display above bears (%%)",
     UI_BN_Bear_MO_TagSizeTip = "100, 150 or 200.",
+    -- B1d (PLAN_B1D.md 6.7): Werte-Zeilen des Schilds, Stufen, Faehigkeiten, zwei Meldungen des Kerns, Anzeige-Optionen
+    UI_BN_Bear_Tag_Health = "Health %1/%2",
+    UI_BN_Bear_Tag_Stamina = "Stamina %1/%2",
+    UI_BN_Bear_Tag_Age = "Day %1 - %2 in %3 day(s)",
+    UI_BN_Bear_Tag_AgeDone = "Day %1 - full-grown",
+    UI_BN_Bear_Stage_Half = "half-grown",
+    UI_BN_Bear_Stage_Strong = "strong",
+    UI_BN_Bear_Stage_Adult = "full-grown",
+    UI_BN_Bear_Skill_Agi = "agility",
+    UI_BN_Bear_Skill_Vit = "toughness",
+    UI_BN_Bear_Skill_Con = "endurance",
+    UI_BN_Bear_Skill_Fgt = "fighting",
+    UI_BN_Bear_Skill_Fsh = "fishing",
+    UI_BN_Bear_Skill_Nos = "keen nose",
+    UI_BN_Bear_Note_Grown = "Your bear is %1 now.",
+    UI_BN_Bear_Note_SkillUp = "Your bear's %1 is now level %2.",
+    UI_BN_Bear_MO_Health = "Health above tamed bears",
+    UI_BN_Bear_MO_HealthTip = "Off, as a bar or as a number (now / most).",
+    UI_BN_Bear_MO_Stamina = "Stamina above tamed bears",
+    UI_BN_Bear_MO_StaminaTip = "Off, as a bar or as a number. Stamina drops while a bear runs and comes back while it rests.",
+    UI_BN_Bear_MO_Age = "Age and growth above tamed bears",
+    UI_BN_Bear_MO_AgeTip = "Growth day and when the next stage comes.",
+    UI_BN_Bear_MO_Off = "Off",
+    UI_BN_Bear_MO_Bar = "Bar",
+    UI_BN_Bear_MO_Number = "Number",
 }
 
 local KEY_HEAD = "UI_BN_Bear_"
 local DIRS = { N = true, NE = true, E = true, SE = true, S = true, SW = true, W = true, NW = true }
+-- B1d (PLAN_B1D.md 6.5): feste Listen fuer die Werte, die der Kern in einer Meldung schickt (v). Nur diese Werte werden zu einem
+-- Schluessel; alles andere wird "?" -- nie ein roher Schluessel und nie ein Text, den der Schreiber zusammengesetzt hat. Die
+-- Schluessel stehen hier ausgeschrieben (nicht zusammengesetzt), damit jeder im Code zu finden ist.
+local STAGE_KEY = { half = "UI_BN_Bear_Stage_Half", strong = "UI_BN_Bear_Stage_Strong", adult = "UI_BN_Bear_Stage_Adult" }
+local SKILL_KEY = { agi = "UI_BN_Bear_Skill_Agi", vit = "UI_BN_Bear_Skill_Vit", con = "UI_BN_Bear_Skill_Con",
+    fgt = "UI_BN_Bear_Skill_Fgt", fsh = "UI_BN_Bear_Skill_Fsh", nos = "UI_BN_Bear_Skill_Nos" }
 
 -- ---------------------------------------------------------------------------
 -- Texte
@@ -171,7 +203,17 @@ function U.WhyText(whyKey, whyVal)
     return U.T(whyKey, tostring(whyVal))
 end
 
--- Text einer Meldung des Schreibers: { k = Schluessel, t = "wait" / "days" / "dir" / "num" / "name" / nil, v = Wert } (Plan 6.2.6).
+-- B1d (PLAN_B1D.md 6.5): Name einer Wachstums-Stufe ("half" / "strong" / "adult"), sonst "?". Gerufen fuer Meldungen und beim
+-- Listenbau des Schilds (hoechstens 1 x je Sekunde), nie je Bild.
+function U.StageName(key)
+    if type(key) ~= "string" then return "?" end
+    local k = STAGE_KEY[key]
+    if k == nil then return "?" end
+    return U.T(k)
+end
+
+-- Text einer Meldung des Schreibers: { k = Schluessel, t = "wait" / "days" / "dir" / "num" / "name" / "stage" / "skill" / nil,
+-- v = Wert, w = zweiter Wert } (Plan 6.2.6; B1d PLAN_B1D.md 6.5: "stage" v = Stufe, "skill" v = Faehigkeit, w = neue Stufe 1..10).
 -- Gibt nil, wenn die Meldung keine von uns ist.
 function U.NoteText(note)
     if type(note) ~= "table" then return nil end
@@ -192,6 +234,14 @@ function U.NoteText(note)
         return U.T(key, math.floor(tonumber(v) or 0))
     elseif t == "name" then
         return U.T(key, tostring(v))
+    elseif t == "stage" then
+        return U.T(key, U.StageName(v))
+    elseif t == "skill" then
+        local sk = nil
+        if type(v) == "string" then sk = SKILL_KEY[v] end
+        local skName = "?"
+        if sk ~= nil then skName = U.T(sk) end
+        return U.T(key, skName, math.floor(tonumber(note.w) or 0))
     end
     return U.T(key)
 end

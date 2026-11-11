@@ -5,6 +5,9 @@
 -- drei Wege zwischen Schreiber und Spieler (B.Ask, B.Tell, B.SendView).
 -- B1c (PLAN_B1C.md 5): Spiegel-Fassung B.MARK_V, Stellwerte fuer Heilung, Laerm, Zombies, Mitfahren, Call to me, Gehen,
 -- Markierung und Karte, zwei neue Sandbox-Optionen (BearRideDistance, BearCallCooldownMinutes).
+-- B1d (PLAN_B1D.md 5): Stellwerte fuer Wachsen (Kurve, Stufen, Fuetter-Bonus), Werte (Stuetzwerte Leben / Ausdauer / Traglast /
+-- Schaden), Faehigkeiten (Erfahrungs-Kurve, Eimer, Haken-Erfahrung), Ausdauer, Leben-Abgleich; fuenf neue Sandbox-Optionen
+-- (BearGrowDays, BearDodgeMax, BearFightBonusMax, BearHealAwake, BearHealSleep). Formeln: shared/BanditsNPCBearStats.lua.
 --
 -- Laeuft ohne NPC Crew und ohne Bandits. Am Ende kopiert das Uebernahme-Skript diese Datei unveraendert nach NPC Crew.
 -- Deshalb: auf Dateiebene wird kein fremdes Modul eingefangen; jeder Griff nach BanditsNPC.X passiert zur Laufzeit und
@@ -96,6 +99,27 @@ B.CFG = B.CFG or {
     viewMoveTiles = 3, viewMoveMs = 5000,                 -- Lage in der Sicht nachschicken ab / hoechstens je
     markerMs = 400, markerAfterMs = 60000, markerDur = 1800, markerShift = 100,   -- Markierung (liest die OBERFLAECHE)
     mapMiniPx = 14, mapWorldMin = 18, mapWorldMax = 28, mapListMs = 500,          -- Karte (liest die OBERFLAECHE)
+    -- B1d (PLAN_B1D.md 5.2). Wachstum g = 0..1 (Register), innere Groesse s, gezeigte Groesse sz. Tabellen nicht zur Laufzeit stellbar.
+    growCurve = { { 0, 0.35 }, { 0.15, 0.75 }, { 0.45, 1.0 }, { 1.0, 1.35 } },   -- Kurve (x = g, Groesse) durch Kevins Tabelle
+    stageAt = { 0.75, 1.0, 1.35 },                        -- Schwellen half / strong / adult (innere Groesse)
+    cubMaxSize = 0.75, bodySwap = false,                  -- groesste gezeigte Groesse mit dem Junges-Modell / Modellwechsel (aus)
+    sizeEps = 0.002, tagBase = 0.35,                      -- Groessen-Probe ab Abweichung / Bezug des Schild-Ankers (OBERFLAECHE)
+    growCommitH = 1.0,                                    -- Wachstum festschreiben hoechstens je (Spielstunden)
+    feedGrowFav = 3, feedGrowOk = 2, feedGrowSnack = 1,   -- Fuetter-Bonus: Spielstunden Wachstum je Fuetterung (Klasse)
+    feedGrowDay = 2, feedGrowMax = 0.10,                  -- hoechstens so viele Gutschriften je Spieltag / Summe als Anteil von g
+    statAt = { 0.35, 0.75, 1.35 },                        -- Stuetzpunkte der Werte (innere Groesse)
+    hpAt = { 40, 150, 400 }, staAt = { 50, 100, 160 },    -- Leben max (Punkte) / Ausdauer max an den Stuetzpunkten
+    carryAt = { 10, 40, 100 }, dmgAt = { 0, 0.35, 1.0 },  -- Traglast (Kevin) / Schaden-Faktor (1,0 = heutiger Erwachsener)
+    vitPerLv = 0.05, conPerLv = 0.05, dodgeBase = 5,      -- Leben- / Ausdauer-Bonus je Stufe / Ausweichen auf Stufe 0 (%)
+    fishBase = 10, fishMax = 60, noseBase = 12, noseStep = 1.5,   -- Fang-Chance % / Warnweite Kacheln
+    xpNeed = { 100, 116, 135, 156, 181, 210, 244, 283, 328, 380 },   -- Erfahrung je Stufe (x 1,16, Summe 2133)
+    xpPerMin = 6, xpBucketMin = 3,                        -- Echtzeit-Deckel je Faehigkeit und Minute / so viele Minuten ansparen
+    xpHitTaken = 10, xpHitDealt = 5, xpFishTry = 2, xpFishCatch = 10, xpSniff = 5,   -- Erfahrung je Ereignis (Haken)
+    conTilesPerXp = 5, conBreathXp = 5, conBreathMs = 60000, conStepMax = 8,   -- Kondition: Kacheln je XP / ausser Puste / je / Weg-Deckel
+    conStepMul = 4,                                       -- Sprung erst ab Weg > conStepMul x runSpeed x Taktdauer (Nachbesserung B1d B4)
+    staRunCost = 0.4, staRegen = 2, staViewStep = 10,     -- Ausdauer: Punkte je Kachel Rennen / Punkte je s Erholung / Sicht ab
+    hpEps = 0.005, hpCommit = 0.02,                       -- Leben: Abgleich-Schwelle (Anteil) / sofort festschreiben ab Verlust
+    hpLossEps = 0.0001,                                   -- Leben: jeder Verlust darueber ist Schaden (Gleitkomma-Rest; Nachbesserung B1d B3)
 }
 
 -- Sandbox-Optionen BanditsNPC.<Name> (Plan 3.1): Vorgabe und Bereich. Die Datei sandbox-options.txt nennt dieselben Zahlen.
@@ -123,6 +147,12 @@ B.OPTS = B.OPTS or {
     -- B1c (PLAN_B1C.md 5.1, Kevin 11.11.2026: 15 Kacheln, 5 Minuten Echtzeit)
     BearRideDistance = { def = 15, min = 3, max = 40 },          -- so weit darf ein folgendes Junges beim Einsteigen weg sein
     BearCallCooldownMinutes = { def = 5, min = 0, max = 60 },    -- Echtzeit-Minuten zwischen zwei "Call to me" am selben Jungen
+    -- B1d (PLAN_B1D.md 5.1; Kevin 11.11.2026: 100 Tage, Ausweichen 40 %, Kaempfen +70 %, Heilen wach ~1 %, im Schlaf ~15 %)
+    BearGrowDays = { def = 100, min = 10, max = 365 },           -- Spieltage vom Zaehmen bis ausgewachsen
+    BearDodgeMax = { def = 40, min = 5, max = 80 },              -- Ausweichen in Prozent auf Agilitaet 10
+    BearFightBonusMax = { def = 70, min = 0, max = 200 },        -- Mehr-Schaden in Prozent auf Kaempfen 10
+    BearHealAwake = { def = 1.0, min = 0.0, max = 10.0 },
+    BearHealSleep = { def = 15.0, min = 0.0, max = 100.0 },
     BearLog = { def = false },
 }
 

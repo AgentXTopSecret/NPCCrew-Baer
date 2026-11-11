@@ -174,6 +174,46 @@ option BanditsNPC.BearCallCooldownMinutes
 	translation = BanditsNPC_BearCallCooldownMinutes,
 }
 
+/* In-game days from taming until a cub is fully grown, size 0.35 -> 1.35 (Kevin 11.11.2026: 100). Faster at first: at 100 days size 0.75 on day 15 and 1.0 on day 45; other values scale the same way. */
+option BanditsNPC.BearGrowDays
+{
+	type = integer, min = 10, max = 365, default = 100,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearGrowDays,
+}
+
+/* Dodge chance in percent at agility level 10; level 0 is 5 (Kevin 11.11.2026: 40). No effect until bears can fight. */
+option BanditsNPC.BearDodgeMax
+{
+	type = integer, min = 5, max = 80, default = 40,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearDodgeMax,
+}
+
+/* Extra damage in percent at fighting level 10, on top of the damage from growing (Kevin 11.11.2026: 70). No effect until bears can fight. */
+option BanditsNPC.BearFightBonusMax
+{
+	type = integer, min = 0, max = 200, default = 70,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearFightBonusMax,
+}
+
+/* Percent of its maximum health a tamed bear heals per in-game hour while awake (Kevin 11.11.2026: about 1). The game's own healing of the animal is taken back. */
+option BanditsNPC.BearHealAwake
+{
+	type = double, min = 0.0, max = 10.0, default = 1.0,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearHealAwake,
+}
+
+/* Percent of its maximum health per in-game hour while asleep (Kevin 11.11.2026: about 15). No effect until bears can sleep. */
+option BanditsNPC.BearHealSleep
+{
+	type = double, min = 0.0, max = 100.0, default = 15.0,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearHealSleep,
+}
+
 /* Diagnosis lines [TC-BEAR] in the console; real errors are always written. */
 option BanditsNPC.BearLog
 {
