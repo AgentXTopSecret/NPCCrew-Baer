@@ -1,5 +1,39 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **11.11.2026 18:10: ZWEI MODELL-LAEUFE ANGEHALTEN (5-h-Fenster 93 %, Reset 20:00).** Hinweis der Projekte-Sitzung (Kevin: "Ja, Bescheid geben"):
+> bis 20:00 nichts Neues starten. Damit nichts mitten in der Arbeit ins Limit laeuft, um 18:10 per TaskStop angehalten (2 verwaiste Blender-Jobs
+> `baer_export_gross.py -- netz` beendet):
+> - **baer-gross** `wf_48fe2220-263`: fertig + im Zwischenspeicher forschung:vorlage, forschung:bestand, spezifikation, bau:clips. Abgebrochen:
+>   **bau:netz** (lief 17:46-18:08; Halbes in `../_arbeit/baer_gross/bau_n2|bau_n3|bau_n3b/`, `log/`). Fortsetzen: Workflow({scriptPath:
+>   `C:/Users/Kevin/.claude/projects/C--Users-Kevin-NPCCrew-Nebenprojekte-baer/8f80868b-c5cd-4de5-ade1-25f74fc113d4/workflows/scripts/baer-gross-wf_48fe2220-263.js`,
+>   resumeFromRunId: "wf_48fe2220-263"}); im bau:netz-Auftrag vorher " (Fortsetzung nach Halt 18:10: Zwischenstaende in bau_n*/ zuerst pruefen)" anhaengen.
+> - **baer-gen-gross** `wf_f0c57dc2-1e2`: fertig plan, bau:form. Abgebrochen: **bau:rig** (lief 17:48-18:08; Halbes in
+>   `../_arbeit/baer_gen_gross/rig/`, `werkzeug/rig_*.py`). Fortsetzen: scriptPath
+>   `C:/Users/Kevin/.claude/projects/C--Users-Kevin-NPCCrew-Nebenprojekte-baer/8f80868b-c5cd-4de5-ade1-25f74fc113d4/workflows/scripts/baer-gen-gross-wf_f0c57dc2-1e2.js`,
+>   resumeFromRunId "wf_f0c57dc2-1e2"; im bau:rig-Auftrag denselben Fortsetzungs-Zusatz.
+> - **baer-b1e FERTIG und EINGEBAUT 18:22 (ungespielt):** 9/9 Agenten mit Ergebnis (journal geprueft; zwei Forschungs-Starts ohne Ergebnis sind
+>   alte, absichtlich ersetzte Starts), Gegenpruefer ohne Blocker. 60 Dateien byte-gleich in NCBearTest (9 neu, 35 ueberschrieben, 16 gleich),
+>   mod.info + 42/mod.info Beschreibung neu, Zips `NCBearTest_vor_b1e_2026-11-11_182245.zip` / `_mit_b1e_...`. Trockenlauf --vor-b5a danach:
+>   0 Fehler, 28 Warnungen (vorher auf dem B1d-Stand gewollt rot). Test: `spiel/anleitung_b1e.md`; Berichte `spiel/b1e_*.md`; Restbefunde C1-C3
+>   und 9 Fragen fuer Kevin in `spiel/b1e_gegen_bericht_b1e.md` (wichtigste: Texte "cub" -> "bear", Baer ohne Koerper nach Absturz im Tausch-Bild
+>   von selbst neu erscheinen lassen -- Empfehlung ja, naechster Funktionen-Lauf).
+> - **Naechster Funktionen-Lauf (nach 20:00):** Baeren-Menue/Fenster (V) + die B1e-Reste (C1 Wiederkehr, Texte bear), dann B5a Kampf.
+> - **Nach 20:00:** beide Modell-Laeufe fortsetzen und baer-junges-fuss (Punkt 4 unten) starten -- erst nach 20:00, nicht frueher.
+
+> **11.11.2026 ~15:50: DREI LAEUFE PARALLEL** (Kevin: "fuer alle 3 sachen eigne workflows von mir aus auch 10agenten pro workflow hauptsache es sieht gut aus").
+> Alle laufen in DIESER Sitzung (8f80868b...); Fortsetzen nur hier mit scriptPath + resumeFromRunId (LIMIT-REGEL unten).
+> 1. **baer-b1e** (Funktionen, 9 Agenten) `wf_490216e4-403`: Modellwechsel ab Tag 15 aufs grosse Modell (neue Art, nie `bear`), Markierung bei 4K
+>    groesser + Regler; misst mit dem ALTEN Jungen. Skript-Kopie `../_arbeit/baer_zaehmen/workflow_baer_b1e.js`, Staging `../_arbeit/baer_zaehmen/mod/`.
+> 2. **baer-gross** (unser grosser 2c-Baer, 10 Agenten) `wf_48fe2220-263`: Aufrichten+Bruellen neu nach echten Baeren, Koerperform aufrecht, G1-G3 im
+>    Sitzen. Skript-Kopie `../_arbeit/baer_gross/workflow_baer_gross.js`, Ergebnis `../_arbeit/baer_gross/mod/42/media/` (5 Dateien).
+> 3. **baer-gen-gross** (neuer grosser Generator-Baer, 9 Agenten) `wf_f0c57dc2-1e2`: E auf das 2c-Skelett, alle 15 2c-Clips byte-gleich, braun +
+>    Fototon, Vergleichs-Spawn `NCBear_GenLive()` (nur Bench). Skript-Kopie `../_arbeit/baer_gen_gross/workflow_baer_gen_gross.js`, Ergebnis `.../out/`.
+> 4. **baer-junges-fuss** (altes Junges: Baerenfuesse + Sitzen wie der 2c-Baer, Gesicht/Gang bleiben; 8 Agenten) VORBEREITET, nicht gestartet:
+>    Skript `../_arbeit/baer_junges_fuss/workflow_baer_junges_fuss.js` (inline starten). Start ERST nach dem 5-h-Reset
+>    (11.11. 20:00; Projekte-Sitzung 18:05: "erst nach 20:00 starten, nicht schon, wenn einer der anderen Laeufe fertig wird").
+> **Arbeitsweise (Kevin 11.11. ~15:55): immer Modell-Spur + Funktionen-Spur parallel, nach jedem fertigen Lauf sofort den naechsten starten.**
+> Danach (Funktionen): Baeren-Menue/Fenster (V), dann B5a Kampf. Eingebaut 11.11.: altes Junges zurueck (96035c3), `NCBear_CubAltSize` (e92835b). Woche beim Start 5 %.
+
 > **11.11.2026 ~15:00: KONTOWECHSEL -- zuerst `UEBERGABE.md` (neu) lesen.** Kein Workflow laeuft; alle Laeufe sind fertig und eingebaut.
 
 

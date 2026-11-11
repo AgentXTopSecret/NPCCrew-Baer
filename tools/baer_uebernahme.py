@@ -2,7 +2,8 @@
 """baer_uebernahme.py -- den Baeren (heute B1a: Junges finden und zaehmen; B1b: Folgen/Bleiben, Namensschild, Umbenennen, Futter
 hinhalten, Waisen raeumen; B1c: Register-Selbstheilung, Laerm- und Zombie-Wache, Mitfahren, Call to me, Gehen, Bildschirm-Markierung,
 Karten-Symbol, Anzeige-Optionen; B1d: Wachsen in BearGrowDays Spieltagen, taeglich steigende Werte, Faehigkeiten als Daten, Leben am
-Tier, Werte-Zeilen ueber dem Baeren) aus der Test-Mod NCBearTest nach NPC Crew uebernehmen.
+Tier, Werte-Zeilen ueber dem Baeren; B1e: ab Halbstark zweiter Koerper "ncbeargrown" mit dem grossen Modell bis 1,35, groessere
+Markierung als eigenes UI-Element) aus der Test-Mod NCBearTest nach NPC Crew uebernehmen.
 
 Grundregel (Werkstatt-CLAUDE.md Abschnitt 0, Kevin 08.11.2026): alles wird FUER NPC Crew gebaut und soll am Ende "einfach copy paste"
 hinueber; keine Cheat- oder Testmenues kommen mit. Plan: _arbeit/baer_zaehmen/PLAN_ZAEHMEN.md Abschnitt 12 (B1b: PLAN_B1B.md 7),
@@ -66,6 +67,12 @@ Was es tut (erst wenn ALLES geprueft ist, wird geschrieben; sonst Abbruch ohne S
      Probe-Wege B.GrowSetG / B.GrowSetHp / B.SkillSet (Vorspulen, Leben und Erfahrung setzen) ruft im kopierten Code NIEMAND (nur die
      Definition; aufrufen darf sie nur die Werkbank, spaeter ein Baeren-Fenster mit eigener begruendeter Ausnahme). Die neuen Dateien
      deckt LUA_BEAR, die fuenf neuen Optionen (zwei als double) plan_sandbox (Text der Zahlen gegen B.OPTS).
+     B1e (PLAN_B1E.md 10.3): die Art-Frage animal:getAnimalType() steht nur in B.BodyKind (shared/BanditsNPCBear.lua) -- jedes
+     Vorkommen des Namens im Code-Teil; kein Vergleich mit B.CUB (== / ~=) im kopierten Code (beide Koerper gehen ueber B.BodyKind).
+     Der Koerper-Tausch geht ueber B.PlaceCub (Tier-Regeln unveraendert). Die Art ncbeargrown nennt bodyModel "NCBear_Body" und die
+     Rassen-Textur "NCBear" -- beides Teile des grossen Modells, die bis B5a in der Test-Mod bleiben (ALT_DEFS: ohne --vor-b5a Fehler,
+     mit Warnung; F9); "NCBear_Body" ist kein Testbefehl (CHEAT_ALLOWED). Neue Bilder ueber UI_ASSET; IG_UI.json + der Tiername
+     IGUI_AnimalType_ncbeargrown.
      Ausnahmen nur einzeln mit Grund (CHEAT_ALLOWED).
   7. (Probe/echt) schreiben, zuruecklesen, dann luacheck.py, scopecheck.py, localcount.py je kopierter Lua-Datei und luacheck_pz.py
      (W113 nur die einzeln erlaubten: die drei Aktionsklassen, die eine andere kopierte Datei setzt).
@@ -134,7 +141,8 @@ ANIM_VAR = "NCBearAct"                                             # B.ACT
 TEXT_NS = {
     "UI.json": (re.compile(r"^UI_BN_Bear_[A-Za-z0-9_]+$"), set()),
     "Sandbox.json": (re.compile(r"^Sandbox_BanditsNPC_Bear[A-Za-z0-9_]+$"), {"Sandbox_BanditsNPC"}),
-    "IG_UI.json": (re.compile(r"^$"), {"IGUI_AnimalType_ncbearcub", "IGUI_Animal_Group_ncbear", "IGUI_Breed_brown"}),
+    "IG_UI.json": (re.compile(r"^$"), {"IGUI_AnimalType_ncbearcub", "IGUI_Animal_Group_ncbear", "IGUI_Breed_brown",
+                                       "IGUI_AnimalType_ncbeargrown"}),               # B1e: Tiername des grossen Koerpers
 }
 
 # ---------------------------------------------------------------------------------------------------------------------------------
@@ -169,6 +177,15 @@ ALT_EXPECTED = collections.OrderedDict([
 ])
 OLD_ASSET = re.compile(r"^(NCBear|nc_bear|Item_NCBear)", re.I)
 OLD_TEXT_KEYS = {"IG_UI.json": {"IGUI_AnimalType_bear", "IGUI_AnimalType_bearstag", "IGUI_Animal_Group_bear"}}
+# B1e (PLAN_B1E.md 0.13, 10.3, Frage F9): die Art "ncbeargrown" (shared/BanditsNPCBearDefs.lua) nennt Teile des grossen Modells, die als
+# Altlast bis B5a in der Test-Mod bleiben (nc_bear_tier.txt mit dem Hirsch-Rueckfall NCBearStag_Body, NCBear.glb, NCBear.png). Die
+# Defs-Pruefung meldet sie als erlaubte Fundstelle: ohne --vor-b5a Fehler (Trockenlauf absichtlich rot), mit --vor-b5a Warnung. B5a
+# bringt ein eigenes Modell-Skript ohne Hirsch-Rueckfall und zieht bodyModel/Textur nach (der ARTNAME ncbeargrown bleibt).
+ALT_DEFS = collections.OrderedDict([
+    (("texture", "NCBear"), "Rassen-Textur der Art ncbeargrown = Textur des grossen Modells (42/media/textures/Body/NCBear.png, Altlast 10)"),
+    (("bodyModel", "NCBear_Body"), "bodyModel der Art ncbeargrown = model-Skript des grossen Modells (42/media/scripts/nc_bear_tier.txt, "
+                                   "Altlast 14)"),
+])
 
 # Erlaubte Fundstellen in NPC Crew (NPC Crew nennt den Baeren SELBST im Code). Heute keine: der Baer beruehrt NPC Crew nur zur Laufzeit
 # (NAEHTE.md). NPC Crew nennt 'NCBear' heute nur in einem Changelog-KOMMENTAR (shared/BanditsNPC.lua, v3.14.58): Warnung, keine Kollision.
@@ -306,6 +323,12 @@ TIER_RULES = [
     # Definitionen zaehlen nicht (TIER_DEF). Ein Aufrufer waere ein Spieler-Weg ohne Spielmechanik (Cheat-Pfad).
     ("probeweg", re.compile(r"\bGrowSetG\b|\bGrowSetHp\b|\bSkillSet\b"), set(),
      "B.GrowSetG / B.GrowSetHp / B.SkillSet nur aus der Werkbank (im kopierten Code nur die Definition)"),
+    # B1e (PLAN_B1E.md 0.8, 10.3): EINE Art-Frage fuer beide Koerper -- getAnimalType (jede Form, auch als String) nur in B.BodyKind,
+    # und kein Vergleich mit B.CUB (eine Stelle, die nur das Junge kennt, verloere den grossen Koerper ab Halbstark)
+    ("getAnimalType", re.compile(r"(?i)\bgetAnimalType\b"), {("42/media/lua/shared/BanditsNPCBear.lua", "B.BodyKind")},
+     "Art-Frage (getAnimalType) nur in B.BodyKind"),
+    ("artvergleich", re.compile(r"(?:==|~=)\s*B\.CUB\b|\bB\.CUB\s*(?:==|~=)"), set(),
+     "Vergleich mit B.CUB (nur das Junge) -- beide Koerper ueber B.BodyKind"),
 ]
 # B1c (PLAN_B1C.md 6.8): die Seite unter Optionen -> Mods bekommt nur Textschluessel (Vanilla ruft getText,
 # client/OptionScreens/MainOptions.lua:2801-2812). Methode -> Stellen der Text-Argumente (0 = erstes Argument).
@@ -357,6 +380,8 @@ TIER_DEF = re.compile(r"^function\s+B\.(CreateCub|AppearFor|RemoveCub|GrowSetG|G
 CHEAT_ALLOWED = [
     {"file": "42/media/lua/shared/BanditsNPCBearDefs.lua", "rule": "befehl", "code": 'bodyModel = "NCBearCub_Body"',
      "why": "Name des model-Skripts (scripts/nc_bear_cub.txt), kein Befehl (Plan 12.1 Punkt 5)"},
+    {"file": "42/media/lua/shared/BanditsNPCBearDefs.lua", "rule": "befehl", "code": 'bodyModel = "NCBear_Body"',
+     "why": "B1e: model-Skript des grossen Koerpers (scripts/nc_bear_tier.txt, Altlast bis B5a -- ALT_DEFS), kein Befehl"},
 ]
 # luacheck_pz W113, die eine ANDERE kopierte Datei setzt (luacheck_pz liest je Datei, nicht ueber Dateien): (Datei, Name).
 PZ_ALLOWED = {
@@ -1122,13 +1147,36 @@ def collisions(tgt, final, copy_lua, copy_asset, rep):
     defs = final.get("42/media/lua/shared/BanditsNPCBearDefs.lua")
     if defs:
         dtext = defs.decode("latin-1")
+        # B1e: Fehlt ein Teil, das ALT_DEFS als Altlast bis B5a fuehrt, gilt dieselbe Regel wie fuer ALT_EXPECTED (alt_report): ohne
+        # --vor-b5a Fehler, mit Warnung. Ist es inzwischen da (B5a), meldet das Skript, dass der Eintrag zu streichen ist.
+        def defs_missing(kind, val, msg):
+            why = ALT_DEFS.get((kind, val))
+            if why is None:
+                rep.err(msg)
+                return
+            line = "noch umzubenennen (B5a): Defs %s %s -- %s" % (kind, val, why)
+            rep.say("  " + line)
+            if ARGS["vor_b5a"]:
+                rep.warn(line)
+            else:
+                rep.err(line)
+        seen_defs = set()
         for val in sorted(set(re.findall(r"\btexture(?:Male|Baby)?\s*=\s*\"(\w+)\"", dtext))):
+            seen_defs.add(("texture", val))
             if "42/media/textures/Body/%s.png" % val not in final:
-                rep.err("Defs: Rassen-Textur %s liegt nicht als 42/media/textures/Body/%s.png in der Uebernahme" % (val, val))
+                defs_missing("texture", val, "Defs: Rassen-Textur %s liegt nicht als 42/media/textures/Body/%s.png in der Uebernahme" % (val, val))
+            elif ("texture", val) in ALT_DEFS:
+                rep.warn("ALT_DEFS: Rassen-Textur %s liegt jetzt in der Uebernahme (B5a erledigt?) -- aus ALT_DEFS und NAEHTE.md streichen" % val)
         for val in re.findall(r"\bbodyModel\s*=\s*\"(\w+)\"", dtext):
+            seen_defs.add(("bodyModel", val))
             if not any(re.search(r"^\s*model\s+%s\b" % re.escape(val), final[r].decode("latin-1"), re.M)
                        for r in final if r.startswith("42/media/scripts/")):
-                rep.err("Defs: bodyModel %s hat kein model-Skript in der Uebernahme" % val)
+                defs_missing("bodyModel", val, "Defs: bodyModel %s hat kein model-Skript in der Uebernahme" % val)
+            elif ("bodyModel", val) in ALT_DEFS:
+                rep.warn("ALT_DEFS: bodyModel %s hat jetzt ein model-Skript in der Uebernahme (B5a erledigt?) -- aus ALT_DEFS streichen" % val)
+        for key in ALT_DEFS:
+            if key not in seen_defs:
+                rep.warn("ALT_DEFS %s %s steht nicht mehr in BanditsNPCBearDefs.lua -- aus ALT_DEFS und NAEHTE.md streichen" % key)
     # Texte: jeder Schluessel aus der Lua steht in EN; englische Ersatztexte (U.EN) wortgleich.
     rel_en = "42/media/lua/shared/Translate/EN/UI.json"
     data = final.get(rel_en)
@@ -1508,7 +1556,8 @@ def print_plan(plan, rep):
     rep.say("")
     rep.say("== Naehte (NAEHTE.md): keine Zeile in einer NPC-Crew-Lua-Datei. Laufzeit-Aufsaetze auf NPC Crew in OnGameBoot stehen in den "
             "kopierten Dateien (B1c: dazu ein Aufsatz auf VANILLAS Kartenklassen, Datei-Ende + OnGameStart, NAEHTE.md Zeile 18; B1d: "
-            "keine neue Naht, NAEHTE.md Zeile 25); geaendert werden nur NPC Crews Texte (zusammenfuehren) und sandbox-options.txt (anhaengen).")
+            "keine neue Naht, NAEHTE.md Zeile 25; B1e: keine neue Naht, die Art ncbeargrown haengt bis B5a am grossen Modell der "
+            "Test-Mod, NAEHTE.md Zeilen 15 und 26); geaendert werden nur NPC Crews Texte (zusammenfuehren) und sandbox-options.txt (anhaengen).")
 
 
 def write_all(root, final, rep):
@@ -1682,9 +1731,11 @@ def main(argv):
     rep.say("")
     rep.say("ERGEBNIS: %s -- %d Fehler, %d Warnungen (%s). Statisch geprueft, nicht gespielt." % (
         "OK" if not rep.errors else "NICHT OK", len(rep.errors), len(rep.warns), mode))
-    n_alt = len(plan["alt"]) + len(plan["text_alt"])
+    n_defs = sum(1 for e in rep.errors if e.startswith("noch umzubenennen (B5a): Defs "))    # B1e: ALT_DEFS
+    n_alt = len(plan["alt"]) + len(plan["text_alt"]) + n_defs
     if not ARGS["vor_b5a"] and n_alt and len(rep.errors) == n_alt and all(e.startswith("noch umzubenennen (B5a)") for e in rep.errors):
-        rep.say("Erwartet rot: genau die %d Altlasten aus ALT_EXPECTED (NAEHTE.md 'Erlaubte Fundstellen des Trockenlaufs'), sonst nichts." % n_alt)
+        rep.say("Erwartet rot: genau die %d Altlasten aus ALT_EXPECTED und %d aus ALT_DEFS (NAEHTE.md 'Erlaubte Fundstellen des "
+                "Trockenlaufs'), sonst nichts." % (n_alt - n_defs, n_defs))
     if mode == "ECHT" and not rep.errors:
         rep.say("Danach von Hand: Version + Changelog in NPC Crew, Test-Mod aus Kevins Liste UND ihre Lua leeren (zwei Mods mit denselben "
                 "Pfaden), Spiel neu starten.")
