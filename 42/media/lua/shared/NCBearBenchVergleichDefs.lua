@@ -17,7 +17,8 @@ if src then
     for k, v in pairs(src) do d[k] = v end
     d.bodyModel = "NCBearBenchCubAlt_Body"     -- scripts/NCBearBenchVergleich.txt
     d.minSize = 0.35
-    d.maxSize = 0.35
+    d.maxSize = 1.35   -- Kevin 11.11.: altes Junges wachsen lassen (NCBear_CubAltSize); bei min = max setzt die Engine jede gesetzte
+                       -- Groesse beim Laden/naechsten Tag zurueck (_arbeit/baer_zaehmen/forschung_b1d.md 0.2); ageToGrow bleibt riesig
     local stages = {}
     stages[ALT] = { ageToGrow = 36500 }      -- Eintrag gleich dem Artnamen (wie BanditsNPCBearDefs.lua:73)
     d.stages = stages

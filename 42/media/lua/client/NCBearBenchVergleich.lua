@@ -7,6 +7,8 @@
 --                           des grossen Generator-Baeren (braun und Fototon) ins Inventar zum Hinlegen
 --   NCBear_CubAlt()         nur das alte Junge (lebend)
 --   NCBear_GenE()           nur die zwei Standmodelle des Generator-Baeren ins Inventar
+--   NCBear_CubAltSize(0.75) alle alten Jungen in 20 Kacheln auf diese Groesse (0,35 .. 1,35; Kevin 11.11.: "wie lass ich das alte
+--                           model wachsen? vom alten baby baeren")
 -- Das neue Junge ist dein gezaehmtes (gleiches Modell wie jedes neue Junge); ein weiteres holt NCBear_CubHere().
 --
 -- Engine-Aufrufe wie die gespielte Testhilfe client/NCBearSpawn.lua: getAllAnimalsDefinitions/getBreeds (Vanilla
@@ -49,6 +51,37 @@ end
 function NCBear_CubAlt()
     if not sp() then print("[NCBear] singleplayer only"); return end
     return spawnAt(2, -2, "ncbearcubalt")
+end
+
+-- Groesse der alten Jungen nachstellen. Liste und Abfragen wie die Testhilfe client/NCBearSize.lua (NCBear_Size):
+-- getCell():getObjectListForLua(), instanceof(x, "IsoAnimal"), getAnimalType(), getSquare(); Groesse ueber
+-- animal:getData():setSizeForced(zahl) (Vanilla shared/Definitions/animal/ButcheringUtil.lua:569). Haelt auch nach Laden/naechstem Tag,
+-- weil die Vergleichs-Art jetzt maxSize 1,35 hat (shared/NCBearBenchVergleichDefs.lua).
+local ALT_RADIUS = 20
+function NCBear_CubAltSize(x)
+    if not sp() then print("[NCBear] singleplayer only"); return end
+    x = tonumber(x)
+    if not x then print("[NCBear] use NCBear_CubAltSize(0.75)  (0.35 .. 1.35)"); return end
+    if x < 0.35 then x = 0.35 end
+    if x > 1.35 then x = 1.35 end
+    local p = getSpecificPlayer(0)
+    if not p then return end
+    local here = p:getCurrentSquare()
+    if not here then return end
+    local list = getCell():getObjectListForLua()
+    local n = 0
+    for i = list:size(), 1, -1 do
+        local a = list:get(i - 1)
+        if instanceof(a, "IsoAnimal") and a:getAnimalType() == "ncbearcubalt" then
+            local sq = a:getSquare()
+            if sq and math.abs(sq:getX() - here:getX()) <= ALT_RADIUS and math.abs(sq:getY() - here:getY()) <= ALT_RADIUS then
+                a:getData():setSizeForced(x)
+                n = n + 1
+            end
+        end
+    end
+    print("[NCBear] old cub size " .. x .. " set on " .. n .. " old cub(s) within " .. ALT_RADIUS .. " tiles"
+        .. (n == 0 and " -- spawn one first: NCBear_CubAlt()" or ""))
 end
 
 function NCBear_GenE()
