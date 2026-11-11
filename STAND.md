@@ -40,7 +40,8 @@ Stand + naechster Schritt + Lauf-ID; abgeschnittene Laeufe mit resumeFromRunId f
    19.418 Dreiecke, 26 Knochen/15 Clips wie der Erwachsene, Gehen 1,60 / Rennen 2,61 Kacheln/s (Platzhalter 0,52/2,47). Blatt
    `spiel/rig_KEVIN_junges_spielfertig.png` (nicht in Git), Berichte `spiel/rig_*.md`. Offen: M3 Pfoten rutschen, wenn B1d es ueber 0,35 wachsen
    laesst (Tempo waechst nicht mit) -> Code-Frage; Fressen erreicht den Boden nicht (Kopf ~18 cm); Folgen-Schwelle walkSpeed (B1c 0,52) auf 1,6
-   anpassen. -- vorher: Modell des Jungen: Workflow baer-rig-junges (8 Agenten, Skript `spiel/rig_junges_workflow.js`; Formrunde Kopf gerade +
+   anpassen. **Kevin 15:00: "besonders die gesichtsgroesse sieht zu klein aus also das maul"** -> naechste Modell-Runde: Gesicht/Schnauze groesser,
+   Kopf hoeher (nach dem Wochen-Reset 14.11.). -- vorher: Modell des Jungen: Workflow baer-rig-junges (8 Agenten, Skript `spiel/rig_junges_workflow.js`; Formrunde Kopf gerade +
    Ohren, Skelett+Gewichte, 15 Clips mit schnellerem Gehen, Pruefer Optik/Technik, Nachbesserung, Gegenpruefer), Ergebnis
    `../_arbeit/baer_gen/rig/out/42/media/...`; Lauf `wf_f7896aa7-c7b` (Task waly9lt77; abgeschnitten -> resumeFromRunId).
 4. [FERTIG + EINGEBAUT 10:55, UNGESPIELT] Code **B1d Wachsen** (51 Dateien byte-gleich; Sicherungen `backups/NCBearTest/NCBearTest_vor_b1d_2026-11-11_105508.zip`/`_mit_`;
@@ -50,6 +51,7 @@ Stand + naechster Schritt + Lauf-ID; abgeschnittene Laeufe mit resumeFromRunId f
 
 **Fertig (diese Nacht):** Modell-Lauf baer-gen-schoen (Blaetter `spiel/gen_KEVIN_*.png`); Code B1c gebaut, geprueft, in NCBearTest (08:12), hochgeladen.
 **Ungespielt:** B1c (in NCBearTest seit 08:12), B1d (seit 10:55), neues Junges-Modell (seit 14:39).
+**Vergleich (Testhilfe, 11.11. 14:55 in NCBearTest):** `NCBear_Vergleich()` / `NCBear_CubAlt()` / `NCBear_GenE()` -- altes Junges lebend (Art `ncbearcubalt`), grosser Generator-Baer als Standmodell braun + Fototon; 9 Dateien NCBearBench*, Sicherungen `NCBearTest_vor_vergleich_2026-11-11_145515.zip`/`_mit_`.
 **Am Limit haengen geblieben:** 11.11. ~06:05 Nutzungslimit erreicht -- B1c fertig, aber nicht eingebaut; Rig-Lauf `wf_f7896aa7-c7b` lief weiter (bei Abbruch mit resumeFromRunId fortsetzen).
 **Fragen fuer Kevin:** (aus B1c, je mit Empfehlung; Einzelheiten `spiel/b1c_gegen_bericht_b1c.md` und `spiel/b1c_forschung_b1c.md` Abschnitt 12)
   1. A3: Vanilla-Lua-Bausteine ohne Aufrufer (addTickBox/addSlider der Optionen-Seite) als Beleg zaehlen? -> ja.
