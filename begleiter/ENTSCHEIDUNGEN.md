@@ -295,3 +295,24 @@ Anlass: Kevin fragte, ob es bessere Programme als Blender gibt (*"im internet me
 Anlass (Spieltest B1d, woertlich): *'der wird garnichtmehr groesser ab tag 15 oder so'* -- *'und das model aendert sich auch nicht'* -- *'und was sagt die konsole wegen den hp und so?'*. Konsole (console.txt): Werte wie geplant (Tag 15 Leben 150, Tag 45 Leben 255, Tag 100 Leben 400 / Ausdauer 160 / Traglast 100 / Schaden 1,0), Bild bleibt absichtlich bei 0,75 (`PLAN_B1D.md` 0.10/1.2), keine roten Fehler.
 * Frage: 'Ab wann soll das Junge zum grossen Baeren werden?' (Claudes Vorschlag: ab Tag 15 wird das Junge zum grossen Baeren in klein, mit 0,75, und waechst bis Tag 100 auf die volle Groesse 1,35; ein Babygesicht in gross saehe komisch aus, die Fuesse wuerden mehr rutschen). **Kevin: *'Ab Tag 15 (halbstark)'*.**
 * Folge: Lauf baer-b1e (Code) schaltet den vorbereiteten Modellwechsel ein: beim Erreichen von Halbstark wird das Junges-Modell gegen das grosse Modell getauscht, das dann bis 1,35 mitwaechst; NICHT die alte Art `bear` (NCBearFight greift sofort an = B5a). Welches grosse Modell (2c oder Generator, Farbe, Kopf) bleibt Kevins offene Frage -- der Wechsel nimmt das jeweils aktuelle grosse Modell.
+
+## Altes Junges ist besser (Kevin 11.11.2026 ~15:25, im Spiel verglichen)
+Woertlich: *'wie lass ich das alte model wachsen? vom alten baby baeren'* -- *'ok ich muss wohl neustarten damit das geht'* -- *'der neue baby baer laeuft auch wie eine giraffe oder so xD also das alte ist definitiv besser ^^'*.
+* **Entscheidung: das ALTE Junge (Entwurf baer-baby, `../_arbeit/baer_baby/entwurf/NCBearCub.glb` 6c3f0a96 + `NCBearCub.png` 2ee25f24) kommt zurueck** als Modell der Art `ncbearcub` (Stand vor Test-Mod-Commit f10621f; Gehen 0,52 / Rennen 2,47 Kacheln/s, dazu passen die B1c-Folgen-Werte). Einbau automatisch, sobald Kevins Spiel zu ist (Sicherungen `NCBearTest_vor_altes_junges_*`/`_mit_`). Das Generator-Junge bleibt nur als Arbeitsstand (`../_arbeit/baer_gen/`, Sicherung `NCBearTest_mit_junges_neu_2026-11-11_*.zip`).
+* Neue Testhilfe `NCBear_CubAltSize(0.35 .. 1.35)` (nur NCBearBench*, seit 15:21 in NCBearTest, e92835b): stellt alte Vergleichs-Junge auf eine Groesse.
+* Lauf baer-b1e (Modellwechsel ab Tag 15) misst und plant jetzt mit dem alten Jungen (Skript `../_arbeit/baer_zaehmen/workflow_baer_b1e.js`).
+
+## Markierung oben groesser (Kevin 11.11.2026 ~15:30, nach dem Test mit Bandits)
+Woertlich: *'ich dachte in der mitte kommt schon ein symbol wenn ein bear in der naehe ist brauch ich dafuer eine zusatz mod?'* -- *'hab nur die baeren mod aktiv grade ;D'* -- (mit Bandits, Bild 3840x2054) *'okay das geht schonmal aber waer cooler wenn das symbol was groesser waere zumindestens bei 4k aufloesung'*.
+* Befund: Bandits zeichnet Kreis, Pfeil und Symbol in fester Groesse 96 Pixel (Bandits 42.22 `client/BanditEventMarkers.lua:7`, `:174`, `:192-193`), daher bei 4K klein; ohne Bandits gibt es die Markierung nicht (Existenz-Riegel).
+* Folge: als Punkt 7 in Lauf baer-b1e -- Markierung waechst mit der Bildschirmhoehe (1080 = 1,0 / 4K = 2,0) und ist in den Mod-Optionen einstellbar; Weg (eigenes UI-Element oder belegtes Skalieren) entscheidet die Forschung mit Beleg.
+
+## Grosser Baer sitzt (Kevin 11.11.2026 ~15:40, Stand baer-2c gespielt)
+Woertlich: *'sag mir wie ich den grossen baeren zum sitzen bekomme'* -- (NCBear_SpawnLive(), NCBear_Sit(20), Bild aus der Spielkamera) *'okay geil der sitz schonmal viel besser als frueher'*.
+* Sitzen nach Vorlage (Lauf baer-2c) im Spiel bestaetigt. Die drei Kopf-Punkte G1-G3 (Buckel hinter dem Kopf, dunkler Ring, Blick nach oben) hat Kevin nicht angesprochen -- weiter offen, bei Gelegenheit fragen.
+
+## Aufrichten + Bruellen sieht schlecht aus (Kevin 11.11.2026 ~15:45, NCBear_AnimTest("rear") im Spiel)
+Woertlich: *'wie mach ich das der schreit'* -- (Bild aus der Spielkamera, Baer von vorn aufgerichtet) *'das sieht scheisse aus das must du noch fixxen guck dir unsere bilder an aus dem internet wie echte baeren stehen und bruellen'* -- *'da sieht das model auch komisch aus dabei ;D'*.
+* Gesehen (Claude): aufrecht wie eine steife Saeule, Beine kurz und gerade, Vorderbeine stehen seitlich ab wie kleine Arme, Rumpf ein gerades Rohr; Zaehne beim Bruellen sind zu sehen.
+* Vorlagen: `begleiter/ref_aufrecht_vorn.jpg`, `ref_aufrecht_seite.jpg`, `ref_aufrecht_schraeg.jpg` (Wikimedia), `kevin_bruellen_vorlage.webp`; dazu Netzbilder nur ansehen.
+* Folge: Lauf baer-rear (Modell + Clip): NCBear_Rear neu (Dauer 3,0 s und Ton-Zeitpunkte bleiben) UND die Koerperform beim Aufrichten (Gewichte/Netz), andere Clips bit-gleich, Sitzen darf nicht schlechter werden.

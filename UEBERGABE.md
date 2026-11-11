@@ -37,7 +37,7 @@ Ergebnis zuerst, "statisch geprueft, nicht gespielt", nach jeder Mod-Aenderung s
 2. **`spiel/anleitung_b1d.md`** -- `NCBear_CubGrow(tage)`, `NCBear_CubStats()`; Achtung: ueber 0,35 rutschen die Pfoten (bekannt, M3).
 3. **Junges-Modell im Spiel ansehen** (sein gezaehmtes Junges traegt das neue Modell) und mit `NCBear_Vergleich()` neben das alte Junge,
    den 2c-Baeren und die Generator-Standmodelle stellen -> Kevin entscheidet altes oder neues Junges und Farbe des grossen Baeren.
-4. Aeltere, weiter offen: `spiel/anleitung_2c.md`, `anleitung_laerm.md`, `anleitung_fell.md` (siehe alte Uebergabe im Git-Verlauf).
+4. Aeltere, weiter offen: `spiel/anleitung_2c.md` (Sitzen gespielt 11.11. ~15:40: "viel besser als frueher"; Rest offen), `anleitung_laerm.md`, `anleitung_fell.md` (siehe alte Uebergabe im Git-Verlauf).
 Seine Antworten woertlich in `begleiter/ENTSCHEIDUNGEN.md` unten eintragen.
 
 ## 3. Offene Entscheidungen (Kevin fragen, nicht selbst entscheiden) -- Einzelheiten STAND.md "Fragen fuer Kevin"
