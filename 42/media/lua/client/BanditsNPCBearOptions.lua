@@ -5,6 +5,7 @@
 -- B1d (PLAN_B1D.md 1.6, 6.8; Kevin 11.11.2026: "jeden wert einzelnd ... im balken oder als zahl frei auswaehlbar"): Leben und
 -- Ausdauer je als Auswahl Aus / Balken / Zahl (Vorgabe Leben = Balken, Ausdauer = Aus), dazu die Alter-Zeile an/aus (Vorgabe an).
 -- Reihenfolge auf der Seite: TagShow, TagHealth, TagStamina, TagAge, TagSize.
+-- B1e (PLAN_B1E.md 1.7.9, 6.7): danach MarkerSize -- Groesse der Markierung oben am Bildschirm (Auto / 100 ... 300 %, Vorgabe Auto).
 --
 -- Warum hier und nicht in der Sandbox: das ist eine Anzeige-Frage des eigenen Rechners, keine Weltregel. Vanilla speichert die
 -- Seite selbst je Rechner in ModOptions.ini (V:client/PZAPI/ModOptions.lua:259-290, geladen V:client/OptionScreens/MainOptions.lua:2791);
@@ -40,7 +41,7 @@ local U = B.UI
 local PAGE = "BanditsNPCBear"
 local CACHE_MS = 1000
 
--- Zwischenspeicher je Wert: { v = Wert oder nil, at = ms }. Gedeckelt durch die festen Ids dieser Seite (B1d: 5).
+-- Zwischenspeicher je Wert: { v = Wert oder nil, at = ms }. Gedeckelt durch die festen Ids dieser Seite (B1d: 5, B1e: 6).
 local cache = {}
 
 local function err(msg)
@@ -76,6 +77,17 @@ if PZAPI and PZAPI.ModOptions and PZAPI.ModOptions.create then
     -- Groesse von Schild UND Balken: 100 = Small (Stand B1b), 150 = Medium, 200 = Large. Stufen statt stufenlos, weil
     -- drawTextZoomed keinen Vanilla-Aufrufer hat (PLAN_B1C.md 0.8, Frage F8).
     o:addSlider("TagSize", "UI_BN_Bear_MO_TagSize", 100, 200, 50, 100, "UI_BN_Bear_MO_TagSizeTip")
+    -- B1e (PLAN_B1E.md 1.7.9, 6.7; Kevin 11.11.2026: "waer cooler wenn das symbol was groesser waere zumindestens bei 4k aufloesung"):
+    -- Groesse der Markierung oben am Bildschirm (client/ISUI/BanditsNPCBearMarker.lua). Index 1 Auto (Vorgabe: waechst mit der
+    -- Bildschirmhoehe, 1080 = 100 %, 4K = 200 %), 2..7 = 100 / 125 / 150 / 200 / 250 / 300 %. addComboBox :121, addItem :131.
+    local mk = o:addComboBox("MarkerSize", "UI_BN_Bear_MO_MarkerSize", "UI_BN_Bear_MO_MarkerSizeTip")
+    mk:addItem("UI_BN_Bear_MO_Auto", true)
+    mk:addItem("UI_BN_Bear_MO_Pct100")
+    mk:addItem("UI_BN_Bear_MO_Pct125")
+    mk:addItem("UI_BN_Bear_MO_Pct150")
+    mk:addItem("UI_BN_Bear_MO_Pct200")
+    mk:addItem("UI_BN_Bear_MO_Pct250")
+    mk:addItem("UI_BN_Bear_MO_Pct300")
     -- Spaeter (NICHT jetzt anlegen; ENTSCHEIDUNGEN.md "Anzeige ueber dem Baeren"): Hunger, Durst, Muedigkeit je als Auswahl
     -- Aus / Balken / Zahl wie TagHealth, sobald es die Werte gibt (Beduerfnisse, Schlafen); "DODGE" als addTickBox mit dem Kampf.
     -- Gelesen wird alles ueber U.Opt(id, vorgabe); jeder neue Schluessel in allen sieben UI.json.

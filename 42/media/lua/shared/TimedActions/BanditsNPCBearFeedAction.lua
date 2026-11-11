@@ -9,6 +9,8 @@
 -- Einzelspieler: complete() laeuft im selben Programm nach perform(). Auf einem MP-Client gibt es B.FeedComplete nicht (nil),
 -- dort wird complete() auch nie gerufen.
 --
+-- B1e (PLAN_B1E.md 0.7, 6.3): Beschaeftigt-Marke -- der Schreiber tauscht den Koerper nicht, solange gefuettert wird (B.BodyBusy,
+-- server/BanditsNPCBearGrow.lua; SP in start(), MP-Server in serverStart(); geloescht in complete()/stop()/serverStop(), Deckel busyMs).
 -- Die Klasse ist eine GLOBALE Variable mit dem Namen ihres Typs und new() nennt seine Parameter wie die Felder: beides verlangt
 -- die Engine fuer Netz-Aktionen (Form Vanilla shared/TimedActions/Animals/ISFeedAnimalFromHand.lua:3 und :66-74).
 -- Statisch geprueft, nicht gespielt.
@@ -50,7 +52,7 @@ end
 function BanditsNPCBearFeedAction:start()
     local a = self.animal
     if a:isExistInTheWorld() then                           -- ISFeedAnimalFromHand.lua:14
-        self:setActionAnim(a:getFeedByHandAnim())           -- :15 (die Tierart nennt "AnimalLureLow")
+        self:setActionAnim(a:getFeedByHandAnim())           -- :15 (Junges "AnimalLureLow", gross "AnimalLureHigh": Defs.lua)
         self:setOverrideHandModels(self.food, nil)          -- :16
         self.character:faceThisObject(a)                    -- :17
     end
@@ -59,6 +61,8 @@ function BanditsNPCBearFeedAction:start()
     -- setVariable(Name, Text) an einem Tier: ISPetAnimal.lua:43. Im Mehrspieler nur an der Kopie dieses Clients sichtbar.
     if B.ACT then a:setVariable(B.ACT, "eat") end
     self.sound = self.character:playSound("GiveFoodAnimal") -- :23
+    -- B1e: Beschaeftigt-Marke beim Schreiber, nur im Einzelspieler (im Mehrspieler setzt sie serverStart am Server)
+    if not isClient() and not isServer() and B.BodyBusy then B.BodyBusy(a, true) end
 end
 
 -- Jeder Ausgang loest die Sperre, loescht die Variable und stoppt den Ton.
@@ -82,6 +86,7 @@ end
 
 function BanditsNPCBearFeedAction:stop()
     self:release()
+    if B.BodyBusy then B.BodyBusy(self.animal, false) end  -- B1e: im MP-Client fehlt die Funktion (nur Schreiber)
     ISBaseTimedAction.stop(self)                            -- :35
 end
 
@@ -95,12 +100,15 @@ end
 -- Im Mehrspieler haelt NUR die Sperre des Servers das Tier: serverStart setzt sie, serverStop (Abbruch) und complete() loesen sie
 -- -- Form Vanilla shared/TimedActions/Animals/ISMilkAnimal.lua:212 (serverStart), :169 (serverStop), :196 (complete).
 -- Nachbesserung A2. Der Client setzt seine eigene Kopie in start() (nur Bild).
+-- B1e: Beschaeftigt-Marke (B.BodyBusy, nur beim Schreiber vorhanden) in serverStart setzen, in serverStop / complete loeschen.
 function BanditsNPCBearFeedAction:serverStart()
     self.animal:getBehavior():setBlockMovement(true)
+    if B.BodyBusy then B.BodyBusy(self.animal, true) end
 end
 
 function BanditsNPCBearFeedAction:serverStop()
     self.animal:getBehavior():setBlockMovement(false)
+    if B.BodyBusy then B.BodyBusy(self.animal, false) end
 end
 
 function BanditsNPCBearFeedAction:complete()
@@ -108,6 +116,7 @@ function BanditsNPCBearFeedAction:complete()
     local ok = false
     if f then ok = f(self.character, self.animal, self.food) end
     if self.animal then self.animal:getBehavior():setBlockMovement(false) end      -- ISMilkAnimal.lua:196
+    if B.BodyBusy then B.BodyBusy(self.animal, false) end
     return ok
 end
 

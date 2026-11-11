@@ -7,9 +7,12 @@
 -- Die Wachstums-Uhr ist rec.g (0..1, gefuehrt beim Schreiber in server/BanditsNPCBearGrow.lua). Daraus wird gerechnet und nie
 -- gespeichert (eine Wahrheit): die INNERE Groesse s (stueckweise gerade durch Kevins Tabelle 0,35 / 0,75 / 1,0 / 1,35 an den Tagen
 -- 0 / 15 / 45 / 100 bei 100 Tagen, anteilig bei anderer Sandbox-Zahl), die Stufe, alle Werte (Leben, Ausdauer, Traglast, Schaden --
--- sie steigen mit s jeden Tag ein Stueck, Kevin 11.11.2026) und die GEZEIGTE Groesse sz = min(s, B.CFG.cubMaxSize): das
--- Junges-Modell waechst nur bis Halbstark und bleibt dort stehen; der Modellwechsel ist vorbereitet und abgeschaltet (B.BodyOf,
--- B.CFG.bodySwap = false; Kevins Wort offen, Frage F11).
+-- sie steigen mit s jeden Tag ein Stueck, Kevin 11.11.2026) und die GEZEIGTE Groesse sz je Koerper.
+-- B1e (PLAN_B1E.md 0.4, 0.5, 0.9, 6.2.2; Kevin 11.11.2026 "Ab Tag 15 (halbstark)"): ab s >= cubMaxSize (0,75) will der Eintrag den
+-- GROSSEN Koerper (B.BodyWant, zurueck erst unter swapBackSize 0,70 -- nie flackern). Junges sz = min(s, 0,75); grosser Koerper
+-- sz = swapSize + (s - 0,75) x (1,35 - swapSize) / (1,35 - 0,75) = 0,72 ... 1,35 (gemessen: bei 0,72 so gross wie das Junge bei 0,75,
+-- an Tag 100 so gross wie der Erwachsene bei 1,35). Den Tausch selbst macht der Schreiber (server/BanditsNPCBearGrow.lua B.BodySwap).
+-- Werte je Koerper (Tempo) ueber B.BodyNum, Folgen-Abstand mit der Koerperlaenge ueber B.BodyGap.
 -- Faehigkeiten: je Faehigkeit EINE Zahl (Erfahrung, Felder xAgi ... xNos), die Stufe 0..10 wird immer daraus gerechnet (Lehre aus
 -- NPC Crew shared/BanditsNPCSkills.lua:52-59, gelesen, nicht kopiert: nie zwei Wahrheiten). Kurve B.CFG.xpNeed, hinten langsamer.
 --
@@ -219,14 +222,85 @@ local function gOf(rec)
     return clamp(num(rec.g) or 0, 0, 1)
 end
 
--- Koerper und GEZEIGTE Groesse (PLAN_B1D.md 0.10): in B1d immer das Junges-Modell, sz = min(s, cubMaxSize) auf 3 Nachkommastellen.
--- B.CFG.bodySwap bleibt aus; der spaetere Lauf entscheidet hier (Kevins Frage F11) -- server/BanditsNPCBearGrow.lua B.GrowLive
--- meldet einen eingeschalteten Schalter als Fehler, solange der Tausch nicht gebaut ist.
-function B.BodyOf(rec)
-    local sz = B.GrowSize(gOf(rec))
+-- ---------------------------------------------------------------------------
+-- B1e: Koerper (PLAN_B1E.md 0.4, 0.5, 6.2.2). "cub" = Junges-Modell (Art B.CUB), "big" = grosses Modell (Art B.BIG).
+-- ---------------------------------------------------------------------------
+
+local function isTameSt(st)
+    return st == "tame" or st == "missing"
+end
+
+-- Welchen Koerper WILL der Eintrag? Not-Aus (B.CFG.bodySwap == false) oder nicht gezaehmt -> "cub". Innere Groesse s ab cubMaxSize
+-- (0,000001 Spiel) -> "big"; unter swapBackSize -> "cub"; dazwischen der Koerper, den er hat (rec.body; fehlt -> "cub").
+function B.BodyWant(rec)
+    local c = B.CFG
+    if c and c.bodySwap == false then return "cub" end
+    if type(rec) ~= "table" or not isTameSt(rec.st) then return "cub" end
+    local s = B.GrowSize(gOf(rec))
+    if s >= cfg("cubMaxSize", 0.75) - 0.000001 then return "big" end
+    if s < cfg("swapBackSize", 0.70) then return "cub" end
+    if rec.body == "big" then return "big" end
+    return "cub"
+end
+
+-- Gezeigte Groesse (3 Nachkommastellen) eines Koerpers zu diesem Eintrag. "big": gerade von swapSize (bei s = cubMaxSize) bis
+-- stageAt[3] (bei s = stageAt[3]), geklemmt; sonst min(s, cubMaxSize).
+function B.BodySize(rec, body)
+    local s = B.GrowSize(gOf(rec))
     local cap = cfg("cubMaxSize", 0.75)
-    if sz > cap then sz = cap end
-    return "cub", math.floor(sz * 1000 + 0.5) / 1000
+    local v
+    if body == "big" then
+        local top = stageAt()[3]
+        local sw = cfg("swapSize", 0.72)
+        if sw > top then sw = top end
+        if top - cap <= 0 then
+            v = top
+        else
+            v = clamp(sw + (s - cap) * (top - sw) / (top - cap), sw, top)
+        end
+    else
+        v = s
+        if v > cap then v = cap end
+    end
+    return math.floor(v * 1000 + 0.5) / 1000
+end
+
+-- Koerper, den der Eintrag haben will, und dessen gezeigte Groesse (Signatur wie B1d; ab B1e auch "big"). Neue Koerper (B.PlaceCub)
+-- entstehen so: Aussteigen, Call to me und Tod im Auto tauschen damit von selbst.
+function B.BodyOf(rec)
+    local want = B.BodyWant(rec)
+    return want, B.BodySize(rec, want)
+end
+
+-- Koerper, den der Eintrag JETZT hat (rec.body, gesetzt beim Erzeugen/Binden/je Hirn-Takt aus dem Tier), sonst der gewollte; dazu
+-- dessen gezeigte Groesse (Sicht, Schild, Folgen-Abstand).
+function B.BodyNow(rec)
+    local body = nil
+    if type(rec) == "table" and (rec.body == "cub" or rec.body == "big") then body = rec.body end
+    if body == nil then body = B.BodyWant(rec) end
+    return body, B.BodySize(rec, body)
+end
+
+-- Stellwert je Koerper: beim grossen Koerper B.CFG[key .. "Big"] (wenn Zahl), sonst B.CFG[key], sonst def.
+function B.BodyNum(body, key, def)
+    local c = B.CFG
+    if c and body == "big" then
+        local v = num(c[tostring(key) .. "Big"])
+        if v ~= nil then return v end
+    end
+    local v = c and num(c[key]) or nil
+    if v == nil then return def end
+    return v
+end
+
+-- Zuschlag zu den Folgen-/Versteck-Abstaenden (Kacheln, Mitte zu Mitte) mit der Koerperlaenge: nur der grosse Koerper,
+-- max(0, (bodyLenBig x sz x tilesPerE - followRefLen) / 2). Tag 15: 0,00 / Tag 45: ~0,21 / Tag 100: ~0,50.
+function B.BodyGap(body, sz)
+    if body ~= "big" then return 0 end
+    local v = num(sz) or 0
+    local gap = (cfg("bodyLenBig", 1.0448) * v * cfg("tilesPerE", 1.5) - cfg("followRefLen", 1.12)) / 2
+    if gap < 0 then return 0 end
+    return gap
 end
 
 -- Wachstumstag (Fuettern zieht ihn vor, Pausen halten ihn an; Frage F12).
@@ -278,7 +352,8 @@ function B.StatsOf(rec)
     local g = gOf(rec)
     local D = B.GrowDays()
     local s = B.GrowSize(g)
-    local body, sz = B.BodyOf(rec)
+    local body, sz = B.BodyNow(rec)             -- B1e: Koerper, den er JETZT hat, und dessen gezeigte Groesse
+    local want = B.BodyWant(rec)                -- B1e: Koerper, den er haben will (Tausch wartet, wenn verschieden)
     local stage = B.StageOf(s)
     local nst, nth = B.NextStage(s)
     local nextDays = nil
@@ -313,7 +388,7 @@ function B.StatsOf(rec)
     end
     local nose = cfg("noseBase", 12) + cfg("noseStep", 1.5) * lv.nos
     return {
-        g = g, day = math.floor(g * D + 0.000001), s = s, sz = sz, body = body, stage = stage, next = nst, nextDays = nextDays,
+        g = g, day = math.floor(g * D + 0.000001), s = s, sz = sz, body = body, want = want, stage = stage, next = nst, nextDays = nextDays,
         hpMax = hpMax, staMax = staMax, carry = carry, dmg = dmg, dodge = dodge, fightBonus = fightBonus, fish = fish, nose = nose,
         lv = lv,
     }

@@ -9,6 +9,11 @@
 -- genau einmal in complete(). Die Groesse fuer die Haltung der Figur ist FEST (Vanilla teilt durch maxSize - minSize, das ist beim
 -- Jungen 0). Welche Haltung die Figur einnimmt, sagt der Stellwert B.CFG.petAnim (Vorgabe "lamb" = Knoten petlamb der Figur;
 -- "loot" = einfach buecken).
+-- B1e (PLAN_B1E.md 1.4, 0.7, 6.3): am GROSSEN Koerper (Sicht bd = "big", B.ViewOf) die Haltung B.CFG.petAnimBig (Vorgabe "cow" =
+-- Knoten petcow, Vanilla AnimSets/player/petanimal/petcow.xml) und AnimalSizeY aus der gezeigten Groesse der Sicht wie Vanilla
+-- (Groesse - min) / (max - min) (ISPetAnimal.lua:27-32; min = B.CFG.swapSize, max = B.CFG.stageAt[3]), geklemmt 0,01..1 -- ohne
+-- Datenteil-Frage am Tier. Beschaeftigt-Marke: der Schreiber sperrt den Koerper-Tausch, solange gestreichelt wird (B.BodyBusy,
+-- server/BanditsNPCBearGrow.lua; SP in start(), MP-Server in serverStart(); geloescht in complete()/stop()/serverStop(), Deckel busyMs).
 -- Die Klasse ist global und new() nennt seine Parameter wie die Felder (Engine-Pflicht fuer Netz-Aktionen, ISPetAnimal.lua:3, :95-102).
 -- Statisch geprueft, nicht gespielt.
 --
@@ -45,9 +50,29 @@ function BanditsNPCBearPetAction:update()
     self.animal:faceThisObject(self.character)
 end
 
+-- B1e: AnimalSizeY am grossen Koerper aus der gezeigten Groesse der Sicht (Zahl), geklemmt 0,01..1.
+local function bigSizeY(cfg, sz)
+    local lo = tonumber(cfg and cfg.swapSize) or 0.72
+    local at = cfg and cfg.stageAt
+    local hi = (type(at) == "table" and tonumber(at[3])) or 1.35
+    local v = tonumber(sz)
+    if v == nil or hi - lo <= 0 then return 0.5 end
+    v = (v - lo) / (hi - lo)
+    if v < 0.01 then v = 0.01 end
+    if v > 1 then v = 1 end
+    return v
+end
+
 function BanditsNPCBearPetAction:start()
     local cfg = B.CFG
     local pose = (cfg and cfg.petAnim) or "lamb"
+    local sizeY = 0.5
+    -- B1e: grosser Koerper? Nur ueber die Sicht (B.ViewOf: Spiegel / OnlineID, shared/BanditsNPCBear.lua)
+    local v = B.ViewOf and B.ViewOf(self.animal) or nil
+    if v and v.bd == "big" then
+        pose = (cfg and cfg.petAnimBig) or "cow"
+        sizeY = bigSizeY(cfg, v.sz)
+    end
     self:setOverrideHandModels(nil, nil)                            -- ISPetAnimal.lua:25
     if pose == "loot" then
         -- Rueckfall: buecken wie beim Nachlegen am Lagerfeuer, shared/Camping/TimedActions/ISAddFuelAction.lua:41-42
@@ -55,12 +80,14 @@ function BanditsNPCBearPetAction:start()
         self.character:SetVariable("LootPosition", "Low")
     else
         self.character:setVariable("AnimalSizeX", 0.01)             -- ISPetAnimal.lua:26
-        self.character:setVariable("AnimalSizeY", 0.5)              -- :32 (dort gerechnet, hier fest)
+        self.character:setVariable("AnimalSizeY", sizeY)            -- :32 (Zahl; Junges fest 0,5, grosser Koerper aus der Sicht)
         self.character:setVariable("petanimal", true)               -- :37
         self.character:setVariable("animal", pose)                  -- :39 und :41 (Text)
         self.petPose = true
     end
     self.animal:getBehavior():setBlockMovement(true)                -- :36
+    -- B1e: Beschaeftigt-Marke beim Schreiber, nur im Einzelspieler (im Mehrspieler setzt sie serverStart am Server)
+    if not isClient() and not isServer() and B.BodyBusy then B.BodyBusy(self.animal, true) end
     -- Fix 3: Streichel-Ton (Schluessel "petting" der Rasse, BanditsNPCBearDefs.lua). playBreedSound(Schluessel) am Tier beim Start und
     -- stopOrTriggerSound am Ende: Form Vanilla shared/TimedActions/Animals/ISPickupAnimal.lua:23 (start) und :27/:33.
     self.sound = self.animal:playBreedSound("petting")
@@ -89,6 +116,7 @@ end
 
 function BanditsNPCBearPetAction:stop()
     self:release()
+    if B.BodyBusy then B.BodyBusy(self.animal, false) end          -- B1e: im MP-Client fehlt die Funktion (nur Schreiber)
     ISBaseTimedAction.stop(self)                                    -- :57
 end
 
@@ -102,12 +130,15 @@ end
 -- Im Mehrspieler haelt NUR die Sperre des Servers das Tier: serverStart setzt sie, serverStop (Abbruch) und complete() loesen sie
 -- -- Form Vanilla shared/TimedActions/Animals/ISMilkAnimal.lua:212 (serverStart), :169 (serverStop), :196 (complete).
 -- Nachbesserung A2. Der Client setzt seine eigene Kopie in start() (nur Bild).
+-- B1e: Beschaeftigt-Marke (B.BodyBusy, nur beim Schreiber vorhanden) in serverStart setzen, in serverStop / complete loeschen.
 function BanditsNPCBearPetAction:serverStart()
     self.animal:getBehavior():setBlockMovement(true)
+    if B.BodyBusy then B.BodyBusy(self.animal, true) end
 end
 
 function BanditsNPCBearPetAction:serverStop()
     self.animal:getBehavior():setBlockMovement(false)
+    if B.BodyBusy then B.BodyBusy(self.animal, false) end
 end
 
 function BanditsNPCBearPetAction:complete()
@@ -115,6 +146,7 @@ function BanditsNPCBearPetAction:complete()
     local ok = false
     if f then ok = f(self.character, self.animal) end
     if self.animal then self.animal:getBehavior():setBlockMovement(false) end      -- ISMilkAnimal.lua:196
+    if B.BodyBusy then B.BodyBusy(self.animal, false) end
     return ok
 end
 

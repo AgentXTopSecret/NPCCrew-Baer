@@ -15,6 +15,10 @@
 -- faellt seine Zeile weg; ist ALLES aus, bekommt das zahme Junge keinen Eintrag (zaehlt nicht gegen hudMax). Der Anker waechst mit
 -- der gezeigten Groesse (tagZ x sz / tagBase). Nur auf dem MP-Client: im Listenbau die Groesse der Client-Kopie aus der Sicht
 -- nachsetzen (B.ApplySize, Kern) -- das laufende Tierpaket der Engine traegt keine Groesse (PLAN_B1D.md 0.4).
+-- B1e (PLAN_B1E.md 1.2.4, 1.2.5, 3.2 Nr. 13 und 20): ab Halbstark traegt der Eintrag den grossen Koerper (Art B.BIG). Der Suchlauf
+-- bindet beide Koerper (nur B.BodyKind des Kerns fragt die Art); das Schild sitzt beim grossen Koerper (Sicht bd == "big") um
+-- B.CFG.tagBigK (1,06 = Oberkante Buckel / Kopf des Jungen bei gleicher Groesse, gemessen) hoeher; die MP-Groessen-Probe setzt nur
+-- an einer Kopie der passenden Art (im Tauschfenster kann die alte Kopie noch da sein). Vorgabe-Name "<Spieler>'s bear" (U.CubName).
 --
 -- Reine Anzeige: liest nur B.View (die Sicht, die der Schreiber diesem Spieler geschickt hat) und fragt nie den Server.
 -- Einzelspieler und Mehrspieler laufen gleich; im Mehrspieler stammen alle Zahlen vom Server. Der dedizierte Server laedt client/ nicht.
@@ -65,6 +69,7 @@ local BAIT_Z = 0.3
 local TAG_Z = 0.18          -- Rueckfall fuer B.CFG.tagZ (Anker von Balken und Schild ueber dem Boden des Tiers, Plan 2.2)
 local TAG_BASE = 0.35       -- B1d: Rueckfall fuer B.CFG.tagBase (die Groesse, fuer die tagZ gemessen ist, PLAN_B1D.md 1.2 Punkt 2)
 local ZK_MAX = 5            -- B1d: Deckel fuer den Anker-Faktor sz / tagBase (gegen Unsinn in der Sicht; 1,35 / 0,35 = 3,9)
+local TAG_BIG_K = 1.06      -- B1e: Rueckfall fuer B.CFG.tagBigK (grosser Koerper; Tag 100: 1,35 / 0,35 x 1,06 = 4,09 < ZK_MAX)
 -- B1d: Anzeige-Arten der Werte (U.Opt "TagHealth" / "TagStamina", Index der Auswahl, V:client/PZAPI/ModOptions.lua:137)
 local SHOW_OFF, SHOW_BAR, SHOW_NUM = 1, 2, 3
 
@@ -239,12 +244,15 @@ end
 
 -- Suchlauf: alle geladenen Jungen einmal ihrem Sicht-Eintrag zuordnen. Die Liste ist eine Kopie der Engine, deshalb selten.
 -- getCell():getObjectListForLua(), size(), get(i): Vanilla FenrisScenario.lua:505-507; instanceof(o, "IsoAnimal"):
--- shared/TimedActions/Animals/ISAddAnimalInTrailer.lua:29; getAnimalType(): client/ISUI/Animal/ISAnimalUI.lua:65.
+-- shared/TimedActions/Animals/ISAddAnimalInTrailer.lua:29. B1e: beide Koerper ueber B.BodyKind (Kern; darin getAnimalType(),
+-- client/ISUI/Animal/ISAnimalUI.lua:65) -- fehlt der Helfer (Kern ohne B1e), kein Suchlauf.
 local function scan()
+    local kind = B.BodyKind
+    if not kind then return end
     local objects = getCell():getObjectListForLua()
     for i = 0, objects:size() - 1 do
         local o = objects:get(i)
-        if instanceof(o, "IsoAnimal") and o:getAnimalType() == B.CUB then
+        if instanceof(o, "IsoAnimal") and kind(o) ~= nil then
             local v = B.ViewOf(o)
             if v and v.id ~= nil then S.objs[v.id] = o end
         end
@@ -366,6 +374,12 @@ local function describe(e, meKey, nowH)
         local sz = c.sz
         if isNum(sz) and sz > 0 then
             local zk = sz / base
+            -- B1e (PLAN_B1E.md 1.2.5): der grosse Koerper ist bei gleicher Groesse um tagBigK hoeher (Buckel statt Kopf)
+            if c.bd == "big" then
+                local k = tonumber(B.CFG.tagBigK) or TAG_BIG_K
+                if k <= 0 then k = TAG_BIG_K end
+                zk = zk * k
+            end
             if zk > ZK_MAX then zk = ZK_MAX end
             e.zk = zk
         end
@@ -440,7 +454,9 @@ local function rebuild(now)
     -- B1d (PLAN_B1D.md 0.4, 6.6): nur auf dem MP-Client die Groesse jeder lebenden Kopie eines zahmen Jungen aus der Sicht nachsetzen
     -- (B.ApplySize, Kern: schreibt nur bei einer Abweichung). Im Einzelspieler ist die Kopie das Objekt des Schreibers -> nie.
     -- isClient(): V:client/ISUI/ISWorldObjectContextMenu.lua:1435. Fehlt B.ApplySize (Kern ohne B1d): keine Probe.
-    local probe = isClient() and B.ApplySize ~= nil
+    -- B1e (PLAN_B1E.md 1.2.4): nur an einer Kopie der Art, die die Sicht nennt (bd fehlt = Junges) -- im Tauschfenster bekommt nie ein
+    -- Junges-Koerper die Groesse des grossen oder umgekehrt. Fehlt B.BodyKind (Kern ohne B1e): keine Probe.
+    local probe = isClient() and B.ApplySize ~= nil and B.BodyKind ~= nil
     local need = false
     local any = false
     for id, c in pairs(cubs) do
@@ -455,7 +471,7 @@ local function rebuild(now)
             if not alive(obj) then
                 S.objs[id] = nil
                 need = true
-            elseif probe and c.st == "tame" and isNum(c.sz) then
+            elseif probe and c.st == "tame" and isNum(c.sz) and B.BodyKind(obj) == (c.bd or "cub") then
                 B.ApplySize(obj, c.sz)
             end
         end

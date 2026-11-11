@@ -63,16 +63,36 @@ end
 -- mit B.SpotNear geprueft. Spiegel SOFORT (isExistInTheWorld ist im selben Bild noch falsch, Fix 1). Rueckgabe: IsoAnimal oder nil, why.
 -- Im selben Takt findet B.FindAnimal das neue Tier noch nicht (nicht in der Welt): ein harmloser Fehlversuch (3 noetig), der
 -- naechste Takt bindet ueber das Objekt der Sitzung.
+-- B1e (PLAN_B1E.md 0.2, 0.3, 6.2.4): body gegeben ("cub"/"big", der Koerper-Tausch server/BanditsNPCBearGrow.lua B.BodySwap) -> genau
+-- dieser Koerper, ohne Rueckfall. body nil (Aussteigen, Call to me, Tod im Auto) -> der Koerper, den der Eintrag haben WILL (B.BodyOf,
+-- shared/BanditsNPCBearStats.lua; ohne jene Datei "cub") -- so tauschen diese Wege von selbst. Misslingt dort der grosse Koerper
+-- mangels Definition ("nodef"), entsteht ein Junges-Koerper (nie verloren) und eine gedrosselte Fehlerzeile. rec.body = erzeugter
+-- Koerper VOR B.Commit (der Spiegel traegt ihn).
 -- ---------------------------------------------------------------------------
-function B.PlaceCub(rec, x, y, z, why)
+function B.PlaceCub(rec, x, y, z, why, body)
     if type(rec) ~= "table" or x == nil or y == nil then return nil, "noargs" end
-    local a, cwhy = B.CreateCub(x, y, z or 0)
+    local want = body
+    if want == nil then
+        want = "cub"
+        if B.BodyOf then want = B.BodyOf(rec) end
+    end
+    if want ~= "big" then want = "cub" end
+    -- Rueckfall "nie verloren" (0.3): ohne Definition des grossen Koerpers (B.CubDefOk, server/BanditsNPCBearWorld.lua) entsteht beim
+    -- Aussteigen / Call to me / Tod im Auto ein Junges-Koerper. Vorher gefragt, damit B.CreateCub hier genau EINMAL steht.
+    if want == "big" and body == nil and B.CubDefOk and not B.CubDefOk("big") then
+        B.ErrEvery("placebig", 600000, "place: animal definition " .. tostring(B.BIG) .. " is not loaded, " .. tostring(rec.id)
+            .. " gets its cub body (" .. tostring(why) .. ")")
+        want = "cub"
+    end
+    local a, cwhy = B.CreateCub(x, y, z or 0, want)
     if not a then return nil, cwhy end
     local s = B.Ses(rec.id)
     rec.gen = (tonumber(rec.gen) or 0) + 1
     rec.aid = a:getAnimalID()
+    rec.body = want
     s.obj = a
     clearBodySession(s)
+    s.placedAt = getTimestampMs()       -- Nachbesserung B1e B1: erst im naechsten Bild in der Welt (B.HandleCall wartet darauf)
     rec.x, rec.y, rec.z = math.floor(x), math.floor(y), math.floor(z or 0)
     rec.missN = 0
     rec.missAt = nil
@@ -87,7 +107,7 @@ function B.PlaceCub(rec, x, y, z, why)
     if B.CalmDrop then B.CalmDrop(rec.id) end
     if B._zed then B._zed[rec.id] = nil end
     B.Log("place " .. tostring(rec.id) .. " (" .. tostring(why) .. ") at " .. tostring(rec.x) .. "," .. tostring(rec.y)
-        .. " gen " .. tostring(rec.gen))
+        .. " gen " .. tostring(rec.gen) .. " body " .. tostring(want))
     return a, nil
 end
 
@@ -96,12 +116,14 @@ end
 -- Rueckgabe false -> der Aufrufer setzt "stay" "car" (Definition fehlt: es kaeme beim Aussteigen kein Koerper zurueck).
 -- Erst die Sitzung loesen (B.Commit schreibt dann keinen Spiegel an den Koerper, der gleich verschwindet), dann festschreiben,
 -- dann entfernen (B.RemoveCub: setBlockMovement(false), remove(), am Server removeAnimal(getOnlineID()) -- Belege dort).
+-- B1e (PLAN_B1E.md 1.3 Nr. 2, 6.2.4): Pflicht ist die Junges-Definition (Rueckfall-Koerper beim Aussteigen, B.PlaceCub); rec.body bleibt
+-- der letzte Koerper. Meldung Note_RideOn mit bd ueber B.NoteBd.
 -- ---------------------------------------------------------------------------
 function B.RideBoard(rec, a, o, players)
     if type(rec) ~= "table" or not a or rec.st ~= "tame" or rec.owner == nil then return false end
-    if not B.CubDefOk() then
-        B.ErrEvery("ridedef", 600000, "ride: animal definition " .. tostring(B.CUB) .. " is not loaded, "
-            .. tostring(rec.id) .. " waits instead of getting in")
+    if not B.CubDefOk("cub") then
+        B.ErrEvery("ridedef", 600000, "ride: animal definition " .. tostring(B.CUB) .. " (fallback body for "
+            .. tostring(B.CUB) .. " and " .. tostring(B.BIG) .. ") is not loaded, " .. tostring(rec.id) .. " waits instead of getting in")
         return false
     end
     local s = B.Ses(rec.id)
@@ -117,7 +139,7 @@ function B.RideBoard(rec, a, o, players)
     B.RemoveCub(a)
     if B.CalmDrop then B.CalmDrop(rec.id) end
     if B._zed then B._zed[rec.id] = nil end
-    tellOwner(rec, players, note("UI_BN_Bear_Note_RideOn", nil, nil, "good"))
+    tellOwner(rec, players, B.NoteBd(note("UI_BN_Bear_Note_RideOn", nil, nil, "good"), rec))
     B.Log("ride: " .. tostring(rec.id) .. " gets in with " .. tostring(rec.owner) .. " (gen " .. tostring(rec.gen) .. ")")
     return true
 end
@@ -212,7 +234,7 @@ function B.RideStep(rec, players, ms)
     rec.ride = nil
     s.ride = nil
     B.SetMode(rec, "follow", "ride", players)
-    if e.p then B.Tell(e.p, note("UI_BN_Bear_Note_RideOff", nil, nil, "good")) end
+    if e.p then B.Tell(e.p, B.NoteBd(note("UI_BN_Bear_Note_RideOff", nil, nil, "good"), rec)) end
     B.Log("ride: " .. tostring(rec.id) .. " got out next to " .. tostring(rec.owner))
 end
 
@@ -293,7 +315,7 @@ function B.HandleCall(player, args)
         return
     end
     if rec.ride ~= nil then
-        refuse(player, pkey, ms, note("UI_BN_Bear_Why_Riding", nil, nil, "bad"))
+        refuse(player, pkey, ms, B.NoteBd(note("UI_BN_Bear_Why_Riding", nil, nil, "bad"), rec))
         return
     end
     if player:getVehicle() ~= nil then
@@ -304,12 +326,24 @@ function B.HandleCall(player, args)
     if left > 0 then
         local mins = math.ceil(left / 60000 - 0.000001)
         if mins < 1 then mins = 1 end
-        refuse(player, pkey, ms, note("UI_BN_Bear_Why_CallWait", "num", mins, "bad"))
+        refuse(player, pkey, ms, B.NoteBd(note("UI_BN_Bear_Why_CallWait", "num", mins, "bad"), rec))
         return
     end
     local sq = B.SpotNear(player:getX(), player:getY(), player:getZ(), B.CFG.callRing, rec.gen)
     if sq == nil then
         refuse(player, pkey, ms, note("UI_BN_Bear_Why_NoRoom", nil, nil, "bad"))
+        return
+    end
+    -- Nachbesserung B1e B1: einen Koerper, den B.PlaceCub eben erst erzeugt hat (Koerper-Tausch, Aussteigen, Call), haengt die Engine
+    -- erst im naechsten Bild in die Welt (server/BanditsNPCBearWorld.lua B.CreateCub). Bis dahin findet B.FindAnimal ihn nicht, er wuerde
+    -- unten nicht entfernt und bliebe neben dem neuen als ungebundene Kopie stehen. Dann diesmal nichts tun (still, wie die Drossel
+    -- darunter); sobald B.FindAnimal ihn findet (naechstes Bild) oder nach callFreshMs geht "Call to me" wieder. Nicht pauschal "Objekt
+    -- nicht in der Welt -> ablehnen": ein Baer in einer entladenen Gegend muss herholbar bleiben. Kein neuer Engine-Aufruf.
+    local s0 = B._s[rec.id]
+    local placed = s0 and tonumber(s0.placedAt) or nil
+    if placed ~= nil and s0.obj ~= nil and ms - placed >= 0 and ms - placed < (tonumber(B.CFG.callFreshMs) or 2000)
+        and B.FindAnimal(rec) == nil then
+        B.Log("call: " .. tostring(rec.id) .. " got its body " .. tostring(ms - placed) .. " ms ago, not in the world yet -- nothing done")
         return
     end
     if not allow(pkey, "ok", ms) then return end
@@ -335,7 +369,7 @@ function B.HandleCall(player, args)
     if old ~= nil and old ~= a then B.RemoveCub(old) end
     B.SetMode(rec, "follow", "call", nil)
     callMark(rec, ms)
-    B.Tell(player, note("UI_BN_Bear_Note_Called", nil, nil, "good"))
+    B.Tell(player, B.NoteBd(note("UI_BN_Bear_Note_Called", nil, nil, "good"), rec))
     B.Log("call: " .. tostring(rec.id) .. " brought next to " .. tostring(pkey))
     B.FlushViews()
 end

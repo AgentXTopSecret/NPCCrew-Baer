@@ -37,10 +37,13 @@ end
 -- Nicht im Spiegel: Lage (das Tier IST die Lage), aid (das Tier kennt sie selbst), Sitzungs-Uhren, ride, idleH, goneP, miss*, hintAt.
 -- B1d (PLAN_B1D.md 2.3): + Wachstum, Fuetter-Bonus, Erfahrung (Fassung bleibt B.MARK_V = 2; Leser nehmen fehlende Felder als "nicht
 -- da"). Nicht im Spiegel: hp / hpB (das Tier traegt sein Leben selbst, NUR JAR dec/IsoAnimal.java:1340), gAt, Sitzung.
+-- B1e (PLAN_B1E.md 4.2): + body (Koerper "cub"/"big"; nur Diagnose -- beim Binden und Wiederherstellen gilt die Art des Tiers,
+-- B.BodyKind). Fassung bleibt B.MARK_V = 2.
 local MARK_FIELDS = {
     "u", "id", "nr", "gen", "r", "kind", "src", "st", "finder", "bond", "owner", "tame", "fedN", "petN", "last",
     "feedAt", "petAt", "born", "tamedAt", "mode", "name", "hx", "hy", "hz",
     "g", "gF", "gFd", "gFn", "xAgi", "xVit", "xCon", "xFgt", "xFsh", "xNos",
+    "body",
 }
 
 local function plain(v)
@@ -85,12 +88,19 @@ end
 -- ist da), vermisst -> gezaehmt mit Meldung, Spiegel neu, festschreiben.
 -- Nachbesserung B1c B1: ist der Spiegel NEUER als der Eintrag (B.TakeNewerMark, weiter unten), gewinnt im Einzelspieler zuerst der
 -- Spiegel -- sonst schriebe B.Commit den alten Stand des Registers ueber die neuere Zaehmung (N9 in anderer Form).
+-- B1e (PLAN_B1E.md 1.3 Nr. 5, 6.3): rec.body = Koerper des Tiers (B.BodyKind; nur gezaehmt/vermisst, sonst nil); weicht der Spiegel ab,
+-- nur eine Diagnose-Zeile.
 local function bind(rec, o, mark, players)
     if mark ~= nil and B.TakeNewerMark then B.TakeNewerMark(rec, mark) end
     local s = B.Ses(rec.id)
     s.obj = o
     s.ride = nil
     rec.aid = o:getAnimalID()
+    local body = B.BodyKind(o)
+    if rec.st == "tame" or rec.st == "missing" then rec.body = body else rec.body = nil end
+    if type(mark) == "table" and mark.body ~= nil and mark.body ~= body then
+        B.Log("heal: " .. tostring(rec.id) .. " mark says body " .. tostring(mark.body) .. ", the animal is " .. tostring(body))
+    end
     local mg = mark and tonumber(mark.gen) or nil
     local rg = tonumber(rec.gen) or 0
     if mg ~= nil and mg > rg then rg = mg end
@@ -153,7 +163,8 @@ local function byAnimalId(reg, o)
 end
 
 -- ---------------------------------------------------------------------------
--- Wiederherstellen (PLAN_B1C.md 2.4). o = lebendes ncbearcub ohne Eintrag; mark = Spiegel (v2 oder die v1-Ersatztabelle aus 2.3 2c).
+-- Wiederherstellen (PLAN_B1C.md 2.4). o = lebendes ncbearcub (B1e: oder ncbeargrown) ohne Eintrag; mark = Spiegel (v2 oder die
+-- v1-Ersatztabelle aus 2.3 2c).
 -- Rueckgabe: rec oder nil, why ("full" / "state" / "nokey" / "cap").
 -- ---------------------------------------------------------------------------
 local function num(v, lo, hi)
@@ -172,6 +183,9 @@ local function keyOf(v)
     return v
 end
 
+-- B1e (PLAN_B1E.md 1.3 Nr. 5, 4.3, 6.3): ein GROSSER Koerper gehoert nur zu einem gezaehmten Eintrag -- mit einem Spiegel new/shy/fed
+-- (nur als Faelschung moeglich) wird er nie hergestellt (nil, "body"; der Aufrufer schreibt die Fehlerzeile). Der neue Eintrag traegt
+-- den Koerper des Tiers (body, nur bei tame).
 function B.Restore(o, mark, players)
     local reg = B.Reg()
     if not reg or not o or type(mark) ~= "table" then return nil, "state" end
@@ -179,6 +193,8 @@ function B.Restore(o, mark, players)
     local st = mark.st
     if st == "missing" then st = "tame" end
     if st ~= "new" and st ~= "shy" and st ~= "fed" and st ~= "tame" then return nil, "state" end
+    local body = B.BodyKind(o) or "cub"
+    if body == "big" and st ~= "tame" then return nil, "body" end
     local now = B.Now()
     local owner, bond, finder = keyOf(mark.owner), keyOf(mark.bond), keyOf(mark.finder)
     local max = B.Opt("BearMaxPerPlayer")
@@ -242,7 +258,10 @@ function B.Restore(o, mark, players)
         -- hoeherem r ist neuer (B.TakeNewerMark, Heil-Regel 1a)
         healed = { at = now, ep = num(mark.ep), r = num(mark.r), gen = num(mark.gen) },
     }
-    if st == "tame" then rec.tame = 100 end
+    if st == "tame" then
+        rec.tame = 100
+        rec.body = body                    -- B1e
+    end
     if st ~= "tame" then rec.mode = nil end
     -- B1d (PLAN_B1D.md 2.4 "restore"): Wachstum und Erfahrung aus dem Spiegel, geklemmt; im Mehrspieler g gedeckelt (Grow.lua)
     if st == "tame" and B.GrowFromMark then B.GrowFromMark(rec, mark, "restore") end
@@ -257,7 +276,8 @@ function B.Restore(o, mark, players)
 end
 
 -- ---------------------------------------------------------------------------
--- Heil-Regeln (PLAN_B1C.md 2.3). o = lebendes ncbearcub, das in dieser Sitzung KEINEM Eintrag als Objekt gehoert; mark = sein Spiegel.
+-- Heil-Regeln (PLAN_B1C.md 2.3). o = lebendes ncbearcub (B1e: oder ncbeargrown), das in dieser Sitzung KEINEM Eintrag als Objekt
+-- gehoert; mark = sein Spiegel.
 -- Rueckgabe: rec (gebunden bzw. wiederhergestellt), "stale" (veraltete Kopie), "dup" (Doppel) oder nil (nichts).
 -- ---------------------------------------------------------------------------
 local function capLine(mark, why)

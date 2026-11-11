@@ -87,6 +87,7 @@ end
 -- Bei "stay" wird die Heimat die Kachel, an der das Junge jetzt steht (Plan 1.4). Leert die Folgen-Sitzung B._s[id].f und die
 -- alte Lauf-Gegenprobe (sonst meldete B.MoveWatch nach dem Wechsel einen Folgen-Befehl als "bewegt sich nicht").
 -- Meldung an den Besitzer nach why; die Richtung ist die vom Besitzer zum Jungen. Rueckgabe: true, wenn gesetzt.
+-- B1e (PLAN_B1E.md 6.4): die Meldungen tragen bd = "big", wenn der Eintrag den grossen Koerper hat (B.NoteBd).
 -- ---------------------------------------------------------------------------
 function B.SetMode(rec, mode, why, players)
     if type(rec) ~= "table" or (mode ~= "follow" and mode ~= "stay") then return false end
@@ -114,7 +115,7 @@ function B.SetMode(rec, mode, why, players)
         elseif why == "lost" then
             n = note("UI_BN_Bear_Note_StayBehind", "dir", B.DirOf(rec.x - e.x, rec.y - e.y), "bad")
         end
-        if n then B.Tell(p, n) end
+        if n then B.Tell(p, B.NoteBd(n, rec)) end
     end
     B.Log("mode " .. tostring(rec.id) .. " " .. mode .. " (" .. tostring(why) .. ") at " .. tostring(rec.x) .. "," .. tostring(rec.y))
     return true
@@ -124,6 +125,8 @@ end
 -- Ein Hirn-Takt eines FOLGENDEN, geladenen, lebenden Jungen (Plan 1.2). Gerufen aus liveRec (server/BanditsNPCBearServer.lua)
 -- statt B.Decide. env.owner = { key, x, y, z, dist, car, mx, my } oder nil (buildEnv). Ohne Gegenprobe B.MoveWatch (Plan 1.2).
 -- Ist der Besitzer nicht da, haelt es und bleibt "follow" (Regel 10, Nachbesserung B1b A7).
+-- B1e (PLAN_B1E.md 1.5, 6.3): c.gap = Zuschlag mit der Koerperlaenge (B.BodyGap, nur grosser Koerper) und c.walkSpeed = Tempo des
+-- Koerpers (B.BodyNum) fuer B.FollowDecide; fehlt shared/BanditsNPCBearStats.lua: Junges, Zuschlag 0, Tempo aus B.CFG (wie B1c).
 -- ---------------------------------------------------------------------------
 function B.FollowStep(rec, a, env, ms, players)
     if type(rec) ~= "table" or not a then return end
@@ -133,8 +136,13 @@ function B.FollowStep(rec, a, env, ms, players)
         f = {}
         s.f = f
     end
+    local body, sz = "cub", 0
+    if B.BodyNow then body, sz = B.BodyNow(rec) end
+    local gap, walkSpeed = 0, nil
+    if B.BodyGap then gap = B.BodyGap(body, sz) end
+    if B.BodyNum then walkSpeed = B.BodyNum(body, "walkSpeed", 0.52) end
     -- getX/getY am Tier: Vanilla shared/Definitions/animal/ButcheringUtil.lua:575-576
-    local c = { x = a:getX(), y = a:getY(), z = rec.z }
+    local c = { x = a:getX(), y = a:getY(), z = rec.z, gap = gap, walkSpeed = walkSpeed }
     local wasStuck = f.stuck == true
     local d = B.FollowDecide(c, env and env.owner or nil, f, ms)
     if d.act == "ride" then
@@ -221,7 +229,7 @@ function B.HandleMode(player, args)
     end
     if rec.ride ~= nil then
         -- B1c: es faehrt mit (kein Koerper); wie NPC Crews "parked" (forschung_b1c.md 4.1)
-        refuse(player, pkey, "Mode", note("UI_BN_Bear_Why_Riding", nil, nil, "bad"))
+        refuse(player, pkey, "Mode", B.NoteBd(note("UI_BN_Bear_Why_Riding", nil, nil, "bad"), rec))
         return
     end
     local a = B.FindAnimal(rec)
@@ -272,7 +280,7 @@ function B.HandleRename(player, args)
     if not allow(pkey, "Rename", "ok") then return end
     rec.name = clean
     B.Commit(rec)
-    B.Tell(player, note("UI_BN_Bear_Note_Renamed", "name", clean, "good"))
+    B.Tell(player, B.NoteBd(note("UI_BN_Bear_Note_Renamed", "name", clean, "good"), rec))
     B.Log("rename " .. tostring(rec.id) .. " by " .. tostring(pkey))
     B.FlushViews()
 end

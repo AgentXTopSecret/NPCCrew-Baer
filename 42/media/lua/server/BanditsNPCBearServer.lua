@@ -146,14 +146,14 @@ end
 
 -- ---------------------------------------------------------------------------
 -- Gemeinsame Pruefung von Fuettern und Streicheln (Plan 5.3 Schritt 1-2). Rueckgabe: rec oder nil (dann schon gemeldet).
--- getAnimalType: Vanilla shared/Definitions/animal/ButcheringUtil.lua:13. isExistInTheWorld:
+-- Art-Frage: B.BodyKind (shared/BanditsNPCBear.lua; B1e: Junges UND grosser Koerper). isExistInTheWorld:
 -- shared/TimedActions/Animals/ISAddAnimalInTrailer.lua:29. isDead am Tier:
 -- server/Traps/STrapGlobalObject.lua:238. character:getSquare():DistTo(animal:getSquare()) < 3:
 -- shared/TimedActions/Animals/ISPetAnimal.lua:6 (dieselbe Pruefung wie Vanillas Streicheln).
 -- ---------------------------------------------------------------------------
 local function handCheck(character, animal)
     if not B.IsWriter() or not character or not animal then return nil end
-    if animal:getAnimalType() ~= B.CUB then return nil end
+    if not B.BodyKind(animal) then return nil end
     if not animal:isExistInTheWorld() or animal:isDead() then
         tellWhy(character, "UI_BN_Bear_Why_Gone")
         return nil

@@ -121,10 +121,17 @@ function B.CalmAnswer(rec, a, w, ms, why)
         local o = ownerOf(rec, players)
         local follow = B.ModeOf(rec) == "follow"
         local sameLevel = o ~= nil and math.floor(o.z or 0) == math.floor(rec.z or 0)
-        if follow and o ~= nil and o.car ~= true and sameLevel and B.DistXY(cx, cy, o.x, o.y) > cfg.followStart then
+        -- Nachbesserung B1e B5 (Z2): Zuschlag mit der Koerperlaenge wie B.FollowDecide (followStart + gap, followGap + gap; nur der
+        -- grosse Koerper, beim Jungen 0). Nur Tabellen-Lesen (shared/BanditsNPCBearStats.lua).
+        local gap = 0
+        if rec.st == "tame" and B.BodyGap and B.BodyNow then
+            local bd, bsz = B.BodyNow(rec)
+            gap = B.BodyGap(bd, bsz)
+        end
+        if follow and o ~= nil and o.car ~= true and sameLevel and B.DistXY(cx, cy, o.x, o.y) > cfg.followStart + gap then
             -- folgt und der Besitzer ist da: der Folgen-Laufbefehl (rennen, wie Regel 16)
             kind = "follow"
-            tx, ty = toward(o.x, o.y, cx, cy, cfg.followGap)
+            tx, ty = toward(o.x, o.y, cx, cy, cfg.followGap + gap)
         else
             -- gehender Ersatzweg calmGap Kacheln: Richtung Besitzer (folgt) bzw. Heimat (bleibt), nah dran seitlich
             local ax, ay = nil, nil
@@ -279,6 +286,8 @@ end
 -- erledigt (liveRec ruft dann weder B.FollowStep noch B.Decide). Ausnahme (Zusatz, schnittstelle_aenderungen.md "B1c KERN"): ein
 -- folgendes gezaehmtes Junges, dessen Besitzer im Fahrzeug sitzt und nah genug zum Einsteigen ist, steigt ein (false) -- das Auto
 -- ist das beste Versteck. getX/getY am Tier: Vanilla shared/Definitions/animal/ButcheringUtil.lua:575-576.
+-- B1e (PLAN_B1E.md 1.5, 6.3): beim gezaehmten Eintrag traegt c.gap den Zuschlag mit der Koerperlaenge (B.BodyGap mit Koerper und
+-- Groesse aus B.BodyNow(rec), nur grosser Koerper) -- das Versteck liegt dann weiter hinter dem Besitzer; sonst 0.
 function B.GuardStep(rec, a, env, ms, players)
     if type(rec) ~= "table" or not a then return false end
     local cfg = B.CFG
@@ -300,7 +309,12 @@ function B.GuardStep(rec, a, env, ms, players)
     if z then zz = { x = z.x, y = z.y, d = B.DistXY(cx, cy, z.x, z.y) } end
     local wasOn = g.on == true
     local prevMode = g.mode
-    local d = B.GuardDecide({ x = cx, y = cy, z = rec.z, st = rec.st }, o, zz, g, ms)
+    local gap = 0
+    if rec.st == "tame" and B.BodyGap and B.BodyNow then
+        local bd, bsz = B.BodyNow(rec)          -- Nachbesserung B1e A3: Mehrfachrueckgabe erst in Locals (CLAUDE.md 5)
+        gap = B.BodyGap(bd, bsz)
+    end
+    local d = B.GuardDecide({ x = cx, y = cy, z = rec.z, st = rec.st, gap = gap }, o, zz, g, ms)
     if d.act == "none" then
         if wasOn then B.Log("guard: " .. tostring(rec.id) .. " is safe again") end
         g.tx, g.ty, g.orderAt = nil, nil, nil

@@ -1,7 +1,8 @@
 --
 -- NPC Crew -- Baer, Client-Seite der Befehle und Meldungen (B1a, PLAN_ZAEHMEN.md 5.6, 6.2.4, 6.2.6; B1b, PLAN_B1B.md 5.4:
 -- Namen fuer das Schild, neue Texte; B1c, PLAN_B1C.md 6.4/6.7: neue Texte, Ankunftszeit der Sicht U.viewAt; B1d, PLAN_B1D.md
--- 6.5/6.7: Meldungen "stage" (Stufe erreicht) und "skill" (Faehigkeit gestiegen), U.StageName, Texte fuer Schild und Optionen).
+-- 6.5/6.7: Meldungen "stage" (Stufe erreicht) und "skill" (Faehigkeit gestiegen), U.StageName, Texte fuer Schild und Optionen;
+-- B1e, PLAN_B1E.md 6.4/6.5/6.8: Texte je Koerper -- U.TB, Big-Fassungen in U.NoteText und U.CubName, Texte der Markierungs-Groesse).
 --
 -- Laeuft im Einzelspieler und auf jedem MP-Client (der dedizierte Server laedt client/ nicht). Diese Datei entscheidet NICHTS:
 -- sie nimmt die Sicht ("Sync") und die Meldungen ("Note") des Schreibers an, zeigt Meldungen ueber der Figur und bittet beim
@@ -161,6 +162,32 @@ U.EN = {
     UI_BN_Bear_MO_Off = "Off",
     UI_BN_Bear_MO_Bar = "Bar",
     UI_BN_Bear_MO_Number = "Number",
+    -- B1e (PLAN_B1E.md 6.8): Big-Fassungen fuer den grossen Koerper (U.TB / U.NoteText waehlen sie bei bd == "big"; Platzhalter je
+    -- Schluessel gleich dem Grundschluessel) und die Groesse der Markierung (Optionen-Seite, MarkerSize)
+    UI_BN_Bear_Tag_NameBig = "%1's bear",
+    UI_BN_Bear_Note_FollowBig = "Your bear follows you.",
+    UI_BN_Bear_Note_StayBig = "Your bear stays here.",
+    UI_BN_Bear_Note_StayCarBig = "Your bear was too far away to get in. It waits here.",
+    UI_BN_Bear_Note_StayFarBig = "Your bear could not keep up. It waits to the %1.",
+    UI_BN_Bear_Note_StayBehindBig = "Your bear stayed behind to the %1.",
+    UI_BN_Bear_Note_RenamedBig = "Your bear is now called %1.",
+    UI_BN_Bear_Note_RideOnBig = "Your bear climbs in with you.",
+    UI_BN_Bear_Note_RideOffBig = "Your bear climbs out.",
+    UI_BN_Bear_Note_CalledBig = "Here is your bear again.",
+    UI_BN_Bear_Why_RidingBig = "Your bear is riding with you.",
+    UI_BN_Bear_Why_CallWaitBig = "You can call your bear again in about %1 min.",
+    UI_BN_Bear_Menu_NameBig = "Name the bear",
+    UI_BN_Bear_Menu_CallTipBig = "Brings your bear right next to you if it is stuck. Works once every %1 minutes.",
+    UI_BN_Bear_Name_TitleBig = "Name for your bear:",
+    UI_BN_Bear_MO_MarkerSize = "Size of the cub marker at the top of the screen",
+    UI_BN_Bear_MO_MarkerSizeTip = "Auto grows with the screen height (1080p = 100%%, 4K = 200%%).",
+    UI_BN_Bear_MO_Auto = "Auto",
+    UI_BN_Bear_MO_Pct100 = "100%%",
+    UI_BN_Bear_MO_Pct125 = "125%%",
+    UI_BN_Bear_MO_Pct150 = "150%%",
+    UI_BN_Bear_MO_Pct200 = "200%%",
+    UI_BN_Bear_MO_Pct250 = "250%%",
+    UI_BN_Bear_MO_Pct300 = "300%%",
 }
 
 local KEY_HEAD = "UI_BN_Bear_"
@@ -180,6 +207,16 @@ local SKILL_KEY = { agi = "UI_BN_Bear_Skill_Agi", vit = "UI_BN_Bear_Skill_Vit", 
 -- englische Ersatztext aus U.EN.
 function U.T(key, a1, a2, a3)
     return B.T(key, U.EN[key] or key, a1, a2, a3)
+end
+
+-- B1e (PLAN_B1E.md 0.10, 6.5): Text je Koerper. bd = Koerper aus der Sicht oder der Meldung ("cub" / "big" / nil). Beim grossen
+-- Koerper die Big-Fassung, aber nur, wenn es sie gibt (U.EN kennt sie -- dieselbe Liste wie EN/UI.json); sonst der Grundtext.
+-- Der Schluessel "<key>Big" wird hier zusammengesetzt: jede Big-Fassung steht ausgeschrieben in U.EN oben.
+function U.TB(key, bd, a1, a2, a3)
+    if bd == "big" and type(key) == "string" and U.EN[key .. "Big"] ~= nil then
+        return U.T(key .. "Big", a1, a2, a3)
+    end
+    return U.T(key, a1, a2, a3)
 end
 
 -- Dauer als Text: unter einer Stunde Minuten, sonst Stunden (Rundung macht B.WaitParts).
@@ -215,10 +252,13 @@ end
 -- Text einer Meldung des Schreibers: { k = Schluessel, t = "wait" / "days" / "dir" / "num" / "name" / "stage" / "skill" / nil,
 -- v = Wert, w = zweiter Wert } (Plan 6.2.6; B1d PLAN_B1D.md 6.5: "stage" v = Stufe, "skill" v = Faehigkeit, w = neue Stufe 1..10).
 -- Gibt nil, wenn die Meldung keine von uns ist.
+-- B1e (PLAN_B1E.md 6.4): traegt die Meldung bd = "big" (der Kern haengt es an, wenn der Eintrag den grossen Koerper hat) und gibt es
+-- die Big-Fassung des Schluessels, kommt diese ("Your bear follows you."); sonst der Grundtext wie bisher.
 function U.NoteText(note)
     if type(note) ~= "table" then return nil end
     local key = note.k
     if type(key) ~= "string" or string.sub(key, 1, string.len(KEY_HEAD)) ~= KEY_HEAD then return nil end
+    if note.bd == "big" and U.EN[key .. "Big"] ~= nil then key = key .. "Big" end
     local t = note.t
     local v = note.v
     if t == "wait" then
@@ -268,6 +308,7 @@ end
 -- der Kontoname (so steht er in der Sicht). Der zweite Parameter (meKey, Schnittstelle 5.4) aendert daran nichts: auch das eigene
 -- Junge heisst im Mehrspieler nach dem Kontonamen; ohne Besitzer steht "?". "__sp" im Mehrspieler (Junges eines frueheren
 -- Einzelspieler-Stands) -> "?", nie der eigene Vorname (Nachbesserung B1b B8).
+-- B1e (PLAN_B1E.md 6.5): beim grossen Koerper (Sicht bd == "big") heisst der Vorgabe-Name "<Spieler>'s bear" (Tag_NameBig).
 function U.CubName(c, _meKey)
     if type(c) ~= "table" then return "" end
     local name = c.name
@@ -281,7 +322,7 @@ function U.CubName(c, _meKey)
     else
         who = tostring(owner)
     end
-    return U.T("UI_BN_Bear_Tag_Name", who)
+    return U.TB("UI_BN_Bear_Tag_Name", c.bd, who)
 end
 
 -- ---------------------------------------------------------------------------

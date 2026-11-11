@@ -17,6 +17,10 @@
 -- auf [minSize, maxSize] -- bei min = max fiele jede gesetzte Groesse dort auf 0,35 zurueck. Neue Koerper starten weiter bei minSize 0,35
 -- (initSize endet mit setSize(0.1F), dec/AnimalData.java:1353-1358); das Engine-Wachsen je Alterstag ist (max - min) / ageToGrow x Leben
 -- = praktisch 0. Lehnt Kevin F1 ab, werden nur maxSize und ageToGrow zurueckgedreht (das Nachsetzen je Hirn-Takt deckt beides).
+-- B1e (PLAN_B1E.md 2.1, 2.2, 0.13): zweite Art "ncbeargrown" = der GROSSE Koerper desselben Eintrags (ab Halbstark, waechst bis 1,35).
+-- Kopie der Junges-Definition (Felder per pairs, eigene stages/breeds/genes), mit dem heutigen grossen Modell (model-Skript des
+-- Erwachsenen, NCBearTest media/scripts/nc_bear_tier.txt; Textur wie NCBearTest shared/NCBearDefs.lua:40-41), minSize 0,72 (= B.CFG.swapSize) / maxSize 1,35, Schatten/Leiche wie der Erwachsene. KEINE
+-- Erwachsenen-Stimmen und NIE die alte Art "bear" (NCBearTest shared/NCBearFight.lua:1787 kennt nur "bear"; Kampf ist B5a).
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -134,4 +138,78 @@ end
 -- (Vanilla ButcheringUtil.lua:18). Stirbt ein Junges, entsteht eine Leiche; ohne Eintrag wuerfe das Zerlegen.
 if AnimalPartsDefinitions and AnimalPartsDefinitions.animals then
     AnimalPartsDefinitions.animals[CUB .. BREED] = AnimalPartsDefinitions.animals["fawnwhitetailed"]
+end
+
+-- ---------------------------------------------------------------------------
+-- B1e (PLAN_B1E.md 2.2): der grosse Koerper "ncbeargrown". Artname ENDGUELTIG (steht in Spielstaenden, siehe Kopf).
+-- ---------------------------------------------------------------------------
+local BIG = "ncbeargrown"
+
+local function copyOf(t)
+    local out = {}
+    if type(t) == "table" then
+        for k, v in pairs(t) do out[k] = v end
+    end
+    return out
+end
+
+local cubDef = AnimalDefinitions.animals[CUB]
+if cubDef then
+    local d = copyOf(cubDef)
+    d.bodyModel = "NCBear_Body"            -- heutiges grosses Modell (model-Skript in module Base, media/scripts/nc_bear_tier.txt)
+    -- Rasse: Kopie der Junges-Rasse (Symbole, Stimmen fallover/petting -- keine Erwachsenen-Stimmen bis B5a), Textur des grossen
+    -- Baeren (media/textures/Body/NCBear.png); texture UND textureMale (textureBaby allein wirkt ohne nextStage nicht)
+    local b = copyOf(breeds[BREED])
+    b.name = BREED
+    b.texture = "NCBear"
+    b.textureMale = "NCBear"
+    b.textureBaby = "NCBear"
+    b.sounds = copyOf(breeds[BREED].sounds)
+    d.breeds = { [BREED] = b }
+    local st = {}
+    st[BIG] = { ageToGrow = 36500 }        -- Eintrag gleich dem Artnamen, kein nextStage (wie das Junge, PLAN_B1D.md 0.3)
+    d.stages = st
+    d.genes = copyOf(genes)
+    d.minSize = 0.72                       -- = B.CFG.swapSize (shared/BanditsNPCBear.lua); ein frischer Koerper steht so gleich bei 0,72
+    d.maxSize = 1.35                       -- Kevin: Erwachsen 1,35 (baer/begleiter/ENTSCHEIDUNGEN.md:10)
+    d.animalSize = 0.3                     -- wie "bear" (NCBearTest shared/NCBearDefs.lua:75)
+    d.collisionSize = 0.30                 -- wirkt x Groesse: 0,22 beim Tausch, 0,41 bei 1,35 (Frage F10, im Spiel ansehen)
+    d.shadoww = 0.9                        -- wie "bear" (NCBearDefs.lua:77-80)
+    d.shadowfm = 1.8
+    d.shadowbm = 1.8
+    d.corpseSize = 3.0
+    d.minWeight = 60                       -- Vorschlag (kein Hochheben, kein Anhaenger)
+    d.maxWeight = 200
+    d.minBlood = 800
+    d.maxBlood = 2000
+    d.trailerBaseSize = 300
+    -- Nachbesserung B1e B4: Haltung der Figur beim Fuettern wie bei grossen Vanilla-Tieren (Kuh CowDefinitions.lua:245, Hirschkuh
+    -- DeerDefinitions.lua:137; Knoten AnimSets/player/actions/AnimalLureHigh.xml) statt gebueckt wie beim Jungen (oben "AnimalLureLow").
+    -- Die Fuetter-Aktion spielt a:getFeedByHandAnim() (shared/TimedActions/BanditsNPCBearFeedAction.lua). Im Spiel ansehen.
+    d.feedByHandAnim = "AnimalLureHigh"
+    AnimalDefinitions.animals[BIG] = d
+end
+
+-- Fenster "Animal info": Werte vom Reh wie beim Jungen (oben); ohne Eintrag wirft Vanilla client/ISUI/Animal/ISAnimalUI.lua:31.
+if AnimalAvatarDefinition then
+    local buck = AnimalAvatarDefinition["buck"]
+    if buck then
+        AnimalAvatarDefinition[BIG] = {
+            zoom = buck.zoom,
+            xoffset = buck.xoffset,
+            yoffset = buck.yoffset,
+            avatarWidth = buck.avatarWidth,
+            avatarDir = buck.avatarDir,
+            trailerDir = buck.trailerDir,
+            trailerZoom = buck.trailerZoom,
+            trailerXoffset = buck.trailerXoffset,
+            trailerYoffset = buck.trailerYoffset,
+        }
+    end
+end
+
+-- Teile beim Zerlegen: Attrappe vom Rehbock wie der Erwachsene (NCBearTest shared/NCBearDefs.lua:125), Schluessel Art .. Rasse
+-- (Vanilla ButcheringUtil.lua:18).
+if AnimalPartsDefinitions and AnimalPartsDefinitions.animals then
+    AnimalPartsDefinitions.animals[BIG .. BREED] = AnimalPartsDefinitions.animals["buckwhitetailed"]
 end

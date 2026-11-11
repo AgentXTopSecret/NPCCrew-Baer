@@ -8,6 +8,10 @@
 -- B1d (PLAN_B1D.md 5): Stellwerte fuer Wachsen (Kurve, Stufen, Fuetter-Bonus), Werte (Stuetzwerte Leben / Ausdauer / Traglast /
 -- Schaden), Faehigkeiten (Erfahrungs-Kurve, Eimer, Haken-Erfahrung), Ausdauer, Leben-Abgleich; fuenf neue Sandbox-Optionen
 -- (BearGrowDays, BearDodgeMax, BearFightBonusMax, BearHealAwake, BearHealSleep). Formeln: shared/BanditsNPCBearStats.lua.
+-- B1e (PLAN_B1E.md 0.1, 0.8, 3.1, 5): zwei Koerper fuer EINEN Register-Eintrag -- "cub" = Art B.CUB (Junges-Modell) und "big" = Art
+-- B.BIG (grosses Modell, ab Halbstark bis 1,35). Die EINZIGE Art-Frage ist B.BodyKind (nie "bear", "bearstag", "ncbearcubalt");
+-- B.NoteBd haengt bd = "big" an Meldungen, deren Text je Koerper anders ist. Stellwerte fuer den Tausch, Tempo und Abstaende je
+-- Koerper, Schild-Faktor, Streichel-Haltung und die neue Markierung (OBERFLAECHE) stehen in B.CFG.
 --
 -- Laeuft ohne NPC Crew und ohne Bandits. Am Ende kopiert das Uebernahme-Skript diese Datei unveraendert nach NPC Crew.
 -- Deshalb: auf Dateiebene wird kein fremdes Modul eingefangen; jeder Griff nach BanditsNPC.X passiert zur Laufzeit und
@@ -27,6 +31,9 @@ local B = BanditsNPC.Bear
 B.KEY = "TrueCompanionsBears"   -- globale ModData des Registers, nur beim Schreiber
 B.CMD = "BanditsNPCBear"        -- Modulname fuer sendClientCommand / sendServerCommand
 B.CUB = "ncbearcub"             -- Tierart des Jungen
+B.BIG = "ncbeargrown"           -- B1e: Tierart des grossen Koerpers (ab Halbstark; Artname ENDGUELTIG, shared/BanditsNPCBearDefs.lua)
+B.BODY_TYPE = { cub = B.CUB, big = B.BIG }                -- B1e: Koerper -> Art
+B.TYPE_BODY = { [B.CUB] = "cub", [B.BIG] = "big" }        -- B1e: Art -> Koerper (nie "bear", "bearstag", "ncbearcubalt")
 B.BREED = "brown"
 B.GROUP = "ncbear"
 B.MARK = "tcBear"               -- Spiegel am Tier: animal:getModData().tcBear (B1c: Spiegel v2, server/BanditsNPCBearHeal.lua B.MarkOf)
@@ -102,7 +109,26 @@ B.CFG = B.CFG or {
     -- B1d (PLAN_B1D.md 5.2). Wachstum g = 0..1 (Register), innere Groesse s, gezeigte Groesse sz. Tabellen nicht zur Laufzeit stellbar.
     growCurve = { { 0, 0.35 }, { 0.15, 0.75 }, { 0.45, 1.0 }, { 1.0, 1.35 } },   -- Kurve (x = g, Groesse) durch Kevins Tabelle
     stageAt = { 0.75, 1.0, 1.35 },                        -- Schwellen half / strong / adult (innere Groesse)
-    cubMaxSize = 0.75, bodySwap = false,                  -- groesste gezeigte Groesse mit dem Junges-Modell / Modellwechsel (aus)
+    -- B1e (PLAN_B1E.md 5): bodySwap true = Modellwechsel an (Kevin 11.11.2026 "Ab Tag 15 (halbstark)"); false = Not-Aus (B.BodyWant
+    -- immer "cub": ein grosser Koerper wird wieder Junges). cubMaxSize = groesste gezeigte Groesse mit dem Junges-Modell UND Schwelle hin.
+    cubMaxSize = 0.75, bodySwap = true,
+    -- swapSize = gezeigte Groesse des grossen Koerpers beim Tausch; MUSS gleich minSize der Art B.BIG sein
+    -- (shared/BanditsNPCBearDefs.lua). Gemessen: bei 0,72 ist das grosse Modell so gross wie das Junge bei 0,75 (Laenge +0,6 %,
+    -- Oberkante +1,9 %, _arbeit/baer_zaehmen/mess_b1e/ausgabe.txt:60). swapBackSize = innere Groesse, unter der er zurueck wechselt.
+    swapSize = 0.72, swapBackSize = 0.70,
+    swapMinMs = 60000, swapRetryMs = 10000, swapFailLog = 6, swapRing = 2,   -- Abklingzeit / neuer Versuch / Fehlerzeile ab / Ringe
+    swapFaceDist = 30,                                    -- neuer Koerper schaut zum Besitzer, wenn naeher (0 = aus)
+    busyMs = 20000,                                       -- Fuettern/Streicheln sperren den Tausch hoechstens so lange
+    swapMoveMaxMs = 10000,                                -- Nachbesserung B1e B2: Rennbefehl sperrt den Tausch hoechstens so lange
+    callFreshMs = 2000,                                   -- Nachbesserung B1e B1: "Call to me" wartet auf einen eben erzeugten Koerper
+    -- Tempo des grossen Koerpers (Kacheln/s; Clip-Weg / Dauer x MotionScale 1,6, forschung_b1e.md 4.4) und Abstand-Zuschlag mit der
+    -- Koerperlaenge: max(0, (bodyLenBig x sz x tilesPerE - followRefLen) / 2), followRefLen = Laenge des Jungen bei 0,75 (Kacheln)
+    walkSpeedBig = 0.67, runSpeedBig = 3.17,
+    bodyLenBig = 1.0448, tilesPerE = 1.5, followRefLen = 1.12,
+    tagBigK = 1.06,                                       -- Schild-Hoehe gross / Junges bei gleicher Groesse (OBERFLAECHE liest)
+    petAnimBig = "cow",                                   -- Streichel-Haltung am grossen Koerper (Vanilla petanimal/petcow.xml)
+    markerAngleAdd = 135, markerCloseTiles = 6.6,         -- Markierung: Pfeil-Ausrichtung / ab hier kein Pfeil (OBERFLAECHE liest)
+    markerR = 1.0, markerG = 0.52, markerB = 0.09,        -- Markierung: Kreisfarbe (OBERFLAECHE liest)
     sizeEps = 0.002, tagBase = 0.35,                      -- Groessen-Probe ab Abweichung / Bezug des Schild-Ankers (OBERFLAECHE)
     growCommitH = 1.0,                                    -- Wachstum festschreiben hoechstens je (Spielstunden)
     feedGrowFav = 3, feedGrowOk = 2, feedGrowSnack = 1,   -- Fuetter-Bonus: Spielstunden Wachstum je Fuetterung (Klasse)
@@ -467,13 +493,29 @@ function B.ApplySync(payload)
     if onView then onView() end
 end
 
+-- B1e (PLAN_B1E.md 3.1, 6.2.1): welcher unserer Koerper ist dieses Tier? "cub" (Art B.CUB) / "big" (Art B.BIG) / nil (jedes andere
+-- Tier, auch "bear", "bearstag", "ncbearcubalt"). Die EINZIGE Art-Frage des Baeren-Codes; Schreiber und Client.
+-- animal:getAnimalType(): Vanilla client/ISUI/Animal/ISAnimalUI.lua:65 (Client), shared/Definitions/animal/ButcheringUtil.lua:13 (shared).
+function B.BodyKind(animal)
+    if animal == nil then return nil end
+    local kind = animal:getAnimalType()
+    if kind == nil then return nil end
+    return B.TYPE_BODY[kind]
+end
+
+-- B1e (PLAN_B1E.md 0.10, 6.4): Meldung eines Eintrags mit grossem Koerper bekommt bd = "big" (der Client waehlt dann den
+-- Big-Text). Sonst unveraendert. Nur Tabellen-Lesen.
+function B.NoteBd(note, rec)
+    if type(note) == "table" and type(rec) == "table" and rec.body == "big" then note.bd = "big" end
+    return note
+end
+
 -- Tier -> Sicht-Eintrag (Plan 5.6): zuerst der Spiegel am Tier (im Einzelspieler immer da), sonst die OnlineID.
--- Erst die Art fragen, dann getModData (legt sonst an jedem fremden Tier eine Tabelle an).
--- getAnimalType: Vanilla client/ISUI/Animal/ISAnimalUI.lua:65. getModData am Tier: client/ISUI/ISInventoryPaneContextMenu.lua:4127.
--- getOnlineID am Tier: client/ISUI/Animal/ISAnimalContextMenu.lua:432.
+-- Erst die Art fragen (B1e: B.BodyKind, beide Koerper), dann getModData (legt sonst an jedem fremden Tier eine Tabelle an).
+-- getModData am Tier: client/ISUI/ISInventoryPaneContextMenu.lua:4127. getOnlineID am Tier: client/ISUI/Animal/ISAnimalContextMenu.lua:432.
 function B.ViewOf(animal)
     if not animal then return nil end
-    if animal:getAnimalType() ~= B.CUB then return nil end
+    if not B.BodyKind(animal) then return nil end
     local v = B.View
     local md = animal:getModData()
     local mark = md and md[B.MARK]

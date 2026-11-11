@@ -14,6 +14,9 @@ if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: la
 -- (beide mit Kevins Wort: pathToLocation 08.11.2026, forschung_engine.md:627; setVariable("animalRunning", false) 11.11.2026,
 -- baer/begleiter/ENTSCHEIDUNGEN.md). Zombies finden in B.ZedNear (Bandits-belegte Wege), freie Kachel in B.SpotNear.
 -- Nicht benutzt (Plan 0.8): setWild, die Engine-Akzeptanz als Balken, LosUtil, getCell():getAnimals(), Teleport (setX/setY am Tier).
+-- B1e (PLAN_B1E.md 3.2 Nr. 5-10, 6.2.3): zwei Koerper -- B.CreateCub(x, y, z, body) erzeugt die Art des Koerpers (Vorgabe Junges),
+-- Entfernen / Finden / Suchlauf sehen beide Arten ueber B.BodyKind (shared/BanditsNPCBear.lua; nie "bear"). B.SwapSpot waehlt die
+-- Kachel fuer den Tausch, B.MoveTo rechnet die Wegzeit mit dem Tempo des Koerpers (B.BodyNum).
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -229,6 +232,18 @@ local function spotOk(sq)
     if not sq:isFree(false) then return false end
     if sq:isVehicleIntersecting() then return false end
     return true
+end
+
+-- B1e (PLAN_B1E.md 1.1 Schritt 4a, 6.2.3): Kachel fuer den Koerper-Tausch -- die eigene Kachel des Tiers, wenn sie die Platzregeln von
+-- B.SpotNear erfuellt (spotOk), sonst Ring 1..swapRing um das Tier wie B.SpotNear (gleicher Raum, ohne Sperre erreichbar). nil = keine.
+-- animal:getSquare(): Vanilla shared/TimedActions/Animals/ISPetAnimal.lua:6 (self.animal:getSquare()). getX/getY/getZ am Tier:
+-- Vanilla shared/Definitions/animal/ButcheringUtil.lua:575-577. Ob isFree(false) die eigene Kachel eines Tiers als belegt meldet, ist
+-- ungeprueft -- dann nimmt der Tausch eine Kachel daneben.
+function B.SwapSpot(a, turn)
+    if a == nil then return nil end
+    local sq = a:getSquare()
+    if sq ~= nil and spotOk(sq) then return sq end
+    return B.SpotNear(a:getX(), a:getY(), a:getZ(), tonumber(B.CFG.swapRing) or 2, turn)
 end
 
 local function sgn(v)
@@ -447,15 +462,17 @@ end
 -- Rasse-Objekt zur Art. AnimalDefinitions.getDef(Artname-Text) und def:getBreedByName(Rasse-Text): Vanilla
 -- server/ClientCommands.lua:808 (Server, direkt vor addAnimal) und shared/Definitions/animal/ButcheringUtil.lua:79/85 (mit
 -- nil-Pruefung). Nachbesserung A3: vorher getAllAnimalsDefinitions/getBreeds, das nur Client-Belege hatte.
-local function findBreed()
-    local def = AnimalDefinitions.getDef(B.CUB)
+-- B1e (PLAN_B1E.md 6.2.3): je Koerper die Art (B.BODY_TYPE; unbekannt/nil -> Junges).
+local function findBreed(body)
+    local def = AnimalDefinitions.getDef(B.BODY_TYPE[body] or B.CUB)
     if def == nil then return nil end
     return def:getBreedByName(B.BREED)
 end
 
 -- B1c (PLAN_B1C.md 3.1): kann ein Koerper erzeugt werden? (Definition und Rasse geladen; sonst nicht einsteigen.)
-function B.CubDefOk()
-    return findBreed() ~= nil
+-- B1e: body = "cub" / "big" (nil = "cub").
+function B.CubDefOk(body)
+    return findBreed(body) ~= nil
 end
 
 -- Die EINZIGE Stelle, die ein Tier in die Welt setzt. Gerufen nur von B.AppearFor und (B1c) B.PlaceCub. Rueckgabe: IsoAnimal oder nil, why.
@@ -463,14 +480,18 @@ end
 -- (Server) und client/DebugUIs/DebugContextMenu.lua:1460-1467 (Einzelspieler). Derselbe Aufruf, aber von sich aus beim
 -- Schreiber -- kein Client-Weg, kein Recht noetig, kein Kick. Koordinaten als ganze Zahlen; die Kachel hat der Aufrufer
 -- mit B.SquareFits geprueft (kein Wasser).
-function B.CreateCub(x, y, z)
+-- B1e (PLAN_B1E.md 6.2.3): body = "cub" (Vorgabe, auch nil/unbekannt; wilde Junge) oder "big" -> Art B.BIG. Gleicher Aufruf, nur ein
+-- anderer Artname (Text) -- wie Vanilla ClientCommands.lua:809 (args.type ist ein Text).
+function B.CreateCub(x, y, z, body)
     if not B.IsWriter() then return nil, "nowriter" end
-    local breed = findBreed()
+    if body ~= "big" then body = "cub" end
+    local kind = B.BODY_TYPE[body] or B.CUB
+    local breed = findBreed(body)
     if not breed then
-        B.ErrEvery("nodef", 600000, "create: animal definition " .. tostring(B.CUB) .. " is not loaded")
+        B.ErrEvery("nodef:" .. kind, 600000, "create: animal definition " .. tostring(kind) .. " is not loaded")
         return nil, "nodef"
     end
-    local animal = addAnimal(getCell(), math.floor(x), math.floor(y), math.floor(z), B.CUB, breed, false)
+    local animal = addAnimal(getCell(), math.floor(x), math.floor(y), math.floor(z), kind, breed, false)
     if not animal then
         B.Err("create: addAnimal gave nothing at " .. tostring(x) .. "," .. tostring(y))
         return nil, "noanimal"
@@ -492,9 +513,10 @@ end
 -- Auf dem Server zusaetzlich removeAnimal(animal:getOnlineID()), damit die Clients ihre Kopie verlieren -- genau wie
 -- ButcheringUtil.lua:612-614 (isServer-Zweig nach remove(); Server-Befehl server/ClientCommands.lua:841). Im Einzelspieler
 -- nur remove() (DebugContextMenu.lua:231-235 -> :616). Nachbesserung A1. remove() hinterlaesst keine Leiche.
+-- B1e: beide Koerper (B.BodyKind), nie ein fremdes Tier ("bear", "bearstag", "ncbearcubalt").
 function B.RemoveCub(animal)
     if not animal or not B.IsWriter() then return end
-    if animal:getAnimalType() ~= B.CUB then return end
+    if not B.BodyKind(animal) then return end
     animal:getBehavior():setBlockMovement(false)
     animal:remove()
     if isServer() then
@@ -511,7 +533,7 @@ function B.FindAnimal(rec)
     local a = s and s.obj
     if a == nil then return nil end
     if not a:isExistInTheWorld() or a:isDead() then return nil end
-    if a:getAnimalType() ~= B.CUB then return nil end
+    if not B.BodyKind(a) then return nil end                -- B1e: beide Koerper
     if rec.aid ~= nil and a:getAnimalID() ~= rec.aid then return nil end
     return a
 end
@@ -531,8 +553,8 @@ end
 -- B1c (PLAN_B1C.md 2): Tiere mit Spiegel ohne passenden Eintrag gehen durch B.HealFromMark (server/BanditsNPCBearHeal.lua):
 -- binden, wiederherstellen (Registerverlust), oder als veraltete Kopie / Doppel unbeobachtet entfernen; "nil" bleibt stehen.
 --
--- B1b (PLAN_B1B.md 4, N5): WAISEN. Eine Waise ist ein lebendes ncbearcub OHNE Spiegel und ohne passenden Eintrag (Rest nach einem
--- Fehler oder Absturz). Nie der Erwachsene, nie fremde Tiere (Art-Frage oben). Drei Riegel, alle Pflicht:
+-- B1b (PLAN_B1B.md 4, N5): WAISEN. Eine Waise ist ein lebendes ncbearcub (B1e: oder ncbeargrown) OHNE Spiegel und ohne passenden
+-- Eintrag (Rest nach einem Fehler oder Absturz). Nie der Erwachsene, nie fremde Tiere (Art-Frage oben). Drei Riegel, alle Pflicht:
 --   1 Identitaet: das in dieser Sitzung gemerkte Objekt eines Eintrags (B._s[id].obj) ist nie Waise; fehlt sein Spiegel, wird er
 --     sofort ueber B.Commit geschrieben (Spiegel-Reparatur).
 --   2 Mehrdeutig: gleiche AnimalID wie ein Eintrag ohne lebendes Objekt -> nie entfernt (nie raten; strenger als der Rueckfall,
@@ -629,14 +651,16 @@ local function newerFirst(p, q)
 end
 
 -- B1c-Reihenfolge je Suchlauf (PLAN_B1C.md 2.6):
---   1 je lebendes ncbearcub: Riegel 1 (Objekt der Sitzung) -> gebunden, Spiegel reparieren; sonst mit Spiegel -> marked (v2 aus
---     DIESEM Register: Zaehler nachziehen), ohne Spiegel -> loose
+--   1 je lebendes ncbearcub / ncbeargrown (B1e): Riegel 1 (Objekt der Sitzung) -> gebunden, Spiegel reparieren; sonst mit Spiegel ->
+--     marked (v2 aus DIESEM Register: Zaehler nachziehen), ohne Spiegel -> loose
 --   2 AnimalID-Rueckfall (B1b) fuer Eintraege ohne lebendes Objekt und ohne ride, ueber loose UND marked; ein marked mit anderem
 --     Kennzeichen u oder kleinerer Generation gen ist KEIN Kandidat
 --   3 je verbliebenem marked: B.HealFromMark -> rec (gebunden / wiederhergestellt) / "stale" / "dup" / nil (bleibt, nie entfernt)
 --   4 "stale"/"dup" unbeobachtet entfernen
 --   5 Waisen (ohne Spiegel) wie B1b
 -- Rueckgabe n (gebunden + wiederhergestellt), removed (Waisen + veraltete Kopien + Doppel).
+-- B1e (PLAN_B1E.md 3.2 Nr. 10, 4.3): der Suchlauf sieht BEIDE Koerper (B.BodyKind) -- sonst bliebe eine veraltete grosse Kopie nach
+-- einem Absturz fuer immer stehen (Doppel). Der AnimalID-Rueckfall setzt rec.body nach dem gefundenen Tier (nur gezaehmt/vermisst).
 function B.ScanAnimals(players, force)
     local reg = B.Reg()
     if not reg then return 0, 0 end
@@ -648,7 +672,7 @@ function B.ScanAnimals(players, force)
     local marked = nil                          -- { o, mark } mit Spiegel, ungebunden
     for i = 0, list:size() - 1 do
         local o = list:get(i)
-        if instanceof(o, "IsoAnimal") and o:getAnimalType() == B.CUB and not o:isDead() then
+        if instanceof(o, "IsoAnimal") and B.BodyKind(o) ~= nil and not o:isDead() then
             local md = o:getModData()
             local mark = md and md[B.MARK]
             local hasMark = type(mark) == "table" and mark.id ~= nil
@@ -729,6 +753,8 @@ function B.ScanAnimals(players, force)
                         local ng = tonumber(newer.gen)
                         if ng ~= nil and ng > (tonumber(rec.gen) or 0) then rec.gen = ng end
                     end
+                    -- B1e (PLAN_B1E.md 4.1): Koerper = Art des gefundenen Tiers (vor dem Commit, damit der Spiegel ihn traegt)
+                    if rec.st == "tame" or rec.st == "missing" then rec.body = B.BodyKind(hit) end
                     n = n + 1
                     B.Commit(rec)
                     B.Log("scan: " .. id .. " found again by its animal id, mark written anew")
@@ -863,8 +889,11 @@ function B.MoveTo(rec, animal, x, y, z, opt)
     end
     s.moveAt = ms
     local way = math.sqrt(dx * dx + dy * dy)
-    local speed = B.CFG.runSpeed
-    if walk then speed = B.CFG.walkSpeed end
+    -- B1e (PLAN_B1E.md 1.5, 6.2.3): Tempo des Koerpers (grosser Koerper: runSpeedBig / walkSpeedBig, shared/BanditsNPCBearStats.lua)
+    local key = "runSpeed"
+    if walk then key = "walkSpeed" end
+    local speed = B.CFG[key]
+    if B.BodyNum then speed = B.BodyNum(rec.body, key, 1) end
     speed = tonumber(speed) or 1
     if speed <= 0 then speed = 1 end
     local own = way / speed * 1000 + (tonumber(B.CFG.ownSlackMs) or 1500)

@@ -59,7 +59,8 @@ function U.AskName(playerObj, v)
     local nr = playerObj:getPlayerNum()
     local current = ""
     if type(v.name) == "string" then current = v.name end
-    local modal = ISTextBox:new(0, 0, 280, 180, U.T("UI_BN_Bear_Name_Title"), current, playerObj, onNameClick, nr, v.id)
+    -- B1e (PLAN_B1E.md 6.1): beim grossen Koerper (Sicht bd == "big") "Name for your bear:" (U.TB, Client.lua)
+    local modal = ISTextBox:new(0, 0, 280, 180, U.TB("UI_BN_Bear_Name_Title", v.bd), current, playerObj, onNameClick, nr, v.id)
     modal:initialise()
     modal:addToUIManager()
     modal.maxChars = max

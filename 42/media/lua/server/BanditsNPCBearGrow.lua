@@ -6,7 +6,13 @@ if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: la
 -- Die Wahrheit steht im Register-Eintrag (nur gezaehmt/vermisst, nur Zahlen): g (Wachstum 0..1), gF / gFd / gFn (Fuetter-Bonus),
 -- gAt (letztes Wachstums-Commit), hp / hpB (Leben als Anteil / zuletzt am Koerper gesetzt oder gesehen), xAgi ... xNos (Erfahrung).
 -- Groesse, Stufe und Werte rechnet shared/BanditsNPCBearStats.lua daraus. Nur in der Sitzung (B._s[id], nie gespeichert): Ausdauer
--- sta, Weg kx / ky / kAt / kAcc, Ausser-Puste-Uhr breathAt, Sicht-Drossel staV / staVAt, Erfahrungs-Eimer xb, gDirty, swapErrAt.
+-- sta, Weg kx / ky / kAt / kAcc, Ausser-Puste-Uhr breathAt, Sicht-Drossel staV / staVAt, Erfahrungs-Eimer xb, gDirty.
+-- B1e (PLAN_B1E.md 0.1-0.7, 1.1-1.3, 6.2.5): KOERPER-TAUSCH. Register-Feld body ("cub"/"big" = Koerper, den der Eintrag zuletzt hatte;
+-- Wahrheit ist immer die Art des gebundenen Tiers, B.BodyKind). Erreicht das gezaehmte Junge Halbstark (innere Groesse >= cubMaxSize),
+-- tauscht B.GrowLive den Koerper ueber den vorhandenen Weg: B.PlaceCub (neuer Koerper der Art B.BIG, gen + 1, Spiegel, Groesse und
+-- Leben sofort) und DANN B.RemoveCub(alt) -- genau wie "Call to me". Genau EIN Koerper, Register-Eintrag bleibt derselbe. Nur, wenn es
+-- sicher ist (B.BodySwapReady), sonst beim naechsten Hirn-Takt. Zurueck zum Jungen erst unter swapBackSize (nie flackern).
+-- Sitzung dazu: swapAt, swapTryAt, swapFailN (Tausch), busyUntil (Fuettern/Streicheln laeuft, B.BodyBusy).
 --
 -- Takte (alle aus vorhandenen Takten, keine neuen Ereignisse; je eine EIGENE Schleife nach den B1a-B1c-Schritten, Nachbesserung B1d B2):
 --   Langsam-Takt (10 Spielminuten, server/BanditsNPCBearServer.lua slowTickBody) -> B.GrowSlow: g waechst, Leben abgleichen und heilen,
@@ -33,8 +39,8 @@ local RANK = { cub = 0, half = 1, strong = 2, adult = 3 }
 -- Text der Stufen fuer die Diagnose-Zeile (die Meldung an den Spieler baut die OBERFLAECHE aus dem Schluessel).
 local STAGE_LOG = { half = "half-grown", strong = "strong", adult = "full-grown" }
 
--- Alle B1d-Felder des Eintrags (an anderen Zustaenden nil).
-local FIELDS = { "g", "gF", "gFd", "gFn", "gAt", "hp", "hpB", "xAgi", "xVit", "xCon", "xFgt", "xFsh", "xNos" }
+-- Alle B1d-Felder des Eintrags (an anderen Zustaenden nil). B1e: + body.
+local FIELDS = { "g", "gF", "gFd", "gFn", "gAt", "hp", "hpB", "xAgi", "xVit", "xCon", "xFgt", "xFsh", "xNos", "body" }
 
 -- ---------------------------------------------------------------------------
 -- Kleine Helfer
@@ -185,6 +191,11 @@ function B.GrowFix(rec, now, log)
         rec.hpB = nil
     else
         rec.hpB = clamp(hpB, 0, 1)
+    end
+    -- B1e (PLAN_B1E.md 4.1): Koerper nur "cub" / "big"; fehlt er (B1d-Stand), setzt ihn das Binden bzw. der naechste Hirn-Takt
+    if rec.body ~= nil and rec.body ~= "cub" and rec.body ~= "big" then
+        badLine(log, id, "body")
+        rec.body = nil
     end
 end
 
@@ -355,7 +366,9 @@ local function stamina(rec, s, cx, cy, ms)
     local dts = (ms - lastAt) / 1000
     if dts > 10 then dts = 10 end
     local way = B.DistXY(px, py, cx, cy)
-    if way > cfg("conStepMax", 8) and way > cfg("conStepMul", 4) * cfg("runSpeed", 2.47) * dts then way = 0 end
+    -- B1e: Sprungdeckel mit dem Tempo des Koerpers (grosser Koerper: runSpeedBig)
+    local run0 = B.BodyNum(rec.body, "runSpeed", 2.47)
+    if way > cfg("conStepMax", 8) and way > cfg("conStepMul", 4) * run0 * dts then way = 0 end
     local st = B.StatsOf(rec)
     local staMax = st.staMax
     if staMax <= 0 then staMax = 1 end
@@ -404,28 +417,165 @@ local function stamina(rec, s, cx, cy, ms)
 end
 
 -- ---------------------------------------------------------------------------
+-- B1e: Koerper-Tausch (PLAN_B1E.md 0.4, 0.6, 0.7, 1.1 Schritt 3-4, 6.2.5)
+-- ---------------------------------------------------------------------------
+
+-- Laeuft eine Frist noch? until_ = Zeitpunkt (Echtzeit-ms), span = ihre Hoechstdauer. Uhr rueckwaerts (Rest > span) = abgelaufen.
+local function pending(until_, ms, span)
+    local u = num(until_)
+    if u == nil then return false end
+    local left = u - ms
+    return left > 0 and left <= span
+end
+
+-- Seit at weniger als span vergangen? Uhr rueckwaerts (ms < at) = abgelaufen.
+local function within(at, ms, span)
+    local t = num(at)
+    if t == nil then return false end
+    return ms - t >= 0 and ms - t < span
+end
+
+-- Ist ein Tausch JETZT sicher? (0.6) Sonst beim naechsten Hirn-Takt; der alte Koerper bleibt solange voll benutzbar.
+-- Das lebende Objekt der Sitzung prueft der Aufrufer (brainTickBody Schritt 7, server/BanditsNPCBearServer.lua).
+-- Rueckgabe ok, why: "state" (nicht gezaehmt), "ride" (faehrt mit), "cool" (swapMinMs seit dem letzten Tausch), "retry"
+-- (swapRetryMs seit dem letzten Fehlversuch), "calm" (Laerm-Antwort laeuft), "guard" (Zombie-Wache an oder Zombie naeher als
+-- zedSafe), "busy" (Fuettern/Streicheln laeuft), "move" (eigener Rennbefehl laeuft, hoechstens swapMoveMaxMs), "nodef" (Definition
+-- des Ziel-Koerpers fehlt). Liest nur (auch die Bench fragt hier).
+function B.BodySwapReady(rec, s, ms)
+    if type(rec) ~= "table" or rec.st ~= "tame" then return false, "state" end
+    if rec.ride ~= nil then return false, "ride" end
+    if type(s) ~= "table" then s = B.Ses(rec.id) end
+    ms = num(ms) or getTimestampMs()
+    if within(s.swapAt, ms, cfg("swapMinMs", 60000)) then return false, "cool" end
+    if within(s.swapTryAt, ms, cfg("swapRetryMs", 10000)) then return false, "retry" end
+    if pending(s.calmUntil, ms, cfg("calmMs", 2500)) then return false, "calm" end
+    local g = s.g
+    if type(g) == "table" and g.on == true then return false, "guard" end
+    local z = B._zed and B._zed[rec.id] or nil
+    if type(z) == "table" and num(z.d) ~= nil and num(z.d) < cfg("zedSafe", 9) then return false, "guard" end
+    if pending(s.busyUntil, ms, cfg("busyMs", 20000)) then return false, "busy" end
+    -- Nachbesserung B1e B2: unser eigener Rennbefehl laeuft noch (B.MoveTo, server/BanditsNPCBearWorld.lua: s.walk == false und
+    -- ms < s.ownUntil, das hoechstens ownMaxMs voraus liegt) -> warten, sonst stuende der neue Koerper bis zum naechsten Hirn-Takt
+    -- still. Aber hoechstens swapMoveMaxMs seit dem ersten Takt mit want ~= have (s.swapWantAt, setzt B.GrowLive): ein staendig
+    -- rennender Baer wartet nie endlos. Ohne s.swapWantAt (Bench-Abfrage vor dem ersten Takt) keine Sperre.
+    if s.walk == false and pending(s.ownUntil, ms, cfg("ownMaxMs", 15000))
+        and within(s.swapWantAt, ms, cfg("swapMoveMaxMs", 10000)) then
+        return false, "move"
+    end
+    local want = B.BodyWant(rec)
+    if B.CubDefOk == nil or not B.CubDefOk(want) then return false, "nodef" end
+    return true, nil
+end
+
+-- Beschaeftigt-Marke (0.7) aus den Zeitaktionen Fuettern / Streicheln (shared/TimedActions, SP start() / MP serverStart(); loeschen in
+-- complete() / stop() / serverStop()). Sucht den Eintrag mit s.obj == animal (hoechstens 64 Sitzungen). on -> busyUntil = jetzt +
+-- busyMs (Deckel: eine nie beendete Aktion sperrt hoechstens so lange), sonst nil. Rueckgabe: true, wenn gefunden.
+-- getTimestampMs: Vanilla server/Foraging/forageServer.lua:456.
+function B.BodyBusy(animal, on)
+    if animal == nil or type(B._s) ~= "table" then return false end
+    local n = 0
+    for _, s in pairs(B._s) do
+        n = n + 1
+        if n > 64 then break end
+        if type(s) == "table" and s.obj == animal then
+            if on == true then
+                s.busyUntil = getTimestampMs() + cfg("busyMs", 20000)
+            else
+                s.busyUntil = nil
+            end
+            return true
+        end
+    end
+    return false
+end
+
+local function swapFail(rec, s, ms, why)
+    s.swapTryAt = ms
+    s.swapFailN = (num(s.swapFailN) or 0) + 1
+    if s.swapFailN >= cfg("swapFailLog", 6) then
+        B.ErrEvery("swap:" .. tostring(rec.id), 60000, "body: " .. tostring(rec.id) .. " could not change its body (" .. tostring(why)
+            .. ", " .. tostring(s.swapFailN) .. " tries), it keeps the old one")
+    end
+    return nil, why
+end
+
+-- Der Tausch (1.1 Schritt 4), alles in EINEM Lua-Aufruf (dazwischen speichert die Welt nicht):
+--   a Kachel (B.SwapSpot: eigene Kachel, sonst Ring 1..swapRing) -- keine: Fehlversuch "nospot"
+--   b noch nicht verbuchter Schaden am alten Koerper ins Register (B.BodyHp, sonst verloren)
+--   c neuer Koerper ueber B.PlaceCub(..., want) (der vorhandene Weg: B.CreateCub, gen + 1, aid, rec.body, Sitzung leer, Commit, Spiegel
+--     sofort, Groesse und Leben sofort ueber B.GrowBody) -- misslingt er: Fehlversuch, der alte Koerper bleibt unberuehrt
+--   d DANN der alte Koerper weg (B.RemoveCub: Sperre los, remove(), am Server removeAnimal(OnlineID)); Abklingzeit; NUR IM
+--     EINZELSPIELER (B.IsSP) schaut der neue Koerper zum Besitzer (animal:faceThisObject(Spieler): Vanilla
+--     shared/TimedActions/Animals/ISPetAnimal.lua:17, Tier -> Spielfigur), wenn der Besitzer da und naeher als swapFaceDist ist.
+--     Nachbesserung B1e A2: jenes Vorbild steht in update() einer Zeitaktion; am MP-Server ruft weder Vanilla noch Bandits
+--     faceThisObject -- im Mehrspieler behaelt der neue Koerper die Richtung, die addAnimal ihm gibt (offen, nur Optik).
+--   Eine Diagnose-Zeile. square:getX()/getY()/getZ() an der Kachel: Vanilla client/DebugUIs/DebugContextMenu.lua:636
+--   (Nachbesserung B1e A6; derselbe Beleg wie server/BanditsNPCBearWorld.lua und server/BanditsNPCBearRide.lua).
+-- Keine eigene Meldung (die Stufen-Meldung "half-grown" kommt mit derselben Schwelle). Rueckgabe: neues Tier oder nil, why.
+function B.BodySwap(rec, a, want, ms)
+    if type(rec) ~= "table" or a == nil then return nil, "noargs" end
+    if want ~= "big" then want = "cub" end
+    ms = num(ms) or getTimestampMs()
+    local s = B.Ses(rec.id)
+    local from = B.BodyKind(a) or "cub"
+    local sq = B.SwapSpot(a, rec.gen)
+    if sq == nil then return swapFail(rec, s, ms, "nospot") end
+    B.BodyHp(rec, a, 0)
+    local why = "shrink"
+    if want == "big" then why = "grow" end
+    local n, pwhy = B.PlaceCub(rec, sq:getX(), sq:getY(), sq:getZ(), why, want)
+    if n == nil then return swapFail(rec, s, ms, pwhy) end
+    if n ~= a then B.RemoveCub(a) end
+    s = B.Ses(rec.id)
+    s.swapAt = ms
+    s.swapTryAt = nil
+    s.swapFailN = 0
+    s.swapWantAt = nil                  -- Nachbesserung B1e B2: die Wartezeit "move" beginnt beim naechsten Wunsch neu
+    local fd = cfg("swapFaceDist", 30)
+    if fd > 0 and rec.owner ~= nil and B.IsSP() then
+        local p, e = B.PlayerByKey(rec.owner)
+        if p and e and B.DistXY(e.x, e.y, sq:getX() + 0.5, sq:getY() + 0.5) < fd then n:faceThisObject(p) end
+    end
+    if B.LogActive() then
+        B.Log("body: " .. tostring(rec.id) .. " " .. from .. " -> " .. want .. " (" .. why .. ") at " .. tostring(sq:getX()) .. ","
+            .. tostring(sq:getY()) .. " gen " .. tostring(rec.gen) .. ", inner " .. tostring(r3(B.GrowSize(rec.g))) .. " shown "
+            .. tostring(B.BodySize(rec, want)))
+    end
+    return n, nil
+end
+
+-- ---------------------------------------------------------------------------
 -- Je Hirn-Takt fuer jedes geladene, lebende, gezaehmte Junge (PLAN_B1D.md 1.1 Schritt 3; seit der Nachbesserung B1d B2 in einer
 -- eigenen Schleife am ENDE von brainTickBody, server/BanditsNPCBearServer.lua -- ein Fehler hier reisst B1a-B1c nicht mehr mit):
 -- Groesse nachsetzen (faengt Laden, Tierzone, Debug-Alter der Engine und Weg A ab; 2 Java-Aufrufe, geschrieben nur bei Abweichung),
 -- fehlendes Leben aus dem Koerper, Ausdauer/Kondition. Kein Commit (ausser beim Stufenaufstieg einer Faehigkeit).
+-- B1e (PLAN_B1E.md 1.1 Schritt 1-3): have = Koerper des Tiers (B.BodyKind; weicht rec.body ab -> rec.body = have, ohne Commit), want =
+-- B.BodyWant. Gleich -> Groesse des VORHANDENEN Koerpers. Verschieden und sicher (B.BodySwapReady) -> B.BodySwap (der neue Koerper hat
+-- Groesse und Leben schon). Sonst bleibt der alte Koerper (das Junge bei 0,75) bis zum naechsten Takt; fehlt die Definition des
+-- Ziel-Koerpers, eine Fehlerzeile je 10 Minuten.
 -- ---------------------------------------------------------------------------
 function B.GrowLive(rec, a, cx, cy, ms)
     if type(rec) ~= "table" or rec.st ~= "tame" or a == nil or not statsOk() then return end
     ms = num(ms) or getTimestampMs()
     local s = B.Ses(rec.id)
-    if B.CFG.bodySwap == true then
-        -- Haken fuer den spaeteren Lauf (PLAN_B1D.md 0.10, Kevins Frage F11): HIER tauscht er den Koerper -- altes Tier ueber
-        -- B.RemoveCub, neues ueber B.PlaceCub mit gen + 1 (wie Call to me; die alte Kopie wird "stale"), und B.BodyOf gibt dann ab
-        -- cubMaxSize das Erwachsenen-Modell. B.CreateCub kennt heute nur B.CUB; nie die alte Art "bear" (NCBearFight.lua = B5a).
-        -- In B1d ist das nicht gebaut: das Junge bleibt im Junges-Modell, eine Fehlerzeile je 10 Minuten.
-        local at = num(s.swapErrAt)
-        if at == nil or ms - at < 0 or ms - at >= 600000 then
-            s.swapErrAt = ms
-            B.Err("grow: body swap is not built yet, " .. tostring(rec.id) .. " keeps the cub body")
+    local have = B.BodyKind(a) or "cub"
+    if rec.body ~= have then rec.body = have end
+    local want = B.BodyWant(rec)
+    if want ~= have then
+        -- Nachbesserung B1e B2: erster Takt mit want ~= have (Beginn der hoechstens swapMoveMaxMs langen Wartezeit "move")
+        if num(s.swapWantAt) == nil then s.swapWantAt = ms end
+        local ready, why = B.BodySwapReady(rec, s, ms)
+        if ready then
+            local n = B.BodySwap(rec, a, want, ms)
+            if n ~= nil then return end
+        elseif why == "nodef" then
+            B.ErrEvery("swapdef", 600000, "body: animal definition " .. tostring(B.BODY_TYPE[want]) .. " is not loaded, "
+                .. tostring(rec.id) .. " keeps its " .. have .. " body")
         end
+    else
+        s.swapWantAt = nil
     end
-    local _, sz = B.BodyOf(rec)
-    B.ApplySize(a, sz)
+    B.ApplySize(a, B.BodySize(rec, have))
     if rec.hp == nil then
         B.BodyHp(rec, a, 0)
         -- Leben jetzt bekannt -> in die Sicht (dieser Schritt laeuft nach B.FlushViews: sie geht mit dem naechsten Takt hinaus)
@@ -474,10 +624,13 @@ end
 -- Autofahrt voll (der neue Koerper hat 0,35 und 1,0, NUR JAR dec/AnimalData.java:1353-1358, dec_b1b/IsoGameCharacter.java:574). Ob
 -- setSizeForced direkt nach addToWorld im selben Bild wirkt: ungeprueft -- der naechste Hirn-Takt setzt sicher nach.
 -- ---------------------------------------------------------------------------
+-- B1e (PLAN_B1E.md 6.2.5): Groesse des VORHANDENEN Koerpers (B.BodyKind; nie bekommt ein Junges-Koerper Erwachsenen-Groesse oder
+-- umgekehrt), rec.body = dieser Koerper.
 function B.GrowBody(rec, a)
     if type(rec) ~= "table" or a == nil or not isTame(rec.st) or not statsOk() then return end
-    local _, sz = B.BodyOf(rec)
-    B.ApplySize(a, sz)
+    local have = B.BodyKind(a) or "cub"
+    rec.body = have
+    B.ApplySize(a, B.BodySize(rec, have))
     B.BodyHp(rec, a, 0)
     local s = B.Ses(rec.id)
     s.kx, s.ky, s.kAt, s.kAcc = nil, nil, nil, nil
@@ -592,11 +745,14 @@ end
 -- Sicht (PLAN_B1D.md 4.1): fertige Zahlen fuer den Client, nur fuer einen gezaehmten Eintrag; schreibt nur in t (aus viewEntry).
 -- sz (gezeigte Groesse), hp (Prozent 0..100, fehlt solange rec.hp fehlt), hpMax, sta (Prozent, Sitzung; ohne Sitzung 100), staMax,
 -- day, stg, nst / nxt (fehlen, wenn ausgewachsen).
+-- B1e (PLAN_B1E.md 4.2): bd = Koerper, den der Eintrag JETZT hat ("cub"/"big"), sz = dessen gezeigte Groesse (B.BodyNow ueber
+-- B.StatsOf). Ein Junges, dessen Tausch noch wartet, zeigt also bd "cub" und 0,75.
 -- ---------------------------------------------------------------------------
 function B.GrowView(rec, t)
     if type(rec) ~= "table" or type(t) ~= "table" or rec.st ~= "tame" or not statsOk() then return end
     local st = B.StatsOf(rec)
     t.sz = st.sz
+    t.bd = st.body
     local hp = num(rec.hp)
     if hp ~= nil then
         local p = math.floor(hp * 100 + 0.5)
@@ -620,6 +776,8 @@ end
 -- ---------------------------------------------------------------------------
 
 -- Wachstum setzen (geklemmt 0..1), Stufen-Meldung nur aufwaerts, Commit, Groesse sofort. Rueckgabe: neues g.
+-- B1e (PLAN_B1E.md 1.3 Nr. 1, 6.2.5): von Hand gibt es keine Abklingzeit des Tauschs (swapAt / swapTryAt geleert) -- der naechste
+-- Hirn-Takt tauscht, wenn noetig; die Groesse hier nur fuer den VORHANDENEN Koerper.
 function B.GrowSetG(rec, g, players)
     if type(rec) ~= "table" or not isTame(rec.st) or not statsOk() then return nil end
     local now = B.Now()
@@ -627,11 +785,12 @@ function B.GrowSetG(rec, g, players)
     local v = clamp(num(g) or rec.g, 0, 1)
     local rank0 = rankOf(rec.g)
     rec.g = v
-    commitGrow(rec, B.Ses(rec.id), now)
+    local s = B.Ses(rec.id)
+    s.swapAt, s.swapTryAt = nil, nil
+    commitGrow(rec, s, now)
     local a = B.FindAnimal(rec)
     if a ~= nil then
-        local _, sz = B.BodyOf(rec)
-        B.ApplySize(a, sz)
+        B.ApplySize(a, B.BodySize(rec, B.BodyKind(a) or "cub"))
     end
     local stage1 = B.StageOf(B.GrowSize(v))
     if (RANK[stage1] or 0) > rank0 then tellStage(rec, stage1, players) end

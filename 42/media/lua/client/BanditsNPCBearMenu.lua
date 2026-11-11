@@ -8,6 +8,9 @@
 -- Tier anzuklicken), wenn ein passendes Junges in B.CFG.lureDist Kacheln steht.
 -- B1c (PLAN_B1C.md 1.5): am eigenen gezaehmten Jungen zusaetzlich "Call to me" (holt es neben den Besitzer; Abklingzeit,
 -- Fahrzeug und freie Kachel prueft der Schreiber, grau vorgeprueft aus der Sicht).
+-- B1e (PLAN_B1E.md 1.4, 3.2 Nr. 12): alles gilt fuer BEIDE Koerper -- das Junge (Art B.CUB) und den grossen Koerper ab Halbstark
+-- (Art B.BIG). Ob ein Tier unser Baer ist, fragt nur B.BodyKind (Kern, einziger Art-Vergleich); "bear" (Test-Baer) bekommt nichts.
+-- Beim grossen Koerper (Sicht bd == "big") heissen "Name the bear", der Call-Tooltip und die Wartezeit "bear" statt "cub" (U.TB).
 --
 -- Das Menue BIETET nur AN. Es stellt Zeitaktionen an (Fuettern, Streicheln, Koeder) bzw. schickt eine Bitte (Koederplatz
 -- aufgeben); ob etwas gilt, entscheidet der Schreiber in complete() bzw. in B.Handle (Einzelspieler: dasselbe Programm,
@@ -233,9 +236,9 @@ local function addMode(menu, playerObj, v)
     setTip(opt, nil, U.T("UI_BN_Bear_Menu_FollowTip"))
 end
 
--- "Name the cub" (Plan 3.1): kein Graufall.
+-- "Name the cub" (Plan 3.1): kein Graufall. B1e: beim grossen Koerper "Name the bear".
 local function addName(menu, playerObj, v)
-    menu:addOption(U.T("UI_BN_Bear_Menu_Name"), playerObj, onName, v)
+    menu:addOption(U.TB("UI_BN_Bear_Menu_Name", v.bd), playerObj, onName, v)
 end
 
 -- Rest der Call-Abklingzeit in ganzen Minuten (aufgerundet, mindestens 1), 0 = bereit. Die Sicht traegt den Rest in Sekunden
@@ -268,13 +271,13 @@ local function addCall(menu, playerObj, v)
     end
     local wait = callWaitMinutes(v)
     if wait > 0 then
-        setGray(opt, U.T("UI_BN_Bear_Why_CallWait", wait))
+        setGray(opt, U.TB("UI_BN_Bear_Why_CallWait", v.bd, wait))
         return
     end
     local mins = nil
     if B.Opt then mins = tonumber(B.Opt("BearCallCooldownMinutes")) end
     if mins == nil then mins = 5 end
-    setTip(opt, nil, U.T("UI_BN_Bear_Menu_CallTip", math.floor(mins)))
+    setTip(opt, nil, U.TB("UI_BN_Bear_Menu_CallTip", v.bd, math.floor(mins)))
 end
 
 -- Ein Junges: Vanillas Untermenue suchen (fehlt es, auf die oberste Ebene), "Kill" entfernen, eigene Punkte anhaengen.
@@ -311,11 +314,13 @@ end
 
 -- Vanillas eigenes Tier-Menue haengt am selben Ereignis (ISAnimalContextMenu.lua:1013-1017, :1235) und laedt vor uns: sein
 -- Untermenue je Tier steht schon, wenn wir drankommen.
+-- B1e: unser Baer ist jedes Tier, fuer das B.BodyKind (Kern, shared) "cub" oder "big" sagt -- der einzige Art-Vergleich (darin
+-- animal:getAnimalType(), client/ISUI/Animal/ISAnimalUI.lua:65). Fehlt der Helfer (Kern ohne B1e), bleibt das Menue still.
 local function onClickedAnimals(player, context, animals, test)
-    if not B.CUB or not B.T or not B.View then return end
+    if not B.CUB or not B.T or not B.View or not B.BodyKind then return end
     local cubs = nil
     for _, a in ipairs(animals) do                                              -- ISAnimalContextMenu.lua:1014
-        if a:getAnimalType() == B.CUB then                                      -- client/ISUI/Animal/ISAnimalUI.lua:65
+        if B.BodyKind(a) ~= nil then
             cubs = cubs or {}
             cubs[#cubs + 1] = a
         end

@@ -45,6 +45,13 @@
 --   NCBear_CubXp(key, xp)    Erfahrung einer Faehigkeit absolut setzen (agi vit con fgt fsh nos; B.SkillSet)
 --   NCBear_CubHurt(pct)      Leben auf pct Prozent setzen (1..100; B.GrowSetHp) -- Heilen und Balken pruefen
 --   NCBear_CubInfo()         druckt zusaetzlich g, hp, hpB und die Erfahrung je Eintrag
+-- B1e (PLAN_B1E.md 1.6): ab Halbstark (innere Groesse 0,75, bei 100 Tagen Tag 15) traegt das zahme Junge den grossen Koerper (Art
+--   B.BIG); NCBear_CubGrow(-100) bringt es zurueck zum Jungen.
+--   NCBear_CubGrow(tage)     wie B1d; der Tausch kommt im selben Aufruf (B.BrainTick(true)), die Zeile nennt den Koerper danach
+--                            ("body big (swapped)" / "body cub, swap waits: calm")
+--   NCBear_CubStats()        druckt zusaetzlich body / want / engine type, ob der Tausch bereit ist (sonst warum nicht), letzter
+--                            Tausch, Fehlversuche
+--   NCBear_CubClean(), NCBear_CubMark()   sehen beide Koerper (B.BodyKind des Kerns), nie den Test-Baeren "bear"
 -- Rechtsklick auf eine Kachel, Untermenue "NC Bear": zwoelf Eintraege "Cub: ...". Texte hier sind englische Literale.
 -- Jeder Engine-Aufruf hat eine Vanilla-Fundstelle (Kommentar daneben). Statisch geprueft, nicht gespielt.
 --
@@ -313,7 +320,7 @@ local function infoRec(p, rec, now)
     local ride = "-"
     if type(rec.ride) == "table" then ride = "since " .. num(rec.ride.at) .. " h" end
     out("     u " .. big(rec.u) .. " gen " .. tostring(rec.gen) .. " r " .. tostring(rec.r) .. " ride " .. ride
-        .. " healed " .. healed)
+        .. " healed " .. healed .. " body " .. tostring(rec.body))
     -- B1d: Wachstum, Leben, Erfahrung (nur Register-Felder, roh)
     if rec.g ~= nil or rec.hp ~= nil or rec.xCon ~= nil then
         out("     g " .. tostring(rec.g) .. " hp " .. tostring(rec.hp) .. " hpB " .. tostring(rec.hpB) .. " xp agi " .. tostring(rec.xAgi)
@@ -390,11 +397,12 @@ function NCBear_CubClean()
     for i = 1, #recs do B.Close(recs[i], "clean") end
     -- Alle geladenen Jungen entfernen, mit und ohne Eintrag. Liste und Rueckwaerts-Schleife: FenrisScenario.lua:505-507;
     -- instanceof(o, "IsoAnimal"): shared/TimedActions/Animals/ISAddAnimalInTrailer.lua:29; entfernt wird nur ueber den Kern.
+    -- B1e: beide Koerper (Junges und grosser Koerper) ueber B.BodyKind des Kerns; der Test-Baer "bear" bleibt.
     local objects = getCell():getObjectListForLua()
     local gone = 0
     for i = objects:size(), 1, -1 do
         local o = objects:get(i - 1)
-        if instanceof(o, "IsoAnimal") and o:getAnimalType() == B.CUB then
+        if instanceof(o, "IsoAnimal") and B.BodyKind and B.BodyKind(o) ~= nil then
             B.RemoveCub(o)
             gone = gone + 1
         end
@@ -449,6 +457,9 @@ function NCBear_CubSet(field, value)
             .. " xpHitTaken xpHitDealt xpFishTry xpFishCatch xpSniff conTilesPerXp conBreathXp conBreathMs conStepMax), stamina and"
             .. " health (staRunCost staRegen staViewStep hpEps hpCommit); the tables growCurve stageAt statAt hpAt staAt carryAt"
             .. " dmgAt xpNeed are not settable here")
+        out("B1e groups: body swap (bodySwap swapSize swapBackSize swapMinMs swapRetryMs swapFailLog swapRing swapFaceDist busyMs),"
+            .. " big body (walkSpeedBig runSpeedBig bodyLenBig tilesPerE followRefLen tagBigK petAnimBig), marker (markerAngleAdd"
+            .. " markerCloseTiles markerR markerG markerB; the size is in Options > Mods)")
         return
     end
     if type(value) ~= type(cfg[field]) or type(value) == "table" then
@@ -629,15 +640,16 @@ function NCBear_CubForget()
 end
 
 -- Naechstes geladenes Junges (mit oder ohne Eintrag) in r Kacheln. Liste: FenrisScenario.lua:505-507; instanceof(o, "IsoAnimal"):
--- shared/TimedActions/Animals/ISAddAnimalInTrailer.lua:29; getAnimalType(): client/ISUI/Animal/ISAnimalUI.lua:65;
--- getX/getY am Tier: client/TimedActions/ISContextualActions.lua:100.
+-- shared/TimedActions/Animals/ISAddAnimalInTrailer.lua:29; B1e: beide Koerper ueber B.BodyKind des Kerns (darin getAnimalType(),
+-- client/ISUI/Animal/ISAnimalUI.lua:65); getX/getY am Tier: client/TimedActions/ISContextualActions.lua:100.
 local function nearestCubObject(p, r)
+    if not B.BodyKind then return nil, nil end
     local objects = getCell():getObjectListForLua()
     local px, py = p:getX(), p:getY()
     local best, bestD = nil, nil
     for i = 0, objects:size() - 1 do
         local o = objects:get(i)
-        if instanceof(o, "IsoAnimal") and o:getAnimalType() == B.CUB then
+        if instanceof(o, "IsoAnimal") and B.BodyKind(o) ~= nil then
             local dx, dy = o:getX() - px, o:getY() - py
             local d = math.sqrt(dx * dx + dy * dy)
             if d <= r and (bestD == nil or d < bestD) then
@@ -814,6 +826,42 @@ local function growLine(rec)
         .. ", stage " .. tostring(st.stage) .. " (next " .. nxt .. "), " .. life
 end
 
+-- B1e (PLAN_B1E.md 1.6): Koerper des Eintrags -- zuerst das lebende Tier (B.BodyKind des Kerns), sonst das Register-Feld rec.body.
+-- Gibt body (oder nil), Tier (oder nil).
+local function bodyNow(rec)
+    local a = nil
+    if B.FindAnimal then a = B.FindAnimal(rec) end
+    local have = nil
+    if a and B.BodyKind then have = B.BodyKind(a) end
+    if have == nil and (rec.body == "cub" or rec.body == "big") then have = rec.body end
+    return have, a
+end
+
+-- B1e: ist der Tausch jetzt erlaubt? B.BodySwapReady(rec, Sitzung, ms) des Kerns (nur lesen). Gibt ok, Grund.
+local function swapReady(rec)
+    if not B.BodySwapReady then return false, "core without B1e" end
+    local s = B._s and B._s[rec.id]
+    if type(s) ~= "table" then return false, "no session yet" end
+    local ok, why = B.BodySwapReady(rec, s, getTimestampMs())     -- getTimestampMs: server/Foraging/forageServer.lua:456
+    if ok then return true, nil end
+    return false, tostring(why)
+end
+
+-- B1e: Zusatz fuer die Zeile von NCBear_CubGrow: Koerper danach, getauscht oder warum (noch) nicht. before = Koerper vor dem Aufruf.
+local function bodyNote(rec, before)
+    if not B.BodyWant then return "" end
+    local have = bodyNow(rec)
+    local want = B.BodyWant(rec)
+    if have == nil then return ", body " .. tostring(want) .. " (no living animal: riding, not loaded or missing)" end
+    if before ~= nil and have ~= before then return ", body " .. have .. " (swapped)" end
+    if want ~= have then
+        local ok, why = swapReady(rec)
+        if ok then return ", body " .. have .. ", swap on the next brain tick" end
+        return ", body " .. have .. ", swap waits: " .. tostring(why)
+    end
+    return ", body " .. have
+end
+
 function NCBear_CubGrow(days)
     local rec, p = myGrowRec()
     if not rec then return end
@@ -823,10 +871,11 @@ function NCBear_CubGrow(days)
     local want = g + days / D
     if want < 0 then want = 0 end
     if want > 1 then want = 1 end
+    local before = bodyNow(rec)
     B.GrowSetG(rec, want)
     B.BrainTick(true)
     push(p)
-    say(growLine(rec))
+    say(growLine(rec) .. bodyNote(rec, before))
 end
 
 function NCBear_CubStats()
@@ -842,6 +891,27 @@ function NCBear_CubStats()
     local nxt = "none (full-grown)"
     if st.next ~= nil then nxt = tostring(st.next) .. " in " .. tostring(st.nextDays) .. " day(s)" end
     out("stage " .. tostring(st.stage) .. ", next " .. nxt)
+    -- B1e (PLAN_B1E.md 1.6): Koerper -- Register, Wunsch, Art des lebenden Tiers (animal:getAnimalType(): V:client/ISUI/Animal/
+    -- ISAnimalUI.lua:65, nur gedruckt), Tausch bereit oder warum nicht, letzter Tausch, Fehlversuche (Sitzung des Kerns, nur lesen)
+    if B.BodyWant then
+        local _, a0 = bodyNow(rec)
+        local etype = "- (no living animal)"
+        if a0 then etype = tostring(a0:getAnimalType()) end
+        out("body " .. tostring(rec.body) .. " / want " .. tostring(B.BodyWant(rec)) .. " / engine type " .. etype)
+        local ok, why = swapReady(rec)
+        local ready = "swap ready"
+        if not ok then ready = "swap waits (" .. tostring(why) .. ")" end
+        local s = B._s and B._s[rec.id]
+        local last = "never (this session)"
+        if type(s) == "table" and type(s.swapAt) == "number" then
+            last = fix((getTimestampMs() - s.swapAt) / 1000, 0) .. " s ago"
+        end
+        local fails = 0
+        if type(s) == "table" then fails = tonumber(s.swapFailN) or 0 end
+        out(ready .. " | last swap " .. last .. " | fails " .. tostring(fails))
+    else
+        out("body: the core has no body swap (B1e) loaded")
+    end
     local hp = tonumber(rec.hp)
     local life = "health unknown (taken from the body on the next check)"
     if hp then life = "health " .. fix(hp, 3) .. " = " .. fix(hp * st.hpMax, 1) .. " / " .. fix(st.hpMax, 1) end

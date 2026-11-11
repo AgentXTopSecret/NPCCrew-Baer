@@ -466,9 +466,13 @@ end
 --   walkSpeed ist (o.dt = ms seit dem letzten Takt, fehlt -> brainMs); sonst rennen. Wechselt walk, geht sofort ein neuer Befehl.
 --   Rueckfall Laerm (1.2 Schritt 5): wuchs der Abstand zum Besitzer seit dem letzten Aufruf um followFleeGrow, sofort neu (ohne
 --   followMoveMs). f.lastD = Abstand dieses Aufrufs; f.walk setzt B.FollowStep nach einem Befehl.
+-- B1e (PLAN_B1E.md 0.9, 1.5, 6.3): c.gap (Zuschlag mit der Koerperlaenge, B.BodyGap) kommt auf followNear, followStart und followGap;
+--   c.walkSpeed (Tempo des Koerpers, B.BodyNum) ersetzt cfg.walkSpeed in der Gehen-Regel. Fehlen beide: Zahlen wie B1c.
 function B.FollowDecide(c, o, f, ms)
     local cfg = B.CFG
     f = f or {}
+    local gap = tonumber(c.gap) or 0
+    local walkSpeed = tonumber(c.walkSpeed) or tonumber(cfg.walkSpeed) or 0
     if o == nil then
         resetProgress(f)
         f.lastD = nil
@@ -497,7 +501,7 @@ function B.FollowDecide(c, o, f, ms)
         px, py = o.x + mx * k, o.y + my * k
     end
     local dp = B.DistXY(c.x, c.y, px, py)
-    if dp <= cfg.followNear or (f.held == true and dp <= cfg.followStart) then
+    if dp <= cfg.followNear + gap or (f.held == true and dp <= cfg.followStart + gap) then
         resetProgress(f)
         return { act = "hold", why = "near", rule = 14 }
     end
@@ -522,12 +526,12 @@ function B.FollowDecide(c, o, f, ms)
         retry = true
     end
     -- 16: laufen zu einem Punkt followGap Kacheln vor dem (vorausberechneten) Besitzer auf der Linie Besitzer -> Junges
-    local tx, ty = toward(px, py, c.x, c.y, cfg.followGap)
+    local tx, ty = toward(px, py, c.x, c.y, cfg.followGap + gap)
     -- B1c Gehen (1.6): Reststrecke und Tempo des Besitzers (Weg seit dem letzten Takt / echte Zeit seitdem)
     local dt = tonumber(o.dt)
     if dt == nil or dt <= 0 then dt = tonumber(cfg.brainMs) or 1500 end
     local speed = ml / (dt / 1000)
-    local walk = B.DistXY(c.x, c.y, tx, ty) <= (tonumber(cfg.walkDist) or 0) and speed <= (tonumber(cfg.walkSpeed) or 0)
+    local walk = B.DistXY(c.x, c.y, tx, ty) <= (tonumber(cfg.walkDist) or 0) and speed <= walkSpeed
     local grow = lastD ~= nil and d - lastD >= (tonumber(cfg.followFleeGrow) or 2)
     local age = nil
     if f.orderAt ~= nil and ms - f.orderAt >= 0 then age = ms - f.orderAt end
@@ -581,6 +585,7 @@ end
 -- Rueckgabe { act, tx, ty, rule, mode }: act "none" (20, keine Gefahr / Ende), "hide" (21, rennen zum Versteck), "hold" (22, am
 -- Versteck halten), "flee" (23, vom Zombie weg), "keep" (24, Nachlauf: war gefaehrdet, jetzt weiter als zedSafe, noch nicht
 -- zedCalmMs lang). Gefahr beginnt bei z.d <= zedHide und haelt, solange z.d <= zedSafe (Hysterese).
+-- B1e (PLAN_B1E.md 1.5, 6.3): c.gap (Zuschlag mit der Koerperlaenge, nur grosser Koerper) kommt auf hideGap; fehlt er: 0.
 function B.GuardDecide(c, o, z, g, ms)
     local cfg = B.CFG
     g = g or {}
@@ -609,7 +614,7 @@ function B.GuardDecide(c, o, z, g, ms)
         and (tonumber(o.dist) or 999) <= cfg.hideOwnerMax
     if canHide then
         g.mode = "hide"
-        local hx, hy = B.HideSpot(o.x, o.y, z.x, z.y, cfg.hideGap)
+        local hx, hy = B.HideSpot(o.x, o.y, z.x, z.y, cfg.hideGap + (tonumber(c.gap) or 0))
         if B.DistXY(c.x, c.y, hx, hy) <= cfg.hideNear then
             return { act = "hold", tx = hx, ty = hy, rule = 22, mode = "hide" }
         end

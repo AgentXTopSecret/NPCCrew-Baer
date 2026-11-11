@@ -25,7 +25,9 @@ local reg = nil                 -- gesetzt in OnInitGlobalModData; vorher wartet
 B._s = B._s or {}               -- Sitzung je Eintrag: [id] = { obj, held, moveAt, curiousAt, chk, f }
                                 -- f (B1b) = { held, orderAt, tx, ty, bestD, bestAt, stuck, retryAt }: Folgen, nie gespeichert
                                 -- B1c: + calmUntil, ownUntil, walk, g (Zombie-Wache), ride (Mitfahren), vx, vy, vAt (Lage der Sicht)
-                                -- B1d: + sta, breathAt, kx, ky, kAt, kAcc, staV, staVAt, xb, gDirty, swapErrAt (Wachsen, Ausdauer)
+                                -- B1d: + sta, breathAt, kx, ky, kAt, kAcc, staV, staVAt, xb, gDirty (Wachsen, Ausdauer)
+                                -- B1e: + swapAt, swapTryAt, swapFailN (Koerper-Tausch), busyUntil (Fuettern/Streicheln laeuft)
+                                -- Nachbesserung B1e: + swapWantAt (Wartezeit "move"), placedAt (Koerper erzeugt, "Call to me")
 B._healUntil = B._healUntil or 0    -- B1c: Echtzeit-Ende des Heil-Fensters nach InitRegistry (PLAN_B1C.md 1.1 Schritt 2)
 B._healScanAt = B._healScanAt or nil
 B._rev = B._rev or 0            -- zaehlt jede Aenderung, die eine Sicht betrifft
@@ -333,12 +335,15 @@ end
 -- wiederherstellen oder ablehnen ("stale"/"dup": ein Doppel oder eine veraltete Kopie wird NIE ein neuer Eintrag; "heal": ein
 -- zahmer Spiegel, der gerade nicht herstellbar ist, wird es auch nie -- Nachbesserung B1c A1). Ein Junges ganz ohne Eintrag (kein
 -- Spiegel, oder ein wilder Spiegel, den die Heilung nicht nimmt) wird aufgenommen (src = "found"), wenn der Deckel es erlaubt.
--- getAnimalType: Vanilla shared/Definitions/animal/ButcheringUtil.lua:13; getModData am Tier: ButcheringUtil.lua:596/602;
+-- Art-Frage ueber B.BodyKind (shared/BanditsNPCBear.lua; B1e: beide Koerper); getModData am Tier: ButcheringUtil.lua:596/602;
 -- getX/getY/getZ am Tier: shared/Definitions/animal/ButcheringUtil.lua:575-577.
+-- B1e (PLAN_B1E.md 1.3 Nr. 5, 3.2 Nr. 4): ein GROSSER Koerper ohne Eintrag ist nie ein neuer Fund ("found" gibt es nur fuer das
+-- Junge): nil, "kind" -- er bleibt unberuehrt (Menue: Why_Gone) bzw. faellt als Waise / Kopie unter die B1b/B1c-Riegel.
 function B.RecOf(animal)
     if not reg then return nil, "noreg" end
     if not animal then return nil, "noanimal" end
-    if animal:getAnimalType() ~= B.CUB then return nil, "kind" end
+    local body = B.BodyKind(animal)
+    if not body then return nil, "kind" end
     for id, s in pairs(B._s) do
         if s.obj == animal then
             local rec = reg.cubs[id]
@@ -372,6 +377,7 @@ function B.RecOf(animal)
             end
         end
     end
+    if body == "big" then return nil, "kind" end
     local x, y, z = math.floor(animal:getX()), math.floor(animal:getY()), math.floor(animal:getZ())
     local rec, why = B.NewRec("found", nil, animal, x, y, z, B.Now())
     if not rec then return nil, why end
