@@ -2,6 +2,85 @@
 
 > **Neuer Account oder neue Sitzung? Zuerst `UEBERGABE.md` (10.11. ~11:00): wo wir stehen, was Kevin testen muss, offene Fragen, was als Naechstes kommt.**
 
+> **10.11.2026 ~22:25: Spieltest B1a nach Fix 1:** `NCBear_CubHere()` geht ("cub b1 appeared 8 tiles away"), Junges flieht ohne Futter
+> (Kevin: "das rennt weg") -- wie geplant. Kevin sah ZWEI Junge: er hat den Spielstand `Saves/Apocalypse/2026-11-10_22-12-12` geladen (vor
+> Fix 1 angelegt); das zweite ist sehr wahrscheinlich die Waise des gescheiterten ersten Versuchs (addAnimal lief, Eintrag nicht).
+> **N5 (neu, klein):** ein `ncbearcub` OHNE Spiegel/Eintrag raeumt `B.ScanAnimals` nie weg (`server/BanditsNPCBearWorld.lua`, Zweig
+> `mark == nil` merkt es nur als `loose` fuer den AnimalID-Rueckfall) -- Waisen nach Absturz/Fehler bleiben fuer immer. Beheben: Waise
+> ohne passenden Eintrag unbeobachtet entfernen (wie der `stale`-Zweig).
+> **N6 (neu, Bedienung):** Kevin: *"man kann garkein essen in die hand nehmen?"* -- stimmt: Vanilla bietet fuer Essen kein "Ausruesten"
+> (`client/ISUI/ISInventoryPaneContextMenu.lua:431`, `not tests.isAllFood`). Das Anlocken mit Futter in der Hand (Server `playerInfo`
+> liest `getPrimaryHandItem`) ist so nur waehrend "Feed" erreichbar (Menue nimmt das Stueck zuerst in die Hand,
+> `client/BanditsNPCBearMenu.lua:79`). Anleitung Schritt 4 und 9 waren falsch. Vorschlag fuer Kevin: eigener Menuepunkt am Jungen
+> "Futter hinhalten" (nur ausruesten, Vanilla `ISWorldObjectContextMenu.equip` wie Menue :79).
+> Kevin: Fuettern ging *"mit hinterherrennen"* -- *"vorher bekommt man das feed fenster ja nicht auf wenn man zuweit weg steht"*: der
+> Rechtsklick am Tier geht nur aus der Naehe, das scheue Junge flieht -> man muss es jagen. Zusammen mit N6 loesen (Hinhalten/Hocken).
+> **Fix 2 (im Staging, NOCH NICHT in der Test-Mod, weil Kevin spielt):** ~900 Warnungen "Missing arguments for UI_BN_Bear_Hud_Taming"
+> u. a. in wenigen Minuten (jede mit Ausnahme + Stacktrace) -- `B.T` fragte `getTextOrNull(key)` ohne Werte bei jedem Aufruf. Jetzt einmal
+> je Schluessel und Sitzung (`shared/BanditsNPCBear.lua`, `tHas`), Pruefer 0, Attrappen 261/133/113 ohne Fehler. Rest: hoechstens eine
+> Warnung je Platzhalter-Schluessel und Sitzung; ganz weg nur mit NPC Crews Weg `getTextOrNull(key, "%1".."%9")` (kein Vanilla-Beleg mit
+> Werten -> braucht Kevins Wort).
+> **Kevin 11.11. ~00:20 fuer das Wachsen (B1-Wachsen, nach B1b):** 100 Spieltage bis ausgewachsen (Halbstark ab ~15, 1,0 ab ~45, 1,35 ab
+> ~100), Sandbox-Option, Werte steigen JEDEN Tag (Tabelle ganz unten in `begleiter/ENTSCHEIDUNGEN.md`; ersetzt 7 + 14 Tage vom 08.11.).
+> **11.11.2026 01:19: B1b IN NCBearTest -- UNGESPIELT.** Folgen/Bleiben (nur gezaehmt, Besitzer; bewegt per `fleeTo` wie B1a, kein Jar-only),
+> Namensschild (Name + "following"/"staying", dicht ueber dem Kopf, Stellwert `tagZ`), Umbenennen ("Name the cub", ISTextBox, max 24,
+> Server prueft), "Hold out food for the cub" (Welt-Menue, nur ausruesten), Waisen-Aufraeumen (N5), Sandbox `BearFollowMaxDistance` 40,
+> Zaehm-Punkte 4/3 (~12 Spielstunden, nur neue Spielstaende), Fix 2/3 drin. Workflow `wf_65827303-1fd` (9 Agenten, Opus): 16 Befunde, 13
+> zu, 3 teils (A3 Zeile 2 nur blasser; A6 Waisen-Suchlauf am MP-Server Testpunkt; A7 Junges eines abgemeldeten Besitzers wartet als
+> follow -- Kevins Wort). Gegenpruefer: bereit, kein Blocker. Claudes Gegenprobe: luacheck/scopecheck 17/0, gesamt 486/0, b1b_kern 203/0.
+> Einbau 42 Dateien byte-gleich (2 neu, 26 eigene ueberschrieben, 14 gleich), mod.info-Beschreibung ersetzt, Sicherungen
+> `backups/NCBearTest/NCBearTest_vor_b1b_2026-11-11_011854.zip` / `..._mit_b1b_...`. **Kevins Test: `spiel/anleitung_b1b.md`.** Berichte
+> `spiel/b1b_*.md`. Fragen an Kevin (Gegenpruefer): Zeile 2 nur blasser ok? MP-Abmelden wartet als follow ok? Bleiben-Radius 12?
+> Abstand beim Stehenbleiben (bis 0,5 Kacheln, Stellwert followLead)? Offen aus der Forschung: Junges zu langsam (Gehen 0,52 Kacheln/s ->
+> rennt immer; schnellere Clips im Modell-Lauf?), Q-Ruf/Laerm laesst es fliehen.
+> **Symbol fuer die Bildschirm-Markierung:** zweite Runde im Cartoon-Stil (`spiel/icon_auswahl_2.png`, Dateien `../_arbeit/baer_icon/`),
+> Kevins Wahl steht aus; Bandits multipliziert die Markierungsfarbe mit sich selbst (Bandits `BanditEventMarkers.lua:153-155`).
+>
+> **Kevin 11.11. ~01:35 Anzeige ueber dem Baeren:** je Spieler einstellbar (Name ein/aus, jeder Wert einzeln als Balken ODER Zahl, Groesse,
+> "DODGE" beim Ausweichen wie NPC Crew) -- Mod-Optionen wie NPC Crew `client/BanditsNPCModOptions.lua`; Name/Groesse nach B1b, Werte mit
+> Wachsen/Kampf/Beduerfnissen (ENTSCHEIDUNGEN.md ganz unten).
+> **ERLEDIGT in B1b (11.11. 01:19):** Zaehm-Dauer auf ~12 Spielstunden (Kevin 11.11.: Abklingzeiten bleiben, nur laenger):
+> Vorgaben `BearTameFeedPoints` 14 -> 4 und `BearTamePetPoints` 8 -> 3 in `shared/BanditsNPCBear.lua` (B.OPTS) UND `sandbox-options.txt`,
+> Tooltips mit Zahlen pruefen, Attrappen (erwartete Punkte) nachziehen. Ausserdem Fix 2/3 (schon im Staging) muessen nach dem B1b-Lauf noch drin sein.
+>
+> **10.11.2026 ~23:10: MODELL-LAUF baer-gen-schoen GESTARTET auf Kevins Wort** (erst `wf_26796352-25b`, nach 5 min angehalten und mit Referenzfotos aus allen Winkeln NEU als `wf_ae849387-409`, Task `wgdq3xjm8`; 6 Agenten, Opus; Skript-Kopie `spiel/gen_schoen_workflow.js`): Junges NEU aus
+> Foto C (`begleiter/vorlage_C_junges_steht.jpg`, steht ruhig) -> 10+ Varianten -> Spielnetz -> Nacharbeit; grosser Baer E nacharbeiten
+> (Schwanz-Lappen und Kopf-Wulst weg, Augen/Nase/Krallen, Fellstriche); Optik-Pruefer, Nachbesserung, Gegenpruefer. Ergebnis-Blaetter fuer
+> Kevin: `../_arbeit/baer_gen/bilder/KEVIN_junges.png`, `KEVIN_gross.png`; Berichte `../_arbeit/baer_gen/C_*.md`, `E_FEIN.md`,
+> `OPTIK_PRUEFUNG.md`, `GEGEN_OPTIK.md`. Noch ohne Knochen/Clips (spaeterer Lauf). Laeuft parallel zu B1b.
+>
+> **10.11.2026 ~23:00: GENERATOR STUFE 2 FERTIG** (Bericht `spiel/gen_STUFE2.md`, Blaetter `spiel/gen_A_spielnetz.png`,
+> `gen_E_spielnetz.png`, nicht in Git). 18 Varianten; gewaehlt A_s2 und E_c2_form; Spielnetze `../_arbeit/baer_gen/aus/A_spielnetz.glb`
+> (19.124 Dreiecke) und `E_spielnetz.glb` (19.562), je 1 Teil, 0 Loecher, Textur 1024, Farbe am Foto geeicht. **Claudes Urteil nach
+> eigenem Ansehen:** beide in Spielgroesse klar als Baer lesbar, E von der Seite ueberzeugend (Buckel, Beine), aber noch Pluesch:
+> keine Augen/Augenpartie, E Lappen am Hinterteil + Wulst hinter dem Kopf, A Gesicht cremefarben und Fell fleckig, Pfoten ohne Krallen.
+> **Wichtig fuer den naechsten Schritt:** A steht in der Schritt-Pose des Fotos (ein Vorderbein gehoben, Kopf gedreht) -- fuer Skelett und
+> Clips muss es erst in die Ruhelage; E steht fast in Ruhelage. Noch kein Skelett, keine Clips, nichts im Spiel. Kevins Urteil steht aus.
+> **Spieltest B1a weiter:** Zaehmen + Speichern/Laden geklappt (Kevin: *"der hat den reload ueberlebt"*). Kevins Absturz 22:40 war NICHT
+> unser Code: `Logs/2026-11-10_22-20_DebugLog.txt:8745` NullPointerException in `NetworkPlayerAI.checkDebugInput` ->
+> `GameClient.sendClientCommand` ohne Verbindung (Debug-Eingabe im SP, kein Lua im Stapel).
+> **B1b gestartet 22:45 auf Kevins Wort** (*"Folgen + Namensschild"*): Workflow `wf_65827303-1fd` (10 Agenten, Opus), Plan
+> `../_arbeit/baer_zaehmen/PLAN_B1B.md`, dazu Futter hinhalten (N6/N8) und Waisen (N5). Verbrauch 22:42: 5 h 10 %, Woche 8 %.
+> **Fix 3 (im Staging, noch NICHT in der Test-Mod):** Streicheln ohne Ton -- Vanilla spielt den Ton ueber das Anim-Ereignis
+> `PlayBreedSound` im idlePetting-Knoten (z. B. `AnimSets/cow/idle/idlePetting.xml:13`), das Animset buck hat keinen. Jetzt: Rasse-Ton
+> `petting = PetAnimalCalf` (`shared/BanditsNPCBearDefs.lua`), Zeitaktion spielt ihn selbst (`playBreedSound`/`stopOrTriggerSound` wie
+> Vanilla `ISPickupAnimal.lua:23/27/33`). Pruefer 0, Attrappen 261/133/113 (Tier- und Spieler-Attrappe um die zwei Ton-Aufrufe ergaenzt).
+> **Zaehmen geklappt** (Kevin ~23:00, ueber `NCBear_CubSkip`); nach dem Zaehmen gibt es in B1a nichts mehr zu tun -- Kevin: *"kann jz
+> nichtmehr mit dem machen also da steht auch nicht ueber den baeren das es meiner ist"*. Naechste Version (B1b) nach seiner Wahl.
+> **N7 (Streichel-Abstand) -- ERLEDIGT, bleibt so** (Kevin: *"diesmal hat er aber richitg gestreichelt also lass das einfach so das kommt wohl auf den blickwinkel an"*). Alter Befund: Kevin: *"zuviel abstand beim streicheln aber danach tut der die hand unter den baeren das sah gut aus"*.
+> Vanilla geht zum Kopf-Anhaengepunkt (`client/ISUI/Animal/ISAnimalContextMenu.lua` onPetAnimal: `getAttachmentWorldPos("head")` +
+> `ISWalkToTimedActionF`); unser Junges hat KEIN `attachment head` in `scripts/nc_bear_cub.txt`, das Menue nimmt nur `walkAdj`
+> (`client/BanditsNPCBearMenu.lua:86-94`). Beheben zusammen mit dem neuen Modell: `attachment head` (Kopfknochen, Versatz am Modell
+> gemessen) + Streicheln und Fuettern wie Vanilla zum Kopf gehen lassen.
+> **Screenshot Kevin ~22:50 (Taming 62 %):** Untermenue "Brown Bear cub": Tier Information, **Tier mit Seil anleinen**, **aufheben**, Debug,
+> Feed (rot = satt, richtig), Pet; Welt-Menue "Lay out bear bait" rot (richtig: gebunden), kein "Kill" (richtig). Aufheben/Anleinen kommen
+> vom aktiven **"Tier Cheat"** (`AnimalContextMenu.cheat`, `client/ISUI/Animal/ISAnimalContextMenu.lua:166/173`) bzw. Gottmodus
+> (Jar `IsoAnimal.canBePicked`); ohne Cheat: Aufheben nie (`canBePicked = false`), Anleinen nur wenn `getBehavior():canBeAttached()` --
+> fuer das Junge UNGEPRUEFT. **N8:** Vanilla hat ein eigenes Anlocken mit Futter aus dem Inventar ("ContextMenu_Lure",
+> `ISAnimalContextMenu.lua:270`, Jar `getPossibleLuringItems` = `getAllPossibleFoodFromInv`) -- Kandidat fuer N6, aber Vanillas
+> `eatFromLured` laesst das Tier das Stueck selbst fressen (an unserem Register und Balken vorbei) -> vorher klaeren. Balken haengt in
+> Kopfhoehe des Spielers, deutlich ueber dem kleinen Jungen (`B.CFG.barZ`) -- evtl. tiefer.
+>
 > **10.11.2026 ~21:50: ERSTER SPIELTEST B1a, Fehler 1 behoben.** Kevin: `NCBear_CubHere()` -> *"no cub: not inworld"* (console.txt:5454
 > `[TC-BEAR] *** create: the new cub is not in the world at 11073,9713`). Ursache: `B.CreateCub` fragte direkt nach `addToWorld()`
 > `isExistInTheWorld()`; die Engine haengt ein neues Tier erst beim naechsten Update in die Kachel-Liste (Jar 42.22.2), im selben Bild also

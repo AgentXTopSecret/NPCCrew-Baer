@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
-"""baer_uebernahme.py -- den Baeren (heute B1a: Junges finden und zaehmen) aus der Test-Mod NCBearTest nach NPC Crew uebernehmen.
+"""baer_uebernahme.py -- den Baeren (heute B1a: Junges finden und zaehmen; B1b: Folgen/Bleiben, Namensschild, Umbenennen, Futter
+hinhalten, Waisen raeumen) aus der Test-Mod NCBearTest nach NPC Crew uebernehmen.
 
 Grundregel (Werkstatt-CLAUDE.md Abschnitt 0, Kevin 08.11.2026): alles wird FUER NPC Crew gebaut und soll am Ende "einfach copy paste"
-hinueber; keine Cheat- oder Testmenues kommen mit. Plan: _arbeit/baer_zaehmen/PLAN_ZAEHMEN.md Abschnitt 12, Naehte: baer/NAEHTE.md.
+hinueber; keine Cheat- oder Testmenues kommen mit. Plan: _arbeit/baer_zaehmen/PLAN_ZAEHMEN.md Abschnitt 12 (B1b: PLAN_B1B.md 7),
+Naehte: baer/NAEHTE.md.
 Vorbild (gelesen, nicht blind kopiert): turret/tools/turret_uebernahme.py.
 
 Aufruf (aus C:/Users/Kevin/NPCCrew-Nebenprojekte):
@@ -35,7 +37,7 @@ Was es tut (erst wenn ALLES geprueft ist, wird geschrieben; sonst Abbruch ohne S
      Paritaet ueber sieben Sprachen; CN nur Zeichen, die Vanilla-CN benutzt; EN 'singleplayer'/'multiplayer' zusammen; %1/%2 gleich
      in allen Sprachen; Namensraum je Datei (UI_BN_Bear_*, Sandbox_BanditsNPC_Bear*, die drei Tiernamen); IG_UI.json hat NPC Crew
      nicht: wird sortiert neu angelegt (bzw. zusammengefuehrt, falls es sie inzwischen gibt); gleicher Schluessel mit gleichem Wert
-     (Sandbox_BanditsNPC = "NPC Crew") ist kein Fehler.
+     (Sandbox_BanditsNPC = "NPC Crew") ist kein Fehler. B1b: kein '<' oder '>' in einem UI.json-Text (Tooltips sind Rich-Text).
   4. Sandbox (Naht 4): die option BanditsNPC.Bear*-Bloecke an NPC Crews 42/media/sandbox-options.txt anhaengen (Zeilenenden der
      Zieldatei, nur C-Kommentare, VERSION nicht doppelt); Abbruch bei vorhandenem Namen; je Option page, translation, Grenzen gegen
      B.OPTS in shared/BanditsNPCBear.lua und die Texte in Sandbox.json.
@@ -48,7 +50,8 @@ Was es tut (erst wenn ALLES geprueft ist, wird geschrieben; sonst Abbruch ohne S
      Aktionsklassen = ISBaseTimedAction:derive(...) und AnimalDefinitions = AnimalDefinitions or {}), kein Gegenstand aus dem Nichts,
      kein fester Menuetext, kein Fingerabdruck der Werkbank (Texte, Funktionsnamen der NCBearBench*-Dateien). Tier-Regel (Plan 12.1
      Punkt 7): addAnimal( und :addToWorld( nur in B.CreateCub, B.CreateCub( nur aus B.AppearFor, B.AppearFor( nur aus forestRolls und
-     baitAppear in server/BanditsNPCBearServer.lua, :remove() am Tier nur in B.RemoveCub. Ausnahmen nur einzeln mit Grund (CHEAT_ALLOWED).
+     baitAppear in server/BanditsNPCBearServer.lua, :remove() am Tier nur in B.RemoveCub. B1b: kein B.ScanAnimals(..., force) im
+     kopierten Code (Waisen ohne Alters-Frist entfernen kann nur die Werkbank). Ausnahmen nur einzeln mit Grund (CHEAT_ALLOWED).
   7. (Probe/echt) schreiben, zuruecklesen, dann luacheck.py, scopecheck.py, localcount.py je kopierter Lua-Datei und luacheck_pz.py
      (W113 nur die einzeln erlaubten: die drei Aktionsklassen, die eine andere kopierte Datei setzt).
 
@@ -176,7 +179,45 @@ CHEAT_RULES = [
      "Gegenstand erzeugen (aus dem Nichts = Spawn; jede Stelle einzeln mit Grund freigeben)"),
     ("bankspur", r"\[NCBear\]|(?i:[\"'][^\"'\n]*\busage:)", "Fingerabdruck der Werkbank (Praefix [NCBear] oder 'usage:'-Hilfe)"),
     ("altmenue", r"\bNCBearMenu\b|\bNCBearBench\w*", "Haken ins alte Testmenue der Test-Mod (NCBearMenu.extra) oder in die Testhilfe"),
+    # B1b (PLAN_B1B.md 4.3): B.ScanAnimals(players, force) -- force ueberspringt die Alters-Frist der Waisen (Riegel 3). Nur die Werkbank
+    # (NCBear_CubSweep) darf das. Seit der Nachbesserung B1b A5 keine Zeilen-Regex mehr, sondern scan_force_hits (zerlegt die Klammer).
 ]
+SCAN_NAME = re.compile(r"\bScanAnimals\b")
+SCAN_DEF = re.compile(r"\bfunction\s+(?:[\w.]+[.:])?ScanAnimals\s*\(")
+SCAN_WHY = "Waisen-Suchlauf mit force (ohne Alters-Frist) gibt es nur in der Werkbank"
+
+
+def scan_force_hits(code_text):
+    """Nachbesserung B1b A5: jede Erwaehnung von ScanAnimals im Code-Teil einer Datei (Zeilen mit "\\n" verbunden, Kommentare schon
+    weg, Strings noch da). Erlaubt sind nur die Definition und Aufrufe mit hoechstens EINEM Argument auf oberster Ebene (mit
+    ':' zaehlt das versteckte self mit). Fund: ein zweites Argument in jeder Form (true, not false, 1 == 1, B.Players(), ...), ein
+    Aufruf ueber mehrere Zeilen eingeschlossen, und ScanAnimals ohne folgende Klammer (Zuweisung an einen Namen, Tabellenfeld,
+    Text "ScanAnimals"). Rueckgabe: Liste (Zeichen-Offset, Kurztext)."""
+    defs = set()
+    for d in SCAN_DEF.finditer(code_text):
+        defs.add(d.start() + d.group(0).index("ScanAnimals"))
+    hits = []
+    for m in SCAN_NAME.finditer(code_text):
+        if m.start() in defs:
+            continue
+        j = m.end()
+        while j < len(code_text) and code_text[j] in " \t\r\n":
+            j += 1
+        if j >= len(code_text) or code_text[j] != "(":
+            hits.append((m.start(), "ScanAnimals ohne Aufruf-Klammer (an einen Namen gebunden?)"))
+            continue
+        k = m.start() - 1
+        while k >= 0 and code_text[k] in " \t":
+            k -= 1
+        args = call_args(code_text, j + 1)
+        n = len(args)
+        if n == 1 and not args[0].strip():
+            n = 0
+        if k >= 0 and code_text[k] == ":":
+            n += 1
+        if n > 1:
+            hits.append((m.start(), "Aufruf mit %d Argumenten" % n))
+    return hits
 CHEAT_GLOBAL_FN = re.compile(r"(?<![\w.:])function\s+([A-Za-z_]\w*)\s*\(")
 CHEAT_GLOBAL_SET = re.compile(r"^([A-Za-z_]\w*)\s*=(?!=)")
 CHEAT_STRING = re.compile(r"(?i)(?<!de)spawn|debug")
@@ -617,6 +658,13 @@ def plan_texts(tgt, src, merge, rep):
                 rep.err("Texte %s: Schluessel %s liegt nicht im Baeren-Namensraum" % (fname, k))
             if re.search(r"single[ -]player|multi[ -]player", str(v), re.I):
                 rep.err("Texte %s %s: EN schreibt 'singleplayer'/'multiplayer' zusammen" % (fname, k))
+            # B1b (schnittstelle_aenderungen.md, B1b OBERFLAECHE 1): Tooltips sind Rich-Text (Vanilla client/ISUI/ISButton.lua:317-334 ->
+            # ISToolTip.lua:192, :358) -- ein "<" oder ">" in einem UI-Text wuerde dort als Formatbefehl verschluckt.
+            if fname == "UI.json":
+                for l in LANGS:
+                    lv = langs.get(l, {}).get(k)
+                    if lv is not None and re.search(r"[<>]", PLACE.sub("", str(lv))):
+                        rep.err("Texte UI.json %s %s: '<' oder '>' im Text (Tooltip ist Rich-Text)" % (l, k))
             want = sorted(PLACE.findall(str(v)))
             for l in LANGS:
                 if l in langs and k in langs[l] and sorted(PLACE.findall(str(langs[l][k]))) != want:
@@ -1163,7 +1211,12 @@ def cheat_check(plan, src, rep):
                                 add(rel, no, "tier", code, "%s -- Aufruf aus %s" % (why, cur_fn or "Dateiebene"), tid)
             if re.search(r"\bNC[A-Z][A-Za-z]*_[A-Za-z]|\bNC[A-Za-z]*Bench|(?i:\btesthilfe\b|\bwerkbank\b)", com):
                 comments.append("%s:%d" % (rel, no))
-        menu_check(rel, [c for c, _ in parts])
+        code_lines = [c for c, _ in parts]
+        menu_check(rel, code_lines)
+        code_text = "\n".join(code_lines)
+        for off, what in scan_force_hits(code_text):
+            no = code_text.count("\n", 0, off) + 1
+            add(rel, no, "force", code_lines[no - 1], SCAN_WHY, what)
         sg = lua_setglobals(final[rel])
         if sg is None:
             rep.warn("%s: luac5.1 lief nicht (%s) -- globale Zuweisungen nur per Regex geprueft" % (rel, LUAC))
@@ -1198,7 +1251,7 @@ def cheat_check(plan, src, rep):
         for name in re.findall(r"^option\s+(BanditsNPC\.\w+)", plan["sandbox_body"], re.M):
             if CHEAT_NAME.search(name):
                 add(SANDBOX, 0, "sandbox", name, "Sandbox-Option nach Testhilfe/Debug/Cheat/Spawn", name)
-    rep.say("geprueft: %d Lua-Dateien (%d Codezeilen), %d Texte, %d Dateinamen; %d Zeilenregeln + wort, global, menue, tier, "
+    rep.say("geprueft: %d Lua-Dateien (%d Codezeilen), %d Texte, %d Dateinamen; %d Zeilenregeln + wort, global, menue, tier, force, "
             "bankspur (%d Werkbank-Texte, %d Werkbank-Funktionsnamen; %d gemeinsame Namen nicht gewertet: %s); %d Ausnahmen" % (
                 len(plan["copy_lua"]), n_lines, n_text, len(plan["copy_lua"]) + len(plan["copy_asset"]), len(CHEAT_RULES),
                 len(prints), len(bfuncs), len(bshared), ", ".join(sorted(bshared)) or "-", len(CHEAT_ALLOWED)))
