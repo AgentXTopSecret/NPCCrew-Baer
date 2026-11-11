@@ -1,6 +1,8 @@
 --
 -- NPC Crew -- Baer, Anzeige ueber der Welt (B1a, PLAN_ZAEHMEN.md 5.6, 6.8, 7): Zaehm-Balken ueber dem Jungen und das Schild
--- ueber dem eigenen Koederplatz.
+-- ueber dem eigenen Koederplatz. B1b (PLAN_B1B.md 2): Namensschild ueber jedem gezaehmten Jungen (Zeile 1 Name, Zeile 2 klein
+-- der Zustand bzw. bei fremden Jungen der Besitzer); Balken und Schild haengen am selben Anker B.CFG.tagZ dicht ueber dem Kopf.
+-- Dazu U.CubsNear (die Jungen mit Objekt in der Naehe, fuer "Futter hinhalten" im Welt-Menue).
 --
 -- Reine Anzeige: liest nur B.View (die Sicht, die der Schreiber diesem Spieler geschickt hat) und fragt nie den Server.
 -- Einzelspieler und Mehrspieler laufen gleich; im Mehrspieler stammen alle Zahlen vom Server. Der dedizierte Server laedt client/ nicht.
@@ -13,7 +15,8 @@
 --     B.CFG.hudMax Junge in B.CFG.hudDist Kacheln, dazu fertige Texte. Die Objektliste der Zelle wird nur durchsucht, wenn ein
 --     Junges aus der Sicht noch kein Objekt hat, und dann hoechstens einmal je Sekunde (nach fuenf vergeblichen Laeufen alle 5 s).
 --   * Je Bild wird nur aus der fertigen Liste gezeichnet: je Balken zwei Umrechnungen, zwei Rechtecke, ein Rahmen, zwei Texte
---     (jeder mit Schatten). Keine Suche, kein getText, keine Tabelle je Bild.
+--     (jeder mit Schatten); je Namensschild zwei Umrechnungen und zwei Texte (mit Schatten: vier drawTextCentre). Keine Suche,
+--     kein getText, keine Tabelle je Bild. Kein Sichtfeld-Test: ein folgendes Junges laeuft HINTER dem Spieler (Plan 2.3).
 --   * Bei mehr als einem lokalen Spieler (geteilter Bildschirm) wird nichts gezeichnet.
 -- Jeder Engine-Aufruf hat eine Vanilla-Fundstelle (Kommentar daneben). Statisch geprueft, nicht gespielt.
 --
@@ -43,9 +46,12 @@ local BAR_W = 64
 local BAR_H = 7
 local BAIT_DIST = 25        -- Kacheln: so nah steht das Schild ueber dem eigenen Koederplatz
 local BAIT_Z = 0.3
+local TAG_Z = 0.18          -- Rueckfall fuer B.CFG.tagZ (Anker von Balken und Schild ueber dem Boden des Tiers, Plan 2.2)
 
 local panel = nil
-local fontH = nil
+local fontH = nil           -- Hoehe UIFont.Small (Zeile 1, Balken-Texte)
+local font2 = nil           -- Schrift der kleinen Zeile 2 des Namensschilds: UIFont.NewSmall, wenn sie niedriger ist, sonst Small
+local fontH2 = nil
 
 -- Alles, was die Anzeige sich merkt. Nichts davon wird gespeichert oder gesendet; die Tabellen sind durch die Sicht gedeckelt
 -- (hoechstens so viele Kennungen, wie B.View.cubs traegt; verschwundene Kennungen fallen bei jeder neuen Sicht heraus).
@@ -84,12 +90,11 @@ local function alive(a)
     return a ~= nil and a:isExistInTheWorld() and not a:isDead()
 end
 
--- Bekommt dieses Junge gerade eine Anzeige? Ungezaehmte immer, gezaehmte nur die 5 Sekunden nach dem Zaehmen.
-local function wanted(c, now)
+-- Bekommt dieses Junge eine Anzeige? B1b: jedes Junge der Sicht, das ein Objekt haben kann -- ungezaehmte den Balken, gezaehmte
+-- (eigene und fremde) das Namensschild. "missing" hat kein Objekt (Plan 2.1).
+local function wanted(c)
     local st = c.st
-    if st == "new" or st == "shy" or st == "fed" then return true end
-    local till = S.flash[c.id]
-    return till ~= nil and now < till
+    return st == "new" or st == "shy" or st == "fed" or st == "tame"
 end
 
 -- Kennungen vergessen, die die Sicht nicht mehr traegt. Erst sammeln, dann loeschen (nie waehrend des Durchlaufs).
@@ -127,13 +132,48 @@ local function waitWord(c, kind, nowH)
     return U.WaitText(left)
 end
 
+-- Zustand eines gezaehmten Jungen. B.ModeOf ist die Regel des Kerns (shared, Plan 5.3: nil und alles andere = "stay"); fehlt
+-- die Kern-Datei, gilt dieselbe Regel hier.
+local function modeOf(c)
+    local f = B.ModeOf
+    if f then return f(c) end
+    if c.mode == "follow" then return "follow" end
+    return "stay"
+end
+
+-- Namensschild (Plan 2.1): Zeile 1 der Name (U.CubName), Zeile 2 beim eigenen Jungen der Zustand, beim fremden der Besitzer.
+-- Gerade gezaehmt: Zeile 2 blinkt FLASH_MS lang gruen "Tamed!", danach der Zustand. Eigen ist ein Junges, wenn der Besitzer mein
+-- Schluessel ist -- oder im Einzelspieler der feste Einzelspieler-Schluessel (dann gibt es keinen anderen Besitzer). Im
+-- Mehrspieler zaehlt "__sp" nie als eigen und erscheint nie als Text (Nachbesserung B1b B8: Junge eines frueheren
+-- Einzelspieler-Stands auf einem Server zeigen "belongs to ?").
+local function describeTag(e, meKey)
+    local c = e.c
+    e.tag = true
+    e.line1 = U.CubName(c, meKey)
+    local own = (c.owner ~= nil) and (c.owner == meKey or (c.owner == B.SP_KEY and B.IsSP ~= nil and B.IsSP()))
+    if own then
+        e.r, e.g, e.b = 0.96, 0.96, 0.90
+        if modeOf(c) == "follow" then
+            e.line2 = U.T("UI_BN_Bear_Tag_Follow")
+        else
+            e.line2 = U.T("UI_BN_Bear_Tag_Stay")
+        end
+        e.till = S.flash[c.id] or 0
+        e.flashLine = U.T("UI_BN_Bear_Hud_Tamed")
+    else
+        e.r, e.g, e.b = 0.80, 0.88, 1.00
+        local who = c.owner
+        if who == nil or who == B.SP_KEY then who = "?" end
+        e.line2 = U.T("UI_BN_Bear_Tag_Owner", tostring(who))
+        e.till = 0
+    end
+end
+
 -- Die fertigen Texte eines Eintrags (einmal je Liste, nie je Bild).
 local function describe(e, meKey, nowH)
     local c = e.c
-    if c.st == "tame" or c.st == "missing" then
-        e.flash = true
-        e.till = S.flash[c.id] or 0
-        e.line1 = U.T("UI_BN_Bear_Hud_Tamed")
+    if c.st == "tame" then
+        describeTag(e, meKey)
         return
     end
     local pct = math.floor(tonumber(c.tame) or 0)
@@ -209,7 +249,7 @@ local function rebuild(now)
             S.flash[id] = now + FLASH_MS
         end
         S.prev[id] = c.st
-        if wanted(c, now) and not alive(S.objs[id]) then
+        if wanted(c) and not alive(S.objs[id]) then
             S.objs[id] = nil
             need = true
         end
@@ -227,7 +267,7 @@ local function rebuild(now)
         scan()
         local still = false
         for id, c in pairs(cubs) do
-            if wanted(c, now) and S.objs[id] == nil then still = true end
+            if wanted(c) and S.objs[id] == nil then still = true end
         end
         if still then
             S.scanMiss = S.scanMiss + 1
@@ -251,7 +291,7 @@ local function rebuild(now)
     local found = {}
     for id, c in pairs(cubs) do
         local a = S.objs[id]
-        if a ~= nil and wanted(c, now) and alive(a) then
+        if a ~= nil and wanted(c) and alive(a) then
             local dx = a:getX() - px                    -- client/TimedActions/ISContextualActions.lua:100
             local dy = a:getY() - py
             local d2 = dx * dx + dy * dy
@@ -281,19 +321,53 @@ end
 -- Zeichnen (je Bild, nur aus der fertigen Liste)
 -- ---------------------------------------------------------------------------
 
--- Text mit Schatten, sonst ist heller Text auf Sand oder Beton unlesbar. drawTextCentre: client/ISUI/ISUIElement.lua:1280.
-local function text(self, str, x, y, r, g, b, a)
-    self:drawTextCentre(str, x + 1, y + 1, 0, 0, 0, 0.7, UIFont.Small)
-    self:drawTextCentre(str, x, y, r, g, b, a, UIFont.Small)
+-- Text mit Schatten, sonst ist heller Text auf Sand oder Beton unlesbar. drawTextCentre(text, x, y, r, g, b, a, Schrift):
+-- client/ISUI/ISUIElement.lua:1280 (UIFont.Small); mit UIFont.NewSmall: client/Foraging/ISSearchManager.lua:148.
+local function text(self, str, x, y, r, g, b, a, font)
+    self:drawTextCentre(str, x + 1, y + 1, 0, 0, 0, 0.7, font)
+    self:drawTextCentre(str, x, y, r, g, b, a, font)
+end
+
+-- Namensschild: der Block waechst vom Anker nach OBEN -- Zeile 2 (klein, blasser) sitzt mit ihrer Unterkante am Anker, Zeile 1
+-- 1 px darueber (Plan 2.2). Gerade gezaehmt: Zeile 2 blinkt gruen "Tamed!" (450 von 700 ms an), danach der Zustand.
+local function drawTag(self, e, sx, sy, now, small)
+    local y2 = sy - fontH2
+    text(self, e.line1, sx, y2 - 1 - fontH, e.r, e.g, e.b, 0.95, small)
+    if now < e.till then
+        if (now % 700) < 450 then
+            text(self, e.flashLine, sx, y2, 0.55, 1.0, 0.55, 1.0, font2)
+        end
+    else
+        text(self, e.line2, sx, y2, 0.78, 0.78, 0.74, 0.80, font2)
+    end
+end
+
+-- Zaehm-Balken wie B1a (Zeile 2 unten am Anker, darueber der Balken, darueber Zeile 1); nur der Anker ist neu.
+local function drawBar(self, e, sx, sy, small)
+    local fh = fontH
+    local bx = sx - BAR_W / 2
+    local by = sy - fh - BAR_H - 4
+    text(self, e.line1, sx, by - fh - 2, 0.96, 0.96, 0.90, 0.95, small)
+    self:drawRect(bx - 1, by - 1, BAR_W + 2, BAR_H + 2, 0.65, 0, 0, 0)
+    if e.fill > 0 then
+        if e.unfed then
+            self:drawRect(bx, by, e.fill, BAR_H, 0.95, 0.95, 0.70, 0.25)
+        else
+            self:drawRect(bx, by, e.fill, BAR_H, 0.95, 0.45, 0.85, 0.35)
+        end
+    end
+    self:drawRectBorder(bx - 1, by - 1, BAR_W + 2, BAR_H + 2, 0.9, 0.85, 0.85, 0.80)
+    text(self, e.line2, sx, sy - fh, 0.90, 0.90, 0.85, 0.80, small)
 end
 
 -- Das Element liegt bei 0,0 und wird nie verschoben: seine Koordinaten sind Bildschirm-Koordinaten.
 -- isoToScreenX/Y(Spielernummer, x, y, z): client/Fishing/TensionUI.lua:11-12 (erstes Argument eine Zahl).
 -- drawRect / drawRectBorder (x, y, w, h, a, r, g, b): client/ISUI/ISUIElement.lua:1191 / :1219.
+-- Anker fuer Balken UND Schild: a:getZ() + B.CFG.tagZ (Plan 2.2; je Bild gelesen, damit ein geaenderter Stellwert sofort wirkt).
 local function draw(self, now)
     local cfg = B.CFG
-    local lift = cfg.barZ or 0.55
-    local fh = fontH
+    local lift = tonumber(cfg.tagZ) or TAG_Z
+    local small = UIFont.Small
     for i = 1, S.n do
         local e = S.list[i]
         local a = e.a
@@ -303,34 +377,20 @@ local function draw(self, now)
             local z = a:getZ() + lift
             local sx = math.floor(isoToScreenX(0, x, y, z))
             local sy = math.floor(isoToScreenY(0, x, y, z))
-            if e.flash then
-                -- gerade gezaehmt: blinkt, bis die Frist um ist
-                if now < e.till and (now % 700) < 450 then
-                    text(self, e.line1, sx, sy - fh, 0.55, 1.0, 0.55, 1.0)
-                end
+            if e.tag then
+                drawTag(self, e, sx, sy, now, small)
             else
-                local bx = sx - BAR_W / 2
-                local by = sy - fh - BAR_H - 4
-                text(self, e.line1, sx, by - fh - 2, 0.96, 0.96, 0.90, 0.95)
-                self:drawRect(bx - 1, by - 1, BAR_W + 2, BAR_H + 2, 0.65, 0, 0, 0)
-                if e.fill > 0 then
-                    if e.unfed then
-                        self:drawRect(bx, by, e.fill, BAR_H, 0.95, 0.95, 0.70, 0.25)
-                    else
-                        self:drawRect(bx, by, e.fill, BAR_H, 0.95, 0.45, 0.85, 0.35)
-                    end
-                end
-                self:drawRectBorder(bx - 1, by - 1, BAR_W + 2, BAR_H + 2, 0.9, 0.85, 0.85, 0.80)
-                text(self, e.line2, sx, sy - fh, 0.90, 0.90, 0.85, 0.80)
+                drawBar(self, e, sx, sy, small)
             end
         end
     end
     local bait = S.bait
     if bait then
+        local fh = fontH
         local sx = math.floor(isoToScreenX(0, bait.x, bait.y, bait.z))
         local sy = math.floor(isoToScreenY(0, bait.x, bait.y, bait.z))
-        text(self, bait.line1, sx, sy - fh * 2 - 2, 0.98, 0.85, 0.45, 0.95)
-        text(self, bait.line2, sx, sy - fh, 0.90, 0.90, 0.85, 0.80)
+        text(self, bait.line1, sx, sy - fh * 2 - 2, 0.98, 0.85, 0.45, 0.95, small)
+        text(self, bait.line2, sx, sy - fh, 0.90, 0.90, 0.85, 0.80, small)
     end
 end
 
@@ -347,13 +407,61 @@ function Hud:prerender()
     local now = getTimestampMs()                        -- client/Foraging/ISBaseIcon.lua:485
     if S.dirty or now - S.listAt >= LIST_MS or now < S.listAt then
         if not fontH then
-            fontH = getTextManager():getFontHeight(UIFont.Small)    -- client/ISUI/Animal/ISAnimalUI.lua:4
+            -- Schrifthoehen einmal holen. getFontHeight(UIFont.Small): client/ISUI/Animal/ISAnimalUI.lua:4;
+            -- getFontHeight(UIFont.NewSmall): client/Entity/ISUI/Controls/ISWidgetTitleHeader.lua:4. Statisch entschieden
+            -- (Nachbesserung B1b A3): in JEDER Vanilla-Sprache laden "font NewSmall" und "font Small" dieselbe Datei
+            -- (media/fonts/EN/fonts.txt:75-79 und :93-97, ebenso CN, CH, JP, KO, PL, RU, TH) -- Zeile 2 ist also gleich gross, nur
+            -- blasser. Der Vergleich bleibt (schadet nicht, greift, falls ein Schriftsatz NewSmall einmal kleiner macht); kleiner
+            -- zeichnen ginge nur mit drawTextZoomed, das Vanilla nirgends aufruft (braucht Kevins Wort).
+            local tm = getTextManager()
+            fontH = tm:getFontHeight(UIFont.Small)
+            local hNew = tm:getFontHeight(UIFont.NewSmall)
+            if type(hNew) == "number" and hNew > 0 and hNew < fontH then
+                font2 = UIFont.NewSmall
+                fontH2 = hNew
+            else
+                font2 = UIFont.Small
+                fontH2 = fontH
+            end
         end
         rebuild(now)
     end
     if S.n > 0 or S.bait then
         draw(self, now)
     end
+end
+
+-- ---------------------------------------------------------------------------
+-- Junge mit Objekt in der Naehe (B1b, Plan 3.2 / 5.4): fuer "Futter hinhalten" im Welt-Menue. Quelle sind die Objekte, die der
+-- Balken ohnehin kennt (S.objs) -- kein Suchlauf, kein Server-Weg. Liste { id, c, a, d }, naechste zuerst. Laeuft nur auf
+-- Rechtsklick. getX/getY am Tier: client/TimedActions/ISContextualActions.lua:100; isExistInTheWorld/isDead siehe alive().
+-- ---------------------------------------------------------------------------
+local function byD(a, b)
+    return a.d < b.d
+end
+
+function U.CubsNear(playerObj, radius)
+    local out = {}
+    if not playerObj or not U.Fresh or not U.Fresh() then return out end
+    local cubs = B.View and B.View.cubs
+    if type(cubs) ~= "table" then return out end
+    local r = tonumber(radius) or 0
+    if r <= 0 then return out end
+    local px = playerObj:getX()                         -- client/Fishing/TensionUI.lua:11
+    local py = playerObj:getY()
+    for id, c in pairs(cubs) do
+        local a = S.objs[id]
+        if a ~= nil and alive(a) then
+            local dx = a:getX() - px
+            local dy = a:getY() - py
+            local d = math.sqrt(dx * dx + dy * dy)
+            if d <= r then
+                out[#out + 1] = { id = id, c = c, a = a, d = d }
+            end
+        end
+    end
+    if #out > 1 then table.sort(out, byD) end
+    return out
 end
 
 -- ---------------------------------------------------------------------------

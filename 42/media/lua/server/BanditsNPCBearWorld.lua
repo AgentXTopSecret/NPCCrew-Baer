@@ -17,6 +17,8 @@ BanditsNPC = BanditsNPC or {}
 BanditsNPC.Bear = BanditsNPC.Bear or {}
 local B = BanditsNPC.Bear
 
+B._orph = B._orph or {}             -- B1b: Waisen-Kandidaten { { o, at } } (Deckel B.CFG.orphanMax), nur fuer die Sitzung
+
 -- ---------------------------------------------------------------------------
 -- Spieler
 -- ---------------------------------------------------------------------------
@@ -24,8 +26,11 @@ local B = BanditsNPC.Bear
 -- Liste { p, key, uid, nr, x, y, z } der lebenden Spieler. Server: getOnlinePlayers() mit :size() / :get(i)
 -- (Vanilla server/Foraging/forageServer.lua:463-466). Einzelspieler: getNumActivePlayers() (Vanilla
 -- client/Fishing/FishingHandler.lua:6) und getSpecificPlayer(i) (server/BuildingObjects/ISBuildingObject.lua:183).
--- isDead am Spieler: server/Seasons/season.lua:127. getX/getY: Bandits server/BanditServerSpawner.lua:179.
+-- isDead am Spieler (Server: getOnlinePlayers():get(i), Einzelspieler: getSpecificPlayer(i)): server/XpSystem/XpUpdate.lua:298
+-- (Nachbesserung B1b A4: der vorige Beleg lag in auskommentiertem Vanilla-Code). getX/getY: Bandits server/BanditServerSpawner.lua:179.
 -- uid trennt lokale Spieler, die sich im Einzelspieler den Schluessel "__sp" teilen; nr ist dort die Spielernummer.
+-- car (B1b): sitzt der Spieler in einem Fahrzeug? player:getVehicle(): Vanilla server/Vehicles/VehicleCommands.lua:11 (Server,
+-- Spieler eines Client-Befehls), client/ISUI/Hutch/ISHutchMenu.lua:8 (getSpecificPlayer(n):getVehicle(), Einzelspieler).
 function B.Players()
     local list = {}
     if isServer() then
@@ -36,7 +41,8 @@ function B.Players()
                 if p and not p:isDead() then
                     local key = B.PlayerKey(p)
                     if key ~= nil then
-                        list[#list + 1] = { p = p, key = key, uid = key, nr = nil, x = p:getX(), y = p:getY(), z = p:getZ() }
+                        list[#list + 1] = { p = p, key = key, uid = key, nr = nil, x = p:getX(), y = p:getY(), z = p:getZ(),
+                                            car = (p:getVehicle() ~= nil) }
                     end
                 end
             end
@@ -47,7 +53,7 @@ function B.Players()
         local p = getSpecificPlayer(i)
         if p and not p:isDead() then
             list[#list + 1] = { p = p, key = B.SP_KEY, uid = B.SP_KEY .. "#" .. string.format("%d", i), nr = i,
-                                x = p:getX(), y = p:getY(), z = p:getZ() }
+                                x = p:getX(), y = p:getY(), z = p:getZ(), car = (p:getVehicle() ~= nil) }
         end
     end
     return list
@@ -282,23 +288,103 @@ end
 -- ist ein schon "weitergezogenes" Tier aus einer damals nicht geladenen Gegend (server/BanditsNPCBearServer.lua slowRec):
 -- es wird ueber B.RemoveCub entfernt, sobald niemand naeher als B.CFG.vanishKeep steht und es keiner sieht. Angefuetterte
 -- oder zahme Tiere ohne Eintrag bleiben (sie werden beim Anfassen ueber B.RecOf neu aufgenommen).
-function B.ScanAnimals(players)
+--
+-- B1b (PLAN_B1B.md 4, N5): WAISEN. Eine Waise ist ein lebendes ncbearcub OHNE Spiegel und ohne passenden Eintrag (Rest nach einem
+-- Fehler oder Absturz). Nie der Erwachsene, nie fremde Tiere (Art-Frage oben). Drei Riegel, alle Pflicht:
+--   1 Identitaet: das in dieser Sitzung gemerkte Objekt eines Eintrags (B._s[id].obj) ist nie Waise; fehlt sein Spiegel, wird er
+--     sofort ueber B.Commit geschrieben (Spiegel-Reparatur).
+--   2 Mehrdeutig: gleiche AnimalID wie ein Eintrag ohne lebendes Objekt -> nie entfernt (nie raten; strenger als der Rueckfall,
+--     der nur bis 40 Kacheln bindet), eine Diagnose-Zeile, wenn der Rueckfall mehrere Kandidaten hatte.
+--   3 Alter und Beobachter: entfernt erst, wenn dasselbe Objekt schon bei einem frueheren Suchlauf vor mindestens
+--     B.CFG.orphanAgeMs Waise war (Liste B._orph, Deckel B.CFG.orphanMax, Vergleich mit ==), UND niemand naeher als
+--     B.CFG.vanishKeep steht, UND es im Einzelspieler keiner sieht. force ueberspringt NUR das Alter (der Spielcode ruft nie mit force).
+-- getTimestampMs: Vanilla server/Foraging/forageServer.lua:456. B.ScanAnimals gibt n (gebunden), removed (entfernte Waisen).
+
+-- Eine Waise entfernen, wenn niemand naeher als vanishKeep steht und sie (SP) keiner sieht. Rueckgabe: true, wenn entfernt.
+-- Nur ueber B.RemoveCub (einzige Entfern-Stelle; im MP mit removeAnimal).
+local function dropOrphan(o, players)
+    local nd = nearestDist(o:getX(), o:getY(), players)
+    if (nd ~= nil and nd < B.CFG.vanishKeep) or B.SeenInSP(o:getSquare(), players) then return false end
+    local x, y = math.floor(o:getX()), math.floor(o:getY())
+    B.RemoveCub(o)
+    B.Log("scan: removed an orphan cub (no mark, no entry) at " .. x .. "," .. y)
+    return true
+end
+
+local function sweepOrphans(found, players, force, ms)
+    local old = B._orph
+    if type(old) ~= "table" then old = {} end
+    local cap = tonumber(B.CFG.orphanMax) or 16
+    local keep = {}
+    local taken = {}
+    local removed = 0
+    -- zuerst die schon bekannten Waisen (sie sind der Entfernung naeher)
+    for i = 1, #found do
+        local o = found[i]
+        for k = 1, #old do
+            local e = old[k]
+            if type(e) == "table" and e.o == o then
+                taken[i] = true
+                local at = tonumber(e.at)
+                if at == nil or ms - at < 0 then at = ms end          -- Uhr rueckwaerts: Messung neu beginnen
+                if (force == true or ms - at >= B.CFG.orphanAgeMs) and dropOrphan(o, players) then
+                    removed = removed + 1
+                elseif #keep < cap then
+                    keep[#keep + 1] = { o = o, at = at }
+                end
+                break
+            end
+        end
+    end
+    -- dann neue, solange der Deckel Platz hat (auch Plaetze, die eben frei wurden); force entfernt sie gleich
+    for i = 1, #found do
+        if not taken[i] then
+            local o = found[i]
+            if force == true and dropOrphan(o, players) then
+                removed = removed + 1
+            elseif #keep < cap then
+                keep[#keep + 1] = { o = o, at = ms }
+            end
+        end
+    end
+    B._orph = keep
+    return removed
+end
+
+function B.ScanAnimals(players, force)
     local reg = B.Reg()
-    if not reg then return 0 end
+    if not reg then return 0, 0 end
     local list = getCell():getObjectListForLua()
-    if not list then return 0 end
+    if not list then return 0, 0 end
     players = players or B.Players()
     local n = 0
     local loose = nil
+    local looseMark = nil                       -- [j] = true: dieses lose Tier traegt einen Spiegel (dann nie Waise)
     local stale = nil
     for i = 0, list:size() - 1 do
         local o = list:get(i)
         if instanceof(o, "IsoAnimal") and o:getAnimalType() == B.CUB and not o:isDead() then
             local md = o:getModData()
             local mark = md and md[B.MARK]
+            local hasMark = type(mark) == "table" and mark.id ~= nil
             local rec = nil
             local bound = false
-            if type(mark) == "table" and mark.id ~= nil then
+            -- Riegel 1 (Identitaet + Spiegel-Reparatur)
+            for id, s in pairs(B._s) do
+                if s.obj == o then
+                    local own = reg.cubs[id]
+                    if own then
+                        bound = true
+                        n = n + 1
+                        if not hasMark or mark.id ~= id then
+                            B.Commit(own)
+                            B.Log("scan: mark of " .. tostring(id) .. " written anew (the animal is the one of this session)")
+                        end
+                    end
+                    break
+                end
+            end
+            if not bound and hasMark then
                 rec = reg.cubs[mark.id]
                 if rec == nil and (mark.st == "new" or mark.st == "shy") then
                     stale = stale or {}
@@ -306,7 +392,7 @@ function B.ScanAnimals(players)
                     bound = true                    -- nicht zuordnen: dieses Tier hat keinen Eintrag mehr
                 end
             end
-            if rec and rec.aid == o:getAnimalID() then
+            if not bound and rec and rec.aid == o:getAnimalID() then
                 local s = B.Ses(rec.id)
                 if s.obj == nil or s.obj == o or not s.obj:isExistInTheWorld() or s.obj:isDead() then
                     s.obj = o
@@ -316,21 +402,31 @@ function B.ScanAnimals(players)
             end
             if not bound then
                 loose = loose or {}
+                looseMark = looseMark or {}
                 loose[#loose + 1] = o
+                looseMark[#loose] = hasMark
             end
         end
     end
+    -- Rueckfall ueber die AnimalID fuer jeden Eintrag OHNE lebendes Objekt (B1b: auch, wenn das gemerkte Objekt nicht mehr in
+    -- der Welt ist -- wie der Spiegel-Weg oben; B1a nahm nur Eintraege ganz ohne Objekt).
+    local guard = nil                           -- Riegel 2: [j] = true -> dieses lose Tier wird nie entfernt
     if loose then
         for id, rec in pairs(reg.cubs) do
             local s = B._s[id]
-            if s == nil or s.obj == nil then
+            local live = s ~= nil and s.obj ~= nil and s.obj:isExistInTheWorld() and not s.obj:isDead()
+            if not live then
                 local hit, hitAt, hits = nil, 0, 0
                 for j = 1, #loose do
                     local o = loose[j]
-                    if o and o:getAnimalID() == rec.aid and B.DistXY(o:getX(), o:getY(), rec.x, rec.y) <= 40 then
-                        hit = o
-                        hitAt = j
-                        hits = hits + 1
+                    if o and o:getAnimalID() == rec.aid then
+                        guard = guard or {}
+                        guard[j] = true
+                        if B.DistXY(o:getX(), o:getY(), rec.x, rec.y) <= 40 then
+                            hit = o
+                            hitAt = j
+                            hits = hits + 1
+                        end
                     end
                 end
                 if hits == 1 then
@@ -339,6 +435,8 @@ function B.ScanAnimals(players)
                     n = n + 1
                     B.Commit(rec)
                     B.Log("scan: " .. id .. " found again by its animal id, mark written anew")
+                elseif hits > 1 then
+                    B.Log("scan: " .. id .. " has " .. hits .. " animals with its animal id nearby: none bound, none removed")
                 end
             end
         end
@@ -354,7 +452,15 @@ function B.ScanAnimals(players)
             end
         end
     end
-    return n
+    local found = {}
+    if loose then
+        for j = 1, #loose do
+            local o = loose[j]
+            if o and not looseMark[j] and not (guard and guard[j]) then found[#found + 1] = o end
+        end
+    end
+    local removed = sweepOrphans(found, players, force, getTimestampMs())
+    return n, removed
 end
 
 -- ---------------------------------------------------------------------------
@@ -381,12 +487,16 @@ local TURN = { 0, 0.6, -0.6, 1.2, -1.2 }
 
 -- Zu einem Punkt rennen. animal:fleeTo(square): Vanilla shared/TimedActions/Animals/ISMilkAnimal.lua:38 (laeuft dort auch auf
 -- dem Server). Derselbe Befehl fruehestens nach B.CFG.moveMs. Zielkachel nicht geladen oder Wasser: Ersatzpunkte, dann nichts.
+-- opt (B1b, wahlfrei): opt.minMs ersetzt B.CFG.moveMs; opt.watch == false -> keine Gegenprobe (B.MoveWatch), weil beim Folgen
+-- ein Halt vor einer Tuer kein Fehler ist. Ohne opt wie B1a.
 -- Rueckgabe: true, wenn ein Befehl hinausging.
-function B.MoveTo(rec, animal, x, y, z)
+function B.MoveTo(rec, animal, x, y, z, opt)
     if not rec or not animal or x == nil or y == nil then return false end
     local ms = getTimestampMs()
     local s = B.Ses(rec.id)
-    if s.moveAt ~= nil and ms - s.moveAt >= 0 and ms - s.moveAt < B.CFG.moveMs then return false end
+    local minMs = B.CFG.moveMs
+    if type(opt) == "table" and tonumber(opt.minMs) ~= nil then minMs = tonumber(opt.minMs) end
+    if s.moveAt ~= nil and ms - s.moveAt >= 0 and ms - s.moveAt < minMs then return false end
     local ax, ay = animal:getX(), animal:getY()
     local dx, dy = x - ax, y - ay
     z = math.floor(z or 0)
@@ -405,7 +515,9 @@ function B.MoveTo(rec, animal, x, y, z)
     animal:fleeTo(sq)
     s.moveAt = ms
     -- Gegenprobe nur fuer Wege, die lang genug sind, um sie zu sehen
-    if dx * dx + dy * dy >= 2.25 then
+    if type(opt) == "table" and opt.watch == false then
+        s.chk = nil
+    elseif dx * dx + dy * dy >= 2.25 then
         s.chk = { x = ax, y = ay, n = 0 }
     else
         s.chk = nil

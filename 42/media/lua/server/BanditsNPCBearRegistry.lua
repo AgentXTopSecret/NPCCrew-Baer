@@ -19,7 +19,8 @@ local B = BanditsNPC.Bear
 
 local reg = nil                 -- gesetzt in OnInitGlobalModData; vorher wartet alles
 
-B._s = B._s or {}               -- Sitzung je Eintrag: [id] = { obj, held, moveAt, curiousAt, chk, orphanAt }
+B._s = B._s or {}               -- Sitzung je Eintrag: [id] = { obj, held, moveAt, curiousAt, chk, f }
+                                -- f (B1b) = { held, orderAt, tx, ty, bestD, bestAt, stuck, retryAt }: Folgen, nie gespeichert
 B._rev = B._rev or 0            -- zaehlt jede Aenderung, die eine Sicht betrifft
 -- Wen betrifft das Geaenderte? Der Takt schickt danach nur diesen Spielern eine neue Sicht (B.FlushViews).
 B._dirty = B._dirty or { any = true, all = true, keys = {}, spots = {}, n = 0 }
@@ -86,6 +87,21 @@ function B.InitRegistry()
     for i = 1, #bad do
         B.Err("registry: dropped unreadable entry " .. tostring(bad[i]))
         r.cubs[bad[i]] = nil
+    end
+    -- B1b (PLAN_B1B.md 5.2): Folgen-Zustand und Name pruefen. Unbrauchbar -> nil (Vorgabe "stay" / Vorgabe-Name), je Feld eine Zeile.
+    for id, rec in pairs(r.cubs) do
+        if rec.mode ~= nil and rec.mode ~= "follow" and rec.mode ~= "stay" then
+            B.Err("registry: entry " .. tostring(id) .. " had an unknown mode, set to stay")
+            rec.mode = nil
+        end
+        if rec.name ~= nil then
+            local clean = nil
+            if type(rec.name) == "string" then clean = B.CleanName(rec.name) end
+            if clean == nil or clean ~= rec.name then
+                B.Err("registry: entry " .. tostring(id) .. " had an unusable name, removed")
+                rec.name = nil
+            end
+        end
     end
     bad = {}
     for bid, bait in pairs(r.baits) do
@@ -165,6 +181,7 @@ function B.NewRec(src, pkey, animal, x, y, z, now)
         idleH = 0, goneP = nil, missN = 0, missAt = nil, missH = 0, hintAt = nil,
         x = x, y = y, z = z,
         hx = nil, hy = nil, hz = nil,
+        mode = nil, name = nil,                       -- B1b: nil = "stay" / Vorgabe-Name beim Client
     }
     if src == "found" then
         -- ein Junges ohne Eintrag, das jemand anfasst: schon entdeckt, gehoert niemandes "wildem Jungen"
@@ -173,6 +190,12 @@ function B.NewRec(src, pkey, animal, x, y, z, now)
     end
     reg.cubs[id] = rec
     B.Ses(id).obj = animal
+    -- B1b (PLAN_B1B.md 4.4): Spiegel SOFORT schreiben, ohne die isExistInTheWorld-Frage von B.Commit -- die ist direkt nach
+    -- addToWorld noch falsch (Fix 1); ohne Spiegel saehe der Waisen-Suchlauf das neue Junge sonst als Waise.
+    -- Schreiben in die ModData eines Tiers: Vanilla client/ISUI/ISInventoryPaneContextMenu.lua:4127
+    -- (animal:getModData()["skeleton"] = "true"); lesen am Tier shared/Definitions/animal/ButcheringUtil.lua:596.
+    local md = animal:getModData()
+    if md then md[B.MARK] = { id = id, st = rec.st } end
     B.Touch(rec)
     return rec, nil
 end
@@ -403,9 +426,13 @@ local function viewEntry(rec)
         local got = a:getOnlineID()          -- Vanilla shared/Definitions/animal/ButcheringUtil.lua:614 (isServer-Zweig)
         if got ~= nil then oid = got end
     end
+    -- B1b (PLAN_B1B.md 5.2): name (nil fehlt im Eintrag), mode nur bei "tame" (Schild Zeile 2)
+    local mode = nil
+    if rec.st == "tame" then mode = B.ModeOf(rec) end
     return {
         id = rec.id, oid = oid, st = rec.st, tame = rec.tame, fedN = rec.fedN, petN = rec.petN, last = rec.last,
         feedAt = rec.feedAt, petAt = rec.petAt, bond = rec.bond, owner = rec.owner, src = rec.src,
+        name = rec.name, mode = mode,
     }
 end
 

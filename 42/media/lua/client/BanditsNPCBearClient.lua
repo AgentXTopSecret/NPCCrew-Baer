@@ -1,5 +1,6 @@
 --
--- NPC Crew -- Baer, Client-Seite der Befehle und Meldungen (B1a, PLAN_ZAEHMEN.md 5.6, 6.2.4, 6.2.6).
+-- NPC Crew -- Baer, Client-Seite der Befehle und Meldungen (B1a, PLAN_ZAEHMEN.md 5.6, 6.2.4, 6.2.6; B1b, PLAN_B1B.md 5.4:
+-- Namen fuer das Schild, neue Texte).
 --
 -- Laeuft im Einzelspieler und auf jedem MP-Client (der dedizierte Server laedt client/ nicht). Diese Datei entscheidet NICHTS:
 -- sie nimmt die Sicht ("Sync") und die Meldungen ("Note") des Schreibers an, zeigt Meldungen ueber der Figur und bittet beim
@@ -44,7 +45,7 @@ U.EN = {
     UI_BN_Bear_Note_GainMix = "+%1 trust - it likes the change!",
     UI_BN_Bear_Note_GainFav = "+%1 trust - it loves this!",
     UI_BN_Bear_Note_FirstFed = "It ate from your hand. It will stay around here now.",
-    UI_BN_Bear_Note_Tamed = "The cub trusts you. It is yours now!",
+    UI_BN_Bear_Note_Tamed = "The cub trusts you. It is yours now! Right-click it and choose Follow me.",
     UI_BN_Bear_Note_Happy = "It enjoys that.",
     UI_BN_Bear_Note_Vanished = "The bear cub has wandered off.",
     UI_BN_Bear_Note_Dead = "The bear cub is dead.",
@@ -96,6 +97,27 @@ U.EN = {
     UI_BN_Bear_Hud_BaitNight = "night %1 of up to %2",
     UI_BN_Bear_Hud_BaitReady = "something was here",
     UI_BN_Bear_Tip_Mix = "Taking turns between feeding and petting earns more trust.",
+    -- B1b (PLAN_B1B.md 6.1 und 6.2): Folgen, Bleiben, Namensschild, Umbenennen, Futter hinhalten
+    UI_BN_Bear_Why_NameBad = "That name does not work. Use 1 to %1 characters, without angle brackets or percent signs.",
+    UI_BN_Bear_Why_InCar = "Not while you are in a vehicle.",
+    UI_BN_Bear_Note_Follow = "Your cub follows you.",
+    UI_BN_Bear_Note_Stay = "Your cub stays here.",
+    UI_BN_Bear_Note_StayCar = "Your cub cannot follow a vehicle. It waits here.",
+    UI_BN_Bear_Note_StayFar = "Your cub could not keep up. It waits to the %1.",
+    UI_BN_Bear_Note_StayBehind = "Your cub stayed behind to the %1.",
+    UI_BN_Bear_Note_Renamed = "Your cub is now called %1.",
+    UI_BN_Bear_Menu_Follow = "Follow me",
+    UI_BN_Bear_Menu_Stay = "Stay here",
+    UI_BN_Bear_Menu_FollowTip = "It runs after you. In a vehicle or when you get too far ahead, it waits.",
+    UI_BN_Bear_Menu_StayTip = "It stays around this spot.",
+    UI_BN_Bear_Menu_Name = "Name the cub",
+    UI_BN_Bear_Name_Title = "Name for your cub:",
+    UI_BN_Bear_Menu_Hold = "Hold out food for the cub",
+    UI_BN_Bear_Menu_HoldTip = "Takes it in your hand. Stand still and the cub comes closer.",
+    UI_BN_Bear_Tag_Name = "%1's cub",
+    UI_BN_Bear_Tag_Follow = "following",
+    UI_BN_Bear_Tag_Stay = "staying",
+    UI_BN_Bear_Tag_Owner = "belongs to %1",
 }
 
 local KEY_HEAD = "UI_BN_Bear_"
@@ -155,6 +177,44 @@ function U.NoteText(note)
         return U.T(key, tostring(v))
     end
     return U.T(key)
+end
+
+-- ---------------------------------------------------------------------------
+-- Namen fuer das Schild (B1b, PLAN_B1B.md 2.1, 5.4). Der Name lebt nur im Register (Plan 0.3); fehlt er, setzt der Client den
+-- Vorgabe-Namen "<Spieler>'s cub" selbst zusammen -- der Schreiber kennt den Vornamen der Figur nicht und braucht ihn nicht.
+-- Gerufen nur beim Listenbau des Schilds (hoechstens 1 x je Sekunde), nie je Bild.
+-- ---------------------------------------------------------------------------
+
+-- Vorname der eigenen Figur. getSpecificPlayer(0): client/Farming/CFarmingSystem.lua:45;
+-- getDescriptor():getForename() an der Spielfigur: client/XpSystem/ISUI/ISCharacterScreen.lua:84.
+function U.LocalName()
+    local p = getSpecificPlayer(0)
+    if not p then return "?" end
+    local desc = p:getDescriptor()
+    local name = desc and desc:getForename()
+    if type(name) ~= "string" or name == "" then return "?" end
+    return name
+end
+
+-- Zeile 1 des Schilds: der Name aus dem Register, sonst der Vorgabe-Name. Besitzer im Einzelspieler ist der feste Schluessel
+-- B.SP_KEY ("__sp") -- der erscheint nie als Text, an seiner Stelle steht der Vorname der Figur. Im Mehrspieler ist der Besitzer
+-- der Kontoname (so steht er in der Sicht). Der zweite Parameter (meKey, Schnittstelle 5.4) aendert daran nichts: auch das eigene
+-- Junge heisst im Mehrspieler nach dem Kontonamen; ohne Besitzer steht "?". "__sp" im Mehrspieler (Junges eines frueheren
+-- Einzelspieler-Stands) -> "?", nie der eigene Vorname (Nachbesserung B1b B8).
+function U.CubName(c, _meKey)
+    if type(c) ~= "table" then return "" end
+    local name = c.name
+    if type(name) == "string" and name ~= "" then return name end
+    local owner = c.owner
+    local who
+    if owner == nil then
+        who = "?"
+    elseif owner == B.SP_KEY then
+        if B.IsSP ~= nil and B.IsSP() then who = U.LocalName() else who = "?" end
+    else
+        who = tostring(owner)
+    end
+    return U.T("UI_BN_Bear_Tag_Name", who)
 end
 
 -- ---------------------------------------------------------------------------

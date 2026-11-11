@@ -47,7 +47,9 @@ B.CFG = B.CFG or {
     forestRate = { 0, 2, 5, 12, 30 },                     -- Prozent je Spielstunde zu Option BearCubForestRate
     feedTime = 150, petTime = 150, baitTime = 100,        -- Dauer der Zeitaktionen
     petAnim = "lamb",
-    barZ = 0.55, hudDist = 20, hudMax = 6, menuFoods = 12,
+    -- tagZ (B1b, PLAN_B1B.md 1.7/2.2): Anker von Zaehm-Balken UND Namensschild ueber dem Boden des Tiers (Ebenen); ersetzt barZ
+    -- (0,55 war ~4,5 x zu hoch ueber dem kleinen Jungen). Stellwert: nach Kevins Blick im Spiel nachstellen.
+    tagZ = 0.18, hudDist = 20, hudMax = 6, menuFoods = 12,
     -- Zusatz des Kerns (nicht in Plan 3.3, gleiche Tabelle, damit alles Stellbare an einem Ort liegt):
     reach = 3,                                            -- Fuettern/Streicheln: Abstand kleiner als (Vanilla ISPetAnimal.lua:6)
     baitReach = 3,                                        -- Koeder auslegen: Spieler hoechstens so weit von der Kachel
@@ -61,6 +63,18 @@ B.CFG = B.CFG or {
     maxDtH = 1.0,                                         -- Deckel fuer einen Schritt des Langsam-Takts (Spielstunden)
     fedMissH = 1.0,                                       -- angefuettertes Junges: so lange fehlen (Spielstunden), bevor es "verloren" ist
     missScanMul = 6,                                      -- vermisstes zahmes Junges: Suchlauf nur je scanMs x so viel
+    -- B1b Folgen / Bleiben (PLAN_B1B.md 1.2, 1.4, 1.7). Abstaende in Kacheln, Zeiten in Echtzeit-ms.
+    followNear = 3, followStart = 4.5, followGap = 2,     -- halten bis / losrennen ab (Haltespanne) / Ziel so weit vor dem Besitzer
+    followLead = 1.5,                                     -- Vorhalt: so weit hoechstens rechnet das Ziel den Weg des Besitzers voraus
+    followMoveMs = 1200, followRepath = 2.5, followRenewMs = 4000,   -- fruehester neuer Laufbefehl / Ziel-Wanderung / Auffrischen
+    followStuckMs = 15000, followStuckGain = 1.0, followRetryMs = 10000,   -- "steckt fest" nach / Mindest-Fortschritt / ein Versuch je
+    -- Bleiben-Radius des gezaehmten Jungen (homeR gilt weiter fuer "fed"). 12 statt 8 (Nachbesserung B1b B7): die Engine wuerfelt
+    -- beim Wandern bis +-8 je Achse um das Tier (Jar BaseAnimalBehavior, forschung_b1b.md:120) -- mit 8 rannte es oft grundlos heim.
+    stayR = 12,
+    -- B1b Name, Bitten, Waisen (PLAN_B1B.md 1.7, 3.3, 4)
+    nameMax = 24,                                         -- hoechstens so viele Zeichen im Namen
+    askMs = 500,                                          -- Bitten "Mode"/"Rename" eines Spielers hoechstens so oft
+    orphanScanMs = 120000, orphanAgeMs = 30000, orphanMax = 16,   -- eigener Waisen-Suchlauf je / Mindestalter einer Waise / Deckel
 }
 
 -- Sandbox-Optionen BanditsNPC.<Name> (Plan 3.1): Vorgabe und Bereich. Die Datei sandbox-options.txt nennt dieselben Zahlen.
@@ -74,8 +88,9 @@ B.OPTS = B.OPTS or {
     BearBaitEnabled = { def = true },
     BearBaitNights = { def = 3, min = 1, max = 7 },
     BearBaitFirstChance = { def = 40, min = 0, max = 100 },
-    BearTameFeedPoints = { def = 14, min = 1, max = 100 },
-    BearTamePetPoints = { def = 8, min = 0, max = 100 },
+    -- Kevin 11.11.2026 (begleiter/ENTSCHEIDUNGEN.md, Zaehm-Dauer): Abklingzeiten bleiben, weniger Punkte je Handlung -> ~12 Spielstunden
+    BearTameFeedPoints = { def = 4, min = 1, max = 100 },
+    BearTamePetPoints = { def = 3, min = 0, max = 100 },
     BearTameMixBonus = { def = 50, min = 0, max = 200 },
     BearTameFavoriteBonus = { def = 50, min = 0, max = 200 },
     BearTameMinFeedings = { def = 3, min = 0, max = 10 },
@@ -83,6 +98,7 @@ B.OPTS = B.OPTS or {
     BearPetCooldownMinutes = { def = 60, min = 0, max = 2880 },
     BearCubVanishHours = { def = 36, min = 0, max = 240 },
     BearDeathLockDays = { def = 7, min = 0, max = 60 },
+    BearFollowMaxDistance = { def = 40, min = 10, max = 60 },   -- B1b: weiter weg -> ein folgendes Junges wartet (Max unter 76 geladenen Kacheln)
     BearLog = { def = false },
 }
 
@@ -235,12 +251,23 @@ end
 -- Text mit bis zu drei Einsetzungen. Fehlt der Schluessel, der englische Ersatztext (Form BanditsNPC.T).
 -- getTextOrNull(key): Vanilla shared/TimedActions/ISReadABook.lua:220. getText(key, a, b): Vanilla
 -- shared/Definitions/animal/ButcheringUtil.lua:394 (zwei Einsetzungen), client/Vehicles/ISUI/ISVehicleMenu.lua:403 (vier).
+-- Fix 2 (Kevins Test 10.11.2026, console.txt: ~900 x "Translator.reportMissingArgumentsFromPastAbuse ... Missing arguments for
+-- UI_BN_Bear_Hud_Taming" usw. in wenigen Minuten): getTextOrNull(key) OHNE Argumente formatiert eine Vorlage mit %1 ohne Werte und
+-- wirft dabei jedes Mal eine Ausnahme (Warnung + Stacktrace). Die Existenzfrage deshalb nur EINMAL je Schluessel und Sitzung stellen
+-- (Zwischenspeicher tHas, gedeckelt durch die feste Zahl unserer Schluessel); formatiert wird wie bisher mit getText(key, Werte).
+-- Restwarnung: hoechstens eine je Schluessel mit Platzhalter und Sitzung (wie NPC Crew vor v3.11.19, shared/BanditsNPC.lua:2853-2856).
+local tHas = {}
 function B.T(key, fallback, a1, a2, a3)
     local s1, s2, s3 = argText(a1), argText(a2), argText(a3)
     if type(key) ~= "string" then
         return fill(tostring(fallback or ""), s1, s2, s3)
     end
-    if getTextOrNull(key) == nil then
+    local has = tHas[key]
+    if has == nil then
+        has = getTextOrNull(key) ~= nil
+        tHas[key] = has
+    end
+    if not has then
         return fill(tostring(fallback or key), s1, s2, s3)
     end
     if a3 ~= nil then return getText(key, s1, s2, s3) end
@@ -251,10 +278,14 @@ end
 
 -- Spielerschluessel (Plan 4.1): im Mehrspieler der Kontoname, im Einzelspieler ein fester Text.
 -- getUsername: Vanilla shared/Traps/TrapSystem.lua:45 (so merkt Vanilla den Fallensteller).
+-- Ein Mehrspieler-Konto, das woertlich wie der Einzelspieler-Schluessel heisst, bekommt keinen Schluessel (Nachbesserung B1b B8):
+-- sonst waere es Besitzer aller Jungen eines frueheren Einzelspieler-Stands. Seine Bitten verfallen, es zaehlt nicht als Spieler.
 function B.PlayerKey(player)
     if not player then return nil end
     if isClient() or isServer() then
-        return player:getUsername()
+        local name = player:getUsername()
+        if name == B.SP_KEY then return nil end
+        return name
     end
     return B.SP_KEY
 end

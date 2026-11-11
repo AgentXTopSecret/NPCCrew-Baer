@@ -262,10 +262,12 @@ local function toward(px, py, cx, cy, d)
     return px + dx / len * d, py + dy / len * d
 end
 
+-- Radius: c.homeR (B1b: der Schreiber gibt einem gezaehmten Jungen B.CFG.stayR mit), sonst B.CFG.homeR wie in B1a.
 local function farFromHome(c)
     if c.hx == nil or c.hy == nil then return false end
     local dx, dy = c.x - c.hx, c.y - c.hy
-    return math.sqrt(dx * dx + dy * dy) > B.CFG.homeR
+    local r = tonumber(c.homeR) or B.CFG.homeR
+    return math.sqrt(dx * dx + dy * dy) > r
 end
 
 function B.Decide(c, env)
@@ -318,4 +320,190 @@ function B.Decide(c, env)
     end
     -- 9: nichts zu tun; eine eigene Sperre wird geloest, die Engine laesst das Tier wandern
     return { act = "free", lead = false, rule = 9 }
+end
+
+-- ---------------------------------------------------------------------------
+-- B1b: Folgen / Bleiben und Name (PLAN_B1B.md 1.2, 3.3, 5.3). Rein: keine Engine, auch der Client darf rufen.
+-- ---------------------------------------------------------------------------
+
+-- Zustand eines gezaehmten Jungen: "follow" oder "stay". Fehlt das Feld (alte Spielstaende) oder steht Unsinn darin: "stay".
+function B.ModeOf(rec)
+    if type(rec) == "table" and rec.mode == "follow" then return "follow" end
+    return "stay"
+end
+
+local NAME_BAD = "UI_BN_Bear_Why_NameBad"
+
+-- Zeichenklassen fuer Namen (Nachbesserung B1b A1/A2/B4: ohne string.byte, das weder Vanilla noch Bandits aufrufen).
+-- Unter Kahlua schneidet string.sub Java-Zeichen (UTF-16), keine Bytes (Jar se/krka/kahlua/stdlib/StringLib.sub: String.substring),
+-- und string.len zaehlt dieselben Einheiten (Vanilla verlaesst sich darauf: shared/luautils.lua:5
+-- string.sub(String, 1, string.len(Start))). "<" / "<=" zwischen zwei Texten vergleicht mit String.compareTo (Jar
+-- se/krka/kahlua/vm/KahluaThread, Befehle LT/LE; Texte vergleicht Vanilla so z. B.
+-- client/DebugUIs/DebugMenu/Entity/ISEntityScriptsPanel.lua:149). Grenzen ueber 127 stehen als UTF-8-Bytefolge im Text
+-- ("\226\128\139" = U+200B): der Kahlua-Lader macht daraus EIN Zeichen (Jar org/luaj/kahluafork/compiler/LexState.newstring:
+-- new String(bytes, "UTF-8")). Die Datei bleibt reines ASCII. Laese der Lader die Folge anders, fiele nur diese Grenze aus (keine
+-- falsche Ablehnung: ein Zeichen ist dann kleiner als die Folge, die mit ihm beginnt).
+-- NAME_BADR: nicht druckbar -> Name abgelehnt. C0 (< " ") prueft der Code selbst.
+local NAME_BADR = {
+    { "\127", "\127" },                         -- DEL
+    { "\194\128", "\194\159" },                 -- U+0080-U+009F C1-Steuerzeichen (z. B. U+0085 NEXT LINE)
+    { "\194\173", "\194\173" },                 -- U+00AD weiches Trennzeichen (unsichtbar)
+    { "\216\156", "\216\156" },                 -- U+061C arabische Richtungsmarke
+    { "\225\133\159", "\225\133\160" },         -- U+115F-U+1160 Hangul-Fueller (unsichtbar)
+    { "\225\160\142", "\225\160\142" },         -- U+180E mongolischer Vokaltrenner
+    { "\226\128\139", "\226\128\143" },         -- U+200B-U+200F Null-Breite-Zeichen, Richtungsmarken
+    { "\226\128\168", "\226\128\174" },         -- U+2028-U+202E Zeilen-/Absatztrenner, Richtungs-Umschalter (U+202E)
+    { "\226\129\160", "\226\129\175" },         -- U+2060-U+206F Wortverbinder, Richtungs-Isolate (U+2066-U+2069)
+    { "\227\133\164", "\227\133\164" },         -- U+3164 Hangul-Fueller
+    { "\239\187\191", "\239\187\191" },         -- U+FEFF Null-Breite-Leerzeichen / BOM
+    { "\239\190\160", "\239\190\160" },         -- U+FFA0 Hangul-Fueller halbbreit
+    { "\239\191\185", "\239\191\187" },         -- U+FFF9-U+FFFB Anmerkungs-Steuerzeichen
+}
+-- NAME_SPACE: Leerraum -> am Rand weg, zaehlt nicht als sichtbar (ein Name nur daraus ist leer); in der Mitte erlaubt.
+local NAME_SPACE = {
+    { " ", " " },
+    { "\194\160", "\194\160" },                 -- U+00A0 geschuetztes Leerzeichen
+    { "\225\154\128", "\225\154\128" },         -- U+1680 Ogham-Leerzeichen
+    { "\226\128\128", "\226\128\138" },         -- U+2000-U+200A Leerzeichen verschiedener Breite
+    { "\226\128\175", "\226\128\175" },         -- U+202F schmales geschuetztes Leerzeichen
+    { "\226\129\159", "\226\129\159" },         -- U+205F mittleres mathematisches Leerzeichen
+    { "\227\128\128", "\227\128\128" },         -- U+3000 ideografisches Leerzeichen
+}
+
+local function inRanges(ch, list)
+    for i = 1, #list do
+        local r = list[i]
+        if ch >= r[1] and ch <= r[2] then return true end
+    end
+    return false
+end
+
+-- Name pruefen und saeubern. Rueckgabe: sauberer Text oder nil, whyKey (immer "UI_BN_Bear_Why_NameBad").
+-- Laenger als 4 x nameMax -> nil, bevor ein Zeichen einzeln angesehen wird (Deckel). Jedes Zeichen per string.sub: unter " ", die
+-- Bereiche NAME_BADR, "<", ">" und "%" -> nil ("<"/">" gegen Rich-Text in Tooltips, "%" gegen Platzhalter in getText). Leerraum
+-- (NAME_SPACE) vorn und hinten weg; nichts Sichtbares -> nil; danach laenger als B.CFG.nameMax -> nil. Druckbare Zeichen ueber 127
+-- (Umlaute, Kyrillisch, Koreanisch, Chinesisch) sind erlaubt. Gedruckte ASCII-Zeichen gehen den kurzen Weg (das Namensfenster ruft
+-- das je Bild). Nur string.len, string.sub und Textvergleiche.
+function B.CleanName(text)
+    if type(text) ~= "string" then return nil, NAME_BAD end
+    local max = tonumber(B.CFG.nameMax) or 24
+    local n = string.len(text)
+    if n > 4 * max then return nil, NAME_BAD end
+    local first, last = nil, nil
+    for k = 1, n do
+        local ch = string.sub(text, k, k)
+        local space
+        if ch >= " " and ch <= "~" then
+            if ch == "<" or ch == ">" or ch == "%" then return nil, NAME_BAD end
+            space = (ch == " ")
+        else
+            if ch < " " or inRanges(ch, NAME_BADR) then return nil, NAME_BAD end
+            space = inRanges(ch, NAME_SPACE)
+        end
+        if not space then
+            if first == nil then first = k end
+            last = k
+        end
+    end
+    if first == nil then return nil, NAME_BAD end
+    if last - first + 1 > max then return nil, NAME_BAD end
+    return string.sub(text, first, last), nil
+end
+
+-- Folgen: was soll ein folgendes Junges in diesem Hirn-Takt tun? Erste passende Regel gewinnt (Plan 1.2, Regeln 10-16).
+-- c = { x, y, z } (z ganze Ebene); o = nil | { key, x, y, z, dist, car, mx, my } (naechster Besitzer; mx/my = sein Weg seit dem
+-- letzten Hirn-Takt, fehlt -> 0); f = Sitzungs-Tabelle { held, orderAt, tx, ty, bestD, bestAt, bx, by, stuck, retryAt }: hier
+-- fortgeschrieben werden NUR bestD, bestAt, bx, by, stuck, retryAt (orderAt / tx / ty / held setzt B.FollowStep nach dem
+-- Ausfuehren). ms = Echtzeit.
+-- Rueckgabe { act, why, tx, ty, rule }: act "stay" / "hold" / "run" / "keep"; why "offline" / "car" / "far" / "level" / "near" /
+-- "stuck" / nil.
+-- Regel 10 (Nachbesserung B1b A7): ist der Besitzer nicht da (abgemeldet, tot, nach einem Server-Neustart noch nicht verbunden),
+-- WARTET das Junge (halten) und bleibt "follow" -- der Zustand ueberlebt so auch im Mehrspieler Abmelden und Neustart.
+-- Vorhalt (Nachbesserung B2): Halten (Regel 14) und Ziel (Regel 16) rechnen mit dem Ort, an dem der Besitzer im naechsten Takt
+-- etwa ist: sein Weg seit dem letzten Takt, gedeckelt auf followLead Kacheln. Steht er, ist das sein Ort.
+-- "Steckt fest" (Nachbesserung B1): bewegt sich das Junge in followStuckMs nicht um followStuckGain AUF DEN BESITZER ZU (gemessen
+-- ab seinem Ort beim letzten Fortschritt, bx/by) und wird auch der Abstand nicht um followStuckGain kleiner, gibt es nur noch je
+-- followRetryMs einen Laufbefehl. Ein Junges, das frei hinter einem gehenden Besitzer herrennt, ist so nie "fest"; eines vor einer
+-- geschlossenen Tuer oder an einer Wand entlang (seitlich, ohne Weg zum Besitzer) schon. Der Fortschritt wird vor Regel 15
+-- gerechnet (gilt auch waehrend des Wartens); jedes Halten (Regel 10/13/14) setzt ihn zurueck.
+local function resetProgress(f)
+    f.bestD = nil
+    f.bestAt = nil
+    f.bx = nil
+    f.by = nil
+    f.stuck = nil
+    f.retryAt = nil
+end
+
+-- Weg des Jungen seit dem letzten Fortschritt (f.bx, f.by), projiziert auf die Richtung zum Besitzer.
+local function gainToward(f, c, o)
+    if f.bx == nil or f.by == nil then return 0 end
+    local ux, uy = o.x - f.bx, o.y - f.by
+    local len = math.sqrt(ux * ux + uy * uy)
+    if len < 0.001 then return 0 end
+    return ((c.x - f.bx) * ux + (c.y - f.by) * uy) / len
+end
+
+function B.FollowDecide(c, o, f, ms)
+    local cfg = B.CFG
+    f = f or {}
+    if o == nil then
+        resetProgress(f)
+        return { act = "hold", why = "offline", rule = 10 }
+    end
+    if o.car then return { act = "stay", why = "car", rule = 11 } end
+    local d = tonumber(o.dist) or 0
+    if d > B.Opt("BearFollowMaxDistance") then return { act = "stay", why = "far", rule = 12 } end
+    if math.floor(tonumber(o.z) or 0) ~= math.floor(tonumber(c.z) or 0) then
+        resetProgress(f)
+        return { act = "hold", why = "level", rule = 13 }
+    end
+    local px, py = o.x, o.y
+    local mx, my = tonumber(o.mx) or 0, tonumber(o.my) or 0
+    local ml = math.sqrt(mx * mx + my * my)
+    local lead = tonumber(cfg.followLead) or 0
+    if ml > 0.001 and lead > 0 then
+        local k = 1
+        if ml > lead then k = lead / ml end
+        px, py = o.x + mx * k, o.y + my * k
+    end
+    local dp = B.DistXY(c.x, c.y, px, py)
+    if dp <= cfg.followNear or (f.held == true and dp <= cfg.followStart) then
+        resetProgress(f)
+        return { act = "hold", why = "near", rule = 14 }
+    end
+    -- Fortschritt (vor Regel 15). Uhr rueckwaerts: Messung neu beginnen.
+    if f.bestD == nil or f.bestAt == nil or ms - f.bestAt < 0 or d <= f.bestD - cfg.followStuckGain
+        or gainToward(f, c, o) >= cfg.followStuckGain then
+        f.bestD = d
+        f.bestAt = ms
+        f.bx, f.by = c.x, c.y
+        f.stuck = nil
+        f.retryAt = nil
+    elseif not f.stuck and ms - f.bestAt >= cfg.followStuckMs then
+        f.stuck = true
+        f.retryAt = ms
+    end
+    local retry = false
+    if f.stuck then
+        local since = (f.retryAt ~= nil) and (ms - f.retryAt) or cfg.followRetryMs
+        if since >= 0 and since < cfg.followRetryMs then
+            return { act = "keep", why = "stuck", rule = 15 }
+        end
+        retry = true
+    end
+    -- 16: rennen zu einem Punkt followGap Kacheln vor dem (vorausberechneten) Besitzer auf der Linie Besitzer -> Junges
+    local tx, ty = toward(px, py, c.x, c.y, cfg.followGap)
+    local age = nil
+    if f.orderAt ~= nil and ms - f.orderAt >= 0 then age = ms - f.orderAt end
+    if age ~= nil and age < cfg.followMoveMs then
+        return { act = "keep", tx = tx, ty = ty, rule = 16 }
+    end
+    local wandered = f.tx == nil or f.ty == nil or B.DistXY(f.tx, f.ty, tx, ty) >= cfg.followRepath
+    local renew = age == nil or age >= cfg.followRenewMs
+    if wandered or renew or f.held == true or retry then
+        if retry then f.retryAt = ms end
+        return { act = "run", tx = tx, ty = ty, rule = 16 }
+    end
+    return { act = "keep", tx = tx, ty = ty, rule = 16 }
 end

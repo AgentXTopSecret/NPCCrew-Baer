@@ -3,6 +3,9 @@
 --
 -- Tier-Menue: am Jungen (Art B.CUB) "Fuettern" (Untermenue mit dem Futter aus dem Inventar) und "Streicheln"; Vanillas "Kill"
 -- wird am Jungen ausgeblendet (Menue-Hygiene, kein Schutz). Welt-Menue: "Baeren-Koeder auslegen" und "Koederplatz aufgeben".
+-- B1b (PLAN_B1B.md 1.1, 3.1, 3.2): am eigenen gezaehmten Jungen der Umschalter "Follow me" / "Stay here" und "Name the cub"
+-- (nur der Besitzer, nur mit Sicht-Eintrag); im Welt-Menue "Hold out food for the cub" (Futter nur in die Hand nehmen, ohne das
+-- Tier anzuklicken), wenn ein passendes Junges in B.CFG.lureDist Kacheln steht.
 --
 -- Das Menue BIETET nur AN. Es stellt Zeitaktionen an (Fuettern, Streicheln, Koeder) bzw. schickt eine Bitte (Koederplatz
 -- aufgeben); ob etwas gilt, entscheidet der Schreiber in complete() bzw. in B.Handle (Einzelspieler: dasselbe Programm,
@@ -109,6 +112,29 @@ local function onBaitDrop(playerObj, baitId)
     B.Ask(playerObj, "BaitDrop", { id = baitId })
 end
 
+-- Folgen / Bleiben (B1b, Plan 1.1): nur eine Bitte. Ob sie gilt (Besitz, Fahrzeug, Abstand), entscheidet der Schreiber
+-- (Einzelspieler: B.Handle direkt; Mehrspieler: sendClientCommand). Die Tabelle ist nie leer (Plan 5.5).
+local function onMode(playerObj, id, mode)
+    if not playerObj or id == nil then return end
+    if mode ~= "follow" and mode ~= "stay" then return end
+    B.Ask(playerObj, "Mode", { id = id, mode = mode })
+end
+
+-- Umbenennen (B1b, Plan 3.1): das Eingabefenster (client/ISUI/BanditsNPCBearNameBox.lua) schickt die Bitte "Rename".
+local function onName(playerObj, v)
+    if not playerObj or not v or not U.AskName then return end
+    U.AskName(playerObj, v)
+end
+
+-- Futter hinhalten (B1b, Plan 3.2): das Stueck NUR in die Hand nehmen -- kein Hingehen, die Warteschlange bleibt. equip holt es
+-- bei Bedarf selbst aus der Tasche (transferIfNeeded) und stellt ISEquipWeaponAction an (client/ISUI/ISWorldObjectContextMenu.lua:2594-2622);
+-- derselbe Aufruf mit Futter: client/ISUI/Animal/ISAnimalContextMenu.lua:93. Danach greift die Regel des Schreibers "Futter in
+-- der Hand und stillstehen -> das Junge kommt naeher". Kein Gegenstand wird erzeugt oder vernichtet.
+local function onHold(playerObj, food)
+    if not playerObj or not food then return end
+    ISWorldObjectContextMenu.equip(playerObj, playerObj:getPrimaryHandItem(), food, true, false)
+end
+
 -- ---------------------------------------------------------------------------
 -- Tier-Menue
 -- ---------------------------------------------------------------------------
@@ -120,6 +146,22 @@ local function tipStatus(option, v)
         name = U.T("UI_BN_Bear_Hud_Taming", math.floor(v.tame))
     end
     setTip(option, name, U.T("UI_BN_Bear_Tip_Mix"))
+end
+
+-- Text einer Futterzeile (Fuettern und Futter hinhalten): Lieblingsfutter / normal / nur ein Happen, dazu die Anzahl.
+local function foodLabel(row)
+    local label
+    if row.class == "fav" then
+        label = U.T("UI_BN_Bear_Food_Fav", row.name)
+    elseif row.class == "snack" then
+        label = U.T("UI_BN_Bear_Food_Snack", row.name)
+    else
+        label = U.T("UI_BN_Bear_Food_Ok", row.name)
+    end
+    if type(row.count) == "number" and row.count > 1 then
+        label = label .. " (" .. tostring(row.count) .. ")"
+    end
+    return label
 end
 
 local function addFeed(menu, playerObj, animal, v, me, key)
@@ -140,18 +182,7 @@ local function addFeed(menu, playerObj, animal, v, me, key)
     local sub = ISContextMenu:getNew(menu)                                      -- ISAnimalContextMenu.lua:273
     menu:addSubMenu(feedOpt, sub)                                               -- :274
     for _, row in ipairs(rows) do
-        local label
-        if row.class == "fav" then
-            label = U.T("UI_BN_Bear_Food_Fav", row.name)
-        elseif row.class == "snack" then
-            label = U.T("UI_BN_Bear_Food_Snack", row.name)
-        else
-            label = U.T("UI_BN_Bear_Food_Ok", row.name)
-        end
-        if type(row.count) == "number" and row.count > 1 then
-            label = label .. " (" .. tostring(row.count) .. ")"
-        end
-        sub:addOption(label, playerObj, onFeed, animal, row.item)               -- ISAnimalContextMenu.lua:280
+        sub:addOption(foodLabel(row), playerObj, onFeed, animal, row.item)      -- ISAnimalContextMenu.lua:280
     end
 end
 
@@ -166,6 +197,36 @@ local function addPet(menu, playerObj, animal, v, me, key)
         end
     end
     tipStatus(petOpt, v)
+end
+
+-- Zustand des Jungen laut Sicht (Regel des Kerns B.ModeOf, Plan 5.3: nil und alles andere heisst "stay").
+local function modeOf(v)
+    local f = B.ModeOf
+    if f then return f(v) end
+    if v.mode == "follow" then return "follow" end
+    return "stay"
+end
+
+-- Umschalter (Plan 1.1): bei "stay" steht "Follow me", bei "follow" "Stay here" -- nie beide. Grau nur mit Grund: im Fahrzeug
+-- kann das Junge nicht folgen (Vorpruefung; alles andere entscheidet der Schreiber). getVehicle() am Spieler:
+-- client/ISUI/Hutch/ISHutchMenu.lua:8.
+local function addMode(menu, playerObj, v)
+    if modeOf(v) == "follow" then
+        local opt = menu:addOption(U.T("UI_BN_Bear_Menu_Stay"), playerObj, onMode, v.id, "stay")
+        setTip(opt, nil, U.T("UI_BN_Bear_Menu_StayTip"))
+        return
+    end
+    local opt = menu:addOption(U.T("UI_BN_Bear_Menu_Follow"), playerObj, onMode, v.id, "follow")
+    if playerObj:getVehicle() then
+        setGray(opt, U.T("UI_BN_Bear_Why_InCar"))
+        return
+    end
+    setTip(opt, nil, U.T("UI_BN_Bear_Menu_FollowTip"))
+end
+
+-- "Name the cub" (Plan 3.1): kein Graufall.
+local function addName(menu, playerObj, v)
+    menu:addOption(U.T("UI_BN_Bear_Menu_Name"), playerObj, onName, v)
 end
 
 -- Ein Junges: Vanillas Untermenue suchen (fehlt es, auf die oberste Ebene), "Kill" entfernen, eigene Punkte anhaengen.
@@ -191,6 +252,11 @@ local function cubMenu(context, playerObj, animal, name, nth)
     local key = B.PlayerKey(playerObj)
     addFeed(menu, playerObj, animal, v, me, key)
     addPet(menu, playerObj, animal, v, me, key)
+    -- B1b: nur am eigenen gezaehmten Jungen und nur, wenn die Sicht es kennt (Fremde sehen die Punkte gar nicht, Plan 1.1, 1.6).
+    if v and v.id ~= nil and v.st == "tame" and key ~= nil and v.owner == key then
+        addMode(menu, playerObj, v)
+        addName(menu, playerObj, v)
+    end
 end
 
 -- Vanillas eigenes Tier-Menue haengt am selben Ereignis (ISAnimalContextMenu.lua:1013-1017, :1235) und laedt vor uns: sein
@@ -277,6 +343,41 @@ local function addBait(context, playerObj, sq, me, rows, near)
     end
 end
 
+-- ---------------------------------------------------------------------------
+-- Welt-Menue: Futter hinhalten (B1b, Plan 3.2)
+-- ---------------------------------------------------------------------------
+
+-- Steht ein Junges mit Objekt in B.CFG.lureDist Kacheln um den Spieler, das auf sein Futter reagiert? Wie die Regel des
+-- Schreibers (server keysOf): scheue (new/shy) jeder, angefuetterte nur der Gebundene, gezaehmte nur der Besitzer -- und nur,
+-- solange es bleibt: ein folgendes Junges rechnet B.FollowDecide, dort spielt Futter keine Rolle (Nachbesserung B1b B6).
+local function holdWanted(playerObj, key)
+    if not U.CubsNear or key == nil then return false end
+    local near = U.CubsNear(playerObj, B.CFG.lureDist or 15)
+    for i = 1, #near do
+        local c = near[i].c
+        local st = c.st
+        if st == "new" or st == "shy" then return true end
+        if st == "fed" and c.bond == key then return true end
+        if st == "tame" and c.owner == key and modeOf(c) ~= "follow" then return true end
+    end
+    return false
+end
+
+local function addHold(context, playerObj)
+    local opt = context:addOption(U.T("UI_BN_Bear_Menu_Hold"), nil, nil)
+    local rows = B.FoodList(playerObj, B.CFG.menuFoods)
+    if not rows or #rows == 0 then
+        setGray(opt, U.T("UI_BN_Bear_Menu_NoFood"))
+        return
+    end
+    setTip(opt, nil, U.T("UI_BN_Bear_Menu_HoldTip"))
+    local sub = ISContextMenu:getNew(context)                   -- client/ISUI/Animal/ISAnimalContextMenu.lua:48
+    context:addSubMenu(opt, sub)                                -- :49
+    for _, row in ipairs(rows) do
+        sub:addOption(foodLabel(row), playerObj, onHold, row.item)
+    end
+end
+
 local function onFillWorld(player, context, worldobjects, test)
     -- Dieselbe Tuer wie Vanillas Menues: client/ISUI/Hutch/ISHutchMenu.lua:4
     if test and ISWorldObjectContextMenu.Test then return true end
@@ -305,6 +406,13 @@ local function onFillWorld(player, context, worldobjects, test)
         else
             addBaitDrop(context, playerObj, sq, view)
         end
+    end
+
+    -- B1b: Futter hinhalten -- nur wenn ein passendes Junges nah ist (sonst kein Menue-Muell in der Stadt). Steht VOR dem Riegel
+    -- des Koeder-Teils: auch mit ausgeschaltetem Koeder oder ausgeschalteten neuen Jungen bleibt das eigene Junge lockbar.
+    if holdWanted(playerObj, B.PlayerKey(playerObj)) then
+        if test then return ISWorldObjectContextMenu.setTest() end
+        addHold(context, playerObj)
     end
 
     -- Auslegen: nur wenn Junge und Koeder eingeschaltet sind (sonst kein Menue-Muell).

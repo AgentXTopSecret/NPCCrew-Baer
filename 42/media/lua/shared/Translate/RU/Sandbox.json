@@ -27,6 +27,8 @@
     "Sandbox_BanditsNPC_BearDeathLockDays_tooltip": "После гибели вашего приручённого медведя ни один новый медвежонок не станет вам доверять столько игровых дней.",
     "Sandbox_BanditsNPC_BearFeedCooldownMinutes": "Приручение: минут между кормлениями",
     "Sandbox_BanditsNPC_BearFeedCooldownMinutes_tooltip": "Игровых минут до того, как того же медвежонка можно снова покормить.",
+    "Sandbox_BanditsNPC_BearFollowMaxDistance": "Медведь: предел расстояния при следовании",
+    "Sandbox_BanditsNPC_BearFollowMaxDistance_tooltip": "В клетках. Если хозяин уходит дальше этого, медвежонок, который идёт за ним, останавливается и ждёт на месте.",
     "Sandbox_BanditsNPC_BearLog": "Медведь: строки диагностики",
     "Sandbox_BanditsNPC_BearLog_tooltip": "Пишет строки диагностики [TC-BEAR] в консоль. Только для сообщений об ошибках; настоящие ошибки пишутся всегда.",
     "Sandbox_BanditsNPC_BearMaxPerPlayer": "Медведей на игрока",

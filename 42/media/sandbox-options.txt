@@ -81,7 +81,7 @@ option BanditsNPC.BearBaitFirstChance
 /* Bar points per feeding (bar 0..100). */
 option BanditsNPC.BearTameFeedPoints
 {
-	type = integer, min = 1, max = 100, default = 14,
+	type = integer, min = 1, max = 100, default = 4,
 	page = BanditsNPC,
 	translation = BanditsNPC_BearTameFeedPoints,
 }
@@ -89,7 +89,7 @@ option BanditsNPC.BearTameFeedPoints
 /* Bar points per petting. */
 option BanditsNPC.BearTamePetPoints
 {
-	type = integer, min = 0, max = 100, default = 8,
+	type = integer, min = 0, max = 100, default = 3,
 	page = BanditsNPC,
 	translation = BanditsNPC_BearTamePetPoints,
 }
@@ -148,6 +148,14 @@ option BanditsNPC.BearDeathLockDays
 	type = integer, min = 0, max = 60, default = 7,
 	page = BanditsNPC,
 	translation = BanditsNPC_BearDeathLockDays,
+}
+
+/* Tiles: a following cub switches to staying when its owner gets farther away than this. Max 60 stays under the about 76 loaded tiles. */
+option BanditsNPC.BearFollowMaxDistance
+{
+	type = integer, min = 10, max = 60, default = 40,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearFollowMaxDistance,
 }
 
 /* Diagnosis lines [TC-BEAR] in the console; real errors are always written. */

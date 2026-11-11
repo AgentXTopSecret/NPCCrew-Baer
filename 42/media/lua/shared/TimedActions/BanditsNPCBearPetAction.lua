@@ -61,13 +61,20 @@ function BanditsNPCBearPetAction:start()
         self.petPose = true
     end
     self.animal:getBehavior():setBlockMovement(true)                -- :36
+    -- Fix 3: Streichel-Ton (Schluessel "petting" der Rasse, BanditsNPCBearDefs.lua). playBreedSound(Schluessel) am Tier beim Start und
+    -- stopOrTriggerSound am Ende: Form Vanilla shared/TimedActions/Animals/ISPickupAnimal.lua:23 (start) und :27/:33.
+    self.sound = self.animal:playBreedSound("petting")
 end
 
--- Jeder Ausgang: Haltung beenden, Sperre loesen (ISPetAnimal.lua:46-67).
+-- Jeder Ausgang: Haltung beenden, Ton beenden, Sperre loesen (ISPetAnimal.lua:46-67).
 function BanditsNPCBearPetAction:release()
     if self.petPose then
         self.character:setVariable("petanimal", false)              -- :47
         self.petPose = nil
+    end
+    if self.sound then
+        self.character:stopOrTriggerSound(self.sound)               -- ISPickupAnimal.lua:27/:33
+        self.sound = nil
     end
     local a = self.animal
     if a then

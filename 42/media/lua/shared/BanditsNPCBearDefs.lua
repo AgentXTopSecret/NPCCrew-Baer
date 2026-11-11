@@ -52,6 +52,12 @@ breeds[BREED] = {
     invIconFemaleSkel = "Item_Skeleton_Deer_Doe",
     sounds = {
         fallover = { name = "AnimalFoleyBuckBodyfall" },
+        -- Fix 3 (Kevin 10.11.2026: "wieso macht streicheln keinen sound wie bei tiere streicheln"): Streichel-Ton der Hand wie beim
+        -- Kalb (Form CowDefinitions.lua:340 "petting = { name = "PetAnimalCalf" }", Ton category Player,
+        -- scripts/generated/sounds/player/sounds_player_farming.txt:57). Vanilla spielt ihn ueber das Anim-Ereignis PlayBreedSound
+        -- im idlePetting-Knoten der Kuh (AnimSets/cow/idle/idlePetting.xml:13); das Animset buck hat keinen solchen Knoten, deshalb
+        -- spielt ihn unsere Zeitaktion selbst (BanditsNPCBearPetAction.lua start).
+        petting = { name = "PetAnimalCalf" },
     },
 }
 

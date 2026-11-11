@@ -27,6 +27,8 @@
     "Sandbox_BanditsNPC_BearDeathLockDays_tooltip": "Depois que seu urso domado morre, nenhum filhote novo vai confiar em você durante esta quantidade de dias de jogo.",
     "Sandbox_BanditsNPC_BearFeedCooldownMinutes": "Domar: minutos entre alimentações",
     "Sandbox_BanditsNPC_BearFeedCooldownMinutes_tooltip": "Minutos de jogo antes que o mesmo filhote possa ser alimentado de novo.",
+    "Sandbox_BanditsNPC_BearFollowMaxDistance": "Urso: limite de distância ao seguir",
+    "Sandbox_BanditsNPC_BearFollowMaxDistance_tooltip": "Em quadrados. Se o dono se afastar mais do que isso, um filhote que o segue para e espera ali.",
     "Sandbox_BanditsNPC_BearLog": "Urso: linhas de diagnóstico",
     "Sandbox_BanditsNPC_BearLog_tooltip": "Escreve linhas de diagnóstico [TC-BEAR] no console. Só para relatar erros; erros reais são sempre escritos.",
     "Sandbox_BanditsNPC_BearMaxPerPlayer": "Ursos por jogador",

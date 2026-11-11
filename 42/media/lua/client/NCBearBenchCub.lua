@@ -17,8 +17,18 @@
 --   NCBear_CubKill()         naechstes Junges toeten (Tod und Sperre pruefen)
 --   NCBear_CubClean()        alle Jungen in der geladenen Gegend entfernen, Register leeren (auch Koeder und Sperren)
 --   NCBear_CubLog(on)        Diagnose-Zeilen [TC-BEAR] an/aus
---   NCBear_CubSet(feld, wert) einen Stellwert aus B.CFG aendern (z. B. "barZ", "petAnim", "shyDist"); gilt bis zum Spielende
--- Rechtsklick auf eine Kachel, Untermenue "NC Bear": fuenf Eintraege "Cub: ...". Texte hier sind englische Literale.
+--   NCBear_CubSet(feld, wert) einen Stellwert aus B.CFG aendern (z. B. "tagZ" = Hoehe von Balken und Namensschild ueber dem
+--                            Jungen, "petAnim", "shyDist"); gilt bis zum Spielende
+-- B1b (PLAN_B1B.md 5.6):
+--   NCBear_CubFollow(on)     meinem naechsten zahmen Jungen Folgen an (true) / aus (false) / umschalten (nil) -- ueber dieselbe
+--                            Bitte "Mode" wie der Rechtsklick, also mit denselben Pruefungen des Schreibers
+--   NCBear_CubName(text)     mein naechstes zahmes Junges umbenennen (Bitte "Rename", dieselben Pruefungen)
+--   NCBear_CubFollowTest()   Folgen-Zustand drucken: Modus, Abstand zum Besitzer, Ebenen, Fahrzeug, Sitzung (gehalten, fest,
+--                            Alter des letzten Laufbefehls), Heimat, tagZ
+--   NCBear_CubOrphan(n)      eine Waise n Kacheln (Vorgabe 8) neben mir: ein Junges OHNE Eintrag (fuer den N5-Test)
+--   NCBear_CubSweep()        Suchlauf mit Waisen sofort (B.ScanAnimals(nil, true): nur die Alters-Frist entfaellt; Abstand
+--                            25 Kacheln und "keiner sieht hin" gelten weiter)
+-- Rechtsklick auf eine Kachel, Untermenue "NC Bear": acht Eintraege "Cub: ...". Texte hier sind englische Literale.
 -- Jeder Engine-Aufruf hat eine Vanilla-Fundstelle (Kommentar daneben). Statisch geprueft, nicht gespielt.
 --
 
@@ -240,7 +250,8 @@ local function infoRec(p, rec, now)
     local a = B.FindAnimal(rec)
     out("  " .. tostring(rec.id) .. " " .. tostring(rec.st) .. " src " .. tostring(rec.src) .. " bar " .. num(rec.tame)
         .. " fed " .. tostring(rec.fedN) .. " pet " .. tostring(rec.petN) .. " last " .. tostring(rec.last)
-        .. " finder " .. tostring(rec.finder) .. " bond " .. tostring(rec.bond) .. " owner " .. tostring(rec.owner))
+        .. " finder " .. tostring(rec.finder) .. " bond " .. tostring(rec.bond) .. " owner " .. tostring(rec.owner)
+        .. " mode " .. tostring(rec.mode) .. " name " .. tostring(rec.name))
     out("     dist " .. num(d) .. " at " .. tostring(rec.x) .. "," .. tostring(rec.y) .. " home " .. tostring(rec.hx) .. "," .. tostring(rec.hy)
         .. " object " .. tostring(a ~= nil) .. " idle " .. num(rec.idleH) .. " h leaving " .. tostring(rec.goneP == true)
         .. " missed " .. tostring(rec.missN) .. " feed in " .. num(B.WaitLeft(rec, "feed", now)) .. " h pet in "
@@ -374,6 +385,151 @@ function NCBear_CubSet(field, value)
 end
 
 -- ---------------------------------------------------------------------------
+-- B1b: Folgen, Name, Waisen (PLAN_B1B.md 5.6). Alles geht ueber dieselben Wege wie das Spiel (B.Ask -> Schreiber-Pruefungen).
+-- ---------------------------------------------------------------------------
+
+-- Folgen-Zustand nach der Regel des Kerns (B.ModeOf, nil = "stay").
+local function modeOf(rec)
+    if B.ModeOf then return B.ModeOf(rec) end
+    if rec.mode == "follow" then return "follow" end
+    return "stay"
+end
+
+-- Mein naechstes gezaehmtes Junges (Eintrag im Register), gleich wie weit weg.
+local function myTame(p, key, reg)
+    local best, bestD = nil, nil
+    for _, rec in pairs(reg.cubs) do
+        if rec.st == "tame" and rec.owner == key then
+            local dx = (tonumber(rec.x) or 0) - p:getX()    -- client/Fishing/TensionUI.lua:11
+            local dy = (tonumber(rec.y) or 0) - p:getY()
+            local d = dx * dx + dy * dy
+            if bestD == nil or d < bestD then
+                best, bestD = rec, d
+            end
+        end
+    end
+    return best
+end
+
+function NCBear_CubFollow(on)
+    local p, key, reg = ready()
+    if not p then return end
+    local rec = myTame(p, key, reg)
+    if not rec then
+        say("no tamed cub of yours (NCBear_CubTame(100) first)")
+        return
+    end
+    local mode = "follow"
+    if on == nil then
+        if modeOf(rec) == "follow" then mode = "stay" end
+    elseif on == false then
+        mode = "stay"
+    end
+    B.Ask(p, "Mode", { id = rec.id, mode = mode })
+    push(p)
+    say("cub " .. tostring(rec.id) .. ": asked " .. mode .. ", now " .. modeOf(rec))
+end
+
+function NCBear_CubName(text)
+    local p, key, reg = ready()
+    if not p then return end
+    local rec = myTame(p, key, reg)
+    if not rec then
+        say("no tamed cub of yours (NCBear_CubTame(100) first)")
+        return
+    end
+    B.Ask(p, "Rename", { id = rec.id, name = tostring(text or "") })
+    push(p)
+    say("cub " .. tostring(rec.id) .. ": name now " .. tostring(rec.name))
+end
+
+function NCBear_CubFollowTest()
+    local p, key, reg = ready()
+    if not p then return end
+    local rec = myTame(p, key, reg)
+    if not rec then
+        say("no tamed cub of yours (NCBear_CubTame(100) first)")
+        return
+    end
+    local a = B.FindAnimal(rec)
+    local cx, cy, cz = tonumber(rec.x) or 0, tonumber(rec.y) or 0, tonumber(rec.z) or 0
+    if a then
+        cx, cy, cz = a:getX(), a:getY(), a:getZ()       -- client/TimedActions/ISContextualActions.lua:100
+    end
+    local dx = cx - p:getX()
+    local dy = cy - p:getY()
+    local pz = p:getZ()                                 -- client/Fishing/TensionUI.lua:11
+    local car = p:getVehicle() ~= nil                   -- client/ISUI/Hutch/ISHutchMenu.lua:8
+    out("--- follow test, cub " .. tostring(rec.id) .. " ---")
+    out("mode " .. modeOf(rec) .. " (field " .. tostring(rec.mode) .. ") name " .. tostring(rec.name) .. " object " .. tostring(a ~= nil))
+    out("distance to me " .. num(math.sqrt(dx * dx + dy * dy)) .. " levels cub " .. num(cz) .. " / me " .. num(pz)
+        .. " in vehicle " .. tostring(car) .. " limit " .. tostring(B.Opt("BearFollowMaxDistance")))
+    out("home " .. tostring(rec.hx) .. "," .. tostring(rec.hy) .. "," .. tostring(rec.hz) .. " tagZ " .. tostring(B.CFG.tagZ))
+    local s = B._s and B._s[rec.id]
+    local f = s and s.f
+    if type(f) ~= "table" then
+        out("session: none yet (first brain tick after load or after a mode change)")
+        return
+    end
+    local now = getTimestampMs()                        -- server/Foraging/forageServer.lua:456
+    local age = "-"
+    if type(f.orderAt) == "number" then age = tostring(now - f.orderAt) .. " ms" end
+    local retry = "-"
+    if type(f.retryAt) == "number" then retry = tostring(f.retryAt - now) .. " ms" end
+    out("session: held " .. tostring(f.held == true) .. " stuck " .. tostring(f.stuck == true) .. " last order " .. age
+        .. " target " .. tostring(f.tx) .. "," .. tostring(f.ty) .. " best " .. num(f.bestD) .. " retry in " .. retry)
+end
+
+function NCBear_CubOrphan(n)
+    local p = ready()
+    if not p then return nil end
+    if not B.CreateCub then
+        out("the bear core is not loaded (BanditsNPCBearWorld.lua)")
+        return nil
+    end
+    n = math.floor(tonumber(n) or 8)
+    if n < 1 then n = 1 end
+    if n > 40 then n = 40 end
+    local here = p:getCurrentSquare()                   -- client/ISUI/ISWorldObjectContextMenu.lua:112
+    if not here then
+        out("player has no square")
+        return nil
+    end
+    local cx, cy, cz = here:getX(), here:getY(), here:getZ()
+    local ring = { { n, 0 }, { 0, n }, { -n, 0 }, { 0, -n }, { n, n }, { -n, n }, { n, -n }, { -n, -n } }
+    local lastWhy = "unloaded"
+    for i = 1, #ring do
+        local sq = getCell():getGridSquare(cx + ring[i][1], cy + ring[i][2], cz)    -- server/Animal/ISPickDungCursor.lua:104
+        local fits, why = B.SquareFits(sq)
+        if fits then
+            -- Absichtlich OHNE Register-Eintrag: genau so bleibt nach einem Fehler eine Waise zurueck (N5).
+            local animal, refused = B.CreateCub(sq:getX(), sq:getY(), sq:getZ())
+            if not animal then
+                say("no orphan: " .. tostring(refused))
+                return nil
+            end
+            say("orphan cub " .. n .. " tiles away (no entry); walk 25+ tiles off, look away, wait or NCBear_CubSweep()")
+            return animal
+        end
+        lastWhy = why
+    end
+    say("no free outdoor square " .. n .. " tiles around you (" .. tostring(lastWhy) .. ")")
+    return nil
+end
+
+function NCBear_CubSweep()
+    local p = ready()
+    if not p then return end
+    if not B.ScanAnimals then
+        out("the bear core is not loaded (BanditsNPCBearWorld.lua)")
+        return
+    end
+    local n, removed = B.ScanAnimals(nil, true)
+    push(p)
+    say("sweep: " .. tostring(n) .. " cub(s) seen, " .. tostring(removed or 0) .. " orphan(s) removed (nobody within 25 tiles, not seen)")
+end
+
+-- ---------------------------------------------------------------------------
 -- Rechtsklick: Eintraege im vorhandenen Untermenue "NC Bear" (NCBearTest.lua nimmt Funktionen aus NCBearMenu.extra an und
 -- ruft sie nur im Einzelspieler). Keine alte Datei wird geaendert.
 -- ---------------------------------------------------------------------------
@@ -382,6 +538,9 @@ local function menuFood() NCBear_CubFood() end
 local function menuSkip() NCBear_CubSkip(2) end
 local function menuInfo() NCBear_CubInfo() end
 local function menuClean() NCBear_CubClean() end
+local function menuFollow() NCBear_CubFollow() end
+local function menuOrphan() NCBear_CubOrphan() end
+local function menuSweep() NCBear_CubSweep() end
 
 NCBearMenu = NCBearMenu or {}
 NCBearMenu.extra = NCBearMenu.extra or {}
@@ -392,4 +551,7 @@ table.insert(NCBearMenu.extra, function(sub, square, player)
     sub:addOption("Cub: skip 2 hours", square, menuSkip)
     sub:addOption("Cub: info", square, menuInfo)
     sub:addOption("Cub: clean up", square, menuClean)
+    sub:addOption("Cub: follow / stay", square, menuFollow)
+    sub:addOption("Cub: make an orphan", square, menuOrphan)
+    sub:addOption("Cub: remove orphans now", square, menuSweep)
 end)

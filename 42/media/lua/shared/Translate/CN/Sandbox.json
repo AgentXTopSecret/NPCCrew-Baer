@@ -27,6 +27,8 @@
     "Sandbox_BanditsNPC_BearDeathLockDays_tooltip": "你驯服的熊死后，在这么多游戏天数内不会有新的小熊信任你。",
     "Sandbox_BanditsNPC_BearFeedCooldownMinutes": "驯服: 两次喂食的间隔(分钟)",
     "Sandbox_BanditsNPC_BearFeedCooldownMinutes_tooltip": "同一只小熊再次可以喂食之前的游戏分钟数。",
+    "Sandbox_BanditsNPC_BearFollowMaxDistance": "熊: 跟随距离上限",
+    "Sandbox_BanditsNPC_BearFollowMaxDistance_tooltip": "单位为格。主人离开超过这个距离时，正在跟随的小熊会停下来在原地等待。",
     "Sandbox_BanditsNPC_BearLog": "熊: 诊断记录",
     "Sandbox_BanditsNPC_BearLog_tooltip": "在控制台写入 [TC-BEAR] 诊断行。仅用于报告问题; 真正的错误总会写入。",
     "Sandbox_BanditsNPC_BearMaxPerPlayer": "每名玩家的熊",

@@ -27,6 +27,8 @@
     "Sandbox_BanditsNPC_BearDeathLockDays_tooltip": "Cuando muere tu oso domesticado, ninguna cría nueva confiará en ti durante esta cantidad de días de juego.",
     "Sandbox_BanditsNPC_BearFeedCooldownMinutes": "Doma: minutos entre comidas",
     "Sandbox_BanditsNPC_BearFeedCooldownMinutes_tooltip": "Minutos de juego antes de poder alimentar otra vez a la misma cría.",
+    "Sandbox_BanditsNPC_BearFollowMaxDistance": "Oso: límite de distancia al seguir",
+    "Sandbox_BanditsNPC_BearFollowMaxDistance_tooltip": "En casillas. Si el dueño se aleja más que esto, la cría que lo sigue se detiene y espera allí.",
     "Sandbox_BanditsNPC_BearLog": "Oso: líneas de diagnóstico",
     "Sandbox_BanditsNPC_BearLog_tooltip": "Escribe líneas de diagnóstico [TC-BEAR] en la consola. Solo para informar de fallos; los errores reales se escriben siempre.",
     "Sandbox_BanditsNPC_BearMaxPerPlayer": "Osos por jugador",

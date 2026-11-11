@@ -27,6 +27,8 @@
     "Sandbox_BanditsNPC_BearDeathLockDays_tooltip": "Après la mort de votre ours apprivoisé, aucun nouvel ourson ne vous fera confiance pendant ce nombre de jours de jeu.",
     "Sandbox_BanditsNPC_BearFeedCooldownMinutes": "Apprivoisement : minutes entre deux repas",
     "Sandbox_BanditsNPC_BearFeedCooldownMinutes_tooltip": "Minutes de jeu avant de pouvoir nourrir à nouveau le même ourson.",
+    "Sandbox_BanditsNPC_BearFollowMaxDistance": "Ours : limite de distance pour suivre",
+    "Sandbox_BanditsNPC_BearFollowMaxDistance_tooltip": "En cases. Si le propriétaire s'éloigne davantage, un ourson qui le suit s'arrête et l'attend sur place.",
     "Sandbox_BanditsNPC_BearLog": "Ours : lignes de diagnostic",
     "Sandbox_BanditsNPC_BearLog_tooltip": "Écrit des lignes de diagnostic [TC-BEAR] dans la console. Seulement pour signaler un bug ; les vraies erreurs sont toujours écrites.",
     "Sandbox_BanditsNPC_BearMaxPerPlayer": "Ours par joueur",

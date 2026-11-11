@@ -23,6 +23,7 @@ B._scanAt = B._scanAt or nil        -- Echtzeit des letzten Suchlaufs
 B._live = B._live or false          -- gab es beim letzten Hirn-Takt etwas zu tun (Eintraege, reife Koeder)?
 B._pp = B._pp or {}                 -- [uid] = { x, y } Ort jedes Spielers beim letzten Hirn-Takt ("steht still")
 B._sig = B._sig or {}               -- [uid] = Text: welche Jungen (mit OnlineID) der Spieler zuletzt in Reichweite hatte
+B._orphAt = B._orphAt or nil        -- B1b: Echtzeit des letzten Suchlaufs, der die Waisen-Liste gefuehrt hat
 
 -- ---------------------------------------------------------------------------
 -- Meldungen
@@ -36,6 +37,7 @@ local WHY_T = {
     UI_BN_Bear_Why_FeedWait = "wait",
     UI_BN_Bear_Why_PetWait = "wait",
     UI_BN_Bear_Why_Locked = "days",
+    UI_BN_Bear_Why_NameBad = "num",        -- B1b: Wert = B.CFG.nameMax (die Bitte "Rename" baut die Meldung selbst, Follow.lua)
 }
 
 local function tellWhy(player, whyKey, whyVal)
@@ -383,6 +385,15 @@ function B.Handle(player, command, args)
         B.PushView(player)
         return
     end
+    -- B1b (PLAN_B1B.md 5.3): Folgen / Bleiben und Umbenennen pruefen die Bitten selbst (server/BanditsNPCBearFollow.lua)
+    if command == "Mode" then
+        if B.HandleMode then B.HandleMode(player, args) end
+        return
+    end
+    if command == "Rename" then
+        if B.HandleRename then B.HandleRename(player, args) end
+        return
+    end
 end
 
 -- Events.OnClientCommand.Add(function(module, command, player, args)): Vanilla server/ClientCommands.lua:1357; Filter auf das
@@ -562,8 +573,13 @@ local function slowTickBody()
 end
 
 function B.SlowTick()
-    -- pcall um EIGENEN Code (alle Engine-Aufrufe darin sind belegt, keine Tarnkappe): ein Fehler soll laut, aber gedrosselt
-    -- kommen (B.ErrEvery). pcall ist eine Lua-Grundfunktion (keine Engine-Methode; Vanilla und Bandits benutzen sie nicht),
+    -- pcall um EIGENEN Code (gilt auch fuer B.BrainTick): ein Fehler soll laut, aber gedrosselt kommen (B.ErrEvery) -- er wird
+    -- nie verschluckt. Alle Engine-Aufrufe darin haben einen Vanilla-/Bandits-Beleg, mit EINER ehrlich offenen Ausnahme fuer den
+    -- Mehrspieler-Server (A3 aus B1a): getCell():getObjectListForLua() im Suchlauf B.ScanAnimals und animal:getAnimalID()
+    -- (B.FindAnimal, B.NewRec, Suchlauf) haben nur Client-Belege (server/BanditsNPCBearWorld.lua:280-282). Scheitert einer am
+    -- Server, steht das im Log ("slow tick: ..." / "brain tick: ...") -- Testpunkt in Kevins MP-Test (PLAN_B1B.md 8.4 MP 7).
+    -- Nachbesserung B1b A6.
+    -- pcall ist eine Lua-Grundfunktion (keine Engine-Methode; Vanilla und Bandits benutzen sie nicht),
     -- im gespielten NCTurretTest shared/BanditsNPCTurretCrew.lua:128 unter Kahlua in Gebrauch.
     local ok, err = pcall(slowTickBody)
     if not ok then B.ErrEvery("slow", 60000, "slow tick: " .. tostring(err)) end
@@ -602,12 +618,17 @@ local function keysOf(rec)
 end
 
 -- Umgebung eines Jungen fuer B.Decide. Rueckgabe: env, Abstand des naechsten Spielers, dessen Eintrag.
+-- B1b: beim gezaehmten Jungen zusaetzlich env.owner = naechster anwesender Besitzer { key, x, y, z, dist, car } (ohne
+-- Abstandsgrenze; B.FollowDecide braucht den echten Abstand fuer "zu weit weg").
 local function buildEnv(rec, cx, cy, players, cache)
     local cfg = B.CFG
     local lureKey, mateKey = keysOf(rec)
     local nearD, nearE = nil, nil
     local lureD, lureI = nil, nil
     local mateD, mateE = nil, nil
+    local ownD, ownE = nil, nil
+    local ownKey = nil
+    if rec.st == "tame" then ownKey = rec.owner end
     for i = 1, #players do
         local e = players[i]
         local d = B.DistXY(cx, cy, e.x, e.y)
@@ -617,6 +638,7 @@ local function buildEnv(rec, cx, cy, players, cache)
             if info.food and not info.fast and (lureD == nil or d < lureD) then lureD, lureI = d, info end
         end
         if mateKey ~= nil and e.key == mateKey and d <= cfg.mateDist and (mateD == nil or d < mateD) then mateD, mateE = d, e end
+        if ownKey ~= nil and e.key == ownKey and (ownD == nil or d < ownD) then ownD, ownE = d, e end
     end
     local env = {}
     if nearE then
@@ -628,6 +650,13 @@ local function buildEnv(rec, cx, cy, players, cache)
     end
     if lureI then env.lure = asP(lureI, lureD) end
     if mateE then env.mate = { key = mateE.key, x = mateE.x, y = mateE.y, dist = mateD, food = false, fast = false, still = false } end
+    if ownE then
+        -- mx/my (Nachbesserung B1b B2): Weg des Besitzers seit dem letzten Hirn-Takt (B._pp), fuer den Vorhalt in B.FollowDecide
+        local last = B._pp[ownE.uid]
+        local mx, my = 0, 0
+        if last ~= nil then mx, my = ownE.x - last.x, ownE.y - last.y end
+        env.owner = { key = ownE.key, x = ownE.x, y = ownE.y, z = ownE.z, dist = ownD, car = (ownE.car == true), mx = mx, my = my }
+    end
     return env, nearD, nearE
 end
 
@@ -647,6 +676,14 @@ local function steer(rec, a, d, ms)
     end
 end
 
+-- Spiegel-Probe (B1b, PLAN_B1B.md 4.4): passt der Spiegel am Tier nicht mehr zum Eintrag, neu schreiben. Ein getModData je Takt.
+-- getModData am Tier: Vanilla shared/Definitions/animal/ButcheringUtil.lua:596.
+local function markProbe(rec, a)
+    local md = a:getModData()
+    local mark = md and md[B.MARK]
+    if type(mark) ~= "table" or mark.id ~= rec.id or mark.st ~= rec.st then B.Commit(rec) end
+end
+
 -- Ein geladenes, lebendes Junges.
 local function liveRec(rec, a, players, cache, ms)
     local x, y, z = tileOf(a)
@@ -659,6 +696,7 @@ local function liveRec(rec, a, players, cache, ms)
         B.Commit(rec)
         tellKey(rec.owner, note("UI_BN_Bear_Note_Back", nil, nil, "good"), players)
     end
+    markProbe(rec, a)
     local cx, cy = a:getX(), a:getY()
     local env, nearD, nearE = buildEnv(rec, cx, cy, players, cache)
     local contact = nearD ~= nil and nearD <= B.CFG.contactDist
@@ -679,6 +717,11 @@ local function liveRec(rec, a, players, cache, ms)
         B.Tell(nearE.p, note("UI_BN_Bear_Note_Seen", nil, nil, "good"))
         B.Log("seen " .. rec.id .. " by " .. tostring(nearE.key))
     end
+    -- B1b (PLAN_B1B.md 1.2): ein folgendes gezaehmtes Junges rechnet B.FollowDecide statt B.Decide, ohne Gegenprobe B.MoveWatch
+    if rec.st == "tame" and B.ModeOf(rec) == "follow" and B.FollowStep then
+        B.FollowStep(rec, a, env, ms, players)
+        return
+    end
     local s = B.Ses(rec.id)
     local big = B.CFG.curiousMs + 1
     local c = {
@@ -686,6 +729,8 @@ local function liveRec(rec, a, players, cache, ms)
         sinceMoveMs = (s.moveAt ~= nil) and (ms - s.moveAt) or big,
         sinceCuriousMs = (s.curiousAt ~= nil) and (ms - s.curiousAt) or big,
     }
+    -- B1b (PLAN_B1B.md 1.4): Bleiben -- das gezaehmte Junge bleibt in B.CFG.stayR um die Heimat ("fed" weiter B.CFG.homeR)
+    if rec.st == "tame" then c.homeR = B.CFG.stayR end
     local d = B.Decide(c, env)
     steer(rec, a, d, ms)
     B.MoveWatch(rec, a)
@@ -730,6 +775,10 @@ local function countMisses(missing, players, now)
                     rec.missH = 0
                     rec.missN = 0
                     rec.missAt = nil
+                    -- B1b (PLAN_B1B.md 1.3): ein vermisstes Junges folgt nicht mehr -- still auf "Bleiben", Heimat = letzte Kachel
+                    if B.ModeOf(rec) == "follow" then
+                        if B.SetMode then B.SetMode(rec, "stay", "missing", players) else rec.mode = "stay" end
+                    end
                     B.Commit(rec)
                     tellKey(rec.owner, note("UI_BN_Bear_Note_Missing", nil, nil, "bad"), players)
                 else
@@ -814,10 +863,20 @@ local function brainTickBody(ms)
     local list = {}
     for _, rec in pairs(reg.cubs) do list[#list + 1] = rec end
     local missing, need, needSlow = resolve(list)
+    -- B1b (PLAN_B1B.md 1.3): ein folgendes Junges ohne Objekt in nicht geladener Gegend wartet dort
+    if B.FollowLost then
+        for i = 1, #missing do
+            local rec = missing[i]
+            if reg.cubs[rec.id] == rec then B.FollowLost(rec, players) end
+        end
+    end
+    local scanned = false
     local every = B.CFG.scanMs
     if not need then every = B.CFG.scanMs * B.CFG.missScanMul end
     if (need or needSlow) and (B._scanAt == nil or ms - B._scanAt < 0 or ms - B._scanAt >= every) then
         B._scanAt = ms
+        B._orphAt = ms                 -- dieser Suchlauf fuehrt die Waisen-Liste mit (B.ScanAnimals)
+        scanned = true
         B.ScanAnimals(players)
         countMisses(missing, players, B.Now())
     end
@@ -847,6 +906,16 @@ local function brainTickBody(ms)
         end
     end
     B._live = live
+    -- B1b (PLAN_B1B.md 4.3, N5): eigener seltener Waisen-Suchlauf je B.CFG.orphanScanMs, auch ohne Eintraege und ohne Vermisste --
+    -- nur, wenn in diesem Takt noch kein Suchlauf war. Am ENDE des Takts und mit vorher gestellter Uhr. Mehrspieler-Server:
+    -- getObjectListForLua hat dort keinen Vanilla-/Bandits-Beleg (A3 aus B1a, offen). Der pcall in B.BrainTick versteckt einen
+    -- Fehler NICHT: er steht je 60 s als "brain tick: ..." im Log (B.ErrEvery) und ist Kevins MP-Testpunkt (PLAN_B1B.md 8.4 MP 7:
+    -- Server 3 min ohne Junges laufen lassen). Weil dieser Lauf auch ohne Junges kommt, zeigt sich A3 dort spaetestens nach 2 min.
+    -- Nachbesserung B1b A6.
+    if not scanned and (B._orphAt == nil or ms - B._orphAt < 0 or ms - B._orphAt >= B.CFG.orphanScanMs) then
+        B._orphAt = ms
+        B.ScanAnimals(players)
+    end
 end
 
 -- force ueberspringt nur die Echtzeit-Drossel. getTimestampMs: Vanilla server/Foraging/forageServer.lua:456.

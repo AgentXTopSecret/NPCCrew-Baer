@@ -27,6 +27,8 @@
     "Sandbox_BanditsNPC_BearDeathLockDays_tooltip": "After your tamed bear dies, no new cub will trust you for this many in-game days.",
     "Sandbox_BanditsNPC_BearFeedCooldownMinutes": "Taming: minutes between feedings",
     "Sandbox_BanditsNPC_BearFeedCooldownMinutes_tooltip": "In-game minutes before the same cub can be fed again.",
+    "Sandbox_BanditsNPC_BearFollowMaxDistance": "Bear: follow distance limit",
+    "Sandbox_BanditsNPC_BearFollowMaxDistance_tooltip": "Tiles. If the owner gets farther away than this, a following cub stops and waits there.",
     "Sandbox_BanditsNPC_BearLog": "Bear: diagnosis lines",
     "Sandbox_BanditsNPC_BearLog_tooltip": "Writes [TC-BEAR] diagnosis lines to the console. Only for bug reports; real errors are always written.",
     "Sandbox_BanditsNPC_BearMaxPerPlayer": "Bears per player",
