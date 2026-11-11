@@ -1,5 +1,23 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+## LIMIT-REGEL (Kevin 11.11.2026 ~11:00, ueber die Projekte-Sitzung: "nen prompt an alle chats ausser blueprint das die beim abgebrochenen wofklow weiter arbeiten ohne verlust")
+
+- Laeuft ein Workflow: warten, nichts doppelt starten.
+- Abgebrochen/haengt: TaskStop, dann Workflow({scriptPath, resumeFromRunId}) mit DERSELBEN Lauf-ID -- nie von vorn.
+- "Fertig", aber ins Limit gelaufen: `journal.jsonl` im Transkript-Ordner des Laufs lesen; jeder Agent mit null/leerem Ergebnis/Limit-Fehler gilt als
+  NICHT gemacht -> seinen Auftrag im Skript leicht aendern (" (Wiederholung nach Limit)") und mit resumeFromRunId neu starten, oder kleiner
+  Nachhol-Workflow nur mit den fehlenden Stuecken. Was auf einem leeren Agenten aufbaut, gilt nicht.
+- Halb geschriebene Dateien: vor dem Fortsetzen git status/diff bzw. Dateizeiten pruefen; nichts blind uebernehmen, nichts loeschen, nichts Halbes
+  in die Test-Mod, nichts Halbes committen. Hier eintragen: welcher Lauf, welche Agenten nachgeholt, was verloren war.
+- Wecker (neu 11.11. ~11:00, Cron `d33c868f`) -- am 11.11. ~13:20 auf Kevins Wort GELOESCHT; nichts startet mehr von selbst.
+- **Laufende Workflows:** baer-rig-junges `wf_f7896aa7-c7b`, scriptPath `C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel/rig_junges_workflow.js`
+  (Task waly9lt77; Transkript `C:/Users/Kevin/.claude/projects/C--Users-Kevin-NPCCrew-Nebenprojekte-baer/d5933cc7-7f9d-46b2-a3a8-0929595b654b/subagents/workflows/wf_f7896aa7-c7b/journal.jsonl`).
+  Fertig und eingebaut: B1c `wf_99d68702-665`, B1d `wf_472ecf82-135` (keine leeren Agenten: je 9/9 mit Ergebnis).
+- 11.11. 13:13 nach dem Reset: baer-rig-junges laeuft von selbst weiter (plan/form/skelett/clips/pruef:optik/pruef:technik fertig, alle mit
+  Ergebnis; nachbesserung nach dem Limit neu gestartet 13:11) -- nichts nachzuholen. **Woche alle Modelle 93 %** (Reset 14.11. 04:00):
+  nach Kevins Regel (bis 98 %, dann anhalten) KEINEN neuen Workflow starten; nur rig-junges zu Ende laufen lassen, Ergebnis ansehen/einbauen.
+
+
 ## Nachtschicht 11.11.2026 (Start 01:55 auf Kevins "los"; Freigaben: ENTSCHEIDUNGEN.md "Nachtschicht 11.11.2026")
 
 Wecker: Cron `70ef11fd` alle 20 min -- am 11.11. ~09:35 auf Kevins Wort GELOESCHT (die beiden laufenden Workflows laufen weiter, nichts startet mehr von selbst). Regeln: max. 10 Agenten je Workflow, vor jedem Workflow hier
@@ -17,7 +35,12 @@ Stand + naechster Schritt + Lauf-ID; abgeschnittene Laeufe mit resumeFromRunId f
    Verstecken hinter dem Besitzer bei Zombies / wilde fliehen, Mitfahren wie NPC Crew, Unstuck "Call to me", Bildschirm-Markierung
    (Symbol 1 + Pfeil), Karten-Symbol (Mini + gross), Anzeige-Optionen (Name ein/aus, Groesse), Gehen mit animalRunning=false (Kevins Ja).
    Danach Einbau (wenn Spiel zu), Commit/Push, Testanleitung.
-3. [LAEUFT ab ~05:10] Modell des Jungen: Workflow baer-rig-junges (8 Agenten, Skript `spiel/rig_junges_workflow.js`; Formrunde Kopf gerade +
+3. [FERTIG + EINGEBAUT 14:39, UNGESPIELT] **Neues Junges aus dem Generator** ersetzt den Platzhalter in NCBearTest (NCBearCub.glb ee7a0cce, NCBearCub.png
+   92a829fa; Sicherungen `NCBearTest_vor_junges_neu_2026-11-11_143915.zip`/`_mit_`). Gegenpruefer: ersetzt Platzhalter JA, bereit JA; Harness OK,
+   19.418 Dreiecke, 26 Knochen/15 Clips wie der Erwachsene, Gehen 1,60 / Rennen 2,61 Kacheln/s (Platzhalter 0,52/2,47). Blatt
+   `spiel/rig_KEVIN_junges_spielfertig.png` (nicht in Git), Berichte `spiel/rig_*.md`. Offen: M3 Pfoten rutschen, wenn B1d es ueber 0,35 wachsen
+   laesst (Tempo waechst nicht mit) -> Code-Frage; Fressen erreicht den Boden nicht (Kopf ~18 cm); Folgen-Schwelle walkSpeed (B1c 0,52) auf 1,6
+   anpassen. -- vorher: Modell des Jungen: Workflow baer-rig-junges (8 Agenten, Skript `spiel/rig_junges_workflow.js`; Formrunde Kopf gerade +
    Ohren, Skelett+Gewichte, 15 Clips mit schnellerem Gehen, Pruefer Optik/Technik, Nachbesserung, Gegenpruefer), Ergebnis
    `../_arbeit/baer_gen/rig/out/42/media/...`; Lauf `wf_f7896aa7-c7b` (Task waly9lt77; abgeschnitten -> resumeFromRunId).
 4. [FERTIG + EINGEBAUT 10:55, UNGESPIELT] Code **B1d Wachsen** (51 Dateien byte-gleich; Sicherungen `backups/NCBearTest/NCBearTest_vor_b1d_2026-11-11_105508.zip`/`_mit_`;
@@ -26,7 +49,7 @@ Stand + naechster Schritt + Lauf-ID; abgeschnittene Laeufe mit resumeFromRunId f
 5. Danach: Pruefer/Gegenpruefer ueber das Gebaute, Testlisten, naechster Punkt aus "Offen".
 
 **Fertig (diese Nacht):** Modell-Lauf baer-gen-schoen (Blaetter `spiel/gen_KEVIN_*.png`); Code B1c gebaut, geprueft, in NCBearTest (08:12), hochgeladen.
-**Ungespielt:** B1c (in NCBearTest seit 08:12), B1d (seit 10:55).
+**Ungespielt:** B1c (in NCBearTest seit 08:12), B1d (seit 10:55), neues Junges-Modell (seit 14:39).
 **Am Limit haengen geblieben:** 11.11. ~06:05 Nutzungslimit erreicht -- B1c fertig, aber nicht eingebaut; Rig-Lauf `wf_f7896aa7-c7b` lief weiter (bei Abbruch mit resumeFromRunId fortsetzen).
 **Fragen fuer Kevin:** (aus B1c, je mit Empfehlung; Einzelheiten `spiel/b1c_gegen_bericht_b1c.md` und `spiel/b1c_forschung_b1c.md` Abschnitt 12)
   1. A3: Vanilla-Lua-Bausteine ohne Aufrufer (addTickBox/addSlider der Optionen-Seite) als Beleg zaehlen? -> ja.
