@@ -6,6 +6,8 @@
 -- B1b (PLAN_B1B.md 1.1, 3.1, 3.2): am eigenen gezaehmten Jungen der Umschalter "Follow me" / "Stay here" und "Name the cub"
 -- (nur der Besitzer, nur mit Sicht-Eintrag); im Welt-Menue "Hold out food for the cub" (Futter nur in die Hand nehmen, ohne das
 -- Tier anzuklicken), wenn ein passendes Junges in B.CFG.lureDist Kacheln steht.
+-- B1c (PLAN_B1C.md 1.5): am eigenen gezaehmten Jungen zusaetzlich "Call to me" (holt es neben den Besitzer; Abklingzeit,
+-- Fahrzeug und freie Kachel prueft der Schreiber, grau vorgeprueft aus der Sicht).
 --
 -- Das Menue BIETET nur AN. Es stellt Zeitaktionen an (Fuettern, Streicheln, Koeder) bzw. schickt eine Bitte (Koederplatz
 -- aufgeben); ob etwas gilt, entscheidet der Schreiber in complete() bzw. in B.Handle (Einzelspieler: dasselbe Programm,
@@ -126,6 +128,13 @@ local function onName(playerObj, v)
     U.AskName(playerObj, v)
 end
 
+-- "Call to me" (B1c, PLAN_B1C.md 1.5): nur eine Bitte. Besitz, Zustand, Fahrzeug, Abklingzeit und freie Kachel prueft der Schreiber
+-- (Einzelspieler: B.Handle direkt; Mehrspieler: sendClientCommand, Rolle user genuegt). Die Tabelle ist nie leer.
+local function onCall(playerObj, id)
+    if not playerObj or id == nil then return end
+    B.Ask(playerObj, "Call", { id = id })
+end
+
 -- Futter hinhalten (B1b, Plan 3.2): das Stueck NUR in die Hand nehmen -- kein Hingehen, die Warteschlange bleibt. equip holt es
 -- bei Bedarf selbst aus der Tasche (transferIfNeeded) und stellt ISEquipWeaponAction an (client/ISUI/ISWorldObjectContextMenu.lua:2594-2622);
 -- derselbe Aufruf mit Futter: client/ISUI/Animal/ISAnimalContextMenu.lua:93. Danach greift die Regel des Schreibers "Futter in
@@ -229,6 +238,45 @@ local function addName(menu, playerObj, v)
     menu:addOption(U.T("UI_BN_Bear_Menu_Name"), playerObj, onName, v)
 end
 
+-- Rest der Call-Abklingzeit in ganzen Minuten (aufgerundet, mindestens 1), 0 = bereit. Die Sicht traegt den Rest in Sekunden
+-- (callWait, nur fuer den Besitzer) zum Zeitpunkt ihres Baus; abgezogen wird die Zeit seit ihrer Ankunft (U.viewAt). Uhr
+-- rueckwaerts: so, als waere die Sicht gerade angekommen. getTimestampMs: V:client/Foraging/ISBaseIcon.lua:485.
+local function callWaitMinutes(v)
+    local left = tonumber(v.callWait)
+    if left == nil or left <= 0 then return 0 end
+    local ms = left * 1000
+    local at = U.viewAt
+    if type(at) == "number" then
+        local now = getTimestampMs()
+        if now >= at then ms = ms - (now - at) end
+    end
+    if ms <= 0 then return 0 end
+    local m = math.ceil(ms / 60000)
+    if m < 1 then m = 1 end
+    return m
+end
+
+-- "Call to me" (B1c, Plan 1.5): nur am eigenen gezaehmten Jungen (der Aufrufer prueft Besitz und Zustand), nie an einem
+-- mitfahrenden. Grau mit Grund nur aus der Sicht: im Fahrzeug, Abklingzeit laeuft. Der Tooltip nennt die Abklingzeit der Sandbox.
+-- getVehicle() am Spieler: client/ISUI/Hutch/ISHutchMenu.lua:8.
+local function addCall(menu, playerObj, v)
+    if v.ride == true then return end
+    local opt = menu:addOption(U.T("UI_BN_Bear_Menu_Call"), playerObj, onCall, v.id)
+    if playerObj:getVehicle() then
+        setGray(opt, U.T("UI_BN_Bear_Why_InCar"))
+        return
+    end
+    local wait = callWaitMinutes(v)
+    if wait > 0 then
+        setGray(opt, U.T("UI_BN_Bear_Why_CallWait", wait))
+        return
+    end
+    local mins = nil
+    if B.Opt then mins = tonumber(B.Opt("BearCallCooldownMinutes")) end
+    if mins == nil then mins = 5 end
+    setTip(opt, nil, U.T("UI_BN_Bear_Menu_CallTip", math.floor(mins)))
+end
+
 -- Ein Junges: Vanillas Untermenue suchen (fehlt es, auf die oberste Ebene), "Kill" entfernen, eigene Punkte anhaengen.
 local function cubMenu(context, playerObj, animal, name, nth)
     local menu = context
@@ -256,6 +304,8 @@ local function cubMenu(context, playerObj, animal, name, nth)
     if v and v.id ~= nil and v.st == "tame" and key ~= nil and v.owner == key then
         addMode(menu, playerObj, v)
         addName(menu, playerObj, v)
+        -- B1c: "Call to me" (Plan 1.5)
+        addCall(menu, playerObj, v)
     end
 end
 

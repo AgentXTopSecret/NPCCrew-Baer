@@ -28,7 +28,16 @@
 --   NCBear_CubOrphan(n)      eine Waise n Kacheln (Vorgabe 8) neben mir: ein Junges OHNE Eintrag (fuer den N5-Test)
 --   NCBear_CubSweep()        Suchlauf mit Waisen sofort (B.ScanAnimals(nil, true): nur die Alters-Frist entfaellt; Abstand
 --                            25 Kacheln und "keiner sieht hin" gelten weiter)
--- Rechtsklick auf eine Kachel, Untermenue "NC Bear": acht Eintraege "Cub: ...". Texte hier sind englische Literale.
+-- B1c (PLAN_B1C.md 6.9):
+--   NCBear_CubForget()       den Register-Eintrag meines naechsten zahmen Jungen loeschen, der Spiegel am Tier BLEIBT (Kevins
+--                            Absturz N9 nachstellen); danach heilt der Kern ihn innerhalb von 2 min (oder sofort mit NCBear_CubSweep())
+--   NCBear_CubMark()         Spiegel des naechsten geladenen Jungen drucken (alle Felder) und ob er zum Eintrag passt (B.MarkFresh)
+--   NCBear_CubCalm()         Laerm-Wache: beobachtete Junge, je Junges die Felder der Wache (Stress, Antworten ...)
+--   NCBear_CubGuard()        Zombie-Wache: naechster Zombie je Junges, Wache an/aus, Modus, "heiss" (schneller Hirn-Takt)
+--   NCBear_CubRide()         Mitfahren: ride, gen, Sitzung (offMs, lostMs, failN), ich im Fahrzeug
+--   NCBear_CubCallReset()    Abklingzeit von "Call to me" fuer alle Jungen zuruecksetzen
+--   NCBear_CubInfo()         druckt zusaetzlich u, gen, r, ride, healed je Eintrag und v/ep des Registers
+-- Rechtsklick auf eine Kachel, Untermenue "NC Bear": zehn Eintraege "Cub: ...". Texte hier sind englische Literale.
 -- Jeder Engine-Aufruf hat eine Vanilla-Fundstelle (Kommentar daneben). Statisch geprueft, nicht gespielt.
 --
 
@@ -243,6 +252,40 @@ function NCBear_CubNight(force)
     end
 end
 
+-- Grosse ganze Zahl (Kennzeichen u, Epoche ep: Millisekunden x 1000) ohne Exponent.
+local function big(v)
+    if type(v) ~= "number" then return tostring(v) end
+    return string.format("%.0f", v)
+end
+
+-- Flache Felder einer Tabelle als Text, Schluessel sortiert (Zahlen, Texte, Wahrheitswerte; Tabellen als "{...}").
+-- skip = Felder, die nicht gedruckt werden. Felder, die auf "At" enden oder "seen" heissen, kommen mit Alter in ms dazu.
+local function flat(t, skip)
+    if type(t) ~= "table" then return " " .. tostring(t) end
+    local keys = {}
+    for k, _ in pairs(t) do
+        if not (skip and skip[k]) then keys[#keys + 1] = tostring(k) end
+    end
+    table.sort(keys)
+    local now = getTimestampMs()                        -- server/Foraging/forageServer.lua:456
+    local parts = {}
+    for i = 1, #keys do
+        local k = keys[i]
+        local v = t[k]
+        if v == nil then v = t[tonumber(k)] end
+        local tv = type(v)
+        if tv == "table" then
+            parts[#parts + 1] = k .. "={...}"
+        elseif tv == "number" and (k == "seen" or (string.len(k) > 2 and string.sub(k, string.len(k) - 1) == "At")) and v > 1000000 then
+            parts[#parts + 1] = k .. "=" .. tostring(v) .. " (" .. tostring(now - v) .. " ms ago)"
+        else
+            parts[#parts + 1] = k .. "=" .. tostring(v)
+        end
+    end
+    if #parts == 0 then return " (empty)" end
+    return " " .. table.concat(parts, " ")
+end
+
 local function infoRec(p, rec, now)
     local dx = (tonumber(rec.x) or 0) - p:getX()        -- client/Fishing/TensionUI.lua:11
     local dy = (tonumber(rec.y) or 0) - p:getY()
@@ -256,6 +299,13 @@ local function infoRec(p, rec, now)
         .. " object " .. tostring(a ~= nil) .. " idle " .. num(rec.idleH) .. " h leaving " .. tostring(rec.goneP == true)
         .. " missed " .. tostring(rec.missN) .. " feed in " .. num(B.WaitLeft(rec, "feed", now)) .. " h pet in "
         .. num(B.WaitLeft(rec, "pet", now)) .. " h")
+    -- B1c: Kennzeichen, Koerper-Generation, Aenderungszaehler, Mitfahren, Heilung
+    local healed = "-"
+    if type(rec.healed) == "table" then healed = "at " .. num(rec.healed.at) .. " h, epoch " .. tostring(rec.healed.ep) end
+    local ride = "-"
+    if type(rec.ride) == "table" then ride = "since " .. num(rec.ride.at) .. " h" end
+    out("     u " .. big(rec.u) .. " gen " .. tostring(rec.gen) .. " r " .. tostring(rec.r) .. " ride " .. ride
+        .. " healed " .. healed)
 end
 
 function NCBear_CubInfo()
@@ -285,7 +335,7 @@ function NCBear_CubInfo()
         infoRec(p, rec, now)
         n = n + 1
     end
-    out("entries: " .. n)
+    out("entries: " .. n .. " (registry v " .. tostring(reg.v) .. ", epoch " .. big(reg.ep) .. ", next number " .. tostring(reg.n) .. ")")
     for _, bait in pairs(reg.baits) do
         out("  bait " .. tostring(bait.id) .. " owner " .. tostring(bait.owner) .. " " .. tostring(bait.kind) .. " at " .. tostring(bait.x) .. ","
             .. tostring(bait.y) .. " nights " .. tostring(bait.nights) .. " missed " .. tostring(bait.miss) .. " ready " .. tostring(bait.ready == true))
@@ -374,6 +424,11 @@ function NCBear_CubSet(field, value)
         end
         table.sort(names)
         out("NCBear_CubSet(field, value). Fields: " .. table.concat(names, " "))
+        out("B1c groups: heal (healWindowMs healScanMs), noise (calmMax calmMs calmGap noiseStressJump noiseAnswerMax"
+            .. " noiseAnswerWinMs ownSlackMs ownMaxMs followFleeGrow), walk (walkDist walkSpeed runSpeed), zombies (zedSense zedHide"
+            .. " zedSafe zedCalmMs zedFlee hideGap hideNear hideOwnerMax zedScanMax zedTickMs zedKeepMs guardMoveMs guardRepath"
+            .. " guardRenewMs), ride (rideOffMsSP rideOffMsMP rideSpeedMax rideRing rideLostMs rideFailLog callRing viewMoveTiles"
+            .. " viewMoveMs), marker (markerMs markerAfterMs markerDur markerShift), map (mapMiniPx mapWorldMin mapWorldMax mapListMs)")
         return
     end
     if type(value) ~= type(cfg[field]) or type(value) == "table" then
@@ -530,6 +585,171 @@ function NCBear_CubSweep()
 end
 
 -- ---------------------------------------------------------------------------
+-- B1c: Selbstheilung, Laerm, Zombies, Mitfahren, Call to me (PLAN_B1C.md 6.9). Nur lesen und die zwei Testgriffe (Eintrag loeschen,
+-- Abklingzeit leeren); alles andere geht ueber die Wege des Spiels.
+-- ---------------------------------------------------------------------------
+
+function NCBear_CubForget()
+    local p, key, reg = ready()
+    if not p then return end
+    local rec = myTame(p, key, reg)
+    if not rec then
+        say("no tamed cub of yours (NCBear_CubTame(100) first)")
+        return
+    end
+    local id = rec.id
+    local loaded = B.FindAnimal ~= nil and B.FindAnimal(rec) ~= nil
+    -- Absichtlich OHNE B.Close (keine Meldung, keine Sperre): genau so fehlt der Eintrag nach Kevins Absturz (N9).
+    reg.cubs[id] = nil
+    if B._s then B._s[id] = nil end
+    if B.Touch then B.Touch(nil, key) end
+    push(p)
+    say("entry " .. tostring(id) .. " removed, mark kept -- wait up to 2 min or NCBear_CubSweep()")
+    if not loaded then out("  note: the cub is not loaded right now; it heals once it is loaded again") end
+end
+
+-- Naechstes geladenes Junges (mit oder ohne Eintrag) in r Kacheln. Liste: FenrisScenario.lua:505-507; instanceof(o, "IsoAnimal"):
+-- shared/TimedActions/Animals/ISAddAnimalInTrailer.lua:29; getAnimalType(): client/ISUI/Animal/ISAnimalUI.lua:65;
+-- getX/getY am Tier: client/TimedActions/ISContextualActions.lua:100.
+local function nearestCubObject(p, r)
+    local objects = getCell():getObjectListForLua()
+    local px, py = p:getX(), p:getY()
+    local best, bestD = nil, nil
+    for i = 0, objects:size() - 1 do
+        local o = objects:get(i)
+        if instanceof(o, "IsoAnimal") and o:getAnimalType() == B.CUB then
+            local dx, dy = o:getX() - px, o:getY() - py
+            local d = math.sqrt(dx * dx + dy * dy)
+            if d <= r and (bestD == nil or d < bestD) then
+                best, bestD = o, d
+            end
+        end
+    end
+    return best, bestD
+end
+
+function NCBear_CubMark()
+    local p, _, reg = ready()
+    if not p then return end
+    local a, d = nearestCubObject(p, 60)
+    if not a then
+        say("no loaded cub within 60 tiles")
+        return
+    end
+    -- getModData am Tier: client/ISUI/ISInventoryPaneContextMenu.lua:4127
+    local md = a:getModData()
+    local mark = md and md[B.MARK]
+    out("--- mark of the nearest loaded cub (" .. num(d) .. " tiles) ---")
+    if type(mark) ~= "table" then
+        out("no mark (" .. tostring(B.MARK) .. " missing): an orphan without entry")
+        return
+    end
+    out("mark:" .. flat(mark))
+    out("  u " .. big(mark.u) .. " epoch " .. big(mark.ep) .. " (registry epoch " .. big(reg.ep) .. ")")
+    local rec = nil
+    if mark.id ~= nil then rec = reg.cubs[mark.id] end
+    if not rec then
+        out("entry " .. tostring(mark.id) .. ": none in the registry (the core heals it on its next search)")
+        return
+    end
+    local s = B._s and B._s[rec.id]
+    local bound = (s ~= nil and s.obj == a)
+    local fresh = "n/a (core without B.MarkFresh)"
+    if B.MarkFresh then fresh = tostring(B.MarkFresh(rec, mark) == true) end
+    out("entry " .. tostring(rec.id) .. ": st " .. tostring(rec.st) .. " u " .. big(rec.u) .. " gen " .. tostring(rec.gen)
+        .. " r " .. tostring(rec.r) .. " | bound to this animal " .. tostring(bound) .. " | mark fresh " .. fresh)
+    if B.MarkOf then out("mark as the core would write it:" .. flat(B.MarkOf(rec))) end
+end
+
+-- Nur lesen: Einzelspieler und Kern da? (ohne Spieler-Pflicht)
+local function readyCore()
+    if B.IsSP and not B.IsSP() then
+        out("singleplayer only")
+        return false
+    end
+    if not B.IsSP or not B.Reg then
+        out("the bear core is not loaded (BanditsNPCBear*.lua)")
+        return false
+    end
+    return true
+end
+
+function NCBear_CubCalm()
+    if not readyCore() then return end
+    local calm = B._calm
+    out("--- noise watch: watched " .. tostring(B._calmN) .. " ---")
+    if type(calm) ~= "table" then
+        out("no noise watch in this core (B._calm missing)")
+        return
+    end
+    local ids = {}
+    for id, _ in pairs(calm) do ids[#ids + 1] = tostring(id) end
+    table.sort(ids)
+    if #ids == 0 then out("no tamed cub is watched right now (none loaded, riding or not tame)") end
+    for i = 1, #ids do
+        local w = calm[ids[i]]
+        local hits = 0
+        if type(w) == "table" and type(w.hits) == "table" then hits = #w.hits end
+        out("  " .. ids[i] .. ":" .. flat(w, { a = true, hits = true }) .. " | answers in the window " .. hits)
+    end
+end
+
+function NCBear_CubGuard()
+    if not readyCore() then return end
+    local tick = B.CFG.brainMs
+    if B._hot then tick = B.CFG.zedTickMs end
+    out("--- zombie watch: hot " .. tostring(B._hot) .. " (brain tick " .. tostring(tick) .. " ms) ---")
+    local zed = B._zed
+    if type(zed) ~= "table" then
+        out("no zombie watch in this core (B._zed missing)")
+        return
+    end
+    local ids = {}
+    for id, _ in pairs(zed) do ids[#ids + 1] = tostring(id) end
+    table.sort(ids)
+    if #ids == 0 then out("no loaded cub has a zombie listed") end
+    for i = 1, #ids do
+        local z = zed[ids[i]]
+        local s = B._s and B._s[ids[i]]
+        out("  " .. ids[i] .. ": nearest zombie" .. flat(z) .. " | watch" .. flat(s and s.g))
+    end
+end
+
+function NCBear_CubRide()
+    local p, key, reg = ready()
+    if not p then return end
+    local car = p:getVehicle() ~= nil                   -- client/ISUI/Hutch/ISHutchMenu.lua:8
+    out("--- ride: me in a vehicle " .. tostring(car) .. ", distance limit " .. tostring(B.Opt("BearRideDistance")) .. " ---")
+    local n = 0
+    for _, rec in pairs(reg.cubs) do
+        if rec.owner == key then
+            n = n + 1
+            local ride = "-"
+            if type(rec.ride) == "table" then ride = "since " .. num(rec.ride.at) .. " h" end
+            local s = B._s and B._s[rec.id]
+            out("  " .. tostring(rec.id) .. " st " .. tostring(rec.st) .. " mode " .. modeOf(rec) .. " ride " .. ride .. " gen "
+                .. tostring(rec.gen) .. " at " .. tostring(rec.x) .. "," .. tostring(rec.y) .. " | session" .. flat(s and s.ride))
+        end
+    end
+    if n == 0 then out("no cub of yours") end
+end
+
+function NCBear_CubCallReset()
+    if not readyCore() then return end
+    local t = B._callAt
+    if type(t) ~= "table" then
+        out("no call cooldown in this core (B._callAt missing)")
+        return
+    end
+    local keys = {}
+    for k, _ in pairs(t) do keys[#keys + 1] = k end
+    for i = 1, #keys do t[keys[i]] = nil end
+    local p = getSpecificPlayer(0)
+    if p then push(p) end
+    say("call cooldown reset (" .. #keys .. " cub(s))")
+end
+
+-- ---------------------------------------------------------------------------
 -- Rechtsklick: Eintraege im vorhandenen Untermenue "NC Bear" (NCBearTest.lua nimmt Funktionen aus NCBearMenu.extra an und
 -- ruft sie nur im Einzelspieler). Keine alte Datei wird geaendert.
 -- ---------------------------------------------------------------------------
@@ -541,6 +761,8 @@ local function menuClean() NCBear_CubClean() end
 local function menuFollow() NCBear_CubFollow() end
 local function menuOrphan() NCBear_CubOrphan() end
 local function menuSweep() NCBear_CubSweep() end
+local function menuForget() NCBear_CubForget() end
+local function menuCallReset() NCBear_CubCallReset() end
 
 NCBearMenu = NCBearMenu or {}
 NCBearMenu.extra = NCBearMenu.extra or {}
@@ -554,4 +776,6 @@ table.insert(NCBearMenu.extra, function(sub, square, player)
     sub:addOption("Cub: follow / stay", square, menuFollow)
     sub:addOption("Cub: make an orphan", square, menuOrphan)
     sub:addOption("Cub: remove orphans now", square, menuSweep)
+    sub:addOption("Cub: forget entry (keep mark)", square, menuForget)
+    sub:addOption("Cub: reset call cooldown", square, menuCallReset)
 end)

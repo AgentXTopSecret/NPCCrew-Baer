@@ -24,6 +24,7 @@ B._live = B._live or false          -- gab es beim letzten Hirn-Takt etwas zu tu
 B._pp = B._pp or {}                 -- [uid] = { x, y } Ort jedes Spielers beim letzten Hirn-Takt ("steht still")
 B._sig = B._sig or {}               -- [uid] = Text: welche Jungen (mit OnlineID) der Spieler zuletzt in Reichweite hatte
 B._orphAt = B._orphAt or nil        -- B1b: Echtzeit des letzten Suchlaufs, der die Waisen-Liste gefuehrt hat
+B._ppAt = B._ppAt or nil            -- B1c: Echtzeit, zu der B._pp gemessen wurde (Tempo = Weg / echte Zeit, Takt ist bei Zombies schneller)
 
 -- ---------------------------------------------------------------------------
 -- Meldungen
@@ -38,6 +39,7 @@ local WHY_T = {
     UI_BN_Bear_Why_PetWait = "wait",
     UI_BN_Bear_Why_Locked = "days",
     UI_BN_Bear_Why_NameBad = "num",        -- B1b: Wert = B.CFG.nameMax (die Bitte "Rename" baut die Meldung selbst, Follow.lua)
+    UI_BN_Bear_Why_CallWait = "num",       -- B1c: Wert = Minuten bis zum naechsten "Call to me" (die Bitte "Call" baut sie selbst, Ride.lua)
 }
 
 local function tellWhy(player, whyKey, whyVal)
@@ -394,6 +396,11 @@ function B.Handle(player, command, args)
         if B.HandleRename then B.HandleRename(player, args) end
         return
     end
+    -- B1c (PLAN_B1C.md 1.5, 6.5): "Call to me" prueft die Bitte selbst (server/BanditsNPCBearRide.lua)
+    if command == "Call" then
+        if B.HandleCall then B.HandleCall(player, args) end
+        return
+    end
 end
 
 -- Events.OnClientCommand.Add(function(module, command, player, args)): Vanilla server/ClientCommands.lua:1357; Filter auf das
@@ -511,6 +518,9 @@ end
 -- Wald-Wurf je Spielerschluessel (Plan 5.1): erst wuerfeln, nur bei Erfolg einen Platz suchen.
 local function forestRolls(players, now)
     if B.Opt("BearCubsEnabled") ~= true then return end
+    -- B1c (PLAN_B1C.md 1.1 Schritt 2): im Heil-Fenster nach dem Laden kein Wald-Wurf -- sonst bekaeme ein Spieler ein neues wildes
+    -- Junges, bevor sein zahmes aus dem Spiegel zurueck ist. getTimestampMs: Vanilla server/Foraging/forageServer.lua:456.
+    if getTimestampMs() < (B._healUntil or 0) then return end
     local pct = B.CFG.forestRate[B.Opt("BearCubForestRate")] or 0
     if pct <= 0 then return end
     local done = {}
@@ -576,9 +586,10 @@ function B.SlowTick()
     -- pcall um EIGENEN Code (gilt auch fuer B.BrainTick): ein Fehler soll laut, aber gedrosselt kommen (B.ErrEvery) -- er wird
     -- nie verschluckt. Alle Engine-Aufrufe darin haben einen Vanilla-/Bandits-Beleg, mit EINER ehrlich offenen Ausnahme fuer den
     -- Mehrspieler-Server (A3 aus B1a): getCell():getObjectListForLua() im Suchlauf B.ScanAnimals und animal:getAnimalID()
-    -- (B.FindAnimal, B.NewRec, Suchlauf) haben nur Client-Belege (server/BanditsNPCBearWorld.lua:280-282). Scheitert einer am
-    -- Server, steht das im Log ("slow tick: ..." / "brain tick: ...") -- Testpunkt in Kevins MP-Test (PLAN_B1B.md 8.4 MP 7).
-    -- Nachbesserung B1b A6.
+    -- (B.FindAnimal, B.NewRec, Suchlauf) haben nur Client-Belege (Kommentar ueber B.ScanAnimals in server/BanditsNPCBearWorld.lua).
+    -- Scheitert einer am Server, steht das im Log ("slow tick: ..." / "brain tick: ...") -- Testpunkt in Kevins MP-Test (PLAN_B1B.md
+    -- 8.4 MP 7). Nachbesserung B1b A6. B1c haengt mehr daran (Nachbesserung B1c A2): der Suchlauf im Heil-Fenster (je healScanMs fuer
+    -- healWindowMs nach jedem Laden), die Heilung, das Aussteigen und "Call to me" (getAnimalID beim Binden) -- PLAN_B1C.md 7.4 MP 8.
     -- pcall ist eine Lua-Grundfunktion (keine Engine-Methode; Vanilla und Bandits benutzen sie nicht),
     -- im gespielten NCTurretTest shared/BanditsNPCTurretCrew.lua:128 unter Kahlua in Gebrauch.
     local ok, err = pcall(slowTickBody)
@@ -620,7 +631,8 @@ end
 -- Umgebung eines Jungen fuer B.Decide. Rueckgabe: env, Abstand des naechsten Spielers, dessen Eintrag.
 -- B1b: beim gezaehmten Jungen zusaetzlich env.owner = naechster anwesender Besitzer { key, x, y, z, dist, car } (ohne
 -- Abstandsgrenze; B.FollowDecide braucht den echten Abstand fuer "zu weit weg").
-local function buildEnv(rec, cx, cy, players, cache)
+-- B1c (PLAN_B1C.md 1.6, 6.3): env.owner.dt = echte ms seit dem letzten Hirn-Takt (B._ppAt; 0 -> nil), fuer das Tempo des Besitzers.
+local function buildEnv(rec, cx, cy, players, cache, ms)
     local cfg = B.CFG
     local lureKey, mateKey = keysOf(rec)
     local nearD, nearE = nil, nil
@@ -655,7 +667,10 @@ local function buildEnv(rec, cx, cy, players, cache)
         local last = B._pp[ownE.uid]
         local mx, my = 0, 0
         if last ~= nil then mx, my = ownE.x - last.x, ownE.y - last.y end
-        env.owner = { key = ownE.key, x = ownE.x, y = ownE.y, z = ownE.z, dist = ownD, car = (ownE.car == true), mx = mx, my = my }
+        local dt = nil
+        if ms ~= nil and B._ppAt ~= nil and ms - B._ppAt > 0 then dt = ms - B._ppAt end
+        env.owner = { key = ownE.key, x = ownE.x, y = ownE.y, z = ownE.z, dist = ownD, car = (ownE.car == true), mx = mx, my = my,
+                      dt = dt }
     end
     return env, nearD, nearE
 end
@@ -678,10 +693,33 @@ end
 
 -- Spiegel-Probe (B1b, PLAN_B1B.md 4.4): passt der Spiegel am Tier nicht mehr zum Eintrag, neu schreiben. Ein getModData je Takt.
 -- getModData am Tier: Vanilla shared/Definitions/animal/ButcheringUtil.lua:596.
+-- B1c (PLAN_B1C.md 2.2, 6.3): billig ueber B.MarkFresh (v, id, u, r); schreibt nur bei Abweichung (B.WriteMark), ein alter
+-- B1a/B1b-Spiegel { id, st } wird so beim ersten Takt v2. Ohne server/BanditsNPCBearHeal.lua der B1b-Weg.
 local function markProbe(rec, a)
     local md = a:getModData()
     local mark = md and md[B.MARK]
+    local fresh = B.MarkFresh
+    if fresh then
+        if not fresh(rec, mark) then B.WriteMark(rec, a) end
+        return
+    end
     if type(mark) ~= "table" or mark.id ~= rec.id or mark.st ~= rec.st then B.Commit(rec) end
+end
+
+-- B1c (PLAN_B1C.md 0.7, 4.1): die Lage in der Sicht nachschicken, wenn sie sich um viewMoveTiles geaendert hat, hoechstens je
+-- viewMoveMs -- nur an finder / bond / owner (Karte, Markierung). Mitfahrend: nie (kein Koerper, kein Symbol).
+local function pushMoved(rec, ms)
+    local s = B.Ses(rec.id)
+    if s.vx == nil or s.vy == nil or s.vAt == nil or ms - s.vAt < 0 then
+        s.vx, s.vy, s.vAt = rec.x, rec.y, ms
+        return
+    end
+    if ms - s.vAt < B.CFG.viewMoveMs then return end
+    if B.DistXY(s.vx, s.vy, rec.x, rec.y) < B.CFG.viewMoveTiles then return end
+    s.vx, s.vy, s.vAt = rec.x, rec.y, ms
+    if rec.finder ~= nil then B.Touch(nil, rec.finder) end
+    if rec.bond ~= nil then B.Touch(nil, rec.bond) end
+    if rec.owner ~= nil then B.Touch(nil, rec.owner) end
 end
 
 -- Ein geladenes, lebendes Junges.
@@ -697,8 +735,11 @@ local function liveRec(rec, a, players, cache, ms)
         tellKey(rec.owner, note("UI_BN_Bear_Note_Back", nil, nil, "good"), players)
     end
     markProbe(rec, a)
+    pushMoved(rec, ms)
+    -- B1c (PLAN_B1C.md 1.2 Schritt 1): gezaehmte Junge stehen auf der Laerm-Wache (server/BanditsNPCBearGuard.lua)
+    if rec.st == "tame" and B.CalmWatch then B.CalmWatch(rec, a, ms) end
     local cx, cy = a:getX(), a:getY()
-    local env, nearD, nearE = buildEnv(rec, cx, cy, players, cache)
+    local env, nearD, nearE = buildEnv(rec, cx, cy, players, cache, ms)
     local contact = nearD ~= nil and nearD <= B.CFG.contactDist
     if rec.goneP and contact then
         rec.goneP = nil
@@ -717,6 +758,8 @@ local function liveRec(rec, a, players, cache, ms)
         B.Tell(nearE.p, note("UI_BN_Bear_Note_Seen", nil, nil, "good"))
         B.Log("seen " .. rec.id .. " by " .. tostring(nearE.key))
     end
+    -- B1c (PLAN_B1C.md 1.3 Schritt 5): die Zombie-Wache geht vor Folgen und B.Decide (verstecken bzw. fliehen)
+    if B.GuardStep and B.GuardStep(rec, a, env, ms, players) then return end
     -- B1b (PLAN_B1B.md 1.2): ein folgendes gezaehmtes Junges rechnet B.FollowDecide statt B.Decide, ohne Gegenprobe B.MoveWatch
     if rec.st == "tame" and B.ModeOf(rec) == "follow" and B.FollowStep then
         B.FollowStep(rec, a, env, ms, players)
@@ -738,6 +781,7 @@ end
 
 -- Erster Durchgang: Tod sehen, Objekte holen, entscheiden, ob ein Suchlauf noetig ist. Rueckgabe: Liste ohne Objekt, Suchlauf
 -- (je B.CFG.scanMs), Suchlauf nur fuer vermisste Zahme (seltener, je scanMs x B.CFG.missScanMul; Nachbesserung B6).
+-- B1c (PLAN_B1C.md 3.3): ein mitfahrendes Junges (rec.ride) hat absichtlich kein Objekt -- nie "fehlt", nie "missing".
 local function resolve(list)
     local missing = {}
     local need = false
@@ -746,7 +790,9 @@ local function resolve(list)
         local rec = list[i]
         local s = B._s[rec.id]
         local o = s and s.obj
-        if o ~= nil and o:isDead() then
+        if rec.ride ~= nil then
+            -- faehrt mit: nichts zu suchen (B.RideStep lief vorher)
+        elseif o ~= nil and o:isDead() then
             -- Tod nur am in dieser Sitzung gemerkten Objekt (Plan 0.8); "fehlt" ist nie "tot"
             B.Close(rec, "dead")
         elseif B.FindAnimal(rec) == nil then
@@ -765,7 +811,8 @@ end
 local function countMisses(missing, players, now)
     for i = 1, #missing do
         local rec = missing[i]
-        if B.Reg().cubs[rec.id] == rec and B.FindAnimal(rec) == nil and rec.st ~= "missing" and B.AreaLoaded(rec.x, rec.y) then
+        if B.Reg().cubs[rec.id] == rec and rec.ride == nil and B.FindAnimal(rec) == nil and rec.st ~= "missing"
+            and B.AreaLoaded(rec.x, rec.y) then
             rec.missN = (tonumber(rec.missN) or 0) + 1
             if tonumber(rec.missAt) == nil then rec.missAt = now end
             local longEnough = rec.st ~= "fed" or now - tonumber(rec.missAt) >= B.CFG.fedMissH
@@ -856,12 +903,22 @@ local function pushNewSights(reg, players, oids)
     return sent
 end
 
+-- B1c-Reihenfolge (PLAN_B1C.md 6.3): 1 Mitfahrende (B.RideStep), 2 resolve / Folgen ohne Objekt / B1a-Suchlauf, 3 Heil-Fenster-
+-- Suchlauf, 4 Liste der geladenen Jungen -> EINE Zombie-Suche (B.GuardScan), 5 liveRec je Junges, 6 Spieler-Orte und deren Zeit
+-- (B._pp, B._ppAt). Restliche Schritte wie B1b.
 local function brainTickBody(ms)
     local reg = B.Reg()
     if not reg then return end
     local players = B.Players()
     local list = {}
     for _, rec in pairs(reg.cubs) do list[#list + 1] = rec end
+    -- 1: mitfahrende Junge (server/BanditsNPCBearRide.lua)
+    if B.RideStep then
+        for i = 1, #list do
+            local rec = list[i]
+            if reg.cubs[rec.id] == rec and rec.ride ~= nil then B.RideStep(rec, players, ms) end
+        end
+    end
     local missing, need, needSlow = resolve(list)
     -- B1b (PLAN_B1B.md 1.3): ein folgendes Junges ohne Objekt in nicht geladener Gegend wartet dort
     if B.FollowLost then
@@ -880,23 +937,44 @@ local function brainTickBody(ms)
         B.ScanAnimals(players)
         countMisses(missing, players, B.Now())
     end
-    local cache = {}
-    local oids = {}
+    -- 3: Heil-Fenster nach InitRegistry (PLAN_B1C.md 1.1 Schritt 2, 2.6): je healScanMs ein Suchlauf, auch ohne Vermisste -- die
+    -- Zellen laden nach, und ein Junges mit Spiegel ohne Eintrag kommt so zurueck. Fuehrt die Waisen-Liste mit (B._orphAt).
+    if not scanned and ms < (B._healUntil or 0)
+        and (B._healScanAt == nil or ms - B._healScanAt < 0 or ms - B._healScanAt >= B.CFG.healScanMs) then
+        B._healScanAt = ms
+        B._orphAt = ms
+        scanned = true
+        B.ScanAnimals(players)
+    end
+    -- 4: geladene, lebende Junge dieses Takts; EINE Zombie-Suche fuer alle (server/BanditsNPCBearGuard.lua)
+    -- getX/getY am Tier: Vanilla shared/Definitions/animal/ButcheringUtil.lua:575-576
+    local loaded = {}
     for i = 1, #list do
         local rec = list[i]
         if reg.cubs[rec.id] == rec then
             local a = B.FindAnimal(rec)
-            if a then
-                liveRec(rec, a, players, cache, ms)
-                -- getOnlineID am Tier: Vanilla shared/Definitions/animal/ButcheringUtil.lua:614 (isServer-Zweig)
-                if reg.cubs[rec.id] == rec then oids[rec.id] = a:getOnlineID() end
-            end
+            if a then loaded[#loaded + 1] = { rec = rec, a = a, x = a:getX(), y = a:getY(), z = rec.z } end
+        end
+    end
+    if B.GuardScan then B.GuardScan(loaded, ms) end
+    -- 5: je Junges
+    local cache = {}
+    local oids = {}
+    for i = 1, #loaded do
+        local e = loaded[i]
+        local rec = e.rec
+        if reg.cubs[rec.id] == rec then
+            liveRec(rec, e.a, players, cache, ms)
+            -- getOnlineID am Tier: Vanilla shared/Definitions/animal/ButcheringUtil.lua:614 (isServer-Zweig); eingestiegen: kein Tier mehr
+            if reg.cubs[rec.id] == rec and rec.ride == nil then oids[rec.id] = e.a:getOnlineID() end
         end
     end
     baitAppear(reg, players)
+    -- 6: Spieler-Orte und ihre Echtzeit (Tempo des Besitzers fuer Gehen und Aussteigen)
     local pp = {}
     for i = 1, #players do pp[players[i].uid] = { x = players[i].x, y = players[i].y } end
     B._pp = pp
+    B._ppAt = ms
     local sent = pushNewSights(reg, players, oids)
     B.FlushViews(players, sent)
     local live = B.CountRecs() > 0
@@ -905,6 +983,9 @@ local function brainTickBody(ms)
             if bait.ready then live = true end
         end
     end
+    -- B1c: im Heil-Fenster laeuft der Takt je brainMs (sonst idleMs 10 s -> Suchlauf nur je 20 s statt healScanMs 15 s, gerade im
+    -- Fall "Register leer"); das Fenster ist nach healWindowMs zu
+    if not live and ms < (B._healUntil or 0) then live = true end
     B._live = live
     -- B1b (PLAN_B1B.md 4.3, N5): eigener seltener Waisen-Suchlauf je B.CFG.orphanScanMs, auch ohne Eintraege und ohne Vermisste --
     -- nur, wenn in diesem Takt noch kein Suchlauf war. Am ENDE des Takts und mit vorher gestellter Uhr. Mehrspieler-Server:
@@ -924,6 +1005,8 @@ function B.BrainTick(force)
     if not force and B._brainAt ~= nil and ms - B._brainAt >= 0 then
         local every = B.CFG.idleMs
         if B._live then every = B.CFG.brainMs end
+        -- B1c (PLAN_B1C.md 0.5, 1.3 Schritt 6): steht ein Zombie in zedSense eines Jungen, rechnet der Takt schneller
+        if B._hot then every = B.CFG.zedTickMs end
         if ms - B._brainAt < every then return end
     end
     B._brainAt = ms

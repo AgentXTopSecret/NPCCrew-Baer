@@ -158,6 +158,22 @@ option BanditsNPC.BearFollowMaxDistance
 	translation = BanditsNPC_BearFollowMaxDistance,
 }
 
+/* Tiles: a following cub gets into the vehicle with its owner when it is at most this far away (Kevin 11.11.2026: 15). Farther away it waits where it is. */
+option BanditsNPC.BearRideDistance
+{
+	type = integer, min = 3, max = 40, default = 15,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearRideDistance,
+}
+
+/* Real-time minutes between two uses of Call to me on the same cub (Kevin 11.11.2026: 5). 0 = no wait. Not saved: loading a game resets it. */
+option BanditsNPC.BearCallCooldownMinutes
+{
+	type = integer, min = 0, max = 60, default = 5,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearCallCooldownMinutes,
+}
+
 /* Diagnosis lines [TC-BEAR] in the console; real errors are always written. */
 option BanditsNPC.BearLog
 {

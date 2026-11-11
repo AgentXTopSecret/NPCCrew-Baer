@@ -1,6 +1,6 @@
 --
 -- NPC Crew -- Baer, Client-Seite der Befehle und Meldungen (B1a, PLAN_ZAEHMEN.md 5.6, 6.2.4, 6.2.6; B1b, PLAN_B1B.md 5.4:
--- Namen fuer das Schild, neue Texte).
+-- Namen fuer das Schild, neue Texte; B1c, PLAN_B1C.md 6.4/6.7: neue Texte, Ankunftszeit der Sicht U.viewAt).
 --
 -- Laeuft im Einzelspieler und auf jedem MP-Client (der dedizierte Server laedt client/ nicht). Diese Datei entscheidet NICHTS:
 -- sie nimmt die Sicht ("Sync") und die Meldungen ("Note") des Schreibers an, zeigt Meldungen ueber der Figur und bittet beim
@@ -102,13 +102,13 @@ U.EN = {
     UI_BN_Bear_Why_InCar = "Not while you are in a vehicle.",
     UI_BN_Bear_Note_Follow = "Your cub follows you.",
     UI_BN_Bear_Note_Stay = "Your cub stays here.",
-    UI_BN_Bear_Note_StayCar = "Your cub cannot follow a vehicle. It waits here.",
+    UI_BN_Bear_Note_StayCar = "Your cub was too far away to get in. It waits here.",
     UI_BN_Bear_Note_StayFar = "Your cub could not keep up. It waits to the %1.",
     UI_BN_Bear_Note_StayBehind = "Your cub stayed behind to the %1.",
     UI_BN_Bear_Note_Renamed = "Your cub is now called %1.",
     UI_BN_Bear_Menu_Follow = "Follow me",
     UI_BN_Bear_Menu_Stay = "Stay here",
-    UI_BN_Bear_Menu_FollowTip = "It runs after you. In a vehicle or when you get too far ahead, it waits.",
+    UI_BN_Bear_Menu_FollowTip = "It runs after you and rides along in vehicles. If you get too far ahead, it waits.",
     UI_BN_Bear_Menu_StayTip = "It stays around this spot.",
     UI_BN_Bear_Menu_Name = "Name the cub",
     UI_BN_Bear_Name_Title = "Name for your cub:",
@@ -118,6 +118,23 @@ U.EN = {
     UI_BN_Bear_Tag_Follow = "following",
     UI_BN_Bear_Tag_Stay = "staying",
     UI_BN_Bear_Tag_Owner = "belongs to %1",
+    -- B1c (PLAN_B1C.md 6.7): Mitfahren, Call to me, Markierung, Anzeige-Optionen (die MO_*-Texte liest Vanillas Optionen-Fenster
+    -- selbst ueber getText; hier stehen sie nur, damit U.EN wortgleich mit EN/UI.json bleibt)
+    UI_BN_Bear_Note_RideOn = "Your cub jumps in with you.",
+    UI_BN_Bear_Note_RideOff = "Your cub hops out.",
+    UI_BN_Bear_Note_Called = "Here is your cub again.",
+    UI_BN_Bear_Why_CallWait = "You can call your cub again in about %1 min.",
+    UI_BN_Bear_Why_Riding = "Your cub is riding with you.",
+    UI_BN_Bear_Why_NoRoom = "There is no free spot next to you.",
+    UI_BN_Bear_Menu_Call = "Call to me",
+    UI_BN_Bear_Menu_CallTip = "Brings your cub right next to you if it is stuck. Works once every %1 minutes.",
+    UI_BN_Bear_Marker_Cub = "Bear cub nearby",
+    UI_BN_Bear_MO_Page = "NPC Crew: Bear",
+    UI_BN_Bear_MO_Title = "Display above bears",
+    UI_BN_Bear_MO_TagShow = "Show name tags above tamed bears",
+    UI_BN_Bear_MO_TagShowTip = "Name and state. The taming bar always shows.",
+    UI_BN_Bear_MO_TagSize = "Size of the display above bears (%%)",
+    UI_BN_Bear_MO_TagSizeTip = "100, 150 or 200.",
 }
 
 local KEY_HEAD = "UI_BN_Bear_"
@@ -244,8 +261,11 @@ end
 U.syncN = U.syncN or 0
 local hello = { on = false, wait = false, base = 0, n = 0, nextAt = 0 }
 
+-- B1c (PLAN_B1C.md 6.4): U.viewAt = Echtzeit (ms), zu der die letzte Sicht ankam. Die Sicht traegt Restzeiten in Sekunden
+-- (callWait); das Menue rechnet damit die Restzeit zum Zeitpunkt des Klicks. getTimestampMs: V:client/Foraging/ISBaseIcon.lua:485.
 function U.NoteSync()
     U.syncN = (U.syncN or 0) + 1
+    U.viewAt = getTimestampMs()
 end
 
 function U.Fresh()

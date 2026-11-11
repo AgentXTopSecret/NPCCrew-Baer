@@ -3,6 +3,11 @@
 -- ueber dem eigenen Koederplatz. B1b (PLAN_B1B.md 2): Namensschild ueber jedem gezaehmten Jungen (Zeile 1 Name, Zeile 2 klein
 -- der Zustand bzw. bei fremden Jungen der Besitzer); Balken und Schild haengen am selben Anker B.CFG.tagZ dicht ueber dem Kopf.
 -- Dazu U.CubsNear (die Jungen mit Objekt in der Naehe, fuer "Futter hinhalten" im Welt-Menue).
+-- B1c (PLAN_B1C.md 1.9, 6.4): Anzeige-Optionen je Spieler ueber U.Opt (client/BanditsNPCBearOptions.lua) -- "TagShow" aus blendet
+-- die Namensschilder ALLER gezaehmten Baeren aus (der Zaehm-Balken bleibt immer), "TagSize" 100 / 150 / 200 waehlt die Schrift
+-- Small / Medium / Large fuer Schild UND Balken (Balken und Abstaende wachsen mit dem Verhaeltnis der Schrifthoehen). Gelesen nur
+-- beim Listenbau (hoechstens 1 x je Sekunde). Ein mitfahrendes Junges (Sicht "ride") hat keinen Koerper: kein Suchlauf seinetwegen.
+-- U.CubObj / U.CubPos geben anderen Anzeigen (Markierung, Karte) die lebende Client-Kopie aus derselben Tabelle -- ohne eigenen Suchlauf.
 --
 -- Reine Anzeige: liest nur B.View (die Sicht, die der Schreiber diesem Spieler geschickt hat) und fragt nie den Server.
 -- Einzelspieler und Mehrspieler laufen gleich; im Mehrspieler stammen alle Zahlen vom Server. Der dedizierte Server laedt client/ nicht.
@@ -53,6 +58,13 @@ local fontH = nil           -- Hoehe UIFont.Small (Zeile 1, Balken-Texte)
 local font2 = nil           -- Schrift der kleinen Zeile 2 des Namensschilds: UIFont.NewSmall, wenn sie niedriger ist, sonst Small
 local fontH2 = nil
 
+-- B1c: Groessenstufen der Anzeige (U.Opt "TagSize"). Je Stufe: f1/h1 = Schrift und Hoehe von Zeile 1 und den Balken-Texten, f2/h2 =
+-- die kleinere Zeile 2 des Schilds, barW/barH/gap = Balkenmasse (Stufe 1 = genau der Stand B1b). Die Hoehe jeder Schrift wird nur
+-- einmal geholt, wenn die Stufe zum ersten Mal gebraucht wird. Hoechstens drei Eintraege.
+local tiers = {}
+local SIZE_MID = 125        -- TagSize unter 125 -> Stufe 1 (Small), unter 175 -> Stufe 2 (Medium), sonst Stufe 3 (Large)
+local SIZE_BIG = 175
+
 -- Alles, was die Anzeige sich merkt. Nichts davon wird gespeichert oder gesendet; die Tabellen sind durch die Sicht gedeckelt
 -- (hoechstens so viele Kennungen, wie B.View.cubs traegt; verschwundene Kennungen fallen bei jeder neuen Sicht heraus).
 local S = {
@@ -66,6 +78,7 @@ local S = {
     objs = {},      -- id -> IsoAnimal (nur in dieser Sitzung, jedes Mal gegengeprueft)
     prev = {},      -- id -> letzter gesehener Zustand (fuer "gerade gezaehmt")
     flash = {},     -- id -> ms, bis wann "Gezaehmt!" steht
+    tier = nil,     -- B1c: Groessenstufe der aktuellen Liste (tiers[1..3]); nil = noch keine Liste
 }
 
 local function reset()
@@ -79,6 +92,56 @@ local function reset()
     S.objs = {}
     S.prev = {}
     S.flash = {}
+    S.tier = nil
+end
+
+-- Stufe k (1..3) mit Schriften und Massen. Stufe 1 braucht fontH/font2/fontH2 (in prerender einmal geholt).
+-- getFontHeight(UIFont.Medium): V:client/ISUI/AdminPanel/ISAddSafeZoneUI.lua:8; getFontHeight(UIFont.Large):
+-- V:client/ISUI/AdminPanel/ISAdminTicketsUI.lua:6.
+local function tierOf(k)
+    local t = tiers[k]
+    if t then return t end
+    local h1, f1, h2, f2 = fontH, UIFont.Small, fontH2, font2
+    if k == 2 or k == 3 then
+        local tm = getTextManager()
+        local hMed = tm:getFontHeight(UIFont.Medium)
+        if k == 2 then
+            f1, h1 = UIFont.Medium, hMed
+            f2, h2 = UIFont.Small, fontH
+        else
+            f1, h1 = UIFont.Large, tm:getFontHeight(UIFont.Large)
+            f2, h2 = UIFont.Medium, hMed
+        end
+        if type(h1) ~= "number" or h1 <= 0 then h1 = fontH end
+        if type(h2) ~= "number" or h2 <= 0 then h2 = fontH end
+    end
+    local ratio = 1
+    if k ~= 1 and fontH and fontH > 0 then ratio = h1 / fontH end
+    if ratio < 1 then ratio = 1 end
+    t = {
+        f1 = f1, h1 = h1, f2 = f2, h2 = h2,
+        barW = math.floor(BAR_W * ratio + 0.5), barH = math.floor(BAR_H * ratio + 0.5),
+        gap = math.floor(4 * ratio + 0.5), gap2 = math.floor(2 * ratio + 0.5),
+    }
+    tiers[k] = t
+    return t
+end
+
+-- Gewaehlte Stufe aus der Anzeige-Option (fehlt client/BanditsNPCBearOptions.lua: Vorgabe 100 = Stufe 1).
+local function tierWanted()
+    local size = 100
+    local opt = U.Opt
+    if opt then size = tonumber(opt("TagSize", 100)) or 100 end
+    if size < SIZE_MID then return 1 end
+    if size < SIZE_BIG then return 2 end
+    return 3
+end
+
+-- Namensschilder zeigen? (fehlt die Options-Datei: ja)
+local function tagsWanted()
+    local opt = U.Opt
+    if not opt then return true end
+    return opt("TagShow", true) ~= false
 end
 
 -- ---------------------------------------------------------------------------
@@ -91,8 +154,9 @@ local function alive(a)
 end
 
 -- Bekommt dieses Junge eine Anzeige? B1b: jedes Junge der Sicht, das ein Objekt haben kann -- ungezaehmte den Balken, gezaehmte
--- (eigene und fremde) das Namensschild. "missing" hat kein Objekt (Plan 2.1).
+-- (eigene und fremde) das Namensschild. "missing" hat kein Objekt (Plan 2.1). B1c: ein mitfahrendes Junges ("ride") auch nicht.
 local function wanted(c)
+    if c.ride == true then return false end
     local st = c.st
     return st == "new" or st == "shy" or st == "fed" or st == "tame"
 end
@@ -179,7 +243,9 @@ local function describe(e, meKey, nowH)
     local pct = math.floor(tonumber(c.tame) or 0)
     if pct < 0 then pct = 0 end
     if pct > 100 then pct = 100 end
-    e.fill = math.floor(BAR_W * pct / 100)
+    local barW = BAR_W
+    if S.tier then barW = S.tier.barW end
+    e.fill = math.floor(barW * pct / 100)
     local unfed = (c.st == "new" or c.st == "shy")
     e.unfed = unfed
     local line1 = U.T("UI_BN_Bear_Hud_Taming", pct)
@@ -284,14 +350,17 @@ local function rebuild(now)
         end
     end
 
-    -- 3. Eintraege: die naechsten hudMax in hudDist Kacheln.
+    -- 3. Eintraege: die naechsten hudMax in hudDist Kacheln. B1c: Anzeige-Optionen einmal je Liste lesen (U.Opt, je Wert
+    -- hoechstens 1 x je Sekunde); "Namensschilder aus" laesst gezaehmte Junge weg (sie zaehlen dann auch nicht gegen hudMax).
+    S.tier = tierOf(tierWanted())
+    local showTags = tagsWanted()
     local cfg = B.CFG
     local reach = cfg.hudDist or 20
     local max = cfg.hudMax or 6
     local found = {}
     for id, c in pairs(cubs) do
         local a = S.objs[id]
-        if a ~= nil and wanted(c) and alive(a) then
+        if a ~= nil and wanted(c) and (showTags or c.st ~= "tame") and alive(a) then
             local dx = a:getX() - px                    -- client/TimedActions/ISContextualActions.lua:100
             local dy = a:getY() - py
             local d2 = dx * dx + dy * dy
@@ -330,34 +399,38 @@ end
 
 -- Namensschild: der Block waechst vom Anker nach OBEN -- Zeile 2 (klein, blasser) sitzt mit ihrer Unterkante am Anker, Zeile 1
 -- 1 px darueber (Plan 2.2). Gerade gezaehmt: Zeile 2 blinkt gruen "Tamed!" (450 von 700 ms an), danach der Zustand.
-local function drawTag(self, e, sx, sy, now, small)
-    local y2 = sy - fontH2
-    text(self, e.line1, sx, y2 - 1 - fontH, e.r, e.g, e.b, 0.95, small)
+-- B1c: Schriften und Hoehen aus der Groessenstufe t (Stufe 1 = Small / NewSmall wie B1b). drawTextCentre mit UIFont.Medium:
+-- V:client/ISUI/ISFitnessUI.lua:204; mit UIFont.Large: V:client/Chat/ISAlert.lua:35.
+local function drawTag(self, e, sx, sy, now, t)
+    local y2 = sy - t.h2
+    text(self, e.line1, sx, y2 - 1 - t.h1, e.r, e.g, e.b, 0.95, t.f1)
     if now < e.till then
         if (now % 700) < 450 then
-            text(self, e.flashLine, sx, y2, 0.55, 1.0, 0.55, 1.0, font2)
+            text(self, e.flashLine, sx, y2, 0.55, 1.0, 0.55, 1.0, t.f2)
         end
     else
-        text(self, e.line2, sx, y2, 0.78, 0.78, 0.74, 0.80, font2)
+        text(self, e.line2, sx, y2, 0.78, 0.78, 0.74, 0.80, t.f2)
     end
 end
 
 -- Zaehm-Balken wie B1a (Zeile 2 unten am Anker, darueber der Balken, darueber Zeile 1); nur der Anker ist neu.
-local function drawBar(self, e, sx, sy, small)
-    local fh = fontH
-    local bx = sx - BAR_W / 2
-    local by = sy - fh - BAR_H - 4
-    text(self, e.line1, sx, by - fh - 2, 0.96, 0.96, 0.90, 0.95, small)
-    self:drawRect(bx - 1, by - 1, BAR_W + 2, BAR_H + 2, 0.65, 0, 0, 0)
+-- B1c: Balkenbreite, -hoehe und Abstaende aus der Groessenstufe t (Stufe 1: 64 x 7, 4 und 2 px wie B1b).
+local function drawBar(self, e, sx, sy, t)
+    local fh = t.h1
+    local bw, bh = t.barW, t.barH
+    local bx = sx - bw / 2
+    local by = sy - fh - bh - t.gap
+    text(self, e.line1, sx, by - fh - t.gap2, 0.96, 0.96, 0.90, 0.95, t.f1)
+    self:drawRect(bx - 1, by - 1, bw + 2, bh + 2, 0.65, 0, 0, 0)
     if e.fill > 0 then
         if e.unfed then
-            self:drawRect(bx, by, e.fill, BAR_H, 0.95, 0.95, 0.70, 0.25)
+            self:drawRect(bx, by, e.fill, bh, 0.95, 0.95, 0.70, 0.25)
         else
-            self:drawRect(bx, by, e.fill, BAR_H, 0.95, 0.45, 0.85, 0.35)
+            self:drawRect(bx, by, e.fill, bh, 0.95, 0.45, 0.85, 0.35)
         end
     end
-    self:drawRectBorder(bx - 1, by - 1, BAR_W + 2, BAR_H + 2, 0.9, 0.85, 0.85, 0.80)
-    text(self, e.line2, sx, sy - fh, 0.90, 0.90, 0.85, 0.80, small)
+    self:drawRectBorder(bx - 1, by - 1, bw + 2, bh + 2, 0.9, 0.85, 0.85, 0.80)
+    text(self, e.line2, sx, sy - fh, 0.90, 0.90, 0.85, 0.80, t.f1)
 end
 
 -- Das Element liegt bei 0,0 und wird nie verschoben: seine Koordinaten sind Bildschirm-Koordinaten.
@@ -368,6 +441,7 @@ local function draw(self, now)
     local cfg = B.CFG
     local lift = tonumber(cfg.tagZ) or TAG_Z
     local small = UIFont.Small
+    local t = S.tier or tierOf(1)
     for i = 1, S.n do
         local e = S.list[i]
         local a = e.a
@@ -378,9 +452,9 @@ local function draw(self, now)
             local sx = math.floor(isoToScreenX(0, x, y, z))
             local sy = math.floor(isoToScreenY(0, x, y, z))
             if e.tag then
-                drawTag(self, e, sx, sy, now, small)
+                drawTag(self, e, sx, sy, now, t)
             else
-                drawBar(self, e, sx, sy, small)
+                drawBar(self, e, sx, sy, t)
             end
         end
     end
@@ -462,6 +536,28 @@ function U.CubsNear(playerObj, radius)
     end
     if #out > 1 then table.sort(out, byD) end
     return out
+end
+
+-- ---------------------------------------------------------------------------
+-- B1c (PLAN_B1C.md 6.4): die lebende Client-Kopie eines Jungen fuer Markierung und Karte -- aus derselben Tabelle wie der
+-- Balken (S.objs), ohne eigenen Suchlauf. Nur auf Abruf (Markierung je 400 ms, Karte je 500 ms), nie je Bild.
+-- U.CubObj(id): das Objekt, wenn es lebt UND sein Sicht-Eintrag noch diese Kennung ist (B.ViewOf: Spiegel bzw. OnlineID), sonst
+-- nil -- schuetzt davor, einer anderen Figur zu folgen, falls die Engine ein Objekt weiterreicht.
+-- U.CubPos(id): x, y, z dieser Kopie oder nil. getX/getY/getZ am Tier: client/TimedActions/ISContextualActions.lua:100.
+-- ---------------------------------------------------------------------------
+function U.CubObj(id)
+    if id == nil then return nil end
+    local a = S.objs[id]
+    if a == nil or not alive(a) then return nil end
+    local v = B.ViewOf and B.ViewOf(a)
+    if not v or v.id ~= id then return nil end
+    return a
+end
+
+function U.CubPos(id)
+    local a = U.CubObj(id)
+    if a == nil then return nil end
+    return a:getX(), a:getY(), a:getZ()
 end
 
 -- ---------------------------------------------------------------------------

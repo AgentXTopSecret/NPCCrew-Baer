@@ -3,6 +3,8 @@
 --
 -- Modul, Konstanten, Stellwerte, Sandbox, Meldungen, Text, Spielerschluessel, Zeit, Wald-Frage, Sicht des Clients und die
 -- drei Wege zwischen Schreiber und Spieler (B.Ask, B.Tell, B.SendView).
+-- B1c (PLAN_B1C.md 5): Spiegel-Fassung B.MARK_V, Stellwerte fuer Heilung, Laerm, Zombies, Mitfahren, Call to me, Gehen,
+-- Markierung und Karte, zwei neue Sandbox-Optionen (BearRideDistance, BearCallCooldownMinutes).
 --
 -- Laeuft ohne NPC Crew und ohne Bandits. Am Ende kopiert das Uebernahme-Skript diese Datei unveraendert nach NPC Crew.
 -- Deshalb: auf Dateiebene wird kein fremdes Modul eingefangen; jeder Griff nach BanditsNPC.X passiert zur Laufzeit und
@@ -24,7 +26,8 @@ B.CMD = "BanditsNPCBear"        -- Modulname fuer sendClientCommand / sendServer
 B.CUB = "ncbearcub"             -- Tierart des Jungen
 B.BREED = "brown"
 B.GROUP = "ncbear"
-B.MARK = "tcBear"               -- Spiegel am Tier: animal:getModData().tcBear = { id, st }
+B.MARK = "tcBear"               -- Spiegel am Tier: animal:getModData().tcBear (B1c: Spiegel v2, server/BanditsNPCBearHeal.lua B.MarkOf)
+B.MARK_V = 2                    -- B1c (PLAN_B1C.md 2.2): Fassung des Spiegels; fehlt mark.v, ist es ein B1a/B1b-Spiegel { id, st }
 B.SP_KEY = "__sp"               -- Besitzerschluessel im Einzelspieler (nie der Charaktername)
 B.ACT = "NCBearAct"             -- Anim-Variable am Tier (Knoten AnimSets/buck/idle)
 
@@ -75,6 +78,24 @@ B.CFG = B.CFG or {
     nameMax = 24,                                         -- hoechstens so viele Zeichen im Namen
     askMs = 500,                                          -- Bitten "Mode"/"Rename" eines Spielers hoechstens so oft
     orphanScanMs = 120000, orphanAgeMs = 30000, orphanMax = 16,   -- eigener Waisen-Suchlauf je / Mindestalter einer Waise / Deckel
+    -- B1c (PLAN_B1C.md 5.2). Abstaende in Kacheln, Zeiten in Echtzeit-ms, Tempo in Kacheln/s.
+    healWindowMs = 120000, healScanMs = 15000,            -- Heil-Fenster nach InitRegistry / Suchlauf darin je
+    calmMax = 8, calmMs = 2500, calmGap = 1.5,            -- Laerm-Wache: Deckel / Ruhefrist (keine Sperre) / Ersatzweg-Laenge
+    noiseStressJump = 0.02, noiseAnswerMax = 4, noiseAnswerWinMs = 2000,   -- Stress-Sprung je Bild = Laerm / Antworten je Fenster
+    ownSlackMs = 1500, ownMaxMs = 15000,                  -- eigener Befehl gilt Wegzeit + so viel, hoechstens so lange
+    ownAway = 3, ownAwayQuietMs = 5000,                   -- Nachbesserung B5: so viel weiter vom eigenen Ziel = Flucht / danach Ruhe
+    followFleeGrow = 2.0,                                 -- Rueckfall: Abstand zum Besitzer wuchs je Takt so viel -> sofort neu
+    walkDist = 3, walkSpeed = 0.52, runSpeed = 2.47,      -- gehen bis Reststrecke / bis Besitzer-Tempo / Tempo fuer die Wegzeit
+    zedSense = 12, zedHide = 6, zedSafe = 9, zedCalmMs = 3000,     -- Zombie: Suche / Gefahr ab / sicher ab / so lange sicher bis Ende
+    zedFlee = 10, hideGap = 1.5, hideNear = 1.0, hideOwnerMax = 10,  -- Fluchtweite / Versteck hinter dem Besitzer / angekommen / Besitzer
+    zedScanMax = 1500, zedTickMs = 750, zedKeepMs = 3000,  -- Zombies je Takt / Hirn-Takt bei Gefahr / letzte Sichtung gilt so lange
+    guardMoveMs = 800, guardRepath = 1.5, guardRenewMs = 3000,     -- Wache: fruehester neuer Befehl / Ziel-Wanderung / Auffrischen
+    rideOffMsSP = 1000, rideOffMsMP = 3000, rideSpeedMax = 4,      -- Aussteigen nach (SP / MP) / nur langsamer als
+    rideRing = 3, rideLostMs = 5000, rideFailLog = 20,    -- Platz-Ringe / Besitzer tot so lange / Fehlerzeile ab Versuch
+    callRing = 3,                                         -- Platz-Ringe fuer "Call to me"
+    viewMoveTiles = 3, viewMoveMs = 5000,                 -- Lage in der Sicht nachschicken ab / hoechstens je
+    markerMs = 400, markerAfterMs = 60000, markerDur = 1800, markerShift = 100,   -- Markierung (liest die OBERFLAECHE)
+    mapMiniPx = 14, mapWorldMin = 18, mapWorldMax = 28, mapListMs = 500,          -- Karte (liest die OBERFLAECHE)
 }
 
 -- Sandbox-Optionen BanditsNPC.<Name> (Plan 3.1): Vorgabe und Bereich. Die Datei sandbox-options.txt nennt dieselben Zahlen.
@@ -99,6 +120,9 @@ B.OPTS = B.OPTS or {
     BearCubVanishHours = { def = 36, min = 0, max = 240 },
     BearDeathLockDays = { def = 7, min = 0, max = 60 },
     BearFollowMaxDistance = { def = 40, min = 10, max = 60 },   -- B1b: weiter weg -> ein folgendes Junges wartet (Max unter 76 geladenen Kacheln)
+    -- B1c (PLAN_B1C.md 5.1, Kevin 11.11.2026: 15 Kacheln, 5 Minuten Echtzeit)
+    BearRideDistance = { def = 15, min = 3, max = 40 },          -- so weit darf ein folgendes Junges beim Einsteigen weg sein
+    BearCallCooldownMinutes = { def = 5, min = 0, max = 60 },    -- Echtzeit-Minuten zwischen zwei "Call to me" am selben Jungen
     BearLog = { def = false },
 }
 

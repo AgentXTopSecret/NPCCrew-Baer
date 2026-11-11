@@ -358,7 +358,17 @@ local NAME_BADR = {
     { "\239\187\191", "\239\187\191" },         -- U+FEFF Null-Breite-Leerzeichen / BOM
     { "\239\190\160", "\239\190\160" },         -- U+FFA0 Hangul-Fueller halbbreit
     { "\239\191\185", "\239\191\187" },         -- U+FFF9-U+FFFB Anmerkungs-Steuerzeichen
+    -- B1c N2 (PLAN_B1C.md 1.10, gegen_bericht_b1b.md N2)
+    { "\238\128\128", "\239\163\191" },         -- U+E000-U+F8FF Privatbereich (ohne Schrift: leere Kaestchen)
+    { "\239\191\188", "\239\191\189" },         -- U+FFFC-U+FFFD Objekt-Ersatz, Ersatzzeichen
 }
+-- B1c N2: Ersatzzeichen-Haelften U+D800-U+DFFF (Kahlua liefert ein Zeichen ueber U+FFFF als ZWEI solche Haelften, Jar
+-- String.substring). Eine Haelfte allein hat kein gueltiges UTF-8-Literal -> als ECHTE Ungleichungen zwischen U+D7FF und U+E000.
+local SURR_LO = "\237\159\191"                  -- U+D7FF (letztes Zeichen davor)
+local SURR_HI = "\238\128\128"                  -- U+E000 (erstes Zeichen danach)
+-- B1c N2: Kombinationszeichen U+0300-U+036F. Ein Name, dessen sichtbare Zeichen ALLE solche sind, zeigt nichts Lesbares.
+local COMB_LO = "\204\128"                      -- U+0300
+local COMB_HI = "\205\175"                      -- U+036F
 -- NAME_SPACE: Leerraum -> am Rand weg, zaehlt nicht als sichtbar (ein Name nur daraus ist leer); in der Mitte erlaubt.
 local NAME_SPACE = {
     { " ", " " },
@@ -390,15 +400,19 @@ function B.CleanName(text)
     local n = string.len(text)
     if n > 4 * max then return nil, NAME_BAD end
     local first, last = nil, nil
+    local allComb = true                        -- B1c N2: bisher nur Kombinationszeichen gesehen (sichtbar)
     for k = 1, n do
         local ch = string.sub(text, k, k)
         local space
         if ch >= " " and ch <= "~" then
             if ch == "<" or ch == ">" or ch == "%" then return nil, NAME_BAD end
             space = (ch == " ")
+            if not space then allComb = false end
         else
             if ch < " " or inRanges(ch, NAME_BADR) then return nil, NAME_BAD end
+            if ch > SURR_LO and ch < SURR_HI then return nil, NAME_BAD end
             space = inRanges(ch, NAME_SPACE)
+            if not space and not (ch >= COMB_LO and ch <= COMB_HI) then allComb = false end
         end
         if not space then
             if first == nil then first = k end
@@ -406,6 +420,7 @@ function B.CleanName(text)
         end
     end
     if first == nil then return nil, NAME_BAD end
+    if allComb then return nil, NAME_BAD end
     if last - first + 1 > max then return nil, NAME_BAD end
     return string.sub(text, first, last), nil
 end
@@ -444,15 +459,29 @@ local function gainToward(f, c, o)
     return ((c.x - f.bx) * ux + (c.y - f.by) * uy) / len
 end
 
+-- B1c (PLAN_B1C.md 1.4, 1.6, 6.3):
+--   Regel 11: Besitzer im Fahrzeug und hoechstens BearRideDistance weg -> { act = "ride" } (der Schreiber laesst es einsteigen,
+--   server/BanditsNPCBearRide.lua B.RideBoard); weiter weg -> "stay" "car" wie B1b.
+--   Regel 16 traegt walk: GEHEN, wenn die Reststrecke Junges -> Ziel hoechstens walkDist ist UND der Besitzer langsamer als
+--   walkSpeed ist (o.dt = ms seit dem letzten Takt, fehlt -> brainMs); sonst rennen. Wechselt walk, geht sofort ein neuer Befehl.
+--   Rueckfall Laerm (1.2 Schritt 5): wuchs der Abstand zum Besitzer seit dem letzten Aufruf um followFleeGrow, sofort neu (ohne
+--   followMoveMs). f.lastD = Abstand dieses Aufrufs; f.walk setzt B.FollowStep nach einem Befehl.
 function B.FollowDecide(c, o, f, ms)
     local cfg = B.CFG
     f = f or {}
     if o == nil then
         resetProgress(f)
+        f.lastD = nil
         return { act = "hold", why = "offline", rule = 10 }
     end
-    if o.car then return { act = "stay", why = "car", rule = 11 } end
     local d = tonumber(o.dist) or 0
+    if o.car then
+        f.lastD = nil
+        if d <= B.Opt("BearRideDistance") then return { act = "ride", rule = 11 } end
+        return { act = "stay", why = "car", rule = 11 }
+    end
+    local lastD = f.lastD
+    f.lastD = d
     if d > B.Opt("BearFollowMaxDistance") then return { act = "stay", why = "far", rule = 12 } end
     if math.floor(tonumber(o.z) or 0) ~= math.floor(tonumber(c.z) or 0) then
         resetProgress(f)
@@ -492,18 +521,108 @@ function B.FollowDecide(c, o, f, ms)
         end
         retry = true
     end
-    -- 16: rennen zu einem Punkt followGap Kacheln vor dem (vorausberechneten) Besitzer auf der Linie Besitzer -> Junges
+    -- 16: laufen zu einem Punkt followGap Kacheln vor dem (vorausberechneten) Besitzer auf der Linie Besitzer -> Junges
     local tx, ty = toward(px, py, c.x, c.y, cfg.followGap)
+    -- B1c Gehen (1.6): Reststrecke und Tempo des Besitzers (Weg seit dem letzten Takt / echte Zeit seitdem)
+    local dt = tonumber(o.dt)
+    if dt == nil or dt <= 0 then dt = tonumber(cfg.brainMs) or 1500 end
+    local speed = ml / (dt / 1000)
+    local walk = B.DistXY(c.x, c.y, tx, ty) <= (tonumber(cfg.walkDist) or 0) and speed <= (tonumber(cfg.walkSpeed) or 0)
+    local grow = lastD ~= nil and d - lastD >= (tonumber(cfg.followFleeGrow) or 2)
     local age = nil
     if f.orderAt ~= nil and ms - f.orderAt >= 0 then age = ms - f.orderAt end
+    if grow then
+        -- B1c Rueckfall (1.2 Schritt 5): das Junge entfernte sich (Engine-Flucht bei Stress am Deckel) -> sofort neu
+        if retry then f.retryAt = ms end
+        return { act = "run", tx = tx, ty = ty, rule = 16, walk = walk }
+    end
     if age ~= nil and age < cfg.followMoveMs then
-        return { act = "keep", tx = tx, ty = ty, rule = 16 }
+        return { act = "keep", tx = tx, ty = ty, rule = 16, walk = walk }
     end
     local wandered = f.tx == nil or f.ty == nil or B.DistXY(f.tx, f.ty, tx, ty) >= cfg.followRepath
     local renew = age == nil or age >= cfg.followRenewMs
-    if wandered or renew or f.held == true or retry then
+    local switched = f.orderAt ~= nil and (f.walk == true) ~= walk
+    if wandered or renew or switched or f.held == true or retry then
         if retry then f.retryAt = ms end
-        return { act = "run", tx = tx, ty = ty, rule = 16 }
+        return { act = "run", tx = tx, ty = ty, rule = 16, walk = walk }
     end
-    return { act = "keep", tx = tx, ty = ty, rule = 16 }
+    return { act = "keep", tx = tx, ty = ty, rule = 16, walk = walk }
+end
+
+-- ---------------------------------------------------------------------------
+-- B1c: Zombie-Wache, Verstecken, Laerm-Ersatzweg (PLAN_B1C.md 1.2, 1.3, 6.3). Rein: keine Engine, auch der Client darf rufen.
+-- ---------------------------------------------------------------------------
+
+-- Versteck hinter dem Besitzer O, vom Zombie Z abgewandt: O + (O - Z) / |O - Z| x gap. Fallen O und Z zusammen: O + (gap, 0).
+function B.HideSpot(ox, oy, zx, zy, gap)
+    local dx, dy = ox - zx, oy - zy
+    local len = math.sqrt(dx * dx + dy * dy)
+    if len < 0.001 then return ox + gap, oy end
+    return ox + dx / len * gap, oy + dy / len * gap
+end
+
+-- Laerm-Ersatzweg von C: ist der Anker A weiter als gap + 1, gap Kacheln Richtung A; sonst gap Kacheln quer zur Linie C -> A
+-- (side 1 / -1; nie die eigene Kachel: Ankunft = Schild weg, PLAN_B1C.md 0.4). A fehlt (oder liegt auf C): quer zur x-Achse.
+function B.CalmSpot(cx, cy, ax, ay, gap, side)
+    local sd = 1
+    if side == -1 then sd = -1 end
+    if ax == nil or ay == nil then return cx, cy + gap * sd end
+    local dx, dy = ax - cx, ay - cy
+    local len = math.sqrt(dx * dx + dy * dy)
+    if len < 0.001 then return cx, cy + gap * sd end
+    local ux, uy = dx / len, dy / len
+    if len > gap + 1 then return cx + ux * gap, cy + uy * gap end
+    return cx - uy * gap * sd, cy + ux * gap * sd
+end
+
+-- Was soll ein Junges wegen eines Zombies tun? (Regeln 20-24, PLAN_B1C.md 1.3)
+-- c = { x, y, z, st }; o = naechster Besitzer { x, y, z, dist, car } (nur bei st "tame") oder nil; z = naechster Zombie
+-- { x, y, d } oder nil; g = Sitzungs-Tabelle der Wache, hier fortgeschrieben: on, mode, safeAt, zx, zy. ms = Echtzeit.
+-- Rueckgabe { act, tx, ty, rule, mode }: act "none" (20, keine Gefahr / Ende), "hide" (21, rennen zum Versteck), "hold" (22, am
+-- Versteck halten), "flee" (23, vom Zombie weg), "keep" (24, Nachlauf: war gefaehrdet, jetzt weiter als zedSafe, noch nicht
+-- zedCalmMs lang). Gefahr beginnt bei z.d <= zedHide und haelt, solange z.d <= zedSafe (Hysterese).
+function B.GuardDecide(c, o, z, g, ms)
+    local cfg = B.CFG
+    g = g or {}
+    local zd = z and tonumber(z.d) or nil
+    local danger
+    if g.on == true then
+        danger = zd ~= nil and zd <= cfg.zedSafe
+    else
+        danger = zd ~= nil and zd <= cfg.zedHide
+    end
+    if not danger then
+        if g.on ~= true then return { act = "none", rule = 20 } end
+        if g.safeAt == nil or ms - g.safeAt < 0 then g.safeAt = ms end
+        if ms - g.safeAt < cfg.zedCalmMs then return { act = "keep", rule = 24, mode = g.mode } end
+        g.on = nil
+        g.mode = nil
+        g.safeAt = nil
+        g.zx, g.zy = nil, nil
+        return { act = "none", rule = 20 }
+    end
+    g.on = true
+    g.safeAt = nil
+    g.zx, g.zy = z.x, z.y
+    local canHide = c.st == "tame" and o ~= nil and o.car ~= true
+        and math.floor(tonumber(o.z) or 0) == math.floor(tonumber(c.z) or 0)
+        and (tonumber(o.dist) or 999) <= cfg.hideOwnerMax
+    if canHide then
+        g.mode = "hide"
+        local hx, hy = B.HideSpot(o.x, o.y, z.x, z.y, cfg.hideGap)
+        if B.DistXY(c.x, c.y, hx, hy) <= cfg.hideNear then
+            return { act = "hold", tx = hx, ty = hy, rule = 22, mode = "hide" }
+        end
+        return { act = "hide", tx = hx, ty = hy, rule = 21, mode = "hide" }
+    end
+    g.mode = "flee"
+    local dx, dy = c.x - z.x, c.y - z.y
+    local len = math.sqrt(dx * dx + dy * dy)
+    local tx, ty
+    if len < 0.001 then
+        tx, ty = c.x + cfg.zedFlee, c.y
+    else
+        tx, ty = c.x + dx / len * cfg.zedFlee, c.y + dy / len * cfg.zedFlee
+    end
+    return { act = "flee", tx = tx, ty = ty, rule = 23, mode = "flee" }
 end

@@ -5,7 +5,8 @@ if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: la
 --
 -- Folgen rechnet NUR der Schreiber im Hirn-Takt (Einzelspieler: das eine Programm; Mehrspieler: der Server). Kein Client
 -- befiehlt dem Tier etwas: ein Client bittet nur ("Mode", "Rename"), der Schreiber prueft Besitz und Zustand im Register.
--- Bewegung nur ueber B.MoveTo (animal:fleeTo, das Junge rennt) und B.Hold (setBlockMovement) aus server/BanditsNPCBearWorld.lua;
+-- Bewegung nur ueber B.MoveTo (animal:fleeTo = rennen; B1c: auf kurze Strecke zu einem stehenden Besitzer gehen, opt.walk) und
+-- B.Hold (setBlockMovement) aus server/BanditsNPCBearWorld.lua; B1c: Einsteigen ueber B.RideBoard (server/BanditsNPCBearRide.lua);
 -- eigene Engine-Aufrufe hier nur player:getVehicle, getX/getY und getTimestampMs (Fundstelle je am Aufruf), sonst Register und Regeln.
 -- Der Name lebt nur im Register (Plan 0.3): kein Vanilla-Tiername am Tier.
 --
@@ -81,7 +82,8 @@ local function refuse(player, pkey, command, n)
 end
 
 -- ---------------------------------------------------------------------------
--- Zustand setzen (Plan 5.3). mode = "follow" / "stay"; why = "ask" / "car" / "far" / "lost" / "offline" / "missing".
+-- Zustand setzen (Plan 5.3). mode = "follow" / "stay"; why = "ask" / "car" / "far" / "lost" / "offline" / "missing"; B1c auch
+-- "call" / "ride" / "dead" (ohne Meldung: Ride.lua meldet selbst).
 -- Bei "stay" wird die Heimat die Kachel, an der das Junge jetzt steht (Plan 1.4). Leert die Folgen-Sitzung B._s[id].f und die
 -- alte Lauf-Gegenprobe (sonst meldete B.MoveWatch nach dem Wechsel einen Folgen-Befehl als "bewegt sich nicht").
 -- Meldung an den Besitzer nach why; die Richtung ist die vom Besitzer zum Jungen. Rueckgabe: true, wenn gesetzt.
@@ -135,18 +137,27 @@ function B.FollowStep(rec, a, env, ms, players)
     local c = { x = a:getX(), y = a:getY(), z = rec.z }
     local wasStuck = f.stuck == true
     local d = B.FollowDecide(c, env and env.owner or nil, f, ms)
-    if d.act == "stay" then
+    if d.act == "ride" then
+        -- B1c (PLAN_B1C.md 1.4, 6.3): Besitzer im Fahrzeug und nah genug -> einsteigen (Koerper verschwindet); geht das nicht
+        -- (Definition fehlt), wie B1b "Bleiben" mit Meldung
+        local board = B.RideBoard
+        if not (board and board(rec, a, env and env.owner or nil, players)) then B.SetMode(rec, "stay", "car", players) end
+        return
+    elseif d.act == "stay" then
         B.SetMode(rec, "stay", d.why, players)
         return
     elseif d.act == "hold" then
         B.Hold(rec, a, true)
         f.held = true
     elseif d.act == "run" then
-        local moved = B.MoveTo(rec, a, d.tx, d.ty, rec.z, { minMs = B.CFG.followMoveMs, watch = false })
+        -- B1c Gehen (1.6): d.walk -> B.MoveTo geht (setVariable + pathToLocation), sonst rennt es (fleeTo)
+        local walk = d.walk == true
+        local moved = B.MoveTo(rec, a, d.tx, d.ty, rec.z, { minMs = B.CFG.followMoveMs, watch = false, walk = walk })
         if moved then
             f.orderAt = ms
             f.tx, f.ty = d.tx, d.ty
             f.held = nil
+            f.walk = walk
         end
     end
     if f.stuck == true and not wasStuck then
@@ -165,8 +176,10 @@ end
 -- "ohne Objekt", bis der Suchlauf es bindet -- das ist kein Zurueckbleiben. Und nur, wenn der Besitzer da ist (Nachbesserung B1b
 -- A7): ist er abgemeldet, entlaedt seine Gegend mit ihm, und das Junge wartet als "follow" auf ihn.
 -- ---------------------------------------------------------------------------
+-- B1c: ein mitfahrendes Junges (rec.ride) hat absichtlich kein Objekt -- nie "zurueckgeblieben" (PLAN_B1C.md 3.3).
 function B.FollowLost(rec, players)
     if type(rec) ~= "table" or rec.st ~= "tame" or B.ModeOf(rec) ~= "follow" then return end
+    if rec.ride ~= nil then return end
     local s = B._s[rec.id]
     if s == nil or s.obj == nil then return end
     if ownerNear(rec, players) == nil then return end
@@ -204,6 +217,11 @@ function B.HandleMode(player, args)
     end
     if rec.st ~= "tame" or rec.owner ~= pkey then
         refuse(player, pkey, "Mode", note("UI_BN_Bear_Why_NotOwner", nil, nil, "bad"))
+        return
+    end
+    if rec.ride ~= nil then
+        -- B1c: es faehrt mit (kein Koerper); wie NPC Crews "parked" (forschung_b1c.md 4.1)
+        refuse(player, pkey, "Mode", note("UI_BN_Bear_Why_Riding", nil, nil, "bad"))
         return
     end
     local a = B.FindAnimal(rec)
