@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """baer_uebernahme.py -- den Baeren (heute B1a: Junges finden und zaehmen; B1b: Folgen/Bleiben, Namensschild, Umbenennen, Futter
 hinhalten, Waisen raeumen; B1c: Register-Selbstheilung, Laerm- und Zombie-Wache, Mitfahren, Call to me, Gehen, Bildschirm-Markierung,
-Karten-Symbol, Anzeige-Optionen) aus der Test-Mod NCBearTest nach NPC Crew uebernehmen.
+Karten-Symbol, Anzeige-Optionen; B1d: Wachsen in BearGrowDays Spieltagen, taeglich steigende Werte, Faehigkeiten als Daten, Leben am
+Tier, Werte-Zeilen ueber dem Baeren) aus der Test-Mod NCBearTest nach NPC Crew uebernehmen.
 
 Grundregel (Werkstatt-CLAUDE.md Abschnitt 0, Kevin 08.11.2026): alles wird FUER NPC Crew gebaut und soll am Ende "einfach copy paste"
 hinueber; keine Cheat- oder Testmenues kommen mit. Plan: _arbeit/baer_zaehmen/PLAN_ZAEHMEN.md Abschnitt 12 (B1b: PLAN_B1B.md 7),
@@ -60,6 +61,11 @@ Was es tut (erst wenn ALLES geprueft ist, wird geschrieben; sonst Abbruch ohne S
      werden (calmTickBody); B._callAt (Abklingzeit von Call to me) nur in server/BanditsNPCBearRide.lua -- zuruecksetzen kann nur die
      Werkbank; die Seite unter Optionen -> Mods (PZAPI.ModOptions) nennt nur Textschluessel (kein anderes Literal, keine Verkettung,
      kein getText(...) als Argument: mo_text_hits).
+     B1d (PLAN_B1D.md 10): Groesse am Tier (setSizeForced, getData) nur in B.ApplySize (shared/BanditsNPCBearStats.lua), Leben am Tier
+     (setHealth, getHealth) nur in B.BodyHp (server/BanditsNPCBearGrow.lua) -- jedes Vorkommen des Namens im Code-Teil; die
+     Probe-Wege B.GrowSetG / B.GrowSetHp / B.SkillSet (Vorspulen, Leben und Erfahrung setzen) ruft im kopierten Code NIEMAND (nur die
+     Definition; aufrufen darf sie nur die Werkbank, spaeter ein Baeren-Fenster mit eigener begruendeter Ausnahme). Die neuen Dateien
+     deckt LUA_BEAR, die fuenf neuen Optionen (zwei als double) plan_sandbox (Text der Zahlen gegen B.OPTS).
      Ausnahmen nur einzeln mit Grund (CHEAT_ALLOWED).
   7. (Probe/echt) schreiben, zuruecklesen, dann luacheck.py, scopecheck.py, localcount.py je kopierter Lua-Datei und luacheck_pz.py
      (W113 nur die einzeln erlaubten: die drei Aktionsklassen, die eine andere kopierte Datei setzt).
@@ -285,6 +291,21 @@ TIER_RULES = [
                                               ("42/media/lua/server/BanditsNPCBearRide.lua", "B.CallLeft"),
                                               ("42/media/lua/server/BanditsNPCBearRide.lua", "callMark")},
      "Abklingzeit von Call to me (B._callAt) nur in server/BanditsNPCBearRide.lua"),
+    # B1d (PLAN_B1D.md 10, 7.1 Nr. 18): Groesse und Leben am Tier je an EINER Stelle -- jedes Vorkommen des Namens im Code-Teil (auch als
+    # String oder Tabellenfeld), wie die B1c-Regeln animalRunning/pathToLocation. Belege der Aufrufe stehen dort im Kommentar
+    # (setSizeForced: Vanilla ButcheringUtil.lua:569/:571/:586; getHealth: ISAnimalUI.lua:15; setHealth: ISAnimalContextMenu.lua:545).
+    ("setSizeForced", re.compile(r"(?i)\bsetSizeForced\b"), {("42/media/lua/shared/BanditsNPCBearStats.lua", "B.ApplySize")},
+     "Groesse am Tier setzen (setSizeForced) nur in B.ApplySize"),
+    ("getData", re.compile(r"\bgetData\b"), {("42/media/lua/shared/BanditsNPCBearStats.lua", "B.ApplySize")},
+     "Datenteil des Tiers (getData) nur in B.ApplySize"),
+    ("setHealth", re.compile(r"(?i)\bsetHealth\b"), {("42/media/lua/server/BanditsNPCBearGrow.lua", "B.BodyHp")},
+     "Leben am Tier setzen (setHealth) nur in B.BodyHp"),
+    ("getHealth", re.compile(r"(?i)\bgetHealth\b"), {("42/media/lua/server/BanditsNPCBearGrow.lua", "B.BodyHp")},
+     "Leben am Tier lesen (getHealth) nur in B.BodyHp"),
+    # B1d: Vorspulen / Leben / Erfahrung von Hand setzen -- im kopierten Code gibt es keinen erlaubten Aufrufer (leere Menge); die
+    # Definitionen zaehlen nicht (TIER_DEF). Ein Aufrufer waere ein Spieler-Weg ohne Spielmechanik (Cheat-Pfad).
+    ("probeweg", re.compile(r"\bGrowSetG\b|\bGrowSetHp\b|\bSkillSet\b"), set(),
+     "B.GrowSetG / B.GrowSetHp / B.SkillSet nur aus der Werkbank (im kopierten Code nur die Definition)"),
 ]
 # B1c (PLAN_B1C.md 6.8): die Seite unter Optionen -> Mods bekommt nur Textschluessel (Vanilla ruft getText,
 # client/OptionScreens/MainOptions.lua:2801-2812). Methode -> Stellen der Text-Argumente (0 = erstes Argument).
@@ -331,7 +352,7 @@ def mo_text_hits(code_text):
     return hits
 
 
-TIER_DEF = re.compile(r"^function\s+B\.(CreateCub|AppearFor|RemoveCub)\s*\(")
+TIER_DEF = re.compile(r"^function\s+B\.(CreateCub|AppearFor|RemoveCub|GrowSetG|GrowSetHp|SkillSet)\s*\(")   # B1d: + die drei Probe-Wege
 # Ausnahmen einzeln mit Grund: Datei, Regel, ein Text im Code-Teil der Zeile. Greift eine nicht mehr, warnt das Skript.
 CHEAT_ALLOWED = [
     {"file": "42/media/lua/shared/BanditsNPCBearDefs.lua", "rule": "befehl", "code": 'bodyModel = "NCBearCub_Body"',
@@ -1374,8 +1395,8 @@ def cheat_check(plan, src, rep):
             rep.warn("Cheat-Ausnahme greift nicht mehr (streichen?): %s [%s] %s" % (a["file"], a["rule"], a["code"]))
     for tid, _rx, allowed, why in TIER_RULES:
         hits = tier_used.get(tid, [])
-        rep.say("  Tier-Regel %s: %s -- %s" % (tid, ", ".join(hits) or "kein Aufruf", why))
-        if not hits:
+        rep.say("  Tier-Regel %s: %s -- %s" % (tid, ", ".join(hits) or ("kein Aufruf" if allowed else "kein Aufruf (erlaubt: nirgends)"), why))
+        if not hits and allowed:              # B1d: eine Regel ohne erlaubten Aufrufer (probeweg) erwartet keinen
             rep.warn("Tier-Regel %s: kein erlaubter Aufruf gefunden (Code umgebaut? TIER_RULES nachziehen)" % tid)
     if comments:
         rep.warn("Kommentare in Baeren-Dateien nennen Testbefehle oder die Testhilfe (kein Cheat): %s" % ", ".join(comments[:12]))
@@ -1486,8 +1507,8 @@ def print_plan(plan, rep):
         rep.say("  " + s)
     rep.say("")
     rep.say("== Naehte (NAEHTE.md): keine Zeile in einer NPC-Crew-Lua-Datei. Laufzeit-Aufsaetze auf NPC Crew in OnGameBoot stehen in den "
-            "kopierten Dateien (B1c: dazu ein Aufsatz auf VANILLAS Kartenklassen, Datei-Ende + OnGameStart, NAEHTE.md Zeile 18); geaendert "
-            "werden nur NPC Crews Texte (zusammenfuehren) und sandbox-options.txt (anhaengen).")
+            "kopierten Dateien (B1c: dazu ein Aufsatz auf VANILLAS Kartenklassen, Datei-Ende + OnGameStart, NAEHTE.md Zeile 18; B1d: "
+            "keine neue Naht, NAEHTE.md Zeile 25); geaendert werden nur NPC Crews Texte (zusammenfuehren) und sandbox-options.txt (anhaengen).")
 
 
 def write_all(root, final, rep):
