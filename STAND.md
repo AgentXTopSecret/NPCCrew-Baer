@@ -2,7 +2,7 @@
 
 ## Nachtschicht 11.11.2026 (Start 01:55 auf Kevins "los"; Freigaben: ENTSCHEIDUNGEN.md "Nachtschicht 11.11.2026")
 
-Wecker: Cron alle 20 min (7,27,47), loeschen erst auf Kevins "stopp". Regeln: max. 10 Agenten je Workflow, vor jedem Workflow hier
+Wecker: Cron `70ef11fd` alle 20 min -- am 11.11. ~09:35 auf Kevins Wort GELOESCHT (die beiden laufenden Workflows laufen weiter, nichts startet mehr von selbst). Regeln: max. 10 Agenten je Workflow, vor jedem Workflow hier
 Stand + naechster Schritt + Lauf-ID; abgeschnittene Laeufe mit resumeFromRunId fortsetzen; Test-Mod nur bei geschlossenem Spiel.
 
 **Plan (Reihenfolge):**
@@ -20,11 +20,13 @@ Stand + naechster Schritt + Lauf-ID; abgeschnittene Laeufe mit resumeFromRunId f
 3. [LAEUFT ab ~05:10] Modell des Jungen: Workflow baer-rig-junges (8 Agenten, Skript `spiel/rig_junges_workflow.js`; Formrunde Kopf gerade +
    Ohren, Skelett+Gewichte, 15 Clips mit schnellerem Gehen, Pruefer Optik/Technik, Nachbesserung, Gegenpruefer), Ergebnis
    `../_arbeit/baer_gen/rig/out/42/media/...`; Lauf `wf_f7896aa7-c7b` (Task waly9lt77; abgeschnitten -> resumeFromRunId).
-4. Wenn Zeit: Wachsen 100 Tage + Werte (Plan + Bau).
+4. [FERTIG + EINGEBAUT 10:55, UNGESPIELT] Code **B1d Wachsen** (51 Dateien byte-gleich; Sicherungen `backups/NCBearTest/NCBearTest_vor_b1d_2026-11-11_105508.zip`/`_mit_`;
+   Test `spiel/anleitung_b1d.md` (NCBear_CubGrow, NCBear_CubStats); Berichte `spiel/b1d_*.md`; Pruefer 25/0, gesamt 1173/0; Junges waechst bis 0,75 und haelt
+   dort, Werte laufen weiter; Leben 40/150/400) -- vorher: Code **B1d Wachsen** (100 Tage, Werte, Faehigkeiten-Daten, Heil-Formeln, Anzeige; Modellwechsel nur vorbereitet), Skript `spiel/b1d_workflow.js`, 9 Agenten; Lauf `wf_472ecf82-135` (Task wmn6g4o1x; abgeschnitten -> resumeFromRunId).
 5. Danach: Pruefer/Gegenpruefer ueber das Gebaute, Testlisten, naechster Punkt aus "Offen".
 
 **Fertig (diese Nacht):** Modell-Lauf baer-gen-schoen (Blaetter `spiel/gen_KEVIN_*.png`); Code B1c gebaut, geprueft, in NCBearTest (08:12), hochgeladen.
-**Ungespielt:** B1c (in NCBearTest seit 08:12).
+**Ungespielt:** B1c (in NCBearTest seit 08:12), B1d (seit 10:55).
 **Am Limit haengen geblieben:** 11.11. ~06:05 Nutzungslimit erreicht -- B1c fertig, aber nicht eingebaut; Rig-Lauf `wf_f7896aa7-c7b` lief weiter (bei Abbruch mit resumeFromRunId fortsetzen).
 **Fragen fuer Kevin:** (aus B1c, je mit Empfehlung; Einzelheiten `spiel/b1c_gegen_bericht_b1c.md` und `spiel/b1c_forschung_b1c.md` Abschnitt 12)
   1. A3: Vanilla-Lua-Bausteine ohne Aufrufer (addTickBox/addSlider der Optionen-Seite) als Beleg zaehlen? -> ja.
@@ -34,6 +36,10 @@ Stand + naechster Schritt + Lauf-ID; abgeschnittene Laeufe mit resumeFromRunId f
   5. Gehen zeigt sich selten (nur bis 3 Kacheln, wenn du fast stehst) -- oefter? -> mit dem neuen Modell einstellen (`NCBear_CubSet("walkDist", 6)`).
   6. FR-Text 'pret' -> 'prete', 'Caresse' Einzahl? -> aendern (klein).
   7. F7: jeder Spieler kann in Vanilla jedes Tier in einen Tier-Anhaenger laden, auch fremde gezaehmte Junge -- Luecke schliessen? -> ja (vor MP).
+  9. B1d (je Empfehlung in `spiel/b1d_gegen_bericht_b1d.md`): Selbstheilung 1 %/h ist schon an (Engine-Heilung wird zurueckgenommen) -- so lassen? -> ja;
+     setHealth 0..1 und setSizeForced am lebenden Tier als belegt zaehlen? -> ja; Spieler/Autos schaden dem Baeren nicht (mit B5a) -> ja;
+     Testwege (Vorspulen, Leben/Erfahrung setzen) vor der Uebernahme in die Bench -> ja; Leben 40/150/400, Ausdauer 50/100/160 -> ja, im Test
+     nachstellen; Modellwechsel fuer Halbstark (Junges- oder Erwachsenen-Modell?) -> nach Blick auf Fussgleiten im Test.
   8. Grosser Baer aus dem Generator: Farbe braun oder Fototon (Blatt `spiel/gen_KEVIN_gross.png`); Kopf: 2c-Kopf behalten oder Generator-Kopf?
 
 
