@@ -1,81 +1,68 @@
-# Baer -- Uebergabe an den anderen Claude-Account (10.11.2026 ~11:00)
+# Baer -- Uebergabe an den anderen Claude-Account (11.11.2026 ~15:00)
 
-Kevin (10.11.2026, woertlich): *"du speicherst erstmal alles ab fuer meinen anderen claude account das er bescheid weiss wo wir sind und was als
-naechstes dran kommt und was wir noch testen muessen"*. (Die alte Uebergabe vom 09.11. ist erledigt und steht im Git-Verlauf.)
+Kevin (11.11.2026, woertlich): *"workflow abbrechen (oder anlassen wenn der neue account ihn direkt fortfuehren kann) und stand merken fuer meinen
+anderen account ich muss den account weckseln der andere account soll alles wissen was ich noch testen soll und wo es weiter geht!"*
+(Die alte Uebergabe vom 10.11. steht im Git-Verlauf.)
 
-**Lesereihenfolge:** `../CLAUDE.md` (Grundregeln, ganz) -> DIESE Datei -> `STAND.md` (Liste "Offen") -> `begleiter/ENTSCHEIDUNGEN.md` (ganz unten
-stehen Kevins neueste Wuensche: Spieltest vom 10.11., Gebiss/Beine, Babygesicht). Kevin programmiert nicht: Deutsch, kurz, Ergebnis zuerst,
-"statisch geprueft, nicht gespielt", nach jeder Mod-Aenderung sagen: Spiel neu starten.
+**Lesereihenfolge:** `../CLAUDE.md` (Grundregeln, ganz) -> DIESE Datei -> `STAND.md` (oben "LIMIT-REGEL" und "Nachtschicht 11.11.2026") ->
+`begleiter/ENTSCHEIDUNGEN.md` (ganz unten: alle Wuensche und Freigaben vom 10./11.11. WOERTLICH). Kevin programmiert nicht: Deutsch, kurz,
+Ergebnis zuerst, "statisch geprueft, nicht gespielt", nach jeder Mod-Aenderung sagen: Spiel neu starten.
 
-## 1. Wo wir stehen (alles gesichert und hochgeladen, nichts laeuft)
-- **Test-Mod `C:/Users/Kevin/Zomboid/mods/NCBearTest`**, Git `main` **b42435e** (GitHub `AgentXTopSecret/NPCCrew-Baer`). Darin seit 10.11. 10:37
-  der Baer aus **Lauf baer-2c**: Sitzen nach Kevins Vorlage (aufrecht, Beine eng, Vorderbeine gerade), Hinterfuss kurz und dunkel (29 statt
-  43 cm), Beine ohne "Hose in Stiefeln", Rumpf schmaler (0,79 statt 0,93 m), Gebiss mit 4 gebogenen Eckzaehnen + 6+6 Schneidezaehnen, flache
-  rosa Zunge. 5 Dateien: GLB 08ec7806, Deer-GLB 91f0c60e, FBX da08d469, Body-Textur 4cfdb177, WorldItems a640e4cd. 12 Clips byte-gleich,
-  NCBear_SitDown/Sit/StandUp neu (gleiche Dauer und Proben), Skelett gleich, Kopf von aussen gleich, 19.806 Dreiecke (alles von Claude
-  nachgezaehlt). **Ungespielt.** Sicherungen `Zomboid/backups/NCBearTest/NCBearTest_vor_2c_2026-11-10_103718.zip` und `..._mit_2c_...`.
-- **Unterlagen `baer/`**, Git-Zweig `unterlagen` (lokal `main`, `git push` landet richtig). Berichte von 2c: `spiel/2c_*.md`
-  (zuerst `2c_gegen_bericht.md`), Bild `spiel/2c_vorher_nachher.png`.
-- **Baer-Junges: nur ENTWURF, nicht im Spiel.** `../_arbeit/baer_baby/entwurf/NCBearCub.glb` (MD5 6c3f0a96) + `NCBearCub.png`, eigenes Gesicht
-  nach Kevins Foto (runder Kopf, runde Ohren, kurze helle Schnauze), gleiche 26 Knochen und 15 Clip-Namen, Clips per Skript umgerechnet.
-  Kevin hat das Blatt `spiel/baby_entwurf.png` gesehen, aber noch nicht geantwortet. Berichte `spiel/baby_*.md` (zuerst `baby_fix_baby.md`).
-- **Kein Workflow offen.** Workflows lassen sich nur in der Sitzung fortsetzen, die sie gestartet hat -- es gibt nichts fortzusetzen.
-- **Verbrauch bei der Uebergabe (alter Account):** Woche 93 %, Reset 15.11. 23 Uhr. Ein Modell-Lauf mit 10 Agenten kostete hier 15-25 % der Woche.
-  Kevins Regel (10.11., ueber die NPC-Crew-Hauptsitzung): weiterarbeiten bis 98 % Woche, dann sofort anhalten, speichern, Uebergabe schreiben.
+## 1. Wo wir stehen (alles gesichert und hochgeladen; KEIN Workflow laeuft)
+- **Test-Mod `C:/Users/Kevin/Zomboid/mods/NCBearTest`**, Git `main` **401dd70** (GitHub `AgentXTopSecret/NPCCrew-Baer`). Unterlagen `baer/`
+  Zweig `unterlagen` **e7dec28**. Sicherungen je Schritt in `Zomboid/backups/NCBearTest/` (`*_vor_*/_mit_*` vom 10./11.11.).
+- **Baeren-Junges (Code, alle UNGESPIELT ausser B1a/B1b-Teilen):**
+  - B1a finden + zaehmen (gespielt: klappt), B1b folgen/bleiben, Namensschild, Umbenennen, Futter hinhalten (Folgen gespielt: klappt),
+  - B1c (seit 11.11. 08:12): Zaehmung ueberlebt Absturz (Spiegel v2), kein Fliehen vor Laerm, versteckt sich vor Zombies, Mitfahren im Auto,
+    "Call to me" (Unstuck), Gehen, Bildschirm-Markierung mit Kevins Symbol 1, Baeren-Symbol auf Mini-/grosser Karte, Anzeige-Optionen,
+  - B1d (seit 10:55): Wachsen ueber 100 Spieltage (Modell haelt bei 0,75), Werte steigen taeglich, Faehigkeiten-Daten, Heil-Formeln.
+  - Staging/Arbeitsordner `../_arbeit/baer_zaehmen/` (mod/, PLAN_B1A..D, Berichte); Kopien der Berichte `spiel/b1b_*.md`, `b1c_*.md`, `b1d_*.md`.
+- **Neues Junges-Modell aus dem Bild-zu-3D-Generator** (seit 14:39 statt des alten Platzhalters): 26 Knochen, 15 Clips, Gehen 1,6 Kacheln/s.
+  Blatt `spiel/rig_KEVIN_junges_spielfertig.png` (nicht in Git), Berichte `spiel/rig_*.md`. **Kevin: "besonders die gesichtsgroesse sieht zu
+  klein aus also das maul" und "ich find sogar unser altes baby model sieht besser aus"** -> siehe Abschnitt 3.
+- **Vergleichs-Testhilfe** (14:55, nur NCBearBench*): `NCBear_Vergleich()` (altes Junges lebend als Art `ncbearcubalt` + grosser 2c-Baer +
+  zwei Standmodelle des Generator-Baeren braun/Fototon ins Inventar), `NCBear_CubAlt()`, `NCBear_GenE()`.
+- **Grosser Baer:** im Spiel weiter der 2c-Baer (`NCBear.glb`, Art `bear`). Der Generator-Baer E ist fertig geformt, aber OHNE Knochen/Clips
+  (`../_arbeit/baer_gen/aus/E_schoen.glb`, `E_schoen_fototon.glb`; Blatt `spiel/gen_KEVIN_gross.png`).
+- **Generator-Werkzeug:** ComfyUI v0.44.0 + TRELLIS.2 lokal (`C:/Users/Kevin/Tools/ComfyUI/ComfyUI_windows_portable/`, Start nur 127.0.0.1:8188),
+  Startskript `tools/gen_trellis.py`, Wege/Lehren `spiel/gen_PROBELAUF.md`, `gen_STUFE2.md`, `../_arbeit/baer_gen/` (C_*.md, E_FEIN.md, rig/).
+  Fotos `begleiter/vorlage_*.jpg`, `ref_*.jpg` (Wikimedia, nicht in Git).
+- **Verbrauch beim Wechsel (dieses Konto):** 5 h 9 %, Woche 3 % (neue Woche). Workflows lassen sich NUR in der Sitzung fortsetzen, die sie
+  gestartet hat -- es gibt nichts fortzusetzen (alle Laeufe fertig, siehe STAND.md).
 
-## 2. Was Kevin testen muss (vorher Spiel neu starten; rote Fehler? `C:/Users/Kevin/Zomboid/console.txt`)
-1. **`spiel/anleitung_2c.md` -- zuerst.** `NCBear_SpawnLive()`, `NCBear_Sit(20)` aus der Spielkamera, Hinsetzen/Aufstehen, einmal um den
-   stehenden Baeren laufen, Gehen/Rennen, `NCBear_AnimTest("rear")` fuer Zaehne und Zunge, Maul zu nah ansehen.
-2. **`spiel/anleitung_laerm.md`** (seit 08.11. ungespielt): flieht der Baer bei Zombie-Schlaegen an Zaun/Tuer oder Q-Rufen nicht mehr endlos?
-3. **`spiel/anleitung_fell.md`** (Unterseite und Brust beim Aufrichten und Sitzen; die Pfoten-Teile sind durch 2c ueberholt).
-4. `spiel/anleitung_pfote.md` ist durch 2c ueberholt (Kevin hat es am 10.11. ~01:00 gespielt; seine Kritik steckt in 2c).
+## 2. Was Kevin testen muss (vorher Spiel neu starten, -debug; rote Fehler? `C:/Users/Kevin/Zomboid/console.txt`)
+1. **`spiel/anleitung_b1c.md`** -- Mitfahren, Call to me, Laerm, Verstecken, Markierung oben, Karten-Symbol, Optionen (Optionen -> Mods).
+2. **`spiel/anleitung_b1d.md`** -- `NCBear_CubGrow(tage)`, `NCBear_CubStats()`; Achtung: ueber 0,35 rutschen die Pfoten (bekannt, M3).
+3. **Junges-Modell im Spiel ansehen** (sein gezaehmtes Junges traegt das neue Modell) und mit `NCBear_Vergleich()` neben das alte Junge,
+   den 2c-Baeren und die Generator-Standmodelle stellen -> Kevin entscheidet altes oder neues Junges und Farbe des grossen Baeren.
+4. Aeltere, weiter offen: `spiel/anleitung_2c.md`, `anleitung_laerm.md`, `anleitung_fell.md` (siehe alte Uebergabe im Git-Verlauf).
 Seine Antworten woertlich in `begleiter/ENTSCHEIDUNGEN.md` unten eintragen.
 
-## 3. Offene Entscheidungen -- Kevin fragen, nicht selbst entscheiden
-- **Aus 2c (Gegenpruefer: klar besser, aber nicht fertig):**
-  - G1: Im Sitzen woelbt sich hinter dem Kopf noch ein Buckel ueber die Ohren (2,6-4,2 cm) -- 1,5-3 cm tiefer?
-  - G2: Das Fell direkt um den Kopf ist 12 % dunkler als der Kopf (Kopf wirkt leicht aufgeklebt) -- Kopf-Randfarbe angleichen? (Kopf-Texel
-    sind nach Kevins Regel tabu; die Form bleibt in jedem Fall.)
-  - G3: Der Kopf schaut im Sitzen nach oben, die Vorlage geradeaus -- geradeaus drehen?
-- **Baby:** Augen groesser? Rumpf kuerzer (wirkt wie ein Fass)? Schrittweite 0,777 oder 1,0 x Erwachsener? Halbstark mit Jungen- oder
-  Erwachsenen-Modell? Zwei Abweichungen ok (Unterlid dunkel statt hellgrau, Ohrrand fellfarben)?
-- **Reihenfolge (wichtig):** Kevin 10.11. ~01:20: *"ich wuerd ja gern auch mal baeren features machen das taming und so vom baby baeren aber
-  das model verkackst du leider immer"*. Vorschlag an ihn (noch ohne Antwort): nach 2c direkt Features (Baby finden + zaehmen), das neue
-  Aufrichten hinten anstellen. Bis er antwortet, gilt seine Reihenfolge vom 09.11. ("Reihenfolge lassen", Abschnitt 4).
-- **Vorschlag Baby finden/zaehmen (ihm erklaert, nicht bestaetigt):** selten im Wald in Spielernaehe ausser Sicht (Sandbox-Haeufigkeit) oder
-  Koeder (Honig/Fisch, 1-3 Naechte); Zaehm-Balken aus Fuettern und Streicheln; ungefuettert und 1-2 Spieltage ohne Kontakt -> verschwindet,
-  einmal gefuettert -> bleibt; je Spieler hoechstens ein Baer und ein wildes Junges; nach Tod des eigenen Baeren neues Junges nach 7 Spieltagen;
-  Zombies greifen nur den gezaehmten Baeren an.
-- **Aeltere, weiter offen:** baer-laerm (`changeStress` nach Flucht? `setShouldFollowWall(false)` nur Jar-belegt -> braucht sein Wort;
-  stoert clockHit?), baer-fell (Zotteln am Umriss, Kopf-Variante B), Schlafen (`begleiter/SCHLAF_PLAN.md` Fragen K1-K21).
+## 3. Offene Entscheidungen (Kevin fragen, nicht selbst entscheiden) -- Einzelheiten STAND.md "Fragen fuer Kevin"
+- **Junges-Modell:** neues (Generator) behalten und Gesicht/Maul groesser + Kopf hoeher machen, ODER zurueck zum alten Entwurf
+  (`../_arbeit/baer_baby/entwurf/NCBearCub.glb` 6c3f0a96 + png; Sicherung `NCBearTest_vor_junges_neu_2026-11-11_143915.zip`) und dessen Clips
+  auf das schnellere Gehen umrechnen.
+- **Grosser Baer:** Farbe braun oder Fototon; Kopf: 2c-Kopf behalten oder Generator-Kopf? Erst danach Knochen/Clips fuer den grossen Baeren.
+- Modellwechsel bei Halbstark (Jungen- oder Erwachsenen-Modell?); B1c/B1d-Fragen (A3 Belege ohne Aufrufer, MP nach Server-Absturz, Q-Ruf beim
+  Bleiben, Zombie zwischen Besitzer und Junges, Gehen oefter, FR-Text, Tier-Anhaenger-Luecke F7, Selbstheilung schon an, Leben/Ausdauer-Zahlen).
 
-## 4. Was als Naechstes dran ist (Kevins Reihenfolge vom 09.11., Einzelheiten `STAND.md` "Offen" 3-13)
-1. Kevins Test von 2c abwarten, dann **G1-G3** nach seinem Wort beheben (klein; Nacken/Buckel, Kopfrand-Farbe, Kopfwinkel in den Sitz-Clips).
-2. **Clip-Runde:** Aufrichten `NCBear_Rear` neu (ganzer Koerper, kein Kragen, bleibt 3,0 s); Lefzen beim Bruellen hochziehen (geht nur mit
-   Clip/Knochen, `spiel/2c_forschung_gebiss.md`); `Toe0` abrollen; Pranke beim Aufrichten von vorn klotzig; Hinterfuss im Renn-Rueckschwung;
-   Liegen schwebt. (Sitzen Richtung (b) ist mit 2c erledigt.)
-3. **B5a Gegenwehr** -- vorher umbenennen auf NPC-Crew-Namen (`BanditsNPCBear*`, `BanditsNPC.Bear`, `UI_BN_Bear_*`, Testhilfen nur in
-   `NCBearBench*`).
-4. **B1 + Baby finden und zaehmen:** Weg aus `spiel/baby_spez_baby.md` Abschnitt 3 -- eigene Tierart `bearcub` mit `NCBearCub.glb`, Stufe ->
-   `bear` wie Vanilla Kitz -> Hirsch (`DeerDefinitions.lua:7-11`); beim Wachsen baut die Engine ein NEUES Tier (`AnimalData.grow`), modData geht
-   NICHT mit -> Besitzer, Zaehm-Balken, Inventar selbst weiterreichen; Clips fuer das Junge per Skript umrechnen (Drehungen gleich,
-   Lage-Schluessel neu). Spaetestens hier `baer_uebernahme.py` mit Cheat-Pruefung (Vorbild `../turret/tools/turret_uebernahme.py`).
-5. Danach Befehle + Fenster (V-Taste, Namensschild, Balken), Beduerfnisse, Inventar, Fischen, Mehrspieler, Schlafen.
+## 4. Was als Naechstes dran ist (Reihenfolge nach Kevins Woertern vom 10./11.11.)
+1. Kevins Tests oben abwarten; Junges-Modell nach seiner Wahl verbessern (Gesicht/Maul) bzw. zurueck; Folgen-Schwelle `walkSpeed` (B1c 0,52) auf
+   das Tempo des gewaehlten Modells stellen; M3 (Pfoten rutschen beim Wachsen) loesen.
+2. Grosser Baer aus dem Generator spielfertig (Vorlage `spiel/rig_junges_workflow.js`), erst nach Kevins Farb-/Kopf-Wort.
+3. **B5a Kampf** (vorher NPC-Crew-Namen fuer die alten NCBear*-Dateien): Zombies greifen GEZAEHMTE Baeren an (auch das Junge; ungezaehmte
+   nicht), Faehigkeiten Agilitaet (5-40 %), Leben, Kondition, Kaempfen (+70 % auf Stufe 10), Ausdauer mit Verschnaufen, Heilen (wach ~1 %/h,
+   Schlaf ~15 %/h, von Hand; NPC-Heiler spaeter), Fliehen statt Sterben?
+4. Schlafen (Muedigkeit; schlaeft selbst, wacht bei Zombies auf und flieht; `begleiter/SCHLAF_PLAN.md` K1-K21), Spuernase (abschaltbar),
+   Fischen (ab Halbstark), Baeren-Fenster auf V (Taste einstellbar), Unstuck-Symbol im Spiel, Traglast/Inventar, Mehrspieler-Test.
 
-## 5. Lehren aus diesen Tagen (bitte ernst nehmen)
-- **Kevins Bild ist der Massstab, nicht die Literatur.** Der "anatomisch richtige" Hinterfuss (29 cm, spitze Ferse, L/B 1,9) sah im Spiel
-  aus wie ein Menschenfuss. Immer: Renders aus GENAU seiner Spielkamera (schraeg von oben, auch seitlich), Ton UND Textur, neben sein Bild
-  legen und selbst ansehen, BEVOR "fertig" gesagt wird. Eine Textur darf eine falsche Form nie verdecken.
-- **Kopf-Aussenform bleibt** (Kevin 08.11.: "das gesicht also der kopf vom baeren passt so"). **Clips bit-gleich**, ausser ein Bein laesst
-  sich nachweislich nur mit neuer Pose retten.
-- Modell-Laeufe: Plan -> Bau -> Pruefer -> Nachbesserung -> Gegenpruefer, hoechstens 10 Agenten; vorher Verbrauch pruefen und Kevin die
-  Agentenzahl nennen. Vorlage fuer einen neuen Lauf: `spiel/2c_workflow.js` (gemeinsamer Kontext CTX mit allen festen Regeln, Suchorten,
-  GPU-Sperre je Arbeitsordner; Rendern auch bei laufendem Spiel erlaubt) bzw. `spiel/baby_workflow.js`.
-- Modell-Kette: neueste Skripte `spiel/baer_{quelle,export,kampf,gewichte,textur,maul}_2c.py`; fuer einen neuen Lauf KOPIEREN
-  (`*_<lauf>.py`), Originale nie aendern. Arbeitsdaten und Werkzeuge `../_arbeit/baer_2c/` (Mod-Ergebnis `mod/42/media/`, Pruefwerkzeuge
-  `pruef/gegen/werkzeug/`), Importer-Harness `../_arbeit/baer_spiel/harness` (Dump.java = so liest das Spiel das GLB).
-- Einbau: nur wenn Kevin NICHT spielt (`tasklist | grep -i ProjectZomboid`), Zip vorher und nachher nach `Zomboid/backups/NCBearTest/`,
-  MD5 nachzaehlen; dann `python C:/Users/Kevin/Claude-Gedaechtnis/sichern.py`, Commit + Push in beiden Repos.
-- Kevins Vorlagebilder in `begleiter/` (`kevin_sitzvorlage.png`, `kevin_bruellen_vorlage.webp`, `kevin_babygesicht_vorlage.webp`,
-  `kevin_baerenfuss_vorlage.png`, `kevin_pfotenvorlage.png`) sind Stockfotos: NUR ansehen, nie hochladen, nie in Modell/Textur
-  (stehen in `.gitignore`); sein Spielbild `kevin_sitzen_fuss_kopf.webp` bleibt ebenfalls lokal (zeigt ein Steam-Overlay).
+## 5. Lehren (bitte ernst nehmen)
+- **Kevins Bild ist der Massstab** (Gedaechtnis `kevin-vorlage-ist-massstab`). Der Generator-Weg macht NICHT von selbst ein schoeneres Modell --
+  Kevin fand das alte Junge schoener. Immer Blatt aus seiner Spielkamera + Spielgroesse neben das Foto, selbst ansehen, bevor "fertig".
+- Die Stockfoto-Einschraenkung ist NICHT von Kevin (Gedaechtnis `stockfoto-regel-nicht-von-kevin`).
+- Workflows: hoechstens 10 Agenten je Workflow; Skript-Vorlagen `spiel/*_workflow.js` (b1c/b1d fuer Code, rig_junges fuer Modelle).
+  Limit-Regel oben in STAND.md (resumeFromRunId, nichts von vorn). Modell-Laeufe dauern viele Stunden (Rig: ~6 h Rechenzeit).
+- Einbau: nur bei geschlossenem Spiel (`tasklist | grep -i ProjectZomboid`), Zip vorher/nachher, MD5 nachzaehlen, nur Bench-/eigene Namen
+  ueberschreiben; dann `python C:/Users/Kevin/Claude-Gedaechtnis/sichern.py`, Commit + Push in beiden Repos.
+- Absturz-Falle: PZ schreibt beim Absturz in `Saves/.../<save>_crash/`; der normale Ordner behaelt den alten Stand (so ging die erste
+  Zaehmung verloren; seit B1c heilt der Spiegel am Tier das).

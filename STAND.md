@@ -1,5 +1,8 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **11.11.2026 ~15:00: KONTOWECHSEL -- zuerst `UEBERGABE.md` (neu) lesen.** Kein Workflow laeuft; alle Laeufe sind fertig und eingebaut.
+
+
 ## LIMIT-REGEL (Kevin 11.11.2026 ~11:00, ueber die Projekte-Sitzung: "nen prompt an alle chats ausser blueprint das die beim abgebrochenen wofklow weiter arbeiten ohne verlust")
 
 - Laeuft ein Workflow: warten, nichts doppelt starten.
