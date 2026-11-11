@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """baer_uebernahme.py -- den Baeren (heute B1a: Junges finden und zaehmen; B1b: Folgen/Bleiben, Namensschild, Umbenennen, Futter
-hinhalten, Waisen raeumen) aus der Test-Mod NCBearTest nach NPC Crew uebernehmen.
+hinhalten, Waisen raeumen; B1c: Register-Selbstheilung, Laerm- und Zombie-Wache, Mitfahren, Call to me, Gehen, Bildschirm-Markierung,
+Karten-Symbol, Anzeige-Optionen) aus der Test-Mod NCBearTest nach NPC Crew uebernehmen.
 
 Grundregel (Werkstatt-CLAUDE.md Abschnitt 0, Kevin 08.11.2026): alles wird FUER NPC Crew gebaut und soll am Ende "einfach copy paste"
 hinueber; keine Cheat- oder Testmenues kommen mit. Plan: _arbeit/baer_zaehmen/PLAN_ZAEHMEN.md Abschnitt 12 (B1b: PLAN_B1B.md 7),
@@ -25,7 +26,8 @@ Was es tut (erst wenn ALLES geprueft ist, wird geschrieben; sonst Abbruch ohne S
      Basisnamen NCBearBench* (jede Endung, jeder Ordner) NICHT (Testhilfe); mod.info, .git, .gitattributes, .gitignore nie;
      Translate/<L>/*.json zusammenfuehren; sandbox-options.txt anhaengen (Naht); Modell/Textur/Skript des Jungen (NCBearCub*,
      nc_bear_cub*) und den Animations-Knoten 42/media/AnimSets/buck/idle/NCBear_Eat.xml kopieren (die 9 Knoten des Erwachsenen
-     bleiben bis B5a in der Test-Mod). Die ALTEN Dateien (NCBear*.lua
+     bleiben bis B5a in der Test-Mod). B1c: Bilder 42/media/ui/BanditsNPCBear*.png kopieren (Kevins Symbol fuer Markierung und Karte;
+     PNG-Kopf geprueft, Name gegen NPC Crew, Vanilla und Bandits). Die ALTEN Dateien (NCBear*.lua
      ausser Bench, Modelle/Texturen/Skripte/Toene des Erwachsenen und des Test-Gegenstands, die drei Test-Tiernamen in EN/IG_UI.json)
      sind "noch umzubenennen (B5a)": Fehler, mit --vor-b5a Warnung, werden nie kopiert. Erwartet sind genau die in ALT_EXPECTED
      (NAEHTE.md 'Erlaubte Fundstellen des Trockenlaufs'); eine neue Altlast ist immer ein Fehler. Alles andere: Fehler.
@@ -51,7 +53,14 @@ Was es tut (erst wenn ALLES geprueft ist, wird geschrieben; sonst Abbruch ohne S
      kein fester Menuetext, kein Fingerabdruck der Werkbank (Texte, Funktionsnamen der NCBearBench*-Dateien). Tier-Regel (Plan 12.1
      Punkt 7): addAnimal( und :addToWorld( nur in B.CreateCub, B.CreateCub( nur aus B.AppearFor, B.AppearFor( nur aus forestRolls und
      baitAppear in server/BanditsNPCBearServer.lua, :remove() am Tier nur in B.RemoveCub. B1b: kein B.ScanAnimals(..., force) im
-     kopierten Code (Waisen ohne Alters-Frist entfernen kann nur die Werkbank). Ausnahmen nur einzeln mit Grund (CHEAT_ALLOWED).
+     kopierten Code (Waisen ohne Alters-Frist entfernen kann nur die Werkbank). B1c (PLAN_B1C.md 10): B.CreateCub( auch aus B.PlaceCub
+     (server/BanditsNPCBearRide.lua: Aussteigen, Call to me); setVariable("animalRunning" und :pathToLocation( (Kevins Wort je Methode)
+     nur in B.MoveTo (server/BanditsNPCBearWorld.lua) -- seit der Nachbesserung B1c A4 zaehlt JEDES Vorkommen der beiden Namen im
+     Code-Teil (auch als String, ueber einen Namen oder ein Tabellenfeld); animalRunning darf zusaetzlich in der Laerm-Wache gelesen
+     werden (calmTickBody); B._callAt (Abklingzeit von Call to me) nur in server/BanditsNPCBearRide.lua -- zuruecksetzen kann nur die
+     Werkbank; die Seite unter Optionen -> Mods (PZAPI.ModOptions) nennt nur Textschluessel (kein anderes Literal, keine Verkettung,
+     kein getText(...) als Argument: mo_text_hits).
+     Ausnahmen nur einzeln mit Grund (CHEAT_ALLOWED).
   7. (Probe/echt) schreiben, zuruecklesen, dann luacheck.py, scopecheck.py, localcount.py je kopierter Lua-Datei und luacheck_pz.py
      (W113 nur die einzeln erlaubten: die drei Aktionsklassen, die eine andere kopierte Datei setzt).
 
@@ -103,6 +112,11 @@ SANDBOX = "42/media/sandbox-options.txt"
 # Knoten des Erwachsenen (Bite, Maul, Slam, Swipe ...) bleiben bis B5a in der Test-Mod (Nachbesserung A10): nie Kampf-Knoten vor
 # dem Kampf nach NPC Crew, und was B5a umbenennt, muesste dort sonst geloescht werden.
 CUB_ASSET = re.compile(r"^42/media/(models_X/Skinned/NCBearCub\.glb|textures/Body/NCBearCub\.png|scripts/nc_bear_cub\.txt)$")
+# B1c (PLAN_B1C.md 10c): Bilder der Oberflaeche (Kevins Baeren-Symbol fuer Bildschirm-Markierung und Karte), nur im eigenen Namensraum
+UI_ASSET = re.compile(r"^42/media/ui/BanditsNPCBear[A-Za-z0-9_]*\.png$")
+UI_MAX_PX = 512                                                    # Deckel fuer ein Oberflaechen-Bild (Kevins Symbol: 96 x 96)
+BANDITS_MEDIA = [os.path.normpath(r"C:/Program Files (x86)/Steam/steamapps/workshop/content/108600/3268487204/mods/Bandits/" + v
+                                  + "/media") for v in ("42.22", "common")]   # nur lesen: gleicher ui-Dateiname verdeckte Bandits' Bild
 ANIMSET_OK = re.compile(r"^42/media/AnimSets/buck/idle/NCBear_Eat\.xml$")
 ANIMSET_ADULT = re.compile(r"^42/media/AnimSets/buck/idle/NCBear_[A-Za-z0-9]+\.xml$")
 ANIMSET_ANY = re.compile(r"^(42|common)/media/AnimSets/")
@@ -245,8 +259,9 @@ TIER_RULES = [
      "Tier erzeugen nur in B.CreateCub"),
     ("addToWorld", re.compile(r":addToWorld\s*\("), {("42/media/lua/server/BanditsNPCBearWorld.lua", "B.CreateCub")},
      "Tier in die Welt setzen nur in B.CreateCub"),
-    ("CreateCub", re.compile(r"\bB\.CreateCub\s*\("), {("42/media/lua/server/BanditsNPCBearServer.lua", "B.AppearFor")},
-     "B.CreateCub nur aus B.AppearFor"),
+    ("CreateCub", re.compile(r"\bB\.CreateCub\s*\("), {("42/media/lua/server/BanditsNPCBearServer.lua", "B.AppearFor"),
+                                                         ("42/media/lua/server/BanditsNPCBearRide.lua", "B.PlaceCub")},
+     "B.CreateCub nur aus B.AppearFor und (B1c) B.PlaceCub (Aussteigen, Call to me)"),
     ("AppearFor", re.compile(r"\bB\.AppearFor\s*\("), {("42/media/lua/server/BanditsNPCBearServer.lua", "forestRolls"),
                                                          ("42/media/lua/server/BanditsNPCBearServer.lua", "baitAppear")},
      "B.AppearFor (der EINE Weg, ein Junges in die Welt zu setzen) nur aus Wald-Wurf und Koeder"),
@@ -254,7 +269,68 @@ TIER_RULES = [
      "Tier entfernen nur in B.RemoveCub"),
     ("removeAnimal", re.compile(r"(?<![\w.:])removeAnimal\s*\("), {("42/media/lua/server/BanditsNPCBearWorld.lua", "B.RemoveCub")},
      "Tier bei den Clients entfernen (Server) nur in B.RemoveCub"),
+    # B1c (PLAN_B1C.md 10b): die zwei Engine-Aufrufe mit Kevins Wort (pathToLocation 08.11.2026, setVariable("animalRunning", false)
+    # 11.11.2026) an genau EINER Stelle. Nachbesserung B1c A4: nicht mehr nur die Aufruf-Form, sondern JEDES Vorkommen des Namens im
+    # Code-Teil (Strings zaehlen mit, Gross/Klein egal) -- so fallen auch local V = "animalRunning"; a.setVariable(a, V, false),
+    # a["setVariable"](...), a.pathToLocation(a, ...), a["pathToLocation"](...) und local f = a.pathToLocation auf. Zweite erlaubte
+    # Stelle fuer den Namen animalRunning: das LESEN in der Laerm-Wache (getVariableBoolean, calmTickBody, nur Einzelspieler).
+    ("animalRunning", re.compile(r"(?i)\banimalRunning\b"),
+     {("42/media/lua/server/BanditsNPCBearWorld.lua", "B.MoveTo"), ("42/media/lua/server/BanditsNPCBearGuard.lua", "calmTickBody")},
+     "Name animalRunning (Gehen setzen nur in B.MoveTo, lesen nur in der Laerm-Wache)"),
+    ("pathToLocation", re.compile(r"(?i)\bpathToLocation\b"), {("42/media/lua/server/BanditsNPCBearWorld.lua", "B.MoveTo")},
+     "pathToLocation (jede Form) nur in B.MoveTo"),
+    # B1c: die Abklingzeit von "Call to me" lebt nur in Ride.lua (Dateiebene, B.CallLeft, callMark); sie zuruecksetzen kann nur die
+    # Werkbank (NCBear_CubCallReset)
+    ("callAt", re.compile(r"\bB\._callAt\b"), {("42/media/lua/server/BanditsNPCBearRide.lua", None),
+                                              ("42/media/lua/server/BanditsNPCBearRide.lua", "B.CallLeft"),
+                                              ("42/media/lua/server/BanditsNPCBearRide.lua", "callMark")},
+     "Abklingzeit von Call to me (B._callAt) nur in server/BanditsNPCBearRide.lua"),
 ]
+# B1c (PLAN_B1C.md 6.8): die Seite unter Optionen -> Mods bekommt nur Textschluessel (Vanilla ruft getText,
+# client/OptionScreens/MainOptions.lua:2801-2812). Methode -> Stellen der Text-Argumente (0 = erstes Argument).
+MO_CALL = re.compile(r"\bModOptions\s*:\s*create\s*\(|[:.](addTitle|addDescription|addTickBox|addSlider|addComboBox|addItem|addTextEntry"
+                     r"|addButton|addKeyBind|addMultipleTickBox|addColorPicker)\s*\(")
+MO_TEXT_ARGS = {None: (1,), "addTitle": (0,), "addDescription": (0,), "addTickBox": (1, 3), "addSlider": (1, 6), "addComboBox": (1, 2),
+                "addItem": (0,), "addTextEntry": (1, 3), "addButton": (1, 2), "addKeyBind": (1, 3), "addMultipleTickBox": (1, 2),
+                "addColorPicker": (1, 6)}
+# (Vanilla client/PZAPI/ModOptions.lua :28-247; option:addTickBox(name, value) einer Mehrfach-Auswahl :96 hat den Text vorn -- mit
+# hoechstens zwei Argumenten zaehlt deshalb das erste)
+MO_KEY = re.compile(r"^UI_BN_Bear_[A-Za-z0-9_]+$")
+MO_NAME = re.compile(r"^[A-Za-z_]\w*$")
+
+
+def mo_text_hits(code_text):
+    """Nachbesserung B1c A4: Text-Argumente der Optionen-Seite (PZAPI.ModOptions) im Code-Teil einer Datei (Zeilen mit "\\n"
+    verbunden, Kommentare weg). Erlaubt: genau EIN String-Literal, das ein Schluessel UI_BN_Bear_* ist, oder ein blosser Name, hinter
+    dem kein lokaler Satz steht (local x = "..."). Alles andere ist ein Fund: ein anderes Literal, ein Literal in einer Verkettung
+    ("Text" .. x), ein Aufruf als Argument (getText(...), U.T(...) -- schon uebersetzt statt Schluessel), jeder andere Ausdruck.
+    Rueckgabe: Liste (Zeilennummer, Kurztext, Grund)."""
+    local_str = set(m.group(1) for m in re.finditer(r"\blocal\s+(\w+)\s*=\s*[\"'][^\"'\n]*[A-Za-z][^\"'\n]*[A-Za-z]", code_text))
+    hits = []
+    for m in MO_CALL.finditer(code_text):
+        args = call_args(code_text, m.end())
+        idx = MO_TEXT_ARGS.get(m.group(1), ())
+        if m.group(1) == "addTickBox" and len(args) <= 2:
+            idx = (0,)
+        no = code_text.count("\n", 0, m.start()) + 1
+        for i in idx:
+            if i >= len(args):
+                continue
+            a = args[i].strip()
+            if a in ("", "nil"):
+                continue
+            lit = re.match(r"^([\"'])([^\"'\n]*)\1$", a)
+            if lit:
+                if not MO_KEY.match(lit.group(2)):
+                    hits.append((no, a[:40], "Optionen-Seite mit festem Text statt Textschluessel"))
+            elif MO_NAME.match(a):
+                if a in local_str:
+                    hits.append((no, a[:40], "Optionen-Seite mit festem Text (lokaler Satz) statt Textschluessel"))
+            else:
+                hits.append((no, a[:40], "Optionen-Seite mit einem Ausdruck (Verkettung, Aufruf ...) statt eines Textschluessels"))
+    return hits
+
+
 TIER_DEF = re.compile(r"^function\s+B\.(CreateCub|AppearFor|RemoveCub)\s*\(")
 # Ausnahmen einzeln mit Grund: Datei, Regel, ein Text im Code-Teil der Zeile. Greift eine nicht mehr, warnt das Skript.
 CHEAT_ALLOWED = [
@@ -406,7 +482,7 @@ def collect_source(src, rep):
             copy_lua.append(rel)
         elif rel == SANDBOX:
             sandbox = rel
-        elif CUB_ASSET.match(rel) or ANIMSET_OK.match(rel):
+        elif CUB_ASSET.match(rel) or ANIMSET_OK.match(rel) or UI_ASSET.match(rel):
             copy_asset.append(rel)
         elif ANIMSET_ADULT.match(rel):
             skipped.append((rel, "Animations-Knoten des Erwachsenen, bleibt bis B5a in der Test-Mod (NAEHTE.md Naht 9)"))
@@ -561,6 +637,30 @@ def form_check(final, copy_lua, copy_asset, rep):
             else:
                 rep.say("  %s = '%s' (%s) hat seinen Knoten" % (ANIM_VAR, m.group(1), os.path.basename(rel)))
     rep.say("  Animations-Knoten: %d, Werte %s" % (len([r for r in copy_asset if ANIMSET_OK.match(r)]), ", ".join(sorted(used_values))))
+    # B1c: Bilder der Oberflaeche (PNG-Kopf, IHDR-Groesse, gedeckelt); jedes Bild, das die kopierte Lua als media/ui/... nennt, wird
+    # mitkopiert -- und jedes kopierte Bild nennt die Lua auch (sonst toter Ballast)
+    rep.say("")
+    rep.say("== Bilder der Oberflaeche (B1c)")
+    named = set()
+    for rel in copy_lua:
+        code = "\n".join(c for c, _ in lua_split_lines(final[rel].decode("latin-1")))
+        named.update("42/" + m for m in re.findall(r"[\"'](media/ui/BanditsNPCBear[A-Za-z0-9_]*\.png)[\"']", code))
+    ui = [r for r in copy_asset if UI_ASSET.match(r)]
+    for rel in ui:
+        data = final[rel]
+        if data[:8] != b"\x89PNG\r\n\x1a\n" or data[12:16] != b"IHDR":
+            rep.err("%s: kein PNG (Kopf/IHDR)" % rel)
+            continue
+        w, h = struct.unpack(">II", data[16:24])
+        rep.say("  %s: %d x %d, %d Bytes, MD5 %s" % (rel, w, h, len(data), md5(data)))
+        if not (0 < w <= UI_MAX_PX and 0 < h <= UI_MAX_PX):
+            rep.err("%s: %d x %d -- erwartet hoechstens %d x %d" % (rel, w, h, UI_MAX_PX, UI_MAX_PX))
+        if rel not in named:
+            rep.warn("%s wird kopiert, aber keine kopierte Lua-Datei nennt es" % rel)
+    for rel in sorted(named - set(ui)):
+        rep.err("die Lua nennt %s, das Bild ist nicht in der Uebernahme (fehlt in Test-Mod/Staging)" % rel[3:])
+    if not ui and not named:
+        rep.say("  keine")
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
@@ -875,7 +975,7 @@ def walk_rel(root, sub):
 
 def is_own(rel):
     b = os.path.basename(rel)
-    return bool(LUA_BEAR.match(rel) or re.match(r"^(NCBear|nc_bear|Item_NCBear)", b, re.I))
+    return bool(LUA_BEAR.match(rel) or UI_ASSET.match(rel) or re.match(r"^(NCBear|nc_bear|Item_NCBear)", b, re.I))
 
 
 def collisions(tgt, final, copy_lua, copy_asset, rep):
@@ -904,7 +1004,7 @@ def collisions(tgt, final, copy_lua, copy_asset, rep):
     if in_comment:
         rep.warn("Baeren-Namen nur in NPC-Crew-Kommentaren (keine Kollision): %s" % ", ".join(in_comment[:10]))
     for r in sorted(set(walk_rel(tgt, "lua")) | set(walk_rel(tgt, "scripts")) | set(walk_rel(tgt, "AnimSets"))
-                    | set(walk_rel(tgt, "models_X")) | set(walk_rel(tgt, "textures"))):
+                    | set(walk_rel(tgt, "models_X")) | set(walk_rel(tgt, "textures")) | set(walk_rel(tgt, "ui"))):
         if is_own(r) and not ARGS["erneut"]:
             rep.err("Kollision: NPC Crew hat schon eine Datei im Baeren-Namensraum: %s" % r)
     for rel in sorted(final):
@@ -916,10 +1016,11 @@ def collisions(tgt, final, copy_lua, copy_asset, rep):
     # Gleicher Dateiname: NPC Crew (Ziel und echter Baum) und Vanilla (gleicher relativer Pfad verdeckte Vanillas Datei).
     names = collections.defaultdict(list)
     for root in sorted(set([tgt, NC_LIVE])):
-        for sub in ("models_X", "textures", "scripts", "AnimSets", "sound"):
+        for sub in ("models_X", "textures", "scripts", "AnimSets", "sound", "ui"):      # B1c: + ui
             for rel in walk_rel(root, sub):
                 names[os.path.basename(rel).lower()].append(rel)
     n_van = 0
+    n_ban = 0
     for rel in sorted(copy_asset):
         b = os.path.basename(rel).lower()
         others = [o for o in names.get(b, []) if o != rel]
@@ -929,7 +1030,14 @@ def collisions(tgt, final, copy_lua, copy_asset, rep):
         if os.path.exists(vp):
             n_van += 1
             rep.err("Kollision: %s verdeckte Vanillas Datei %s" % (rel, vp))
-    rep.say("Dateinamen gegen NPC Crew und Vanilla: %d Vanilla-Treffer" % n_van)
+        # B1c: Bandits ist Pflicht-Mod von NPC Crew; ein gleicher media/ui-Pfad verdeckte Bandits' Bild (oder umgekehrt)
+        if UI_ASSET.match(rel):
+            for bm in BANDITS_MEDIA:
+                bp = os.path.join(bm, rel[len("42/media/"):])
+                if os.path.exists(bp):
+                    n_ban += 1
+                    rep.err("Kollision: %s liegt auch in Bandits (%s)" % (rel, bp))
+    rep.say("Dateinamen gegen NPC Crew, Vanilla und Bandits (media/ui): %d Vanilla-Treffer, %d Bandits-Treffer" % (n_van, n_ban))
     # Modell-/Skriptnamen und Tierart gegen Vanilla.
     van_scripts = os.path.join(VANILLA_MEDIA, "scripts")
     own_models = set()
@@ -1185,6 +1293,10 @@ def cheat_check(plan, src, rep):
                     lits = _strings_of(TEXT_CALL.sub("", a))
                     if any(re.search(r"[A-Za-z].*[A-Za-z]", x) for x in lits) or a.strip() in local_str:
                         add(rel, no, "menue", codes[no - 1], "Menue-Eintrag mit festem Text statt Textschluessel (Testmenue?)", a.strip()[:40])
+        # B1c: Optionen-Seite (PZAPI.ModOptions) -- jedes Text-Argument ist ein Schluessel UI_BN_Bear_* (Vanilla ruft getText), nie
+        # ein fester Satz, nie ein Ausdruck (Nachbesserung B1c A4: mo_text_hits)
+        for no, what, why in mo_text_hits(code_text):
+            add(rel, no, "menue", codes[no - 1], why, what)
 
     n_lines = 0
     for rel in plan["copy_lua"]:
@@ -1206,7 +1318,7 @@ def cheat_check(plan, src, rep):
                     for tid, rx, allowed, why in TIER_RULES:
                         if rx.search(code):
                             if (rel, cur_fn) in allowed:
-                                tier_used[tid].append("%s:%d (%s)" % (os.path.basename(rel), no, cur_fn))
+                                tier_used[tid].append("%s:%d (%s)" % (os.path.basename(rel), no, cur_fn or "Dateiebene"))
                             else:
                                 add(rel, no, "tier", code, "%s -- Aufruf aus %s" % (why, cur_fn or "Dateiebene"), tid)
             if re.search(r"\bNC[A-Z][A-Za-z]*_[A-Za-z]|\bNC[A-Za-z]*Bench|(?i:\btesthilfe\b|\bwerkbank\b)", com):
@@ -1373,8 +1485,9 @@ def print_plan(plan, rep):
     for s in plan["texts"]:
         rep.say("  " + s)
     rep.say("")
-    rep.say("== Naehte (NAEHTE.md): keine Zeile in einer NPC-Crew-Lua-Datei. Laufzeit-Aufsaetze in OnGameBoot stehen in den kopierten "
-            "Dateien; geaendert werden nur NPC Crews Texte (zusammenfuehren) und sandbox-options.txt (anhaengen).")
+    rep.say("== Naehte (NAEHTE.md): keine Zeile in einer NPC-Crew-Lua-Datei. Laufzeit-Aufsaetze auf NPC Crew in OnGameBoot stehen in den "
+            "kopierten Dateien (B1c: dazu ein Aufsatz auf VANILLAS Kartenklassen, Datei-Ende + OnGameStart, NAEHTE.md Zeile 18); geaendert "
+            "werden nur NPC Crews Texte (zusammenfuehren) und sandbox-options.txt (anhaengen).")
 
 
 def write_all(root, final, rep):

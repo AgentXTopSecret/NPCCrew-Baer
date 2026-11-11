@@ -1,5 +1,42 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+## Nachtschicht 11.11.2026 (Start 01:55 auf Kevins "los"; Freigaben: ENTSCHEIDUNGEN.md "Nachtschicht 11.11.2026")
+
+Wecker: Cron alle 20 min (7,27,47), loeschen erst auf Kevins "stopp". Regeln: max. 10 Agenten je Workflow, vor jedem Workflow hier
+Stand + naechster Schritt + Lauf-ID; abgeschnittene Laeufe mit resumeFromRunId fortsetzen; Test-Mod nur bei geschlossenem Spiel.
+
+**Plan (Reihenfolge):**
+1. [FERTIG 05:05] Modell-Lauf baer-gen-schoen `wf_ae849387-409`: Gegenpruefer -- grosser Baer E zeigen (sauber, Kevin waehlt Farbe braun/
+   Fototon), Junges C noch NICHT (Ohren von hinten Pilze, Kopf in Fotopose gedreht). Blaetter `spiel/gen_KEVIN_junges.png`, `gen_KEVIN_gross.png`
+   (nicht in Git), Bericht `spiel/gen_GEGEN_OPTIK.md`, GLB `../_arbeit/baer_gen/aus/C_schoen.glb`, `E_schoen.glb`, `E_schoen_fototon.glb`.
+   Claudes Blick: C in Kevins Kamera klar ein Baerenjunges mit Fellstrichen, viel schoener als der Platzhalter; E gut, Gesicht etwas hell.
+2. [FERTIG + EINGEBAUT 08:12, UNGESPIELT] Code **B1c** (49 Dateien byte-gleich, 7 neu; Sicherungen `backups/NCBearTest/NCBearTest_vor_b1c_2026-11-11_081208.zip`/`_mit_`; Test `spiel/anleitung_b1c.md`; Berichte `spiel/b1c_*.md`; Pruefer 23/0, gesamt 812/0) -- vorher: Gegenpruefer bereit=True, Blocker=[]. NAECHSTER SCHRITT: Urteil/Restbefunde in
+   `../_arbeit/baer_zaehmen/gegen_bericht_b1c.md` lesen, selbst Pruefer+Attrappen laufen lassen, wenn Spiel zu: sichern, Staging nach
+   NCBearTest (staging_dateien.txt), mod.info, Commit/Push beider Repos, Testanleitung aus `anleitung_b1c_entwurf.md`. Fragen F1-F9 in
+   `forschung_b1c.md` Abschnitt 12 -> 'Fragen fuer Kevin'. Lauf war:  Workflow `wf_99d68702-665` (Task wbyqd4dj0; 9 Agenten, Skript `spiel/b1c_workflow.js`; abgeschnitten -> Workflow({scriptPath, resumeFromRunId: "wf_99d68702-665"})): Register-Selbstheilung N9, Laerm-Flucht des gezaehmten Jungen abfangen,
+   Verstecken hinter dem Besitzer bei Zombies / wilde fliehen, Mitfahren wie NPC Crew, Unstuck "Call to me", Bildschirm-Markierung
+   (Symbol 1 + Pfeil), Karten-Symbol (Mini + gross), Anzeige-Optionen (Name ein/aus, Groesse), Gehen mit animalRunning=false (Kevins Ja).
+   Danach Einbau (wenn Spiel zu), Commit/Push, Testanleitung.
+3. [LAEUFT ab ~05:10] Modell des Jungen: Workflow baer-rig-junges (8 Agenten, Skript `spiel/rig_junges_workflow.js`; Formrunde Kopf gerade +
+   Ohren, Skelett+Gewichte, 15 Clips mit schnellerem Gehen, Pruefer Optik/Technik, Nachbesserung, Gegenpruefer), Ergebnis
+   `../_arbeit/baer_gen/rig/out/42/media/...`; Lauf `wf_f7896aa7-c7b` (Task waly9lt77; abgeschnitten -> resumeFromRunId).
+4. Wenn Zeit: Wachsen 100 Tage + Werte (Plan + Bau).
+5. Danach: Pruefer/Gegenpruefer ueber das Gebaute, Testlisten, naechster Punkt aus "Offen".
+
+**Fertig (diese Nacht):** Modell-Lauf baer-gen-schoen (Blaetter `spiel/gen_KEVIN_*.png`); Code B1c gebaut, geprueft, in NCBearTest (08:12), hochgeladen.
+**Ungespielt:** B1c (in NCBearTest seit 08:12).
+**Am Limit haengen geblieben:** 11.11. ~06:05 Nutzungslimit erreicht -- B1c fertig, aber nicht eingebaut; Rig-Lauf `wf_f7896aa7-c7b` lief weiter (bei Abbruch mit resumeFromRunId fortsetzen).
+**Fragen fuer Kevin:** (aus B1c, je mit Empfehlung; Einzelheiten `spiel/b1c_gegen_bericht_b1c.md` und `spiel/b1c_forschung_b1c.md` Abschnitt 12)
+  1. A3: Vanilla-Lua-Bausteine ohne Aufrufer (addTickBox/addSlider der Optionen-Seite) als Beleg zaehlen? -> ja.
+  2. MP nach Server-Absturz: aelteres Register gewinnt (Schutz vor gefaelschtem Spiegel), im SP der neuere Stand? -> ja.
+  3. Q-Ruf holt ein FOLGENDES Junges, ein bleibendes nicht -- auch beim Bleiben holen? -> erst im Test ansehen.
+  4. Zombie zwischen dir (>10 Kacheln) und dem Jungen: es rennt weg und kommt zurueck -- lieber stehen bleiben? -> ja, mit B5a.
+  5. Gehen zeigt sich selten (nur bis 3 Kacheln, wenn du fast stehst) -- oefter? -> mit dem neuen Modell einstellen (`NCBear_CubSet("walkDist", 6)`).
+  6. FR-Text 'pret' -> 'prete', 'Caresse' Einzahl? -> aendern (klein).
+  7. F7: jeder Spieler kann in Vanilla jedes Tier in einen Tier-Anhaenger laden, auch fremde gezaehmte Junge -- Luecke schliessen? -> ja (vor MP).
+  8. Grosser Baer aus dem Generator: Farbe braun oder Fototon (Blatt `spiel/gen_KEVIN_gross.png`); Kopf: 2c-Kopf behalten oder Generator-Kopf?
+
+
 > **Neuer Account oder neue Sitzung? Zuerst `UEBERGABE.md` (10.11. ~11:00): wo wir stehen, was Kevin testen muss, offene Fragen, was als Naechstes kommt.**
 
 > **10.11.2026 ~22:25: Spieltest B1a nach Fix 1:** `NCBear_CubHere()` geht ("cub b1 appeared 8 tiles away"), Junges flieht ohne Futter
@@ -22,6 +59,20 @@
 > Werten -> braucht Kevins Wort).
 > **Kevin 11.11. ~00:20 fuer das Wachsen (B1-Wachsen, nach B1b):** 100 Spieltage bis ausgewachsen (Halbstark ab ~15, 1,0 ab ~45, 1,35 ab
 > ~100), Sandbox-Option, Werte steigen JEDEN Tag (Tabelle ganz unten in `begleiter/ENTSCHEIDUNGEN.md`; ersetzt 7 + 14 Tage vom 08.11.).
+> **Kevin ~01:50 beim Spielen:** (1) gezaehmtes Junges rennt bei Laerm weg (Rennen/Schuesse; Engine `respondToSound`) -> wie beim grossen
+> Baeren abfangen; (2) Zombie direkt daneben, Junges reagiert nicht (`fleeZombies = false`) -> nach Kevins Regel hinter den Besitzer
+> verstecken; (3) Zombies sollen Baeren angreifen (B5a; Vorschlag: alle gezaehmten, auch das Junge). Alles naechste Version.
+> **11.11.2026 ~01:45: B1b IM SP ANGESPIELT:** nach `NCBear_CubTame(100)` gezaehmt, **Folgen klappt** (Kevin: *"okay klappt jz hab den
+> getamed und der folgt"*). Neuer Wunsch: Baeren-Fenster auf **V** (Taste einstellbar), siehe ENTSCHEIDUNGEN.md unten.
+>
+> **11.11.2026 ~01:35: ZAEHMUNG NACH ABSTURZ VERLOREN (N9, Ursache gefunden, nicht B1b).** Kevin: *"hoe der baer der eben getamed war ist jz
+> nichtmehr getamed ist das normal?"*. Belege: Absturz 22:40 (Vanilla-Debug-NPE, `Logs/2026-11-10_22-20_DebugLog.txt:8745`) schrieb den
+> Spielstand nach `Saves/Apocalypse/2026-11-10_22-12-12_crash/` -- dort steht im Register b1 `st tame`, `tame 100`, `bond __sp`
+> (`global_mod_data.bin`, 598 Bytes). Der normale Ordner hat seit 22:43 ein LEERES Register (`cubs {}`, 182 Bytes); das Tier selbst lag
+> mit seinem Spiegel noch da und wurde als neues "found" (b2) aufgenommen; dazu kam ein neues Wald-Junges b1 (48 Kacheln). Kevin fuettert
+> jetzt b2 (Balken 33). **Folge-Fix (naechste Version): Register-Selbstheilung** -- Spiegel am Tier (`tcBear` = heute nur {id, st})
+> um owner/bond/tame/mode/name erweitern und einen fehlenden Eintrag daraus wiederherstellen statt "found"/"shy" neu anzulegen.
+>
 > **11.11.2026 01:19: B1b IN NCBearTest -- UNGESPIELT.** Folgen/Bleiben (nur gezaehmt, Besitzer; bewegt per `fleeTo` wie B1a, kein Jar-only),
 > Namensschild (Name + "following"/"staying", dicht ueber dem Kopf, Stellwert `tagZ`), Umbenennen ("Name the cub", ISTextBox, max 24,
 > Server prueft), "Hold out food for the cub" (Welt-Menue, nur ausruesten), Waisen-Aufraeumen (N5), Sandbox `BearFollowMaxDistance` 40,
@@ -34,7 +85,7 @@
 > Abstand beim Stehenbleiben (bis 0,5 Kacheln, Stellwert followLead)? Offen aus der Forschung: Junges zu langsam (Gehen 0,52 Kacheln/s ->
 > rennt immer; schnellere Clips im Modell-Lauf?), Q-Ruf/Laerm laesst es fliehen.
 > **Symbol fuer die Bildschirm-Markierung:** zweite Runde im Cartoon-Stil (`spiel/icon_auswahl_2.png`, Dateien `../_arbeit/baer_icon/`),
-> Kevins Wahl steht aus; Bandits multipliziert die Markierungsfarbe mit sich selbst (Bandits `BanditEventMarkers.lua:153-155`).
+> **Kevin waehlt Entwurf 1 (Kopf von vorn)** -> `../_arbeit/baer_icon/BanditsNPCBearCub_marker.png`, Einbau naechste Version; Bandits multipliziert die Markierungsfarbe mit sich selbst (Bandits `BanditEventMarkers.lua:153-155`).
 >
 > **Kevin 11.11. ~01:35 Anzeige ueber dem Baeren:** je Spieler einstellbar (Name ein/aus, jeder Wert einzeln als Balken ODER Zahl, Groesse,
 > "DODGE" beim Ausweichen wie NPC Crew) -- Mod-Optionen wie NPC Crew `client/BanditsNPCModOptions.lua`; Name/Groesse nach B1b, Werte mit
