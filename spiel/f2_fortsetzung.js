@@ -25,8 +25,14 @@ und ${BAN}/common). Kevin programmiert nicht, er spielt und testet. Schreibe Ber
 VORGESCHICHTE: Das gezaehmte Junge (Art "ncbearcub") und ab Tag 15 der grosse Koerper (Art "ncbeargrown", Helfer B.BodyKind) sind in
 B1a-B1e gebaut; F1 (Baeren-Fenster auf V mit Werten, Faehigkeiten, Befehlen Folgen/Bleiben/Sitz/Frei/Komm her/Passiv/Unstuck, C1-Wiederkehr)
 ist gebaut und geprueft und liegt im Staging ${W}/mod/ (67 Dateien, Liste ${W}/staging_dateien.txt; Berichte PLAN_F1.md, gegen_bericht_f1.md).
-ACHTUNG: Die Test-Mod ${T} hat F1 NOCH NICHT (Claude baut F1 ein, sobald Kevins Spiel zu ist) -- dein Bezugsstand ist das STAGING; vergleiche
-gegen die Test-Mod nur fuer die alten NCBear*-Dateien. Daneben gibt es in der Test-Mod den alten Kampf-Test: Art "bear" mit NCBearFight.lua
+STAND 12.11. 10:00 (neu): Die Test-Mod ${T} hat F1 UND F1b (Git main db80ad6: Fenster mit E nah am Baeren, Fern-Taste in Optionen > Mods,
+V wieder Vanilla, Schalter Growth line; dazu Junges mit Baerenfuessen NCBearCub.glb d9931d32). F1b ist ohne Kollision in das Staging ${W}/mod/
+zusammengefuehrt (${W}/f1b_merge.md); dein Bezugsstand bleibt das STAGING. "V-Fenster" heisst jetzt "Baeren-Fenster (E)". Das Uebernahme-Skript
+${B}/tools/baer_uebernahme.py und ${B}/NAEHTE.md tragen die F1B-Regeln (committet) -- uebernehmen, nicht zuruecknehmen. BEKANNT, NICHT beheben:
+der Trockenlauf meldet 1 Fehler "NPC Crew hat Sprachen, die das Skript nicht kennt: DE" (NPC Crew hat seit 12.11. 09:26 shared/Translate/DE; ob der
+Baer Deutsch bekommt, entscheidet Kevin) -- im Bericht als bekannt fuehren, sonst gruen machen. Modell-Dateien (NCBearCub.*, NCBear.*, NCBearGen*,
+NCBearBench*.glb/png/fbx) nie anfassen oder ins Staging kopieren; im Staging liegt ein ALTES NCBearCub.glb/.png -- in staging_dateien.txt als
+"NICHT KOPIEREN" fuehren (Test-Mod neuer). Daneben gibt es in der Test-Mod den alten Kampf-Test: Art "bear" mit NCBearFight.lua
 (Prankenhieb links/rechts, Biss, Biss am Boden, Doppelschlag, Rueckstoss, Schnauben, Sitzen/Fressen; Testbefehle NCBear_*; Lehren in
 ${B}/spiel/*.md und ${B}/STAND.md). Der grosse Baer bekommt parallel im Lauf baer-gross neue Clips (Aufrichten/Bruellen) -- Modell-, Textur-,
 Ton- und AnimSet-Dateien fasst F2 NICHT an; Clip-Zeiten nur aus EINER Tabelle lesen, damit sie nach baer-gross nachgezogen werden koennen.
@@ -165,8 +171,8 @@ Testbefehle, die Kevin kennt (NCBear_SpawnLive, NCBear_Fight, NCBear_Sit, NCBear
 NCBear_GenLive ...), laufen weiter. 3. Gesamt-Attrappe ${W}/attrappe/gesamt/run.lua um F2 erweitern und laufen lassen; alle B1a-F1-Faelle bleiben
 gruen. 4. ${B}/tools/baer_uebernahme.py und ${B}/NAEHTE.md nachziehen (Umbenennen, Stummel nie kopieren, Altlasten, die F2 abloest, aus der
 --vor-b5a-Liste; Cheat-Pruefung), Trockenlauf und --probe (mit und ohne --vor-b5a, Probe nur unter ${W}/probe_f2/).
-5. ${W}/staging_dateien.txt neu (Pfad | MD5 | Bytes | neu/ueberschreibt/gleich gegen ${T} -- Achtung: F1 ist dort noch nicht eingebaut, Spalte
-gilt gegen die heutige Test-Mod) und ${W}/mod_info_vorschlag.txt um F1 und F2. Ergebnis: ${W}/bau_f2_zusammenbau.md. Rueckgabe: Kurzfassung mit Zahlen. NACHTRAG KEVIN 12.11. ~05:00: ${W}/PLAN_F2.md Abschnitt 11 (11.1 Schalter 'Show damage' mit schwebenden Schadenszahlen ueber Zombies/Banditen, 11.2 Zeile 'Melee damage' unter Condition mit B.MeleeDamage, 11.4 Lerntempo langsamer + Alters-Deckel + Sandbox-Prozent, 11.5 Kill-Zaehler, 11.6 kein Schaden durch Spieler/Turrets/NPCs + Bench-Fehler %1$s, 11.7 Fliehen erst N=3 Treffer vor dem Tod statt 20 %) gehoert zum Auftrag -- umsetzen bzw. mitpruefen.`, { label: 'bau:zusammenbau', phase: 'Bau' })
+5. ${W}/staging_dateien.txt neu (Pfad | MD5 | Bytes | neu/ueberschreibt/gleich gegen ${T} -- F1 und F1b sind dort eingebaut (db80ad6), Spalte
+gilt gegen die heutige Test-Mod; Modell-Dateien, die dort neuer sind, als "ueberschreibt (NICHT KOPIEREN: ...)") und ${W}/mod_info_vorschlag.txt (Grundlage ${W}/mod_info_vorschlag_f1b.txt = heutige Test-Mod) um F2. Ergebnis: ${W}/bau_f2_zusammenbau.md. Rueckgabe: Kurzfassung mit Zahlen. NACHTRAG KEVIN 12.11. ~05:00: ${W}/PLAN_F2.md Abschnitt 11 (11.1 Schalter 'Show damage' mit schwebenden Schadenszahlen ueber Zombies/Banditen, 11.2 Zeile 'Melee damage' unter Condition mit B.MeleeDamage, 11.4 Lerntempo langsamer + Alters-Deckel + Sandbox-Prozent, 11.5 Kill-Zaehler, 11.6 kein Schaden durch Spieler/Turrets/NPCs + Bench-Fehler %1$s, 11.7 Fliehen erst N=3 Treffer vor dem Tod statt 20 %) gehoert zum Auftrag -- umsetzen bzw. mitpruefen.`, { label: 'bau:zusammenbau', phase: 'Bau' })
 if (!zus) { return { foA, foB, plan, kern, ober, abbruch: 'Zusammenbau ohne Ergebnis' } }
 
 phase('Pruefung')
@@ -214,9 +220,9 @@ Bericht der Nachbesserung: ${W}/nachbesserung_f2.md.
 3. Zwei eigene Stichproben (z. B. Zombie beisst den grossen Baeren, der kaempft, flieht bei wenig Leben -- Zeile fuer Zeile; Tod waehrend
    Mitfahren; Verband abgebrochen).
 4. Urteil: bereit fuer Kevins naechsten Einzelspieler-Test (laedt ohne rote Fehler; Zombies greifen den gezaehmten Baeren an, er wehrt sich,
-   Junges versteckt sich, Passiv wirkt, Werte/Faehigkeiten steigen sichtbar im V-Fenster, Verband heilt, Tod bzw. downed sauber; alte Testbefehle
+   Junges versteckt sich, Passiv wirkt, Werte/Faehigkeiten steigen sichtbar im Baeren-Fenster (E), Verband heilt, Tod bzw. downed sauber; alte Testbefehle
    laufen weiter; B1a-F1 unveraendert)? Blocker nur, was diesen Test verhindert oder eine rote Linie reisst.
 Ergebnis ${W}/gegen_bericht_f2.md und Testanleitung ${W}/anleitung_f2_entwurf.md (Deutsch, kurz, Schritt fuer Schritt fuer Kevin, mit Bench-
-Befehlen zum Eintippen; Spiel mit -debug neu starten; Wegwerf-Spielstand; F1 muss vorher eingebaut sein). Rueckgabe: das Urteil strukturiert. NACHTRAG KEVIN 12.11. ~05:00: ${W}/PLAN_F2.md Abschnitt 11 (11.1 Schalter 'Show damage' mit schwebenden Schadenszahlen ueber Zombies/Banditen, 11.2 Zeile 'Melee damage' unter Condition mit B.MeleeDamage, 11.4 Lerntempo langsamer + Alters-Deckel + Sandbox-Prozent, 11.5 Kill-Zaehler, 11.6 kein Schaden durch Spieler/Turrets/NPCs + Bench-Fehler %1$s, 11.7 Fliehen erst N=3 Treffer vor dem Tod statt 20 %) gehoert zum Auftrag -- umsetzen bzw. mitpruefen.`, { label: 'gegenpruefung', phase: 'Gegenpruefung', schema: VERDICT })
+Befehlen zum Eintippen; Spiel mit -debug neu starten; Wegwerf-Spielstand; F1 und F1b sind schon eingebaut). Rueckgabe: das Urteil strukturiert. NACHTRAG KEVIN 12.11. ~05:00: ${W}/PLAN_F2.md Abschnitt 11 (11.1 Schalter 'Show damage' mit schwebenden Schadenszahlen ueber Zombies/Banditen, 11.2 Zeile 'Melee damage' unter Condition mit B.MeleeDamage, 11.4 Lerntempo langsamer + Alters-Deckel + Sandbox-Prozent, 11.5 Kill-Zaehler, 11.6 kein Schaden durch Spieler/Turrets/NPCs + Bench-Fehler %1$s, 11.7 Fliehen erst N=3 Treffer vor dem Tod statt 20 %) gehoert zum Auftrag -- umsetzen bzw. mitpruefen.`, { label: 'gegenpruefung', phase: 'Gegenpruefung', schema: VERDICT })
 
 return { foA, foB, plan, kern, ober, zus, pa, pb, fix, gegen }
