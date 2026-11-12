@@ -150,7 +150,7 @@ Berichte: ${R}/*.md. URTEILE: Optik ${JSON.stringify(po ? po.urteil : 'FEHLT')} 
 MAENGEL: ${JSON.stringify(maengel)}
 
 DEINE ROLLE: NACHBESSERUNG. Stand sichern (${R}/fix1/vorher/), blocker und major beheben (minor wenn billig), nach jeder Aenderung Ton-Bild ansehen,
-alles neu messen, md5.txt neu. Mangel nur mit Beleg ablehnen. Bericht ${R}/NACHBESSERUNG.md. Rueckgabe: je Mangel-ID Kurzfassung.`, { label: 'nachbesserung', phase: 'Nachbesserung' })
+alles neu messen, md5.txt neu. Mangel nur mit Beleg ablehnen. Bericht ${R}/NACHBESSERUNG.md. Rueckgabe: je Mangel-ID Kurzfassung. FORTSETZUNG nach Halt 04:12 (5-h-Limit): Zwischenstaende pruefen, nur Vollstaendiges weiterverwenden.`, { label: 'nachbesserung', phase: 'Nachbesserung' })
 
 phase('Gegenpruefung')
 const gegen = await agent(`${CTX}
