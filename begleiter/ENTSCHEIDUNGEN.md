@@ -443,3 +443,11 @@ Woertlich: *'merk dir noch auch fuer die uebergabe der getamte waer soll nichtme
 hits sterben wuerde'* -- Korrektur *'getamter baer*'*.
 * **Fest (F2, `../_arbeit/baer_zaehmen/PLAN_F2.md` 11.7):** der gezaehmte Baer kaempft, bis sein Leben nur noch fuer 3 Treffer der aktuellen Gegner
   reicht, dann hoert er auf und flieht. Sandbox "Bear: backs off when this many hits from death" 1-10, Vorgabe 3, 0 = nie. Ersetzt die 20-%-Schwelle.
+
+## Junges liegend/tot: Pfoten stecken ineinander (Kevin 12.11.2026 ~07:40)
+Nach dem Vergleichsblatt `../_arbeit/baer_junges_fuss/bilder/KEVIN_junges_liegen.png` (alt | neu | Variante "liegen" 2,2 cm tiefer) woertlich:
+*'naja ich denk mal du siehst selbst das es scheisse ist die beine stecken ineinander xD'* -- *'(die fuesse)'*. Zuvor zum Gesamtblatt: *'ja das ist
+schonmal besser als vorher'*.
+* **Fest (naechster Modell-Lauf am Jungen, nach dem Wochen-Reset):** Clips Dead/Death des Jungen so aendern, dass die Pfoten/Fuesse beim Liegen NICHT
+  ineinander oder uebereinander stecken (Beine natuerlich gestaffelt, jede Pfote sichtbar und frei), Koerper liegt auf (Variante liegen_gesenkt
+  einrechnen), aus Kevins Kamera UND von der Seite pruefen; dabei auch das Schweben beim Rennen ansehen. Die anderen Clips bleiben byte-gleich.
