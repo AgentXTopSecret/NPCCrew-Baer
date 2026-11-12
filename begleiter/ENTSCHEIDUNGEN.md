@@ -439,7 +439,7 @@ dann sein verstehst du?'*
   Fluss/See/flach/tief (die Fluss-am-flachen-Wasser-Idee entfaellt).
 
 ## Fliehen erst kurz vor dem Tod (Kevin 12.11.2026 ~07:30)
-Woertlich: *'merk dir noch auch fuer die uebergabe der getamte wær soll nichtmehr kaempfen und nur noch fliehen wenn er low hp ist sodas er nach 2-3
+Woertlich: *'merk dir noch auch fuer die uebergabe der getamte waer soll nichtmehr kaempfen und nur noch fliehen wenn er low hp ist sodas er nach 2-3
 hits sterben wuerde'* -- Korrektur *'getamter baer*'*.
 * **Fest (F2, `../_arbeit/baer_zaehmen/PLAN_F2.md` 11.7):** der gezaehmte Baer kaempft, bis sein Leben nur noch fuer 3 Treffer der aktuellen Gegner
   reicht, dann hoert er auf und flieht. Sandbox "Bear: backs off when this many hits from death" 1-10, Vorgabe 3, 0 = nie. Ersetzt die 20-%-Schwelle.
