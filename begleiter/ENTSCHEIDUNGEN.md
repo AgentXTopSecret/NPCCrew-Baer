@@ -358,3 +358,15 @@ Kevins Antwort woertlich: *'Ja, wie NPC Crew'*.
 * **Fest:** `B.T` (shared/BanditsNPCBear.lua) fragt die Existenz eines Schluessels einmal je Sitzung mit `pcall(getTextOrNull, key, "%1", ..., "%9")`;
   eingesetzt wird weiter mit `getText(key, Werte)` (Vanilla-belegt). Gilt NUR fuer diese eine Methode in dieser Form. Eingebaut mit F2 (Staging), nicht
   einzeln in die Test-Mod.
+
+## Baeren-Fenster: E in der Naehe statt V, Fern-Taste selbst setzen (Kevin 12.11.2026 ~04:40)
+Woertlich (nach dem ersten F1-Spiel: "neues ui anzeige passt ... das ist top"): *'also folgendes problem das fenster geht auf V auf aber das war
+eigtl so gemeint wenn man in der naehe ist wie bei den npc's ich wuerde vorschlagen aber jz weil wenn man mit npc's unterwegs ist die auf v auf gehn
+dann ist es schwer das baeren inventar zu oeffnen deswegen schlag ich vor bei E das baeren ui zu oeffnen und wenn man es aus der ferne oeffnen will
+dann kann man beim UI den hotkey festelegen um es aus der ferne aufzurufen und em die E taste fuer den baeren wenn man in der naehe ist in sen mod
+settings zum aendern eintragen falls jemand nicht E nutzen will sondern einen anderen key'*.
+* **Fest (Lauf baer-f1b, `spiel/f1b_workflow.js`):** Nah-Taste Vorgabe **E** (nur neben dem EIGENEN Baeren, Abstand wie NPC Crews V bei NPCs),
+  Fern-Taste Vorgabe **keine** -- beide in Optionen > Mods > "NPC Crew: Bear" einstellbar. V gehoert wieder NPC Crew ("Talk to NPC") und Vanilla;
+  der Rechtsklick "Bear window" bleibt. Ohne Baer in der Naehe tut E nichts Eigenes (bleibt Vanillas Interact).
+* Gewaehlter Weg bei Kleinfragen (Lauf entscheidet mit Beleg, Kevin sieht die Liste danach): E oeffnet nicht im Fahrzeug, beim Tippen im Chat
+  oder bei anderem Fenster im Fokus; Vanillas Tier-Radial am eigenen Baeren wieder offen, aber ohne "Kill" (falls belegt moeglich).
