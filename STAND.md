@@ -1,5 +1,45 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **11.11.2026 20:05: VIER LAEUFE PARALLEL (Nachtschicht)** -- alle in DIESER Sitzung; Fortsetzen nur hier: Workflow({scriptPath, resumeFromRunId}).
+> 1. baer-gross `wf_48fe2220-263` (Task wehxfh1d9) FORTGESETZT ab bau:netz (Zusatz "FORTSETZUNG nach Halt 18:10"); scriptPath `C:/Users/Kevin/.claude/projects/C--Users-Kevin-NPCCrew-Nebenprojekte-baer/8f80868b-c5cd-4de5-ade1-25f74fc113d4/workflows/scripts/baer-gross-wf_48fe2220-263.js`.
+> 2. baer-gen-gross `wf_f0c57dc2-1e2` (Task wlafzliv1) FORTGESETZT ab bau:rig (gleicher Zusatz); scriptPath `C:/Users/Kevin/.claude/projects/C--Users-Kevin-NPCCrew-Nebenprojekte-baer/8f80868b-c5cd-4de5-ade1-25f74fc113d4/workflows/scripts/baer-gen-gross-wf_f0c57dc2-1e2.js`.
+> 3. baer-junges-fuss `wf_9972fabf-79b` (Task w6ltibxwp, 8 Agenten) NEU; scriptPath `C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel/junges_fuss_workflow.js`.
+> 4. baer-f1 Baerenfenster V + B1e-Reste `wf_ef86c2c0-ba8` (Task whqyziqwq, 9 Agenten) NEU; scriptPath `C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel/f1_workflow.js`,
+>    Staging `../_arbeit/baer_zaehmen/mod/`, Berichte `*_f1.md`, Fenster-Entwurf `../_arbeit/baer_zaehmen/f1_entwurf/`.
+> **22:22 baer-gross ANGEHALTEN (5 h 79 %, Reset 01:00):** fertig bis bau:netz (2. Versuch); abgebrochen **bau:textur** (lief 22:00-22:19). Nach dem Reset:
+>    im persistierten Skript den bau:textur-Auftrag um " FORTSETZUNG nach Halt 22:22 (5-h-Limit): Zwischenstaende pruefen, nur Vollstaendiges weiterverwenden."
+>    ergaenzen, dann resumeFromRunId wf_48fe2220-263. Die anderen drei laufen bis zur Pruefung 22:34 weiter (gen-gross ist beim letzten Agenten).
+> **22:30 baer-gen-gross FERTIG** (8/8 Agenten mit Ergebnis, keine leeren): technisch sauber (Skelett/15 Clips textgleich mit 2c, 19.958 Dreiecke,
+>    Dehnung max 3,18), Gegenpruefer: "bereit fuer Test-Mod" als Vergleich, aber "insgesamt NICHT schoener als der 2c" (schwarze Unterarme +
+>    Brustband beim Aufrichten, schmale Schnauze/Teddy-Ohren, wirkt grau). Blatt `../_arbeit/baer_gen_gross/bilder/KEVIN_gross_vergleich.png`, GEGEN.md.
+>    EINBAU als Vergleich (Kevin Freigabe 3: nur NCBear_GenLive) NACH dem 5-h-Reset 01:00; dabei NUR `fix1/M2_uebernahme.patch` ins
+>    Uebernahme-Skript (die Vollkopie fix1/m2/baer_uebernahme.py ist veraltet!), NAEHTE.md Zeile 84 nachziehen, Trockenlauf. Kein weiterer
+>    Modell-Lauf fuer den Generator-Baeren vor Kevins Wahl -- die Modell-Spur arbeitet am 2c (baer-gross) und am Baby.
+> **22:38 ALLES ANGEHALTEN (5 h 87 %, Woche 50 %, Reset 01:00).** Fortsetzungs-Zusatz steht schon in den Skripten -- nach dem Reset nur noch
+>    Workflow({scriptPath, resumeFromRunId}) je Lauf:
+>    - baer-gross wf_48fe2220-263: neu ab **bau:textur** (Zusatz drin).
+>    - baer-junges-fuss wf_9972fabf-79b: plan + bau:form fertig, neu ab **bau:clips** (lief 20:57-22:37; Zusatz drin).
+>    - baer-f1 wf_ef86c2c0-ba8: forschung, plan, bau:kern, bau:oberflaeche, bau:zusammenbau fertig; neu ab **pruef:belege + pruef:logik**
+>      (lesen nur, kein Zusatz noetig).
+>    Dazu der Einbau des Generator-Baeren als Vergleich (Block 22:30).
+> **12.11. 01:02 nach dem Reset:** baer-gross (Task wjxi9u7tr), baer-junges-fuss (w8gd14wr1), baer-f1 (wpa8yys1b) mit derselben Lauf-ID
+>    FORTGESETZT. Generator-Baer als Vergleich EINGEBAUT (NCBearTest 6e678fb, 6 neue Bench-Dateien, Zips `*_gen_vergleich_2026-11-12_*`),
+>    Test `spiel/anleitung_gen_vergleich.md`; Patch M2 ins Uebernahme-Skript eingespielt (Trockenlauf 0 Fehler / 34 Warnungen) -- das Skript
+>    und NAEHTE.md tragen auch die halben F1-Aenderungen: erst mit F1 committen (NAEHTE Zeile 84: 26 -> 29 Fehler + 3 NCBearGen-Pfade nachziehen).
+> Verbrauch beim Start: 5 h 1 % (Reset 01:00), Woche 27 %. Der Block "18:10 ZWEI MODELL-LAEUFE ANGEHALTEN" darunter ist damit erledigt.
+
+> **NACHTSCHICHT 11./12.11.2026** (Kevin ~18:25: Freigaben 1-5 ja, Wecker "machst du das am besten selbst"; `begleiter/ENTSCHEIDUNGEN.md` unten).
+> **Funktionen-Liste (Kevin ~18:40: "alle funktionen einbauen ... die ganzen skills das schoene ui und alles"), der Reihe nach, je ein Lauf:**
+> F1 Baerenfenster auf V (Taste einstellbar; schoenes UI: Name, Alter/Stufe, Leben/Ausdauer/Hunger, Faehigkeiten mit Stufe+Fortschritt, Befehle
+>    Folgen/Bleiben/Sitz/Frei/Komm her/Passiv, Unstuck-Knopf) + B1e-Reste (bear statt cub, koerperloser Baer kommt wieder).
+> F2 B5a Kampf: Zombies greifen GEZAEHMTE Baeren an, der Baer kaempft mit; Faehigkeiten wirken (Agilitaet, Leben, Kondition, Kaempfen,
+>    Ausdauer/Verschnaufen, Heilen wach/Schlaf/von Hand); alte NCBear*-Dateien auf NPC-Crew-Namen.
+> F3 Beduerfnisse + Schlafen (Hunger, Muedigkeit; `begleiter/SCHLAF_PLAN.md` K1-K21: schlaeft selbst, wacht bei Zombies auf).
+> F4 Traglast/Inventar am Baeren. F5 Spuernase (abschaltbar) + Fischen (ab Halbstark). F6 Mehrspieler-Pruefung aller Teile.
+> Kleinfragen unterwegs: empfohlenen Weg bauen, morgens als Liste zeigen. Kevins Wuensche: `begleiter/ENTSCHEIDUNGEN.md` + `PLAN.md` + UEBERGABE.md 4.
+> **Wecker 4533eb5c am 12.11. ~02:00 auf Kevins Wort GELOESCHT (kein Wecker mehr aktiv).** Frueher: Wecker NUR in dieser Sitzung: Cron `c5ad71b2` (einmal 20:03: Start, vier Laeufe) und `4533eb5c` (:04/:19/:34/:49 Verbrauch pruefen: 5 h >= 85 % anhalten,
+> <= 20 % fortsetzen, Woche >= 98 % alles stoppen + UEBERGABE_LIMIT.md). Morgens auf Kevins Stopp: CronDelete beider Wecker.
+
 > **11.11.2026 18:10: ZWEI MODELL-LAEUFE ANGEHALTEN (5-h-Fenster 93 %, Reset 20:00).** Hinweis der Projekte-Sitzung (Kevin: "Ja, Bescheid geben"):
 > bis 20:00 nichts Neues starten. Damit nichts mitten in der Arbeit ins Limit laeuft, um 18:10 per TaskStop angehalten (2 verwaiste Blender-Jobs
 > `baer_export_gross.py -- netz` beendet):
@@ -28,7 +68,7 @@
 >    Sitzen. Skript-Kopie `../_arbeit/baer_gross/workflow_baer_gross.js`, Ergebnis `../_arbeit/baer_gross/mod/42/media/` (5 Dateien).
 > 3. **baer-gen-gross** (neuer grosser Generator-Baer, 9 Agenten) `wf_f0c57dc2-1e2`: E auf das 2c-Skelett, alle 15 2c-Clips byte-gleich, braun +
 >    Fototon, Vergleichs-Spawn `NCBear_GenLive()` (nur Bench). Skript-Kopie `../_arbeit/baer_gen_gross/workflow_baer_gen_gross.js`, Ergebnis `.../out/`.
-> 4. **baer-junges-fuss** (altes Junges: Baerenfuesse + Sitzen wie der 2c-Baer, Gesicht/Gang bleiben; 8 Agenten) VORBEREITET, nicht gestartet:
+> 4. **baer-junges-fuss** (altes Junges: Baerenfuesse + Sitzen wie der 2c-Baer, Gesicht/Gang bleiben; 8 Agenten) startet 20:03 PARALLEL (Kevin 18:35 "3 baeren gleichtzeitig"):
 >    Skript `../_arbeit/baer_junges_fuss/workflow_baer_junges_fuss.js` (inline starten). Start ERST nach dem 5-h-Reset
 >    (11.11. 20:00; Projekte-Sitzung 18:05: "erst nach 20:00 starten, nicht schon, wenn einer der anderen Laeufe fertig wird").
 > **Arbeitsweise (Kevin 11.11. ~15:55): immer Modell-Spur + Funktionen-Spur parallel, nach jedem fertigen Lauf sofort den naechsten starten.**

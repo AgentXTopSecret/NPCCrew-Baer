@@ -3,7 +3,8 @@
 hinhalten, Waisen raeumen; B1c: Register-Selbstheilung, Laerm- und Zombie-Wache, Mitfahren, Call to me, Gehen, Bildschirm-Markierung,
 Karten-Symbol, Anzeige-Optionen; B1d: Wachsen in BearGrowDays Spieltagen, taeglich steigende Werte, Faehigkeiten als Daten, Leben am
 Tier, Werte-Zeilen ueber dem Baeren; B1e: ab Halbstark zweiter Koerper "ncbeargrown" mit dem grossen Modell bis 1,35, groessere
-Markierung als eigenes UI-Element) aus der Test-Mod NCBearTest nach NPC Crew uebernehmen.
+Markierung als eigenes UI-Element; F1: Baeren-Fenster auf V, Befehle Sitz/Frei/Komm her/Passiv/Unstuck, Namensschild je Baer, Baer ohne
+Koerper kommt von selbst wieder) aus der Test-Mod NCBearTest nach NPC Crew uebernehmen.
 
 Grundregel (Werkstatt-CLAUDE.md Abschnitt 0, Kevin 08.11.2026): alles wird FUER NPC Crew gebaut und soll am Ende "einfach copy paste"
 hinueber; keine Cheat- oder Testmenues kommen mit. Plan: _arbeit/baer_zaehmen/PLAN_ZAEHMEN.md Abschnitt 12 (B1b: PLAN_B1B.md 7),
@@ -27,8 +28,11 @@ Was es tut (erst wenn ALLES geprueft ist, wird geschrieben; sonst Abbruch ohne S
   1. Einordnen: Lua (42|common)/media/lua/(shared|client|server)/(ISUI/|TimedActions/)?BanditsNPCBear*.lua kopieren; jede Datei mit
      Basisnamen NCBearBench* (jede Endung, jeder Ordner) NICHT (Testhilfe); mod.info, .git, .gitattributes, .gitignore nie;
      Translate/<L>/*.json zusammenfuehren; sandbox-options.txt anhaengen (Naht); Modell/Textur/Skript des Jungen (NCBearCub*,
-     nc_bear_cub*) und den Animations-Knoten 42/media/AnimSets/buck/idle/NCBear_Eat.xml kopieren (die 9 Knoten des Erwachsenen
-     bleiben bis B5a in der Test-Mod). B1c: Bilder 42/media/ui/BanditsNPCBear*.png kopieren (Kevins Symbol fuer Markierung und Karte;
+     nc_bear_cub*) und den Animations-Knoten 42/media/AnimSets/buck/idle/NCBear_Eat.xml kopieren (die Kampf-Knoten des Erwachsenen
+     bleiben bis B5a in der Test-Mod). F1 (PLAN_F1.md 0.5, 11.3): dazu die drei Sitz-Knoten NCBear_SitDown/Sit/StandUp.xml (liegen in
+     der Test-Mod; genau eine Bedingung NCBearAct, Clips im GLB des Jungen); die Werte, die der Sitz-Treiber
+     (client/BanditsNPCBearPose.lua, phase(e, obj, "<wert>", now)) setzt, brauchen je einen kopierten Knoten.
+     B1c: Bilder 42/media/ui/BanditsNPCBear*.png kopieren (Kevins Symbol fuer Markierung und Karte;
      PNG-Kopf geprueft, Name gegen NPC Crew, Vanilla und Bandits). Die ALTEN Dateien (NCBear*.lua
      ausser Bench, Modelle/Texturen/Skripte/Toene des Erwachsenen und des Test-Gegenstands, die drei Test-Tiernamen in EN/IG_UI.json)
      sind "noch umzubenennen (B5a)": Fehler, mit --vor-b5a Warnung, werden nie kopiert. Erwartet sind genau die in ALT_EXPECTED
@@ -73,6 +77,17 @@ Was es tut (erst wenn ALLES geprueft ist, wird geschrieben; sonst Abbruch ohne S
      Rassen-Textur "NCBear" -- beides Teile des grossen Modells, die bis B5a in der Test-Mod bleiben (ALT_DEFS: ohne --vor-b5a Fehler,
      mit Warnung; F9); "NCBear_Body" ist kein Testbefehl (CHEAT_ALLOWED). Neue Bilder ueber UI_ASSET; IG_UI.json + der Tiername
      IGUI_AnimalType_ncbeargrown.
+     F1 (PLAN_F1.md 11.3): genau drei Ausnahmen der Regel "taste" (Baeren-Fenster auf Kevins Wunsch, Taste in Vanillas Belegung):
+     client/BanditsNPCBearKey.lua Keyboard.KEY_V (Vorgabe der Zeile "Bear window") und Events.OnKeyPressed.Add(onKey),
+     client/ISUI/BanditsNPCBearWindow.lua Keyboard.KEY_ESCAPE (Esc schliesst); jede andere Taste/Maus bleibt ein Fund. Nachbesserung
+     F1 A1: die Regel sieht auch Fenster-Tasten (setWantKeyEvents, isKeyConsumed, onKeyPress/onKeyRelease/onKeyRepeat, :isKey(...),
+     table.insert(keyBinding, rohe Tastencodes "key == 33"); die heutigen Stellen (Key.lua: Abschnitt, eigene Taste, Vorfahrt NPC/
+     Fahrzeug/Tier, B9 Radial schliessen beim Druecken und Halten; Window.lua: setWantKeyEvents, isKeyConsumed, onKeyRelease)
+     stehen einzeln mit Grund in CHEAT_ALLOWED (14 Tasten-Ausnahmen). TEXT_NS
+     UI.json + genau die zwei Tasten-Schluessel "UI_optionscreen_binding_NPC Crew Bear" / "UI_optionscreen_binding_Bear window"
+     (Vanilla liest sie selbst, client/OptionScreens/MainOptions.lua:2165/:2177). Neue Tier-Regel PlaceCub: B.PlaceCub( (neuer Koerper
+     fuer einen bestehenden Eintrag) nur aus B.RideStep / B.HandleCall / B.BodySwap / B.ReviveMissing (C1). Das Fenster ist echte
+     Spielmechanik (kein Wert-Setzen, keine Probe-Wege); die Bench (NCBearBench*) bleibt Bench.
      Ausnahmen nur einzeln mit Grund (CHEAT_ALLOWED).
   7. (Probe/echt) schreiben, zuruecklesen, dann luacheck.py, scopecheck.py, localcount.py je kopierter Lua-Datei und luacheck_pz.py
      (W113 nur die einzeln erlaubten: die drei Aktionsklassen, die eine andere kopierte Datei setzt).
@@ -130,7 +145,8 @@ UI_ASSET = re.compile(r"^42/media/ui/BanditsNPCBear[A-Za-z0-9_]*\.png$")
 UI_MAX_PX = 512                                                    # Deckel fuer ein Oberflaechen-Bild (Kevins Symbol: 96 x 96)
 BANDITS_MEDIA = [os.path.normpath(r"C:/Program Files (x86)/Steam/steamapps/workshop/content/108600/3268487204/mods/Bandits/" + v
                                   + "/media") for v in ("42.22", "common")]   # nur lesen: gleicher ui-Dateiname verdeckte Bandits' Bild
-ANIMSET_OK = re.compile(r"^42/media/AnimSets/buck/idle/NCBear_Eat\.xml$")
+# F1 (PLAN_F1.md 0.5, 11.3): + die drei Sitz-Knoten (Hinsetzen, Sitzen, Aufstehen; Bedingung NCBearAct = sitdown / sit / standup)
+ANIMSET_OK = re.compile(r"^42/media/AnimSets/buck/idle/NCBear_(Eat|SitDown|Sit|StandUp)\.xml$")
 ANIMSET_ADULT = re.compile(r"^42/media/AnimSets/buck/idle/NCBear_[A-Za-z0-9]+\.xml$")
 ANIMSET_ANY = re.compile(r"^(42|common)/media/AnimSets/")
 CUB_GLB = "42/media/models_X/Skinned/NCBearCub.glb"
@@ -139,7 +155,10 @@ ANIM_VAR = "NCBearAct"                                             # B.ACT
 
 # Namensraum der Texte je Datei.
 TEXT_NS = {
-    "UI.json": (re.compile(r"^UI_BN_Bear_[A-Za-z0-9_]+$"), set()),
+    # F1 (PLAN_F1.md 3.1, 11.3): die zwei Beschriftungen der Tasten-Zeile (Vanilla baut "UI_optionscreen_binding_" .. Name,
+    # client/OptionScreens/MainOptions.lua:2165/:2177) -- genau diese, kein Muster (NAEHTE.md Zeile 27)
+    "UI.json": (re.compile(r"^UI_BN_Bear_[A-Za-z0-9_]+$"),
+                {"UI_optionscreen_binding_NPC Crew Bear", "UI_optionscreen_binding_Bear window"}),
     "Sandbox.json": (re.compile(r"^Sandbox_BanditsNPC_Bear[A-Za-z0-9_]+$"), {"Sandbox_BanditsNPC"}),
     "IG_UI.json": (re.compile(r"^$"), {"IGUI_AnimalType_ncbearcub", "IGUI_Animal_Group_ncbear", "IGUI_Breed_brown",
                                        "IGUI_AnimalType_ncbeargrown"}),               # B1e: Tiername des grossen Koerpers
@@ -171,6 +190,9 @@ ALT_EXPECTED = collections.OrderedDict([
     ("42/media/sound/NCBear_Huff.wav", "Ton des Erwachsenen (B5a)"),
     ("42/media/sound/NCBear_Pain.wav", "Ton des Erwachsenen (B5a)"),
     ("42/media/sound/NCBear_Roar.wav", "Ton des Erwachsenen (B5a)"),
+    ("42/media/models_X/Skinned/NCBearGen.glb", "Vergleichs-Modell Generator-Baer E (Lauf baer-gen-gross) bis Kevins Wahl; nie kopieren"),
+    ("42/media/textures/Body/NCBearGen.png", "Textur braun des Vergleichs-Modells NCBearGen bis Kevins Wahl; nie kopieren"),
+    ("42/media/textures/Body/NCBearGenFoto.png", "Textur Fototon des Vergleichs-Modells NCBearGen bis Kevins Wahl; nie kopieren"),
     ("text:IG_UI.json:IGUI_AnimalType_bear", "Tiername der Test-Art 'bear' ('Brown bear (test)', B5a)"),
     ("text:IG_UI.json:IGUI_AnimalType_bearstag", "Tiername der Test-Art 'bearstag' (B5a: streichen)"),
     ("text:IG_UI.json:IGUI_Animal_Group_bear", "Gruppenname der Test-Gruppe 'bear' ('Bear (NC test)', B5a)"),
@@ -205,8 +227,12 @@ CHEAT_RULES = [
               r"|:getRole\s*\(\s*\)\s*:\s*getName\s*\(|\bisCoopHost\b|(?i:[\"']admin)", "Admin-/Staff-Recht (ein Admin-Weg ist ein Spawn-Weg)"),
     ("taste", r"\bEvents\.(OnKeyPressed|OnKeyStartPressed|OnKeyKeepPressed|OnCustomUIKey\w*|OnContextKey|OnMouseDown|OnMouseUp"
               r"|OnRightMouseDown|OnRightMouseUp|OnMouseWheel|OnObject(?:Left|Right)MouseButton(?:Down|Up)|OnJoypad\w*|OnGamepad\w*"
-              r"|OnPressReloadButton|OnPressRackButton)\b|\bisKeyDown\s*\(|\bisKeyPressed\s*\(|\bGameKeyboard\.|\bKeyboard\.KEY_\w+",
-     "Taste oder Maus abgefragt (Debug-Taste? Die V-Taste kommt erst mit dem Baeren-Fenster und dann ueber NAEHTE.md)"),
+              r"|OnPressReloadButton|OnPressRackButton)\b|\bisKeyDown\s*\(|\bisKeyPressed\s*\(|\bGameKeyboard\.|\bKeyboard\.KEY_\w+"
+              # Nachbesserung F1 A1: Tasten in UI-Fenstern und Vanillas Tastentabelle
+              r"|\bsetWantKeyEvents\s*\(|:isKey\s*\(|[:.]isKeyConsumed\b|[:.]onKey(?:Press|Release|Repeat)\b"
+              r"|\btable\.insert\s*\(\s*keyBinding\b|\bkey\s*[=~]=\s*\d",
+     "Taste oder Maus abgefragt (Debug-Taste? Erlaubt sind nur die einzeln begruendeten Stellen des Baeren-Fensters, CHEAT_ALLOWED / "
+     "NAEHTE.md 27-28)"),
     ("engine", r"\b(setGodMod|setGhostMode|setInvisible|setInvincible|setIsInvincible|setNoClip|setUnlimitedCarry|setUnlimitedEndurance"
                r"|setUnlimitedAmmo|setBuildCheat|setFarmingCheat|setHealthCheat|setMechanicsCheat|setMovablesCheat"
                r"|setTimedActionInstantCheat|setFastMoveCheat|setCanSeeAll|setCanHearAll|setZombiesDontAttack|setKnowAllRecipes"
@@ -329,6 +355,14 @@ TIER_RULES = [
      "Art-Frage (getAnimalType) nur in B.BodyKind"),
     ("artvergleich", re.compile(r"(?:==|~=)\s*B\.CUB\b|\bB\.CUB\s*(?:==|~=)"), set(),
      "Vergleich mit B.CUB (nur das Junge) -- beide Koerper ueber B.BodyKind"),
+    # F1 (PLAN_F1.md 4b, 8.1 Nr. 16): B.PlaceCub erzeugt einen neuen Koerper fuer einen BESTEHENDEN Eintrag (gen + 1). Erlaubt nur aus
+    # Aussteigen (B.RideStep), Call to me / Unstuck (B.HandleCall), Koerper-Tausch (B.BodySwap) und C1 (B.ReviveMissing) -- ein weiterer
+    # Aufrufer (z. B. aus einem Fenster-Knopf) waere ein Spawn-Weg.
+    ("PlaceCub", re.compile(r"\bB\.PlaceCub\s*\("), {("42/media/lua/server/BanditsNPCBearRide.lua", "B.RideStep"),
+                                                       ("42/media/lua/server/BanditsNPCBearRide.lua", "B.HandleCall"),
+                                                       ("42/media/lua/server/BanditsNPCBearGrow.lua", "B.BodySwap"),
+                                                       ("42/media/lua/server/BanditsNPCBearOrder.lua", "B.ReviveMissing")},
+     "neuer Koerper fuer einen bestehenden Eintrag (B.PlaceCub) nur aus Aussteigen, Call to me, Koerper-Tausch und C1"),
 ]
 # B1c (PLAN_B1C.md 6.8): die Seite unter Optionen -> Mods bekommt nur Textschluessel (Vanilla ruft getText,
 # client/OptionScreens/MainOptions.lua:2801-2812). Methode -> Stellen der Text-Argumente (0 = erstes Argument).
@@ -375,13 +409,47 @@ def mo_text_hits(code_text):
     return hits
 
 
-TIER_DEF = re.compile(r"^function\s+B\.(CreateCub|AppearFor|RemoveCub|GrowSetG|GrowSetHp|SkillSet)\s*\(")   # B1d: + die drei Probe-Wege
+TIER_DEF = re.compile(r"^function\s+B\.(CreateCub|AppearFor|RemoveCub|GrowSetG|GrowSetHp|SkillSet|PlaceCub)\s*\(")   # B1d: + die drei
+# Probe-Wege; F1: + PlaceCub
 # Ausnahmen einzeln mit Grund: Datei, Regel, ein Text im Code-Teil der Zeile. Greift eine nicht mehr, warnt das Skript.
 CHEAT_ALLOWED = [
     {"file": "42/media/lua/shared/BanditsNPCBearDefs.lua", "rule": "befehl", "code": 'bodyModel = "NCBearCub_Body"',
      "why": "Name des model-Skripts (scripts/nc_bear_cub.txt), kein Befehl (Plan 12.1 Punkt 5)"},
     {"file": "42/media/lua/shared/BanditsNPCBearDefs.lua", "rule": "befehl", "code": 'bodyModel = "NCBear_Body"',
      "why": "B1e: model-Skript des grossen Koerpers (scripts/nc_bear_tier.txt, Altlast bis B5a -- ALT_DEFS), kein Befehl"},
+    # F1 (PLAN_F1.md 11.3): Baeren-Fenster auf Kevins Wunsch (ENT:259 "eine richtige UI die aufgeht wenn ich V druecke (einstellbar in den
+    # keystings)"), Taste in Vanillas Belegung (Optionen -> Tastaturbelegung, Abschnitt "NPC Crew: Bear"). Genau diese drei Stellen.
+    {"file": "42/media/lua/client/BanditsNPCBearKey.lua", "rule": "taste", "code": "{ value = NAME, key = Keyboard.KEY_V }",
+     "why": "F1: Vorgabe-Taste V der Zeile 'Bear window' in Vanillas keyBinding (V:shared/keyBinding.lua:132), einstellbar"},
+    {"file": "42/media/lua/client/BanditsNPCBearKey.lua", "rule": "taste", "code": "Events.OnKeyPressed.Add(onKey)",
+     "why": "F1: oeffnet/schliesst das Baeren-Fenster auf der belegten Taste (V:client/ISUI/FPS.lua:20), mit Vorfahrt NPC/Fahrzeug/Tier"},
+    {"file": "42/media/lua/client/ISUI/BanditsNPCBearWindow.lua", "rule": "taste", "code": "return key == Keyboard.KEY_ESCAPE or",
+     "why": "F1: Esc oder die eigene Taste schliessen das Fenster (V:client/ISUI/Crafting/ISHandcraftWindow.lua:289-297)"},
+    # Nachbesserung F1 A1 (die Regel sieht seit dem auch Fenster-Tasten): genau diese Stellen, je mit Grund
+    {"file": "42/media/lua/client/BanditsNPCBearKey.lua", "rule": "taste", "code": "table.insert(keyBinding, { value = HEAD })",
+     "why": "F1: Abschnitt [NPC Crew Bear] in Vanillas keyBinding (V:shared/keyBinding.lua:6-14), nur einmal (Doppel-Riegel)"},
+    {"file": "42/media/lua/client/BanditsNPCBearKey.lua", "rule": "taste", "code": "if not getCore():isKey(NAME, key) then return end",
+     "why": "F1: nur die eigene Zeile 'Bear window' oeffnet das Fenster (V:client/ISUI/FPS.lua:9)"},
+    {"file": "42/media/lua/client/BanditsNPCBearKey.lua", "rule": "taste", "code": "getCore():isKey(ia.KEYBIND, key) and ia.FindTarget(p)",
+     "why": "F1: Vorfahrt NPC-Gespraech -- NPC Crews Taste nur gelesen (NAEHTE.md 28)"},
+    {"file": "42/media/lua/client/BanditsNPCBearKey.lua", "rule": "taste",
+     "code": "getCore():isKey(KeybindId.VEHICLE_RADIAL_MENU, key) and ISVehicleMenu.getVehicleToInteractWith(p)",
+     "why": "F1: Vorfahrt Fahrzeug-Radial (V:client/ISUI/ISUIHandler.lua:36, :43)"},
+    {"file": "42/media/lua/client/BanditsNPCBearKey.lua", "rule": "taste", "code": "if getCore():isKey(KeybindId.ANIMAL_RADIAL_MENU, key) then",
+     "why": "F1: Vorfahrt Tier-Radial eines fremden Tiers (V:client/ISUI/ISUIHandler.lua:37, :44)"},
+    {"file": "42/media/lua/client/BanditsNPCBearKey.lua", "rule": "taste",
+     "code": "if not getCore():isKey(KeybindId.ANIMAL_RADIAL_MENU, key) then return end",
+     "why": "Nachbesserung F1 B9: schliesst Vanillas Tier-Radial an unserem Baeren (kein 'Kill'), nur die Radial-Taste"},
+    {"file": "42/media/lua/client/BanditsNPCBearKey.lua", "rule": "taste", "code": "Events.OnKeyStartPressed.Add(onRadialKey)",
+     "why": "Nachbesserung F1 B9: Radial schliessen beim Druecken (V:client/ISUI/ISUIHandler.lua:102)"},
+    {"file": "42/media/lua/client/BanditsNPCBearKey.lua", "rule": "taste", "code": "Events.OnKeyKeepPressed.Add(onRadialKey)",
+     "why": "Nachbesserung F1 B9: Radial schliessen, solange die Taste gehalten wird (V:client/Hotbar/ISHotbar.lua:890)"},
+    {"file": "42/media/lua/client/ISUI/BanditsNPCBearWindow.lua", "rule": "taste", "code": "o:setWantKeyEvents(true)",
+     "why": "F1: das Fenster bekommt Tasten (Esc / eigene Taste schliessen; V:client/ISUI/Crafting/ISHandcraftWindow.lua:386)"},
+    {"file": "42/media/lua/client/ISUI/BanditsNPCBearWindow.lua", "rule": "taste", "code": "function Win:isKeyConsumed(key)",
+     "why": "F1: Esc / eigene Taste gehoeren dem offenen Fenster (V:client/ISUI/Crafting/ISHandcraftWindow.lua:289-292)"},
+    {"file": "42/media/lua/client/ISUI/BanditsNPCBearWindow.lua", "rule": "taste", "code": "function Win:onKeyRelease(key)",
+     "why": "F1: Esc / eigene Taste schliessen das Fenster (V:client/ISUI/Crafting/ISHandcraftWindow.lua:294-297)"},
 ]
 # luacheck_pz W113, die eine ANDERE kopierte Datei setzt (luacheck_pz liest je Datei, nicht ueber Dateien): (Datei, Name).
 PZ_ALLOWED = {
@@ -531,7 +599,7 @@ def collect_source(src, rep):
         elif CUB_ASSET.match(rel) or ANIMSET_OK.match(rel) or UI_ASSET.match(rel):
             copy_asset.append(rel)
         elif ANIMSET_ADULT.match(rel):
-            skipped.append((rel, "Animations-Knoten des Erwachsenen, bleibt bis B5a in der Test-Mod (NAEHTE.md Naht 9)"))
+            skipped.append((rel, "Kampf-Knoten des Erwachsenen, bleibt bis B5a in der Test-Mod (NAEHTE.md Naht 9)"))
         elif rel.endswith(".lua") and re.match(r"BanditsNPCBear", base):
             rep.err("%s: Unterordner nicht freigegeben (bekannt: shared|client|server, darin ISUI/ oder TimedActions/)" % rel)
         elif rel in ALT_EXPECTED or (rel.endswith(".lua") and base.startswith("NCBear")) or (
@@ -682,6 +750,14 @@ def form_check(final, copy_lua, copy_asset, rep):
                 rep.err("%s: setzt %s = '%s', dafuer gibt es keinen kopierten Animations-Knoten" % (rel, ANIM_VAR, m.group(1)))
             else:
                 rep.say("  %s = '%s' (%s) hat seinen Knoten" % (ANIM_VAR, m.group(1), os.path.basename(rel)))
+    # F1 (PLAN_F1.md 5.6): der Sitz-Treiber setzt B.ACT ueber phase(e, obj, "<wert>", now) (client/BanditsNPCBearPose.lua)
+    for rel in copy_lua:
+        code = "\n".join(c for c, _ in lua_split_lines(final[rel].decode("latin-1")))
+        for val in sorted(set(re.findall(r"\bphase\(\s*\w+\s*,\s*\w+\s*,\s*\"(\w+)\"", code))):
+            if val not in used_values:
+                rep.err("%s: Sitz-Treiber setzt %s = '%s', dafuer gibt es keinen kopierten Animations-Knoten" % (rel, ANIM_VAR, val))
+            else:
+                rep.say("  %s = '%s' (%s, Sitz-Treiber) hat seinen Knoten" % (ANIM_VAR, val, os.path.basename(rel)))
     rep.say("  Animations-Knoten: %d, Werte %s" % (len([r for r in copy_asset if ANIMSET_OK.match(r)]), ", ".join(sorted(used_values))))
     # B1c: Bilder der Oberflaeche (PNG-Kopf, IHDR-Groesse, gedeckelt); jedes Bild, das die kopierte Lua als media/ui/... nennt, wird
     # mitkopiert -- und jedes kopierte Bild nennt die Lua auch (sonst toter Ballast)
@@ -1557,7 +1633,9 @@ def print_plan(plan, rep):
     rep.say("== Naehte (NAEHTE.md): keine Zeile in einer NPC-Crew-Lua-Datei. Laufzeit-Aufsaetze auf NPC Crew in OnGameBoot stehen in den "
             "kopierten Dateien (B1c: dazu ein Aufsatz auf VANILLAS Kartenklassen, Datei-Ende + OnGameStart, NAEHTE.md Zeile 18; B1d: "
             "keine neue Naht, NAEHTE.md Zeile 25; B1e: keine neue Naht, die Art ncbeargrown haengt bis B5a am grossen Modell der "
-            "Test-Mod, NAEHTE.md Zeilen 15 und 26); geaendert werden nur NPC Crews Texte (zusammenfuehren) und sandbox-options.txt (anhaengen).")
+            "Test-Mod, NAEHTE.md Zeilen 15 und 26; F1: Tasten-Zeile in Vanillas keyBinding, Vorfahrt vor NPC Crews 'Talk to NPC' nur "
+            "lesend, layout.ini-Name und Client-Datei BanditsNPCBear.ini, Beacon-Basisflaeche fuer 'Frei' nur dokumentiert, NAEHTE.md "
+            "Zeilen 27-30); geaendert werden nur NPC Crews Texte (zusammenfuehren) und sandbox-options.txt (anhaengen).")
 
 
 def write_all(root, final, rep):

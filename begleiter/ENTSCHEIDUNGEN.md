@@ -326,3 +326,25 @@ Woertlich: *'kannst du bitte die baeren funktionen weiter bauen + unseren grosse
 Woertlich (nach den Bilderreihen `spiel/rig_KEVIN_junges_spielfertig.png` und `spiel/baby_entwurf.png`): *'ja ausser auf dem foto da sieht das noch schlimmer aus haha'* -- *'sieht das aktuell wirkloch noch genau so aus?'* -- *'und das baby hat echt so menschen fuesse noch? wenn ja kannst du das auch noch abaendern das es beim sitzen nicht so scheisse aussieht dann? sondern wie unser grosser baer der schon fast fertig ist? ;D'* -- *'genau das gesicht muss so bleiben das wirkt suess ;D das ist gut so und gang sieht ja auch normal aus ^^'*.
 * Ja: das alte Junge (6c3f0a96) stammt aus dem grossen Baeren VOR baer-2c (Menschenfuss, alte Sitzhaltung; `../_arbeit/baer_baby/fix_baby.md`).
 * **Fest:** Lauf baer-junges-fuss (8 Agenten, Skript `../_arbeit/baer_junges_fuss/workflow_baer_junges_fuss.js`): Fuesse/Beine wie der 2c-Baer im Junges-Massstab, Sitz-Clips aus den 2c-Clips umgerechnet (wiederholbar), **Gesicht/Kopf bit-gleich, Gang (alle anderen Clips) byte-gleich**.
+
+## Nachtschicht 11./12.11.2026: Freigaben (Kevin 11.11.2026 ~18:25)
+Fragen (ueber die Projekte-Sitzung gestellt) und Kevins Antwort woertlich: *'alles wie du gesagt hast aber bei 6 weiss ich das nicht ;D deswegen machst du das am besten selbst'*.
+* 1 ja: fertige, selbst gepruefte, UNGESPIELTE Staende nachts in NCBearTest kopieren (nur bei geschlossenem Spiel, Zip vorher/nachher, Commit+Push).
+* 2 A: der ueberarbeitete grosse Baer (Lauf baer-gross: Aufrichten/Bruellen, Koerperform, Kopf im Sitzen) ERSETZT den 2c-Baeren im Spiel; alter Stand im Zip.
+* 3 ja: der Generator-Baer nur als Vergleich per Testbefehl `NCBear_GenLive()` (braun + Fototon); Kevin waehlt spaeter.
+* 4 ja: B1e-Reste in den naechsten Funktionen-Lauf -- Meldungen beim grossen Baeren "bear" statt "cub"; Baer ohne Koerper (Absturz im Wechsel-Bild)
+  erscheint von selbst wieder.
+* 5 ja: Funktionen-Reihenfolge Baerenfenster (V) -> B5a Kampf (alte NCBear*-Dateien bekommen NPC-Crew-Namen) -> Schlafen; B5a darf nachts starten.
+* 6 "machst du das am besten selbst": fuer die Nacht stellt sich die Sitzung EIGENE Wecker (Cron, nur in dieser Sitzung, verfallen mit ihr):
+  Start 20:03 nach dem 5-h-Reset, danach alle ~15 min Verbrauch pruefen -- 5 h ab 85 %: laufende Workflows anhalten (TaskStop), nach dem Reset mit
+  derselben Lauf-ID fortsetzen; Woche ab 98 %: alles anhalten, Uebergabe schreiben, sichern. Am Morgen auf Kevins Stopp Wecker loeschen.
+* Nachtrag ~18:30, woertlich: *'ja arbeite an den baeren models + den code ingame fuer die funktionen damit wir ueberall weiter kommen du siehst ja
+  selbst ob der baer schoen aussieht wenn du meinst er ist schoen genug und die anitmtionen passen gut dann kannst du ja erstmal mir das zeigen
+  morgen und ich entscheide dann'* -> Modelle nachts selbst beurteilen (Blatt aus der Spielkamera neben die Fotos) und nachbessern, bis sie schoen
+  sind; erst dann fuer Kevin morgen zeigen (Blatt + Testweg). Er entscheidet dann; der alte Stand bleibt je Einbau im Zip.
+* Nachtrag ~18:35, woertlich: *'du machst beide baeren schoener baby und die grossen okay? also 3 baeren gleichtzeitig wenn das geht ;D ausser du
+  sagst jz das ist zu viel und kostet zuviel tokens ^^'* -> ab 20:03 alle drei Modell-Laeufe gleichzeitig (baer-gross, baer-gen-gross,
+  baer-junges-fuss) plus der Funktionen-Lauf; parallel kostet nicht mehr Tokens, das 5-h-Fenster ist nur frueher voll (dann Pause bis zum Reset).
+* Nachtrag ~18:40, woertlich: *'gut und alle funktionen einbauen noch vom baeren du weisst ja bescheid was ich alels wollte die ganzen skills das
+  schoene ui und alles'* -> Funktionen-Spur nachts der Reihe nach durch ALLES (Liste STAND.md oben "Funktionen-Liste"); offene Kleinfragen mit dem
+  empfohlenen Weg bauen und morgens als Liste zeigen; das UI soll schoen sein (Kevins Wort).
