@@ -1,5 +1,9 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **13.11. ~00:00 (NPC-Crew-Sitzung fragt fuer Kevin, er schlaeft; PC wird danach heruntergefahren):** Alles gesichert und gepusht ausser dem laufenden
+> **baer-maul-bau** (wf_a876c805-e76): W/T/G/PT/PO/N fertig, Gegenpruefer laeuft, dann Integrator. Bricht er ab (PC aus): neuer Account nimmt
+> `spiel/maul_bau_fortsetzung.js` (GP + I live). Uebergabe `UEBERGABE_ACCOUNT2.md` ist aktuell. Nichts Neues gestartet. Woche 87 %.
+
 > **12.11. 21:25: AUSSEHEN-KNOPF + SANDBOX 39 -> 12 FERTIG (8/8) UND EINGEBAUT** (Spiel zu; `tools/einbau_look.py`: 143 Dateien -- 4 neu, 55 ueberschrieben, 84 gleich,
 > Modell-Dateien nie aus dem Staging; Zips `NCBearTest_vor_look_2026-11-12_212527.zip` / `_mit_`; mod.info aus mod_info_vorschlag_look.txt; Trockenlauf 0 Fehler).
 > Gegenpruefer: bereit fuer SP-Test, kein Blocker. Test `spiel/anleitung_aussehen.md`, Bericht `spiel/aussehen_gegen_bericht.md`. Neue Arten ncbeargrowngen /
