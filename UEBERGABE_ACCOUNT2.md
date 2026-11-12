@@ -1,4 +1,4 @@
-# Baer -- Uebergabe fuer Kevins anderen Claude-Account (Stand 12.11.2026 20:15, Sitzung d5933cc7; wird bei Lauf-Ende / Limit-Halt nachgezogen)
+# Baer -- Uebergabe fuer Kevins anderen Claude-Account (FINAL 13.11.2026 ~01:00, Sitzung d5933cc7: alle Laeufe fertig, nichts laeuft mehr)
 
 Kevin (12.11. ~20:10): *"so keinen neuen workflow mehr starten merk dir den stand schonmal und mach alels fuer die uebergabe an eine nanderen clausde
 ascocunt berreit und wenn die workflows durch sind nochmal alles speichern, stell dir einen waechter ab 95% wochen limit stoppst du alles und machst es
@@ -30,7 +30,7 @@ Transkripte: `C:\Users\Kevin\.claude\projects\C--Users-Kevin-NPCCrew-Nebenprojek
 | Lauf | Lauf-ID / Task | Skript | fertig (20:13) | danach |
 |---|---|---|---|---|
 | **baer-aussehen** (Funktion: Aussehen-Knopf + Sandbox 39 -> 12) | `wf_34a802e5-6f8` / wbvwbx4bx | `baer\spiel\aussehen_workflow.js` | **FERTIG + EINGEBAUT 21:25** (alle 8) | Kevins Test `baer\spiel\anleitung_aussehen.md`, Fragen K1-K8 in `_arbeit\baer_zaehmen\aussehen\` |
-| **baer-maul-bau** (Modell: Maul beider grosser Baeren) | `wf_a876c805-e76` / w8qe5etel | `baer\spiel\maul_bau_workflow.js` | (13.11. ~00:00) W, T, G, PT, PO (urteil PO: "NICHT abnahmefaehig" vor der Nachbesserung), N | GP laeuft, dann I. **Neuer Account: `baer\spiel\maul_bau_fortsetzung.js`** (W-N als Text, GP + I live) -- vorher pruefen, ob `_arbeit\baer_maul\bau\GEGEN.md`/`BAU_MAUL.md` schon fertig sind |
+| **baer-maul-bau** (Modell: Maul beider grosser Baeren) | `wf_a876c805-e76` / w8qe5etel | `baer\spiel\maul_bau_workflow.js` | (13.11. ~00:00) W, T, G, PT, PO (urteil PO: "NICHT abnahmefaehig" vor der Nachbesserung), N | **FERTIG 13.11. ~01:00** (alle 8): nicht empfohlen, nicht eingebaut -- siehe Abschnitt 3 Punkt 2 (Fortsetzungs-Skript nicht mehr noetig) |
 | **baer-f3-plan** (Funktion: F3 Forschung + Plan, nur lesen) | `wf_881b0108-ad0` / whr8tzmw4 | `baer\spiel\f3_plan_workflow.js` | **FERTIG 20:30** (forschung, plan) | Kevins 6 Fragen (`_arbeit\baer_zaehmen\f3\PLAN_F3.md` Ende), dann Bau baer-f3 (7 Agenten) nach Aussehen-Einbau |
 
 **Fortsetzen in einem NEUEN Account/einer neuen Sitzung** (kein Lauf-Cache): wie `baer\spiel\f2_fortsetzung.js` -- fertige Rollen werden
@@ -44,7 +44,12 @@ Die Stand-Zeile oben in `baer\STAND.md` sagt, ob ein Lauf inzwischen fertig/eing
 
 ## 3. Was nach den Laeufen zu tun ist (Reihenfolge; NEUE Laeufe nur auf Kevins Wort)
 1. ~~Aussehen einbauen~~ **ERLEDIGT 21:25** (Test-Mod, Commit siehe STAND.md).
-2. **Maul einbauen**, wenn der Gegenpruefer je Baer empfiehlt (`_arbeit\baer_maul\bau\GEGEN.md`): 2c 5 Dateien aus bau\out_c2, Gen 3 aus bau\out_gen
+2. **Maul: Lauf FERTIG 13.11. ~01:00, NICHT eingebaut** (Gegenpruefer: keinen der beiden Baeren empfehlen). Besser: dunkle Lippenlinie bei geschlossenem
+   Maul, schwarzer Lefzenrand, dicke Zunge, Saege weg. Nicht besser: von vorn bleibt ein KASTEN statt U, Mundwinkel ein Keil; neu: schwarze Fluegel (2c),
+   Schneidezaehne wirken zerbrochen (verkehrte Normalen, `_arbeit\baer_maul\bau\w\mt_glb.py:252`), Innenwaende wie Platten. Ursache: der Plan hielt die
+   Lippenlinie bit-gleich (Zone Z2). **Kevin-Frage:** Darf die Lippenlinie bzw. der Schnitt der Aussenhaut 1,3-1,8 cm nach innen ruecken (Maul zu aendert
+   sich minimal)? Dazu R8-Lesart und A1 (`_arbeit\baer_maul\bau\GEGEN.md`). Blatt fuer Kevin: `_arbeit\baer_maul\bilder\KEVIN_maul.png`. Erst nach seiner
+   Antwort ein Nachbesserungs-Lauf; Pruefausgang (nicht empfohlen) `_arbeit\baer_maul\bau\n\out_*`. ALTER TEXT: Maul einbauen, wenn der Gegenpruefer je Baer empfiehlt (`_arbeit\baer_maul\bau\GEGEN.md`): 2c 5 Dateien aus bau\out_c2, Gen 3 aus bau\out_gen
    (Vorlage `baer\tools\einbau_gross.py` / `einbau_gg2s.py`); Kevin das Blatt `_arbeit\baer_maul\bilder\KEVIN_maul.png` zeigen.
 3. **F3-Fragen** (PLAN_F3.md, Ende) Kevin stellen; danach F3-Bau (Fenster-Variante B, Kevin 12.11. "B (breit)", Vorlage `_arbeit\baer_zaehmen\ui_entwurf\proto\`).
 4. Spaeter (Kevins Wuensche, ENTSCHEIDUNGEN.md): Liegen/Tot beider Baeren (Pfoten frei), Schlafpose nach Kevins Bild (Modell-Lauf), F4 Traglast/Inventar,

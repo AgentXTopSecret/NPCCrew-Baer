@@ -1,5 +1,9 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **13.11. ~01:00 ALLES FERTIG, NICHTS LAEUFT MEHR.** baer-maul-bau (wf_a876c805-e76) fertig: Gegenpruefer empfiehlt KEINEN Baeren -> nichts eingebaut
+> (Kasten statt U bleibt, weil die Lippenlinie bit-gleich bleiben sollte; Kevin-Frage: Lippenlinie 1,3-1,8 cm nach innen? Blatt `../_arbeit/baer_maul/bilder/KEVIN_maul.png`,
+> Bericht `../_arbeit/baer_maul/bau/GEGEN.md`). Waechter 3c536c47 geloescht. Uebergabe `UEBERGABE_ACCOUNT2.md` FINAL. Woche 87 %. Test-Mod fda41e8.
+
 > **13.11. ~00:00 (NPC-Crew-Sitzung fragt fuer Kevin, er schlaeft; PC wird danach heruntergefahren):** Alles gesichert und gepusht ausser dem laufenden
 > **baer-maul-bau** (wf_a876c805-e76): W/T/G/PT/PO/N fertig, Gegenpruefer laeuft, dann Integrator. Bricht er ab (PC aus): neuer Account nimmt
 > `spiel/maul_bau_fortsetzung.js` (GP + I live). Uebergabe `UEBERGABE_ACCOUNT2.md` ist aktuell. Nichts Neues gestartet. Woche 87 %.
