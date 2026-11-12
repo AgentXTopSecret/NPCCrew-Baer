@@ -29,7 +29,7 @@ WICHTIG: `resumeFromRunId` gilt NUR in der alten Sitzung. Eine neue Sitzung setz
 | baer-gross (grosser Baer schoener) | FERTIG 06:45 | Aufrichten/Bruellen wie echte Baeren, Sitzen ok; **Kopfnaht wie heute** (Kevins Bilder `baer\begleiter\kevin_kopfnaht_1112_*.png`, nur lokal) -> NICHT eingebaut. Staging `baer_gross\mod\`, Blatt `baer_gross\bilder\kevin_vorher_nachher.png`, Urteil `baer_gross\gegen_bericht.md`. |
 | baer-kopfnaht | VORBEREITET, nicht gestartet | `baer\spiel\kopfnaht_workflow.js` (6 Agenten, baut auf baer_gross\mod auf). Danach grossen Baeren einbauen (Kevin-Freigabe 2: ersetzt 2c) und Kevin zeigen. |
 | baer-junges-fuss (Junges mit Baerenfuessen) | FERTIG + EINGEBAUT 07:28 (NCBearTest cee4890) | Kevins Test und Fragen: `baer/spiel/anleitung_jfuss.md` (Sitzhaltung, Liegen tiefer -- Variante fertig, Schweben beim Rennen). |
-| F1b (E-Taste, Fern-Taste, Wachstums-Schalter) | lief 07:20 beim Bauer (von 8 Agenten: forschung, plan fertig) | Staging `baer_zaehmen\mod_f1b\`, Plan `baer_zaehmen\PLAN_F1B.md`; letzte Rolle fuehrt in das F2-Staging zusammen (`f1b_merge.md`). Siehe Abschnitt 5. |
+| F1b (E-Taste, Fern-Taste, Wachstums-Schalter) | ANGEHALTEN 08:13 (Woche 97 %) in den beiden Pruefern | Forschung, Plan, BAU fertig (`baer_zaehmenorschung_f1b.md`, `PLAN_F1B.md`, `bau_f1b.md`, Staging `baer_zaehmen\mod_f1b\`, Liste `staging_dateien_f1b.txt`, mod.info-Vorschlag `mod_info_vorschlag_f1b.txt`). Weiter mit **`baer\spiel1b_fortsetzung.js`** (5 Agenten: 2 Pruefer, Nachbesserung, Gegenpruefung, Zusammenfuehren ins F2-Staging). Danach einbauen (Spiel zu, `baer	ools\einbau_f1.py` auf SRC mod_f1b / LISTE staging_dateien_f1b.txt umstellen), Testanleitung kommt vom Gegenpruefer (`anleitung_f1b_entwurf.md`). |
 | F2 (Kampf B5a + Nachtraege) | ANGEHALTEN 03:58 im Bau | Forschung + Plan fertig (`baer_zaehmen\forschung_f2_*.md`, `PLAN_F2.md` mit Abschnitt 11). Fortsetzen mit **`baer\spiel\f2_fortsetzung.js`** (7 Agenten, ab Bau), ERST wenn F1b in der Test-Mod ist und `f1b_merge.md` keine Kollision meldet. |
 
 Dazu Modell-Aufgabe **Junges UND grosser Baer liegend/tot** (Kevin 07:50 "Ja, beide Baeren") (Kevin 07:40: "die beine stecken ineinander (die fuesse)"): Dead/Death neu, Pfoten frei, liegt auf
@@ -56,8 +56,14 @@ im Plan als Bild zeigen).
 F3 Beduerfnisse + Schlafen (`baer\SCHLAF_PLAN.md`), F4 Traglast/Inventar, F5 Spuernase + Fischen (Balance fest: Ertrag = NPC-Angler gleicher Stufe x
 0,5 halbstark .. 1,0 ausgewachsen, jedes Wasser; offene Fragen: von selbst/Befehl, Fische bringen, Zusehen), F6 Mehrspieler-Pruefung.
 
-## 5. Abschluss-Stand (wird beim Ende/Halt eingetragen)
-- (noch offen)
+## 5. Abschluss-Stand (12.11.2026 08:15, Halt am Wochenlimit 97 %)
+- Fertig und in der Test-Mod (NCBearTest cee4890, ungespielt): F1 Baerenfenster (Taste V), Junges mit Baerenfuessen.
+- Fertig, NICHT eingebaut: grosser Baer neues Aufrichten/Bruellen (wartet auf Kopfnaht-Lauf).
+- Halb: F1b (Bau fertig, Pruefung fehlt) -> `f1b_fortsetzung.js`. F2 (Forschung/Plan fertig, Bau halb) -> `f2_fortsetzung.js`, ERST nach F1b-Einbau.
+- Vorbereitet, nicht gestartet: `kopfnaht_workflow.js` (6 Agenten).
+- Neue Aufgaben (Kevin 12.11.): Liegen/Tot fuer beide Baeren (Pfoten frei), Schlaf-Pose nach Fotos + Kevins Bild (F3), z Z z in Schlaf-Farbe.
+- Reihenfolge (Kevin vorher kurz fragen): F1b fertig -> einbauen -> F2 -> baer-kopfnaht -> grossen Baeren einbauen -> Liegen beider Baeren -> F3 ...
+- In `tools/baer_uebernahme.py` liegt eine UNCOMMITTETE Aenderung des F1b-Bauers (gehoert zu F1b, mit F1b pruefen und committen).
 
 ## 6. Werkzeuge
 - Einbau in die Test-Mod: `baer\tools\einbau_f1.py` (Vorlage; SRC/LISTE/Zip-Namen anpassen), danach mod.info + 42/mod.info `description=` ersetzen,

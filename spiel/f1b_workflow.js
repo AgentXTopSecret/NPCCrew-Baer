@@ -189,7 +189,7 @@ Dateien (Liste ${W}/bau_f1b.md und ${W}/staging_dateien_f1b.txt): jeder Engine-A
 (Datei, Zeile, Argumenttypen, Seite), Jar-only = Befund; ModOptions-Tasten richtig angelegt und gelesen; keine Testbefehle ausserhalb der
 Bench; nur client/ und Translate/ geaendert (sonst Befund); Texte in sieben Sprachen (Schluessel, Platzhalter, Round-Trip, CN-Zeichen);
 Uebernahme-Kopie Trockenlauf/--probe selbst laufen lassen; vier Lua-Pruefer und alle Attrappen selbst laufen lassen, Zahlen nennen.
-Ergebnis ${W}/pruef_f1b_a.md. Rueckgabe strukturiert (id A1...).`, { label: 'pruef:belege', phase: 'Pruefung', schema: FIND }),
+Ergebnis ${W}/pruef_f1b_a.md. Rueckgabe strukturiert (id A1...). FORTSETZUNG nach Halt 08:13 (Wochenlimit 97 %): Zwischenstaende pruefen, nur Vollstaendiges weiterverwenden.`, { label: 'pruef:belege', phase: 'Pruefung', schema: FIND }),
   () => agent(`${CTX}
 
 DEINE ROLLE: PRUEFER B -- Logik, Tasten-Kollisionen, SP/MP, rote Linien. Du aenderst KEINE Datei ausser deinem Bericht und eigenen Attrappen
@@ -198,7 +198,7 @@ beim Tippen im Chat / bei offenem anderem Fenster / Baer auf anderer Etage / Bae
 nie ausloesen, auch nicht bei Tastencode 0) und gesetzt (auch auf E oder V -- was dann?); V neben NPC und Baer (nur noch NPC Crew bzw.
 Vanilla); Tier-Radial am eigenen Baeren (kein Kill); Wachstums-Schalter je Baer (zwei Baeren, ausgewachsen, zurueck, Deckel der Datei). Kann ein Druck den Baeren verlieren, verdoppeln, fremde Baeren steuern, NPC Crew
 stoeren oder Vanilla-E kaputtmachen? Kosten je Druck. Drei eigene Attrappen-Faelle fuer die riskantesten Stellen. Ergebnis ${W}/pruef_f1b_b.md.
-Rueckgabe strukturiert (id B1...).`, { label: 'pruef:logik', phase: 'Pruefung', schema: FIND }),
+Rueckgabe strukturiert (id B1...). FORTSETZUNG nach Halt 08:13 (Wochenlimit 97 %): Zwischenstaende pruefen, nur Vollstaendiges weiterverwenden.`, { label: 'pruef:logik', phase: 'Pruefung', schema: FIND }),
 ])
 const befunde = [...((pa && pa.findings) || []), ...((pb && pb.findings) || [])]
 log('Pruefung: ' + befunde.length + ' Befunde')
