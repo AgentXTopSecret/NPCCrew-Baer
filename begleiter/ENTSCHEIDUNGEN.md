@@ -396,3 +396,12 @@ lvl 1 bei endurance dabei bin ich mit dem baeren vllt maximal 5 min rumgelaufen'
 * **Fest (mit F2, `../_arbeit/baer_zaehmen/PLAN_F2.md` 11.4/11.5):** Deckel 6 -> 2 XP je Faehigkeit und Minute (Stufe 10 >= ~18 Echtzeit-Stunden
   Dauer-Einsatz); Alters-Deckel Junges 3 / halbstark 6 / kraeftig 8 / ausgewachsen 10; Sandbox "Bear: skill learning speed (%)" 25-1000, Vorgabe 100,
   und "Bear: skills limited by age" an/aus, Vorgabe an. Kill-Zaehler je Baer (Zombies, Banditen) im Fenster.
+
+## Kein Schaden am eigenen Baeren durch Spieler, Turrets, NPCs (Kevin 12.11.2026 ~05:20)
+Anlass: Kevin hat seinen halbstarken Baeren aus Versehen getoetet (console.txt f:181960 Note_BearDead, Speer in der Hand). Woertlich: *'und scheinbar
+hab ich grad meinen eigenen baeren ausversehn gekillt der darf kein schaden bekommen von mir oder meinen turrets schuessen/raketen und von meinen
+npc's nicht'* -- danach *'kann keinen neuen baeren rufen obwohl meiner tot ist'* (Trauer-Sperre; zum Testen `NCBear_CubClean()` loescht sie; die
+Meldung zeigte "%1$s" -- Bench-Fehler).
+* **Fest (mit F2, `../_arbeit/baer_zaehmen/PLAN_F2.md` 11.6):** gezaehmter Baer fuer die Engine unverwundbar; Leben sinkt NUR durch Zombies/feindliche
+  Banditen (`B.BearHurt`); jeder andere Verlust (Spieler -- Empfehlung: alle Spieler --, Auto, Turret, NPC-Crew-Figur, fremde Mod) wird
+  zurueckgenommen. Naht Turret <-> Baer in NAEHTE.md; Turret-Sitzung am 12.11. informiert. Bench-Meldung bekommt die Tage-Zahl.
