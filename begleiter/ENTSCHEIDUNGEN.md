@@ -472,3 +472,7 @@ also baby und ganz gross?'*
 | 10 | eingerollt, von vorn-oben wie die Spielkamera (Pfoten-Lage) | https://commons.wikimedia.org/wiki/File:Ours_brun_(19612993101).jpg | 3427x2284, 7,04 MB | CC BY 2.0, Sebastien Faillon |
 | 4 | Sphinx, Kopf seitlich, Hinterbeine sauber nebeneinander | https://commons.wikimedia.org/wiki/File:Braunbaer_anholter_schweiz.JPG | 2816x2112, 3,13 MB | CC BY-SA 3.0, jpr65 |
 | 9 | Schlafgesicht nah, Augen zu | https://commons.wikimedia.org/wiki/File:Orso_bruno_(Ursus_arctos)_-_Brown_bear,_Valbrembo,_Italia,_08.2014_(2).jpg | 4608x3072, 11,12 MB | CC BY-SA 4.0, Chindea Ciprian Emil |
+* Nachtrag ~07:55: Kevin schickt ein eigenes Bild (nur lokal `begleiter/kevin_schlafen_vorlage_1112.png`): *'das bild find ich auch noch gut dafuer'* --
+  Braunbaer EINGEROLLT auf der Seite, Kopf flach am Boden, Vorderpfote vor dem Bauch, Hintersohle sichtbar, alle Pfoten frei. **Fest:** gilt als
+  Vorlage mit Vorrang (Kevins Bild ist der Massstab) fuer eine zweite Schlafhaltung "eingerollt" (Tiefschlaf) neben der Sphinx -- deutlich anders als
+  die ausgestreckte Tot-Pose (Beine angezogen, Ruecken rund). Ob beide Haltungen oder nur eine: im F3-Plan vorschlagen, Kevin entscheidet.

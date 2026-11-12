@@ -47,6 +47,8 @@ wuerde"), Sandbox 1-10, Vorgabe 3; ersetzt die 20-%-Schwelle.
 Nach 5 Wikimedia-Commons-Fotos (Liste mit Links, Groessen, Lizenzen: `baer/begleiter/ENTSCHEIDUNGEN.md` ganz unten), fuer Junges UND grossen Baeren
 (am grossen Baeren entwerfen, mit dem Sitz-Umrechner auf das Junge uebertragen). Gehoert zu F3 (Schlafen, `baer/begleiter/SCHLAF_PLAN.md`).
 Download erst nach Kevins Ja je Datei (noch nicht gegeben).
+Dazu Kevins eigenes Bild `baer/begleiter/kevin_schlafen_vorlage_1112.png` (eingerollt auf der Seite, Pfoten frei) -- Vorrang als Vorlage, ggf. zweite
+Haltung "eingerollt" neben der Sphinx (Kevin entscheidet im F3-Plan).
 
 ## 4. Spaeter (Funktionen-Liste, STAND.md "NACHTSCHICHT")
 F3 Beduerfnisse + Schlafen (`baer\SCHLAF_PLAN.md`), F4 Traglast/Inventar, F5 Spuernase + Fischen (Balance fest: Ertrag = NPC-Angler gleicher Stufe x
