@@ -1,5 +1,12 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **12.11. 18:42: ZWEI LAEUFE GESTARTET (5 h 0 %, Woche 58 %; Wecker 6df67d34/84aebc74 geloescht):**
+> Funktionen-Spur **baer-aussehen** `wf_34a802e5-6f8` (Task wbvwbx4bx, 8 Agenten, scriptPath `C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel/aussehen_workflow.js`;
+> Aussehen-Knopf + Sandbox 39 -> 12, Staging `../_arbeit/baer_zaehmen/mod_look/`, Berichte `../_arbeit/baer_zaehmen/aussehen/`).
+> Modell-Spur **baer-maul-bau** `wf_a876c805-e76` (Task w8qe5etel, 8 Agenten, scriptPath `C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel/maul_bau_workflow.js`;
+> Eingang 2c = baer_kopfnaht/mod, Gen = v2/out_schmal; Ergebnis `../_arbeit/baer_maul/bau/out_c2|out_gen`). Transkripte `C:/Users/Kevin/.claude/projects/C--Users-Kevin-NPCCrew-Nebenprojekte-baer/d5933cc7-7f9d-46b2-a3a8-0929595b654b/subagents/workflows/<Lauf-ID>/journal.jsonl`.
+> Bei Abbruch: in DIESER Sitzung Workflow({scriptPath, resumeFromRunId}); neue Sitzung -> Fortsetzungs-Skript (Vorbild f2_fortsetzung.js).
+
 > **12.11. ~17:45 SANDBOX-KUERZUNG 39 -> 12 (Kevin):** Liste in ENTSCHEIDUNGEN.md unten; wird im Lauf baer-aussehen mitgebaut (Start 18:43, CTX "SANDBOX-KUERZUNG";
 > Staging mod_look 17:40 neu aus Test-Mod 99e0368 kopiert; Generator-Junges v2 als Aussehen des Jungen aufgenommen).
 
