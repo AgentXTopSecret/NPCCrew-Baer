@@ -1,10 +1,9 @@
 # Lauf baer-gen-junges-v2 (12.11.2026), Bauer BEINE: Skelett-Ruhe des Generator-Jungen mit KURZEN Beinen (PLAN.md 4.1).
 # Neu (Vorbild baer_skelett_rig.py, nur Format und Rechenweg uebernommen). Ruhe-DREHUNGEN bleiben byte-gleich mit dem 2c (Knoten von
-# quelle/2c/NCBear.glb); neu sind nur die Gelenk-LAGEN:
-#   - Rumpf, Becken, Wirbel, Hals, Kopf, Kiefer, Schwanz, Schulterblatt: dz = -(1 - f) x (Huefte - Sprunggelenk) = -0,1652 m
-#   - Huefte |y| +2,0 cm, Schulter |y| +1,8 cm (breitere Spur), Schulterblatt quer im selben Verhaeltnis
-#   - Oberschenkel/Unterschenkel x f_h, Oberarm/Unterarm x f_v (Richtung wie heute) -> Sprung-/Handgelenk bleibt 0,100 / 0,097 ueber dem Boden
-#   - Toe0 = Abrollpunkt der neuen Pfote (Toe0 des Standard-Jungen relativ zu seinem Sprunggelenk, Hoehe ueber der Sohle wie dort)
+# quelle/2c/NCBear.glb); neu sind nur die Gelenk-LAGEN: alle Gelenke = phi(alte Gelenke), DIESELBE Raum-Abbildung wie die Haut
+# (baer_beine_gj2.phi: Beine senkrecht gestaucht f_h 0,72 / f_v 0,7335 zwischen Sprung-/Handgelenk und Huefte/Schulter, alles darueber
+# dz -0,1652, Spur hinten +2,0 / vorn +1,8 cm). Toe0 = Abrollpunkt der neuen Pfote (Toe0 des Standard-Jungen relativ zu seinem
+# Sprunggelenk, Hoehe ueber der Sohle wie dort).
 # lage_E (lokale Lagen, Dump-Raum E) aus den Weltlagen ueber die unveraenderten Ruhe-Drehungen (Probe FK < 1e-9 E).
 # Aufruf: python baer_skelett_gj2.py AUS_SKELETT.json
 # Rahmen tier-Meter (x vorn, y links, z oben, Boden z 0) im Skelettrahmen; Dump-Raum = (y, z, -x) x 0,544. Statisch, nicht gespielt.
@@ -18,9 +17,6 @@ sys.path.insert(0, r"C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel")
 import baer_export_gj2 as X  # noqa: E402
 
 Q = "C:/Users/Kevin/NPCCrew-Nebenprojekte/_arbeit/baer_gen_junges/v2/quelle/"
-F_H = 0.72          # Hinterbein: Oberschenkel + Unterschenkel
-DY_H = 0.020        # Huefte quer nach aussen
-DY_V = 0.018        # Schulter quer nach aussen
 
 
 def main(aus):
@@ -28,29 +24,15 @@ def main(aus):
     names, par = sk["namen"], sk["eltern"]
     nb = len(names)
     alt = {n: np.array(sk["ruhe_m"][n], float) for n in names}
-    # Absenkung aus dem Hinterbein: Huefte z 0,690 -> Sprunggelenk z 0,100 bleibt, Kette x F_H
-    hz, az = alt["Bip01_L_Thigh"][2], alt["Bip01_L_Foot"][2]
-    dz = -(1.0 - F_H) * (hz - az)
-    # Vorderbein: Faktor so, dass das Handgelenk auf seiner Hoehe bleibt, wenn die Schulter um dz sinkt
-    sz, hdz = alt["Bip01_L_UpperArm"][2], alt["Bip01_L_Hand"][2]
-    F_V = (sz + dz - hdz) / (sz - hdz)
+    import baer_beine_gj2 as BG
+    pp = BG.phi_para()
+    dz, F_H, F_V = pp["dz"], pp["f_h"], pp["f_v"]
+    DY_H, DY_V = pp["dy_h"], pp["dy_v"]
     neu = {}
     for n in names:
-        neu[n] = alt[n].copy()
-        if n not in ("Dummy01", "Translation_Data"):
-            neu[n][2] += dz
-    for s, sg in (("L", 1.0), ("R", -1.0)):
-        h, k, f, t = ("Bip01_%s_%s" % (s, x) for x in ("Thigh", "Calf", "Foot", "Toe0"))
-        neu[h] = alt[h] + np.array((0.0, sg * DY_H, dz))
-        neu[k] = neu[h] + F_H * (alt[k] - alt[h])
-        neu[f] = neu[k] + F_H * (alt[f] - alt[k])
-        u, fa, ha, cl = ("Bip01_%s_%s" % (s, x) for x in ("UpperArm", "Forearm", "Hand", "Clavicle"))
-        neu[u] = alt[u] + np.array((0.0, sg * DY_V, dz))
-        neu[fa] = neu[u] + F_V * (alt[fa] - alt[u])
-        neu[ha] = neu[fa] + F_V * (alt[ha] - alt[fa])
-        q = neu[u][1] / alt[u][1]
-        neu[cl] = np.array((alt[cl][0], alt[cl][1] * q, alt[cl][2] + dz))
-        neu[t] = None
+        neu[n] = alt[n].copy() if n in ("Dummy01", "Translation_Data") else BG.phi(alt[n][None, :], pp)[0]
+    for s in "LR":
+        neu["Bip01_%s_Toe0" % s] = None
     # Toe0 aus der neuen Pfote: Standard-Junges (Dump d9931d32, Ruhe aus OFFSET)
     sys.path.insert(0, "C:/Users/Kevin/NPCCrew-Nebenprojekte/_arbeit/baer_gen/rig/gegen/werkzeug")
     import g_lib as g
@@ -102,7 +84,7 @@ def main(aus):
     out["ruhe_m_alt"] = sk["ruhe_m"]
     out["lage_E_alt"] = sk["lage_E"]
     out["faktoren"] = dict(sk["faktoren"], beine_hinten=F_H, beine_vorn=round(F_V, 6), dz_rumpf_m=round(dz, 6), dy_huefte_m=DY_H,
-                           dy_schulter_m=DY_V)
+                           dy_schulter_m=DY_V, phi=dict((k_, v_) for k_, v_ in pp.items()))
     out["dx_m"] = sk["dx_m"]       # Huefte x unveraendert -> D.2-Versatz gleich; die Becken-Regel des Exports wird nicht benutzt (alle 15 Clips neu)
     out["gj2"] = dict(lauf="baer-gen-junges-v2", rolle="BEINE", fk_probe_E=fk, fk_probe_gerundet_E=fk2,
                       toe0_quelle="Standard-Junges d9931d32: Toe0 - Foot (x, y), Toe0-Hoehe wie dort",

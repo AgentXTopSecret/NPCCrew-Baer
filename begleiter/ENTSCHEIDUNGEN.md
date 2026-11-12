@@ -488,3 +488,10 @@ also baby und ganz gross?'*
 * Kevin (12.11. ~08:40): *"okay gut dann starte noch einen workflow fuer den anderen baby baeren mach da auch das gesicht besser und vorallem die beine"* -- *"laeuft das
   andere baby anders als das was jz standard ist?"* -> Lauf baer-gen-junges-v2 (8 Agenten) am Generator-Jungen (Foto C): Beine/Gang zuerst, dann Gesicht/Maul; kommt als
   Vergleich per NCBear_CubGen() zurueck (Bench), spaeter waehlbar ueber den Aussehen-Knopf.
+* Kevin (12.11. ~10:15) auf die Frage "NPC Crew kann jetzt Deutsch -- soll der Baer auch deutsche Texte bekommen?": *"Ja, auch Deutsch"*.
+  **Fest:** der Baer bekommt DE als achte Sprache (wie NPC Crew seit v3.14.75: EN, PTBR, RU, KO, ES, CN, FR, DE; DE nur U+0020-007E und U+00A1-00FF ohne
+  U+00A4/U+00AD, typografische Anfuehrungszeichen als " und Gedankenstriche als --, Pruefung NPC Crew `_docs/tools/langcheck.py`). Vorbereitung jetzt am
+  F1b-Stand (`../_arbeit/baer_de/`), die F2-Texte kommen nach dem F2-Lauf dazu; dann LANGS im Uebernahme-Skript auf acht und mit F2 einbauen.
+* Kevin (12.11. ~10:50) zu den deutschen Begriffen: Ueberschrift **"Faehigkeiten"** (nicht Fertigkeiten), Balken **"Leben"** (nicht Gesundheit), Knopf
+  Unstuck = **"Herholen"** (wie NPC Crew DE), mittlere Stufe **"stark"** (Junges -> halbstark -> stark -> ausgewachsen). Die Faehigkeit Vitality heisst "Zaehigkeit"
+  (damit sie nicht wie der Balken "Leben" heisst). Eingesetzt in `../_arbeit/baer_de/werkzeug/de_texte.py`, Pruefer 0 Fehler.

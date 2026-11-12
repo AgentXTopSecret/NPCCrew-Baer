@@ -1,5 +1,8 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **12.11. ~10:15 DEUTSCH (Kevin: *"Ja, auch Deutsch"*):** Agent bereitet DE am F1b-Stand vor (`../_arbeit/baer_de/`: UI/IG_UI/Sandbox.json DE + LANGS-Vorschlag fuer
+> baer_uebernahme.py als Kopie -- das Original fasst gerade F2 an). Nach F2: DE fuer die neuen F2-Schluessel ergaenzen, LANGS auf acht, mit F2 zusammen einbauen.
+
 > **12.11. ~10:10: F2-FORTSETZUNG GESTARTET** (Funktionen-Spur, nach F1b-Einbau; f1b_merge.md ohne Kollision): `wf_64557b7a-4a6` (Task wazscrq12, 7 Agenten,
 > scriptPath `C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel/f2_fortsetzung.js`, Zusatz "STAND 12.11. 10:00" im CTX: F1+F1b in der Test-Mod, DE-Fehler bekannt,
 > Modell-Dateien NICHT KOPIEREN). Danach in der Funktionen-Spur: Aussehen-Knopf (Kevin fragen: vor F3 oder danach).
