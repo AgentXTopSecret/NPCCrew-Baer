@@ -516,3 +516,4 @@ also baby und ganz gross?'*
   (Junge an/aus, Haeufigkeit, Baeren je Spieler, Koederplatz an/aus, Zaehm-Tempo %, Tage bis ausgewachsen, Lerntempo %, Faehigkeiten nach Alter an/aus,
   kann nicht sterben, Flucht-Schwelle, Schaden des Baeren %, Heil-Tempo %); alle anderen feste Werte (heutige Vorgaben), Zombies/Banditen greifen immer an.
   Umsetzung im Lauf baer-aussehen (CTX "SANDBOX-KUERZUNG"). Nachfrage Kevin: *"was soll denn nummer 12 sein schaden pro % ?"*
+  Nach der Erklaerung (Schaden, den der Baer austeilt, 10-300 %, 100 = normal): *"ja okay den rest koennen wir so lassen"* -> die 12er-Liste ist FEST (inkl. Schaden %).
