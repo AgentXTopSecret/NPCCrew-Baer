@@ -415,3 +415,6 @@ im worklfow?'* -> nur teilweise: baer-gross hob ein 3-cm-Band an (Farbsprung 18,
 * **Fest:** baer-gross-Gegenpruefer prueft die Kopfnaht ausdruecklich aus Kevins Kamera; danach eigener Modell-Lauf **baer-kopfnaht**
   (`spiel/kopfnaht_workflow.js`, 6 Agenten): Uebergang Kopf -> Stirn/Nacken/Hals/Wangen ohne Rand, Ring, Struktur- oder Farbsprung und ohne Stufe,
   Gesicht unveraendert; geprueft aus Kevins Kamera in 8 Posen; erst zeigen, wenn wirklich weg.
+* Nachtrag ~06:25: Kevin zu den Zahlen (Stufe 1 >= 50 min, Stufe 10 >= 18 h reine Aktivitaet, realistisch Tag 100-200): *'okay das klingt gut steht das
+  dann auch im ui dasss das level nicht hoeher werden kann wegen dem baeren wachstum?'* -> ja: Hinweis "max for its age" sichtbar an der Faehigkeit,
+  Tooltip nennt Stufe und ungefaehren Tag, ab dem es weitergeht (PLAN_F2.md 11.4).
