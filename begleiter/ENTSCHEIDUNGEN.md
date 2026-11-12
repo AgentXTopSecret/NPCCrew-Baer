@@ -348,3 +348,13 @@ Fragen (ueber die Projekte-Sitzung gestellt) und Kevins Antwort woertlich: *'all
 * Nachtrag ~18:40, woertlich: *'gut und alle funktionen einbauen noch vom baeren du weisst ja bescheid was ich alels wollte die ganzen skills das
   schoene ui und alles'* -> Funktionen-Spur nachts der Reihe nach durch ALLES (Liste STAND.md oben "Funktionen-Liste"); offene Kleinfragen mit dem
   empfohlenen Weg bauen und morgens als Liste zeigen; das UI soll schoen sein (Kevins Wort).
+
+## Jar-Ausnahme getTextOrNull mit Platzhalter-Argumenten (Kevin 12.11.2026 ~04:25)
+Anlass: Turret- und NPC-Crew-Sitzung melden je Bear-Text mit Platzhalter eine Warnung "Missing arguments for UI_BN_Bear_*" (MissingFormatArgumentException
+'%1$s', console.txt 12.11. ab 04:09, je Schluessel einmal je Sitzung; Restwarnung aus Fix 2 vom 10.11.). Frage: getTextOrNull mit "%1".."%9" als
+Argumenten wie NPC Crew seit v3.11.19 (`shared/BanditsNPC.lua` BanditsNPC.T, ~:2843-2870; Beleg dort: Jar Translator.getTextOrNull(String, Object...)
+ruft reportMissingArgumentsFromPastAbuse -> text.formatted(args)) -- in Vanilla- und Bandits-Lua NICHT als Aufruf mit Argumenten belegt (grep 12.11.: 0).
+Kevins Antwort woertlich: *'Ja, wie NPC Crew'*.
+* **Fest:** `B.T` (shared/BanditsNPCBear.lua) fragt die Existenz eines Schluessels einmal je Sitzung mit `pcall(getTextOrNull, key, "%1", ..., "%9")`;
+  eingesetzt wird weiter mit `getText(key, Werte)` (Vanilla-belegt). Gilt NUR fuer diese eine Methode in dieser Form. Eingebaut mit F2 (Staging), nicht
+  einzeln in die Test-Mod.
