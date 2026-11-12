@@ -1,5 +1,9 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **12.11. ~15:20 AUSSEHEN-KNOPF als naechster Funktionen-Lauf (Kevin: *"Aussehen-Knopf"*, Start *"Nach 18:40"*):** Skript `spiel/aussehen_workflow.js` (8 Agenten),
+> Staging `../_arbeit/baer_zaehmen/mod_look/` (Kopie Test-Mod 8a22bf9, 136 Dateien). **Einmal-Wecker 6df67d34 um 18:43** startet ihn (nur diese Sitzung) -- noch NICHT gestartet.
+> Laufend: baer-kopfnaht (wf_0956985e-5e7, kopfnaht_workflow.js) und baer-gen-junges-v2 (wf_fccd15a2-a54); Maul-Bau `spiel/maul_bau_workflow.js` wartet auf die Kopfnaht.
+
 > **12.11. 15:08: F2 (Kampf) + DEUTSCH FERTIG UND EINGEBAUT** (Spiel zu; `tools/einbau_f2.py`: 96 Dateien -- 20 neu, 48 ueberschrieben (6 Stummel), 28 gleich,
 > NCBearCub.glb/.png NICHT kopiert, nc_bear_tier.txt bedingt 2a7c5ab1 -> kopiert; Zips `NCBearTest_vor_f2_2026-11-12_150748.zip` / `_mit_`; mod.info aus mod_info_vorschlag.txt
 > + DE-Satz). Gegenpruefer F2 "bereit fuer SP-Test", kein Blocker (`spiel/f2_gegen_bericht.md`, Test `spiel/anleitung_f2.md`). DE: 345 UI / 84 Sandbox / 4 IG_UI

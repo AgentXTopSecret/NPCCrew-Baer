@@ -507,3 +507,5 @@ also baby und ganz gross?'*
   alle drei Ja** -> `begleiter/ref_maul/ref_maul_1.jpg` (Kodiak_brown_bears_FWS_18395.jpg, 1.919.838 B, gemeinfrei Lisa Hupp/USFWS), `ref_maul_2.jpg`
   (Two_bears_fight,_mouths_open_(51101357447).jpg, 12.029.986 B, gemeinfrei Peter Pearsall/USFWS), `ref_maul_3.jpg` (Brown_bear_(Ursus_arctos_arctos)_smiling.jpg,
   9.966.880 B, CC BY-SA Malene Thyssen) -- alle von commons.wikimedia.org, nur ansehen, in .gitignore, nie in Modell/Textur, nie hochladen.
+* Kevin (12.11. ~15:15) auf "Was soll der naechste Funktionen-Lauf werden?": *"Aussehen-Knopf"* (vor F3); Start: *"Nach 18:40"* (5-h-Reset). Lauf baer-aussehen
+  (8 Agenten, `spiel/aussehen_workflow.js`, Staging `../_arbeit/baer_zaehmen/mod_look/` = Test-Mod 8a22bf9).
