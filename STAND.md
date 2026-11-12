@@ -17,7 +17,7 @@
 > nicht neu bauen/loeschen. Nichts Halbes in die Test-Mod, nichts Halbes committen. Erst wenn ein Lauf vollstaendig ist, Neues.
 > **12.11. ~11:50: baer-gen-gross-v2 FERTIG (7/7)**: Gegenpruefer schoener_als_vorher JA, kevin_zeigen JA; Ergebnis ../_arbeit/baer_gen_gross/v2/out/ (NCBearGen.glb f58ea4c9, NCBearGen.png 4fb7c993, NCBearGenFoto.png f040a731), Blatt v2/bilder/KEVIN_gen_gross_v2.png, Bericht v2/GEGEN.md. 13:42 selbst angesehen (klar schoener als ALT: kein Wolfsgesicht, breite Schnauze, Unterarme nicht schwarz; Nase von vorn sehr gross) und EINGEBAUT (tools/einbau_gg2.py, 3 Dateien, Zips NCBearTest_vor_gg2_2026-11-12_134203.zip / _mit_; Test-Mod-Commit). Kevin waehlt die Nase: a so gross / b schmaler = v2/out_vor_fix / c Mittelweg (GEGEN.md G2-01).
 > 13:41 nach dem Reset: kopfnaht, gen-junges-v2 und F2 haben ihren am Limit abgebrochenen Agenten von selbst neu gestartet (journal 13:41, neue agent-*.jsonl) -> laufen, warten.
-> Wecker 033295dc (nur diese Sitzung): 12.11. 13:03-23:43 je :03/:23/:43, handelt erst nach 13:40; loescht sich, wenn alle vier Laeufe fertig oder wieder gestartet sind.
+> Wecker 033295dc 13:43 GELOESCHT (gen-gross-v2 fertig, die anderen drei laufen wieder). Frueher: Wecker 033295dc (nur diese Sitzung): 12.11. 13:03-23:43 je :03/:23/:43, handelt erst nach 13:40; loescht sich, wenn alle vier Laeufe fertig oder wieder gestartet sind.
 
 > **12.11. ~10:15 DEUTSCH (Kevin: *"Ja, auch Deutsch"*):** Agent bereitet DE am F1b-Stand vor (`../_arbeit/baer_de/`: UI/IG_UI/Sandbox.json DE + LANGS-Vorschlag fuer
 > baer_uebernahme.py als Kopie -- das Original fasst gerade F2 an). Nach F2: DE fuer die neuen F2-Schluessel ergaenzen, LANGS auf acht, mit F2 zusammen einbauen.
