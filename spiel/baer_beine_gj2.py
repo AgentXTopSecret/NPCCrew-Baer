@@ -22,7 +22,7 @@ TORSO = ("Bip01_Pelvis", "Bip01_Spine", "Bip01_Spine1", "Bip01_Tail")
 QUER_OBEN = 1.05
 QUER_UNTEN = 1.14
 UEBERGANG = 0.04          # Oberschenkel/Oberarm: ueber dem Gelenk keine Laengs-/Querskalierung (weich +-4 cm)
-BREIT = 0.05              # Rumpf-Seitenfeld (PLAN 4.2.2: 0,09; dazu kommt hier die Spur-Verschiebung bis 2 cm)
+BREIT = 0.020             # Rumpf-Seitenfeld (PLAN 4.2.2: 0,09; dazu kommt hier die Spur-Verschiebung bis 2 cm)
 
 
 def log(*a):
@@ -143,8 +143,12 @@ def abbildungs_gewichte(V0, W, namen, alt, z0=0.30, z1=0.40):
 # Kein Laengs-Faktor an den Knochen-Achsen: die Beine werden SENKRECHT gestaucht (Knie/Ellbogen behalten ihr x) -- Knie und Ellbogen
 # etwas staerker gebeugt als beim 2c (Gelenke = Phi(alte Gelenke), Skelett aus baer_skelett_gj2.py).
 PHI = dict(f_h=0.72, f_v=None, za_h=0.100, za_v=0.097, zj_h=0.690, zj_v=0.717, ecke=0.03,
-           bauch_x=(-0.24, -0.10, -0.06, 0.10), vh_x=(-0.10, 0.10), dy_h=0.020, dy_v=0.018, dy_brt=(0.025, 0.12),
-           brt_z_h=(0.24, 0.34), brt_z_v=(0.36, 0.46), h_ueber=(0.02, 0.18))
+           bauch_x=(-0.24, -0.10, -0.06, 0.10), vh_x=(-0.10, 0.10), dy_h=0.034, dy_v=0.020, dy_brt=(0.025, 0.12),
+           brt_z_h=(0.24, 0.34), brt_z_v=(0.30, 0.40), h_ueber=(0.02, 0.18),
+           # Nachbesserung 12.11.: Stauchung nicht gleichmaessig, sondern unten staerker (Unterschenkel/Unterarm und Spalt zwischen den
+           # Beinen, wie die Plan-Attrappe "Band z 0,12..0,44"): z_a..z_m Faktor f_unten, z_m..z_j der Rest (Huefte/Schulter bleiben
+           # auf 0,525/0,552). Gemessen v1 (gleichmaessig 0,72): aus Kevins Kamera "nur Bein" 0,37 m, Beinflaeche 0,150 m2.
+           z_m=0.44, f_unten=0.58)
 
 
 def phi_para():
@@ -152,17 +156,25 @@ def phi_para():
     dz = -(1.0 - p["f_h"]) * (p["zj_h"] - p["za_h"])
     p["dz"] = dz
     p["f_v"] = 1.0 + dz / (p["zj_v"] - p["za_v"])
+    # oberer Faktor je Paar so, dass die Gesamtstauchung gleich bleibt (Huefte/Schulter wie geplant)
+    for a in ("h", "v"):
+        za, zj = p["za_" + a], p["zj_" + a]
+        p["f_oben_" + a] = ((zj - za) + dz - p["f_unten"] * (p["z_m"] - za)) / (zj - p["z_m"])
     return p
 
 
 _ZC = {}
 
 
-def _zc_tabelle(f, za, zj, w):
-    key = (f, za, zj, w)
+def _zc_tabelle(f, za, zj, w, zm=None, fu=None):
+    key = (f, za, zj, w, zm, fu)
     if key not in _ZC:
         tau = np.linspace(-0.2, 1.6, 36001)
-        s = 1.0 + (f - 1.0) * (sst(za - w, za + w, tau) - sst(zj - w, zj + w, tau))
+        if zm is None:
+            s = 1.0 + (f - 1.0) * (sst(za - w, za + w, tau) - sst(zj - w, zj + w, tau))
+        else:
+            # f hier = oberer Faktor: 1 -> fu (ab z_a) -> f (ab z_m) -> 1 (ab z_j), Ecken weich
+            s = 1.0 + (fu - 1.0) * sst(za - w, za + w, tau) + (f - fu) * sst(zm - w, zm + w, tau) + (1.0 - f) * sst(zj - w, zj + w, tau)
         I = np.concatenate(([0.0], np.cumsum(0.5 * (s[1:] + s[:-1]) * np.diff(tau))))
         I += -0.2 - I[0]
         _ZC[key] = (tau, I)
@@ -175,8 +187,8 @@ def phi(P, p=None):
     P = np.asarray(P, float)
     x, y, z = P[:, 0], P[:, 1], P[:, 2]
     tv = sst(p["vh_x"][0], p["vh_x"][1], x)                    # 0 hinten, 1 vorn
-    th, Ih = _zc_tabelle(p["f_h"], p["za_h"], p["zj_h"], p["ecke"])
-    tv_, Iv = _zc_tabelle(p["f_v"], p["za_v"], p["zj_v"], p["ecke"])
+    th, Ih = _zc_tabelle(p["f_oben_h"], p["za_h"], p["zj_h"], p["ecke"], p["z_m"], p["f_unten"])
+    tv_, Iv = _zc_tabelle(p["f_oben_v"], p["za_v"], p["zj_v"], p["ecke"], p["z_m"], p["f_unten"])
     zc = (1.0 - tv) * np.interp(z, th, Ih) + tv * np.interp(z, tv_, Iv)
     b = p["bauch_x"]
     lam = 1.0 - sst(b[0], b[1], x) * (1.0 - sst(b[2], b[3], x))

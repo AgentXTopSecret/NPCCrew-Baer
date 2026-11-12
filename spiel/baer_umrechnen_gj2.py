@@ -11,7 +11,14 @@
 #   4. Boden an der HAUT (Endgewichte): Stuetzpfoten tiefster Punkt auf 0 (Gelenk-Ziel z nachgefuehrt), sonst nichts unter -0,5 cm
 #      (Koerper gehoben); ueberstreckte Stuetzbeine -> Koerper tiefer; zeitlich geglaettet.
 #   5. Sitz-Trio: Vorbeugen (Wirbel nicken), bis die Vorderpfoten den Boden erreichen; Kopf haelt seine Weltneigung.
-#   6. Eat: Hals/Kopf nicken zusaetzlich, bis die Schnauze den Boden erreicht (0..+2 cm), Brust/Ellbogen helfen.
+#      Nachbesserung 12.11. (PRUEF_TECHNIK 7.2, Maengel T2): die Quelle schiebt beim Hinsetzen/Aufstehen beide Hinterpfoten 0,2-1,0 cm
+#      UEBER dem Boden nach vorn/hinten (2-8 cm je Bild); die Boden-Regel drueckte sie auf 0 -> Schleifen auf der Ferse ~40 cm. Jetzt
+#      "umsetzen": bewegt sich das Quell-Gelenk einer Stuetz-Hinterpfote waagerecht, wird ihre tiefste Haut auf bis zu PAR umsetzen
+#      (2,5 cm) gehoben (weich ueber die Geschwindigkeit 0,4..1,2 cm je Bild, zeitlich geglaettet) -- sie setzt um statt zu wischen.
+#   6. Eat: Fress-Grad s (0..1) je Bild -- Brust/Lende beugen nach vorn (Brust bis PAR_EAT brust), vorn kauern (Ellbogen beugen per IK),
+#      Hals und Kopf folgen der Brust; die Vorderpfoten stehen im GANZEN Clip gleich etwas weiter hinten und weiter auseinander (fest je
+#      Clip, also kein Rutschen), damit die Schnauze VOR den Pfoten den Boden erreicht (0..+2 cm) ohne Kopf im Unterarm. (12.11.,
+#      Nachbesserung: das reine Kopf-Nicken bis 50 Grad kam nur bis 20,7 cm ueber den Boden -- der Hals der kurzbeinigen Form ist zu kurz.)
 # Ausgabe npz: <Clip>_R (Bilder x 26 x 3 x 3 lokale Drehungen, Dump-Raum), <Clip>_pel (Bilder x 3 Becken-Lage im Bip01-Raum, Dump-Raum E),
 #   <Clip>_stuetz (Bilder x 4 Stuetz-Gewicht VL VR HL HR), <Clip>_dz (Bilder, Koerper-Hub in m). Fuer baer_export_gj2.py: neu=...
 # Aufruf: python baer_umrechnen_gj2.py --skelett SK.json --netz NETZ.npz --gewichte GEW.npz --aus CLIPS.npz [--nur Clip,Clip] [--alt ALT.npz]
@@ -36,10 +43,15 @@ CLIPS = ["DeerStag_Idle01", "DeerStag_Walk", "DeerStag_Run", "DeerStag_Death", "
          "NCBear_SwipeR", "NCBear_Slam", "NCBear_Bite", "NCBear_Maul", "NCBear_Eat", "NCBear_SitDown", "NCBear_Sit", "NCBear_StandUp"]
 UMRECHNEN = [c for c in CLIPS if c not in ("DeerStag_Walk", "DeerStag_Run")]
 SITZ = ("NCBear_SitDown", "NCBear_Sit", "NCBear_StandUp")
+SCHLEIFEN = ("DeerStag_Idle01", "NCBear_Eat", "NCBear_Sit")
 PF = ("VL", "VR", "HL", "HR")
 BEIN = {"VL": ("Bip01_L_UpperArm", "Bip01_L_Forearm", "Bip01_L_Hand"), "VR": ("Bip01_R_UpperArm", "Bip01_R_Forearm", "Bip01_R_Hand"),
         "HL": ("Bip01_L_Thigh", "Bip01_L_Calf", "Bip01_L_Foot"), "HR": ("Bip01_R_Thigh", "Bip01_R_Calf", "Bip01_R_Foot")}
 T0 = time.time()
+# Fressen (Probe log/eat_probe4.json im Bauer-BEINE-Ordner): Brust 40 Grad + 8 cm kauern erreicht den Boden 1,2 cm mit Kopf/Unterarm 2,8 cm
+# (Hoechstwerte 45 Grad / 9 cm, damit der Fress-Grad s < 1 bleibt),
+# Vorderpfoten fest 12 cm zurueck / 4 cm weiter aussen; Schnauze dann vor den Pfotenspitzen
+PAR_EAT = dict(brust=45.0, lende=0.4, kauern=-0.09, hals=0.0, kopf=0.0, pfote_dx=-0.12, pfote_dy=0.04, kopf_arm_min=0.010)
 
 
 def log(*a):
@@ -120,6 +132,7 @@ class Gerippe:
         if netz is not None:
             N = np.load(netz)
             G = np.load(gewichte)
+            self.gew_pfad = gewichte
             nam = [str(n) for n in G["namen"]]
             W = np.zeros((len(N["V"]), self.nb))
             for i, n in enumerate(nam):
@@ -287,6 +300,27 @@ def erw_schnauze(clip):
     return np.array([g.haut(d, M[f])[kopf, 2].min() for f in range(len(M))])
 
 
+def normalen(P, T):
+    fn = np.cross(P[T[:, 1]] - P[T[:, 0]], P[T[:, 2]] - P[T[:, 0]])
+    acc = np.zeros_like(P)
+    for k in range(3):
+        np.add.at(acc, T[:, k], fn)
+    return acc / np.maximum(np.linalg.norm(acc, axis=1, keepdims=True), 1e-12)
+
+
+def pfoten_ineinander(P, Nv, ia, ib, tol=0.002):
+    """Punkte der Pfote a, die in Pfote b liegen (naechster b-Punkt, Normale zeigt weg) -- und umgekehrt; nur nahe Punkte (< 3 cm)."""
+    n = 0
+    for x, y in ((ia, ib), (ib, ia)):
+        A, B = P[x], P[y]
+        d = ((A[:, None, :] - B[None, :, :]) ** 2).sum(2)
+        j = d.argmin(1)
+        nah = np.sqrt(d[np.arange(len(A)), j]) < 0.03
+        innen = ((A - B[j]) * Nv[y][j]).sum(1) < -tol
+        n += int((nah & innen).sum())
+    return n
+
+
 def umrechnen(G, Q, clip, par):
     """Gibt R (Bilder x nb x 3 x 3), pel (Bilder x 3), stuetz (Bilder x 4), dz (Bilder), info zurueck."""
     nf = len(Q["clips"][clip]["M"])
@@ -298,6 +332,17 @@ def umrechnen(G, Q, clip, par):
     auf_w = sst(0.45, 0.75, auf)
     st = {k: stuetz_gewicht([qb["tief"][k] for qb in QB]) * auf_w for k in PF}
     info = dict(bilder=nf, ueber=[])
+    # Sitz-Trio: Stuetz-Hinterpfote, deren Quell-Gelenk waagerecht wandert, umsetzen (heben) statt am Boden schleifen
+    lift = {k: np.zeros(nf) for k in PF}
+    if clip in SITZ and par.get("umsetzen", 0.0) > 0 and nf >= 3:
+        for k in ("HL", "HR"):
+            A_ = np.array([qb["J"][BEIN[k][2]] for qb in QB])
+            v_ = np.zeros(nf)
+            v_[1:-1] = 0.5 * np.linalg.norm(A_[2:, :2] - A_[:-2, :2], axis=1)
+            lift[k] = par["umsetzen"] * np.clip(glatt(sst(0.004, 0.012, v_)), 0.0, 1.0)
+            lift[k][[0, nf - 1]] = 0.0
+        info["umsetzen_cm_max"] = {k: round(100 * float(lift[k].max()), 2) for k in ("HL", "HR")}
+        info["umsetzen_bilder"] = {k: [int(i) for i in np.nonzero(lift[k] > 0.001)[0]] for k in ("HL", "HR")}
     # Absenkung je Bild: (1 - f_h) x senkrechte Hoehe Huefte -> Sprunggelenk (stuetzende Hinterbeine), geglaettet
     ab = np.zeros(nf)
     for f, qb in enumerate(QB):
@@ -315,6 +360,14 @@ def umrechnen(G, Q, clip, par):
     nick = np.zeros(nf)
     zz = {k: np.zeros(nf) for k in PF}
     zug = {k: np.ones(nf) for k in PF}           # Stuetzziel zur Huefte ziehen (1 = Quell-Lage), wenn unerreichbar
+    weg = {k: np.zeros((nf, 3)) for k in PF}     # Liegen: freie Pfote von der anderen weg (3D)
+    if not hasattr(G, "pfote_ok"):
+        kr_ = np.zeros(len(G.V), bool)
+        try:
+            kr_ = np.load(G.gew_pfad)["kralle"].astype(bool)
+        except Exception:
+            pass
+        G.pfote_ok = {k: G.pfote[k][~kr_[G.pfote[k]]] for k in PF}
     # Fressen: Ziel-Hoehe der Schnauze je Bild (2c < 1 cm -> 0,01 m; sonst 0,7 x 2c, hoechstens Quelle)
     eat_ziel = None
     if clip == "NCBear_Eat" and par.get("eat", True):
@@ -324,7 +377,7 @@ def umrechnen(G, Q, clip, par):
 
     def los(f):
         return bild(G, QB[f], J_alt, ab[f] + hub[f], {k: st[k][f] for k in PF}, {k: zz[k][f] for k in PF},
-                    {k: zug[k][f] for k in PF}, vorb[f], nick[f])
+                    {k: zug[k][f] for k in PF}, vorb[f], nick[f], {k: weg[k][f] for k in PF}, fress=eat_ziel is not None)
     for runde in range(par["runden"]):
         for f in range(nf):
             # Sitz: Vorbeugen, bis die stuetzenden Vorderbeine den Boden erreichen (Halbierung 0..vorbeug_max)
@@ -340,16 +393,23 @@ def umrechnen(G, Q, clip, par):
                         else:
                             hi = mid
                     vorb[f] = hi
-            # Fressen: Nicken (Hals 0,55 + Kopf 1,0), bis die tiefste Kopfhaut die Ziel-Hoehe erreicht
+            # Fressen: Fress-Grad s (Brust beugen + vorn kauern, PAR_EAT), bis die tiefste Kopfhaut die Ziel-Hoehe erreicht
             if eat_ziel is not None and runde == 0:
-                # Abtasten 0..eat_max (5 Grad), dann fein: kleinster Winkel, der die Ziel-Hoehe erreicht, sonst der tiefste
+                # Abtasten 0..1 (0,1), dann fein: kleinster Grad, der die Ziel-Hoehe erreicht, sonst der tiefste; Kopf nie naeher als
+                # kopf_arm_min an Unterarm/Vorderpfote (sonst steckt er drin) und Schnauze vor den Handgelenken
                 hs = []
-                for n_ in np.arange(0.0, par["eat_max"] + 1e-9, 5.0):
+                for n_ in np.arange(0.0, 1.0 + 1e-9, 0.1):
                     nick[f] = n_
-                    hs.append((float(G.haut(los(f)[2], G.kopf)[:, 2].min()), n_))
+                    Mk = los(f)[2]
+                    Pk = G.haut(Mk, G.kopf)
+                    i_ = int(np.argmin(Pk[:, 2]))
+                    x_pf = max(float(G.gelenk(Mk, "Bip01_L_Hand")[0]), float(G.gelenk(Mk, "Bip01_R_Hand")[0]))
+                    if n_ > 0 and (Pk[i_, 0] < x_pf + 0.10 or kopf_arm_abstand(G, Mk, Pk) < PAR_EAT["kopf_arm_min"]):
+                        break
+                    hs.append((float(Pk[i_, 2]), n_))
                 ok_ = [n_ for h_, n_ in hs if h_ <= eat_ziel[f]]
                 if ok_:
-                    lo, hi = max(ok_[0] - 5.0, 0.0), ok_[0]
+                    lo, hi = max(ok_[0] - 0.1, 0.0), ok_[0]
                     for _ in range(8):
                         mid = 0.5 * (lo + hi)
                         nick[f] = mid
@@ -366,7 +426,7 @@ def umrechnen(G, Q, clip, par):
             for k in PF:
                 low = float(P[G.pfote[k], 2].min())
                 if st[k][f] > 0.5:
-                    zz[k][f] -= low
+                    zz[k][f] -= low - lift[k][f]
                     stz.append(low)
                     if dd["streck"][k] > 0.97:
                         zug[k][f] = max(zug[k][f] - 0.08, 0.3)
@@ -378,29 +438,82 @@ def umrechnen(G, Q, clip, par):
                 hub[f] += -low_r
             elif not stz and low_r > 0.012 and auf_w[f] < 0.5:
                 hub[f] -= low_r - 0.004                          # liegt: Koerper bis auf den Boden
+            # Liegen: Pfoten nicht ineinander (Kevin 12.11. zum Standard-Jungen: "die beine stecken ineinander") -- die hoehere Pfote
+            # eines Paars (L/R) wird angehoben, bis keine ihrer Punkte mehr in der anderen liegen
+            if auf_w[f] < 0.5:
+                Nv = normalen(P, G.netz["T"])
+                for a_, b_ in (("HL", "HR"), ("VL", "VR")):
+                    n_in = pfoten_ineinander(P, Nv, G.pfote_ok[a_], G.pfote_ok[b_])
+                    if n_in > 0:
+                        hoch, tief = (a_, b_) if P[G.pfote[a_], 2].mean() > P[G.pfote[b_], 2].mean() else (b_, a_)
+                        if st[hoch][f] < 0.5:
+                            r_ = P[G.pfote[hoch]].mean(0) - P[G.pfote[tief]].mean(0)
+                            r_ = r_ / max(np.linalg.norm(r_), 1e-9)
+                            weg[hoch][f] += 0.015 * r_
         if runde < par["runden"] - 1:
             hub = glatt(hub)
             vorb = glatt(vorb)
             nick = glatt(nick)
+    # Schleifen (Idle, Eat, Sit): letztes Bild = erstes -- die je Bild gefundenen Groessen laufen ueber die letzten 8 Bilder weich auf Bild 0
+    if clip in SCHLEIFEN:
+        n8 = min(8, nf - 1)
+        arrs = [hub, vorb, nick] + [zz[k] for k in PF] + [zug[k] for k in PF]
+        for arr in arrs:
+            d0 = arr[0] - arr[nf - 1]
+            for i in range(n8):
+                arr[nf - 1 - i] += d0 * (1.0 - i / n8)
+    # Liegen: je Bild nachschieben, bis keine Pfote mehr in der anderen steckt (hoechstens 10 Schritte a 1,5 cm), dann zeitlich glaetten
+    for f in range(nf):
+        if auf_w[f] >= 0.5:
+            continue
+        for _ in range(10):
+            P = G.haut(los(f)[2])
+            Nv = normalen(P, G.netz["T"])
+            fertig = True
+            for a_, b_ in (("HL", "HR"), ("VL", "VR")):
+                if pfoten_ineinander(P, Nv, G.pfote_ok[a_], G.pfote_ok[b_], tol=0.003) > 0:
+                    fertig = False
+                    hoch, tief = (a_, b_) if P[G.pfote[a_], 2].mean() > P[G.pfote[b_], 2].mean() else (b_, a_)
+                    r_ = P[G.pfote[hoch]].mean(0) - P[G.pfote[tief]].mean(0)
+                    r_[2] = max(r_[2], 0.0) + 0.02
+                    weg[hoch][f] += 0.015 * r_ / max(np.linalg.norm(r_), 1e-9)
+            if fertig:
+                break
+    for k in PF:
+        for c_ in range(3):
+            weg[k][:, c_] = np.maximum.reduce([weg[k][:, c_], glatt(weg[k][:, c_])]) if False else glatt(weg[k][:, c_]) * 0.5 + weg[k][:, c_] * 0.5
     R_all = np.zeros((nf, G.nb, 3, 3))
     pel_all = np.zeros((nf, 3))
-    pmin, pst, kz = [], [], []
+    pmin, pst, kz, pin = [], [], [], []
     for f in range(nf):
         R, pel, M, dd = los(f)
         R_all[f], pel_all[f] = R, pel
         P = G.haut(M)
         pmin.append(float(P[:, 2].min()))
-        pst += [float(P[G.pfote[k], 2].min()) for k in PF if st[k][f] > 0.5]
+        if auf_w[f] < 0.5:
+            Nv = normalen(P, G.netz["T"])
+            pin.append(sum(pfoten_ineinander(P, Nv, G.pfote_ok[a_], G.pfote_ok[b_], tol=0.003) for a_, b_ in (("HL", "HR"), ("VL", "VR"))))
+        pst += [float(P[G.pfote[k], 2].min()) for k in PF if st[k][f] > 0.5 and lift[k][f] < 0.001]
         kz.append(float(P[G.kopf, 2].min()))
         info["ueber"] += [(f,) + u for u in dd["ueber"]]
+    if clip in SCHLEIFEN:
+        # die je Bild gesuchten Groessen schliessen Idle nur auf 3e-4 E (Quelle exakt) -> letztes Bild = erstes Bild exakt
+        info["schleife_abw_vorher_E"] = float(max(np.abs(R_all[-1] - R_all[0]).max(), np.abs(pel_all[-1] - pel_all[0]).max()))
+        R_all[-1] = R_all[0]
+        pel_all[-1] = pel_all[0]
     info["ueber_n"] = len(info["ueber"])
     info["ueber"] = info["ueber"][:8]
     info["boden_min_cm"] = round(100 * min(pmin), 2)
+    info["liegen_pfote_in_pfote_punkte_max"] = int(max(pin)) if pin else 0
     info["stuetz_cm"] = [round(100 * min(pst), 2), round(100 * max(pst), 2)] if pst else None
     info["hub_cm"] = [round(100 * float(hub.min()), 2), round(100 * float(hub.max()), 2)]
     info["absenk_cm"] = [round(100 * float(ab.min()), 2), round(100 * float(ab.max()), 2)]
     info["vorbeugen_grad_max"] = round(float(vorb.max()), 1)
-    info["nick_grad_max"] = round(float(nick.max()), 1)
+    info["nick_grad_max"] = round(float(nick.max()) * (PAR_EAT["brust"] if eat_ziel is not None else 1.0), 1)
+    if eat_ziel is not None:
+        info["eat_grad_max"] = round(float(nick.max()), 3)
+        info["eat_par"] = PAR_EAT
+        info["eat_kopf_arm_min_cm"] = round(100 * min(kopf_arm_abstand(G, los(f)[2]) for f in range(0, nf, 4)), 2)
     info["kopf_min_cm"] = [round(100 * min(kz), 2), round(100 * max(kz), 2)]
     if eat_ziel is not None:
         kz = np.array(kz)
@@ -410,7 +523,19 @@ def umrechnen(G, Q, clip, par):
     return R_all, pel_all, np.stack([st[k] for k in PF], 1), ab + hub, info
 
 
-def bild(G, qb, J_alt, dz, sw, zz, zug, vorbeug, nick):
+def kopf_arm_abstand(G, M, Pk=None):
+    """Kleinster Abstand Kopfhaut -> Haut von Unterarm/Vorderpfote (jeder 3. Punkt), in m."""
+    if not hasattr(G, "arm_idx"):
+        W, ix = G.W, G.idx
+        G.arm_idx = np.nonzero((W[:, ix["Bip01_L_Forearm"]] + W[:, ix["Bip01_R_Forearm"]] + W[:, ix["Bip01_L_Hand"]]
+                                + W[:, ix["Bip01_R_Hand"]]) >= 0.5)[0][::3]
+    if Pk is None:
+        Pk = G.haut(M, G.kopf)
+    Pa = G.haut(M, G.arm_idx)
+    return min(float(np.sqrt(((Pk[j:j + 400, None, :] - Pa[None]) ** 2).sum(-1)).min()) for j in range(0, len(Pk), 400))
+
+
+def bild(G, qb, J_alt, dz, sw, zz, zug, vorbeug, nick, weg=None, fress=False):
     """Ein Bild: Rumpf aus der Quelle (Weltdrehungen), Becken abgesenkt, Beine per IK. Rueckgabe R, Becken-Lage lokal, M, Daten."""
     names = G.names
     Qw = {}
@@ -428,14 +553,19 @@ def bild(G, qb, J_alt, dz, sw, zz, zug, vorbeug, nick):
         Qw["Bip01_Spine"] = ry(0.65 * vorbeug) @ Qw["Bip01_Spine"]
         for nm in ("Bip01_Spine1", "Bip01_L_Clavicle", "Bip01_R_Clavicle"):
             Qw[nm] = ry(vorbeug) @ Qw[nm]
-    if nick:
-        # Fressen: Hals 0,9 / Kopf 1,0 des Winkels nach unten, Brust bis 12 Grad mit (Schultern tiefer, Ellbogen beugen per IK)
-        Qw["Bip01_Neck"] = ry(0.9 * nick) @ Qw["Bip01_Neck"]
-        Qw["Bip01_Head"] = ry(nick) @ Qw["Bip01_Head"]
-        Qw["Bip01_Jaw"] = ry(nick) @ Qw["Bip01_Jaw"]
+    kauern = 0.0
+    if fress and nick:
+        # Fressen (nick = Fress-Grad 0..1): Lende/Brust nach vorn beugen (Welt), Hals und Kopf folgen der Brust, vorn kauern
+        pe = PAR_EAT
+        br = pe["brust"] * nick
+        Qw["Bip01_Spine"] = ry(pe["lende"] * br) @ Qw["Bip01_Spine"]
         for nm in ("Bip01_Spine1", "Bip01_L_Clavicle", "Bip01_R_Clavicle"):
-            Qw[nm] = ry(min(0.2 * nick, 12.0)) @ Qw[nm]
-    pel = qb["J"]["Bip01_Pelvis"] + np.array((0.0, 0.0, dz))
+            Qw[nm] = ry(br) @ Qw[nm]
+        Qw["Bip01_Neck"] = ry(br + pe["hals"] * nick) @ Qw["Bip01_Neck"]
+        for nm in ("Bip01_Head", "Bip01_Jaw"):
+            Qw[nm] = ry(br + (pe["hals"] + pe["kopf"]) * nick) @ Qw[nm]
+        kauern = pe["kauern"] * nick
+    pel = qb["J"]["Bip01_Pelvis"] + np.array((0.0, 0.0, dz + kauern))
     _R, _t, M0 = G.pose(Qw, pel)
     dd = dict(ueber=[], streck={})
     for k, (o, u, e) in BEIN.items():
@@ -443,8 +573,11 @@ def bild(G, qb, J_alt, dz, sw, zz, zug, vorbeug, nick):
         Ho, Ao, Ko = qb["J"][o], qb["J"][e], qb["J"][u]
         f_ = G.f_h if k[0] == "H" else G.f_v
         dy = G.J[o][1] - J_alt[o][1]
-        frei = H + f_ * (Ao - Ho)
+        frei = H + f_ * (Ao - Ho) + (weg[k] if weg is not None else 0.0)    # weg: Liegen, Pfoten nicht ineinander
         steh = np.array((Ao[0], Ao[1] + dy, Ao[2] + zz[k]))
+        if fress and k[0] == "V":
+            # Fressen: Vorderpfoten im ganzen Clip fest etwas zurueck und nach aussen (Platz fuer den Kopf vor/zwischen den Pfoten)
+            steh += np.array((PAR_EAT["pfote_dx"], np.sign(steh[1]) * PAR_EAT["pfote_dy"], 0.0))
         # unerreichbar: waagerecht zur Huefte ziehen (zug < 1)
         steh[:2] = H[:2] + zug[k] * (steh[:2] - H[:2])
         w = sw[k]
@@ -477,7 +610,7 @@ def main():
     Q = lade_quelle()
     nur = [c for c in a.nur.split(",") if c] or UMRECHNEN
     out = dict(np.load(a.alt)) if a.alt else {}
-    par = dict(runden=5, vorbeug_max=60.0, eat_max=70.0)
+    par = dict(runden=5, vorbeug_max=60.0, eat_max=50.0, umsetzen=0.025)
     infos = {}
     for clip in nur:
         R, pel, st, dz, info = umrechnen(G, Q, clip, par)

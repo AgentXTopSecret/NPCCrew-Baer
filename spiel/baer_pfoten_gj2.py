@@ -33,10 +33,13 @@ PAR = dict(
     z_g=dict(V=0.165, H=0.165),       # Gen-Schnitt (neu, z)
     z_s=dict(V=0.130, H=0.130),       # Std-Schnitt ueber der eigenen Sohle
     morph_h0=0.05,                    # darunter bleibt die Std-Pfote unveraendert (Zehen, Krallen, Sohle)
-    verjung=dict(V=(0.92, 0.96), H=(0.86, 0.93)),    # Gen-Querschnitt am Schnitt x/y (1 = nicht)
+    verjung=dict(V=(0.92, 0.96), H=(0.80, 0.90)),    # Gen-Querschnitt am Schnitt x/y (1 = nicht); hinten staerker (Ton-Bild: Klotz)
     verjung_oben=dict(V=0.27, H=0.245),             # bis hier (z) laeuft die Verjuengung auf 1
     budget=19850,
     insel_rand_px=3, insel_abstand_px=4, uv_dichte_ziel=None,
+    gen_ausdehnen_px=8,               # Gen-Textur vor dem Verkleinern ueber die Inselraender hinaus fuellen (kein Schwarz in den Naehten)
+    rand_ausdehnen_px=4,              # zum Schluss: Texel bis 4 px neben jeder Insel = Mittel der Insel-Texel (Mip-Stufen, Hell-Faktor)
+    kranz_angleich=(0.06, 0.01),      # Std-Fell 6..1 cm unter dem Ring je Kanal weich auf die Gen-Farbe am Ring ziehen (Naht ohne Stufe)
 )
 # Unterbein heller (Vorstufe): Ruecken = Texel mit z > 0,72 und x < 0,25 (ohne Kopf), Unterbein = z_g..0,30
 PAR_HELL = dict(ruecken_z=0.72, ruecken_x=0.25, unten_z=0.30, ziel=0.66, max=1.45, aus=(0.28, 0.42))
@@ -347,6 +350,27 @@ def raster_uv(UVpx, F, W=GR, H=GR):
         b1[mny:mxy + 1, mnx:mxx + 1][ins] = l1[ins]
         b2[mny:mxy + 1, mnx:mxx + 1][ins] = l2[ins]
     return tid, b1, b2
+
+
+def ausdehnen(img, voll, n):
+    """Leere Texel (voll False) n Schritte lang mit dem Mittel ihrer vollen 8 Nachbarn fuellen; Rueckgabe neue Kopie."""
+    img = img.copy()
+    voll = voll.copy()
+    for _ in range(n):
+        acc = np.zeros_like(img)
+        cnt = np.zeros(voll.shape)
+        for dy in (-1, 0, 1):
+            for dx in (-1, 0, 1):
+                if dy == 0 and dx == 0:
+                    continue
+                acc += np.roll(np.roll(img * voll[..., None], dy, 0), dx, 1)
+                cnt += np.roll(np.roll(voll, dy, 0), dx, 1)
+        neu = ~voll & (cnt > 0)
+        if not neu.any():
+            break
+        img[neu] = acc[neu] / cnt[neu][:, None]
+        voll |= neu
+    return img
 
 
 def bilinear(img, u, v):
@@ -751,6 +775,19 @@ def zusammenbau(L):
     TgN = np.concatenate((Tg_gen, Tg_std, band_Tg))
     teil_T = np.r_[np.zeros(len(T_gen), int), np.ones(len(T_std), int), np.full(len(band_T), 2)]
     assert (glb_punkt[TgN] == TN).all()
+    # Naht glaetten (Nachbesserung nach dem Ton-Bild: Kante/"Manschette" an den Ringen): Laplace nur quer (x, y), z bleibt; frei sind
+    # Gen-Punkte bis 3 cm ueber dem Gen-Ring und Std-Punkte bis 3 cm unter dem Std-Ring (samt Ringen), Rand fest
+    zg_, zs_ = P_["z_g"]["H"], P_["z_s"]["H"]
+    zone = ((teil == 0) & (VN[:, 2] < zg_ + 0.03)) | ((teil == 1) & (VN[:, 2] > zs_ - 0.03) & (VN[:, 2] < zs_ + 1e-6))
+    Ek = np.unique(np.sort(np.concatenate((TN[:, [0, 1]], TN[:, [1, 2]], TN[:, [2, 0]])), 1), axis=0)
+    deg = np.bincount(Ek[:, 0], minlength=len(VN)) + np.bincount(Ek[:, 1], minlength=len(VN))
+    for _ in range(P_.get("naht_glatt", 12)):
+        acc = np.zeros_like(VN)
+        np.add.at(acc, Ek[:, 0], VN[Ek[:, 1]])
+        np.add.at(acc, Ek[:, 1], VN[Ek[:, 0]])
+        mit = acc / np.maximum(deg, 1)[:, None]
+        VN[zone, :2] = 0.5 * VN[zone, :2] + 0.5 * mit[zone, :2]
+    info["naht_glatt_punkte"] = int(zone.sum())
     # Pruefung: geschlossen, mannigfaltig
     r_, nm_ = rand_kanten(TN)
     info["netz"] = dict(punkte=int(len(VN)), glb_punkte=int(len(glb_punkt)), dreiecke=int(len(TN)), offen=int(len(r_)),
@@ -773,6 +810,11 @@ def zusammenbau(L):
     UVN = np.zeros((len(glb_punkt), 2))
     UVN[:len(gg_alt)] = UVg[gg_alt] * UVS
     tex_gen = np.asarray(Image.open(Q + "gen/NCBearCub.png").convert("RGB")).astype(float)
+    # Nachbesserung 12.11. (Blatt nah): der schwarze Hintergrund der Gen-Textur blutete beim Verkleinern in die Inselraender -> dunkle
+    # "Risse" an den UV-Naehten der Beine. Darum die Gen-Textur zuerst von ihren (verbliebenen) Dreiecken aus nach aussen fuellen.
+    tidG0 = raster_uv(UVg * GR, Tgk)[0]
+    tex_gen = ausdehnen(tex_gen, tidG0 >= 0, P_["gen_ausdehnen_px"])
+    info["gen_ausgedehnt_texel"] = int(((tidG0 < 0) & (tex_gen.sum(2) > 0)).sum())
     tex_std = np.asarray(Image.open(Q + "std/NCBearCub.png").convert("RGB")).astype(float)
     img = np.zeros((GR, GR, 3))
     voll = np.zeros((GR, GR), bool)
@@ -889,6 +931,71 @@ def zusammenbau(L):
         info["fellkranz"][k] = dict(gen_ring=np.round(c_gen, 1).tolist(), std_fell=np.round(c_std, 1).tolist(), faktor=np.round(ratio, 3).tolist())
     info["fellkranz"]["inseln"] = {a: sum(1 for b in inseln if b["art"] == a) for a in ("fell", "sohle", "kralle")}
     log("FELLKRANZ", info["fellkranz"])
+    # ---- (b2) heller Rand der Std-Pfote direkt unter dem Ring (Fellspitzen nach x1,6 heller, im Bild als Linie sichtbar): je Bein die
+    #      Texel 0..2,5 cm unter dem Ring auf die Helligkeit 2,5..5 cm darunter ziehen (Faktor nach 3D-Hoehe, weich)
+    ist = np.nonzero(teil_T == 1)[0]
+    tidS, b1S, b2S = raster_uv(UVN * GR, TgN[ist])
+    mS = tidS >= 0
+    ttS = TgN[ist][tidS[mS]]
+    PG3 = VN[glb_punkt]
+    zS = b1S[mS] * PG3[ttS[:, 0], 2] + b2S[mS] * PG3[ttS[:, 1], 2] + (1 - b1S[mS] - b2S[mS]) * PG3[ttS[:, 2], 2]
+    xS = b1S[mS] * PG3[ttS[:, 0], 0] + b2S[mS] * PG3[ttS[:, 1], 0] + (1 - b1S[mS] - b2S[mS]) * PG3[ttS[:, 2], 0]
+    yS = b1S[mS] * PG3[ttS[:, 0], 1] + b2S[mS] * PG3[ttS[:, 1], 1] + (1 - b1S[mS] - b2S[mS]) * PG3[ttS[:, 2], 1]
+    colS = img[mS]
+    LS = colS @ np.array([0.299, 0.587, 0.114])
+    rand_info = {}
+    for k, (sx_, sy_) in BEINE.items():
+        zs_ = P_["z_s"][k[0]]
+        q = (np.sign(xS) == sx_) & (np.sign(yS) == sy_)
+        rim = q & (zS > zs_ - 0.03)
+        unt = q & (zS > zs_ - 0.06) & (zS <= zs_ - 0.03)
+        if rim.sum() > 20 and unt.sum() > 20:
+            # helle Fellspitzen-Texel kappen: Helligkeit hoechstens 1,08 x Median darunter, weich ab 3 cm unter dem Ring
+            L_ref = float(np.median(LS[unt])) * 1.08
+            w = sst(zs_ - 0.03, zs_ - 0.015, zS[q])
+            Lq = LS[q]
+            fak = np.where(Lq > L_ref, L_ref / np.maximum(Lq, 1.0), 1.0)
+            fak = 1.0 - w * (1.0 - fak)
+            colS[q] = colS[q] * fak[:, None]
+            rand_info[k] = dict(rand_L_p90=round(float(np.percentile(LS[rim], 90)), 1), darunter_L=round(float(np.median(LS[unt])), 1),
+                                gekappt=int((fak < 0.999).sum()))
+    img[mS] = colS
+    info["std_rand"] = rand_info
+    log("STD-RAND", rand_info)
+    # ---- (b3) Nachbesserung 12.11. (Blatt nah: unter dem Band ein dunkler, olivstichiger Streifen, Helligkeit Gen 74 -> Std 58..62):
+    #      Std-Fell 6..1 cm unter dem Ring je Bein und Kanal weich auf die Gen-Farbe am Ring (Gen-Texel z_g..z_g+3 cm) ziehen; je 1-cm-
+    #      Scheibe Median -> Ziel = w x Gen-Ring + (1 - w) x eigener Median, w = smoothstep(z_s - 6 cm, z_s - 1 cm); Faktor je Texel nach z
+    #      linear zwischen den Scheiben (keine Stufen). Krallen/Sohle liegen tiefer (unberuehrt).
+    yt = b1[mm] * VN[glb_punkt][tt[:, 0], 1] + b2[mm] * VN[glb_punkt][tt[:, 1], 1] + (1 - b1[mm] - b2[mm]) * VN[glb_punkt][tt[:, 2], 1]
+    colG = img[mm]
+    angl = {}
+    k0, k1 = P_["kranz_angleich"]
+    for k, (sx_, sy_) in BEINE.items():
+        zg_k, zs_k = P_["z_g"][k[0]], P_["z_s"][k[0]]
+        gq = (np.sign(xt) == sx_) & (np.sign(yt) == sy_) & (zt >= zg_k) & (zt < zg_k + 0.03)
+        ref = np.median(colG[gq], 0)
+        q = (np.sign(xS) == sx_) & (np.sign(yS) == sy_) & (zS > zs_k - k0 - 0.01)
+        zc = np.arange(zs_k - k0 - 0.005, zs_k, 0.01)
+        gain = np.ones((len(zc), 3))
+        for i_, z_ in enumerate(zc):
+            qq = q & (np.abs(zS - z_) <= 0.005)
+            if qq.sum() < 20:
+                continue
+            med = np.median(colS[qq], 0)
+            w = float(sst(zs_k - k0, zs_k - k1, z_))
+            gain[i_] = (w * ref + (1 - w) * med) / np.maximum(med, 1.0)
+        fq = np.stack([np.interp(zS[q], zc, gain[:, c_], left=1.0, right=gain[-1, c_]) for c_ in range(3)], 1)
+        colS[q] = np.clip(colS[q] * fq, 0, 255)
+        # Farbton nahe am Ring (5..1,5 cm darunter, bis 70 %) auf den Ton des Gen-Rings: eigene Helligkeit x Gen-Farbverhaeltnis
+        # (das Std-Fell hat vorn oliv-gruenliche Spitzen, nah als Fleck unter dem Band sichtbar)
+        hq = 0.7 * sst(zs_k - 0.05, zs_k - 0.015, zS[q])
+        Lq = colS[q] @ np.array([0.299, 0.587, 0.114])
+        ton = Lq[:, None] * (ref / max(float(ref @ np.array([0.299, 0.587, 0.114])), 1.0))[None, :]
+        colS[q] = np.clip((1 - hq[:, None]) * colS[q] + hq[:, None] * ton, 0, 255)
+        angl[k] = dict(gen_ring=np.round(ref, 1).tolist(), faktor_ring=np.round(gain[-1], 3).tolist(), faktor_6cm=np.round(gain[0], 3).tolist())
+    img[mS] = colS
+    info["kranz_angleich"] = angl
+    log("KRANZ-ANGLEICH", angl)
     img_n = img.copy()
     # ---- (c) Band: Fell gespiegelt -- oben das Gen-Bein ueber dem Ring (an z_g gespiegelt), unten die Std-Pfote unter ihrem Ring
     #      (an z_s gespiegelt), in der Mitte ueberblendet. Strahl waagerecht vom Ring-Mittelpunkt im Winkel des Ringpunkts.
@@ -975,6 +1082,15 @@ def zusammenbau(L):
         voll[by0_:by0_ + bh, bx0:bx0 + bw] = True
     # Std-UV fuer alle Std-GLB-Punkte gesetzt?
     assert np.isfinite(UVN).all()
+    # Nachbesserung 12.11.: Texel bis rand_ausdehnen_px neben JEDER Insel (Gen, Std, Band) = Mittel der Insel-Texel -- die Hell-Faktoren
+    # (a)/(b)/(b3) wirken nur in den Inseln, die Raender daneben blieben dunkler und zeigten sich als Naht-Linien (bilinear, Mip-Stufen)
+    tidA = raster_uv(UVN * GR, TgN)[0]
+    bedeckt = tidA >= 0
+    img_r = ausdehnen(img, bedeckt, P_["rand_ausdehnen_px"])
+    nah = ~bedeckt & (ausdehnen(bedeckt[..., None].astype(float), bedeckt, P_["rand_ausdehnen_px"])[..., 0] > 0)
+    img[nah] = img_r[nah]
+    voll |= nah
+    info["rand_ausgedehnt_texel"] = int(nah.sum())
     # Ausdehnen (leere Pixel = Mittel der vollen Nachbarn), damit Mip-Stufen nicht schwarz bluten
     hinter = np.median(gen_kl.reshape(-1, 3), 0)
     for _ in range(6):

@@ -4,6 +4,11 @@
 # Gelenke/IK/Haut aus baer_umrechnen_gj2.Gerippe (dasselbe Skelett wie der Export). Neu: Abrollpunkt aus der neuen Pfote (Vorderkante
 # der Sohle), Gehen = Baeren-Schritt/Passgang mit 2 Zyklen (T 13,5 Bilder), Boden an der HAUT (Stuetzpfote tiefster Punkt auf 0 nur
 # ueber das Gelenk-z, x/y bleiben in der Welt stehen -> kein Gleiten), freie Pfoten nie unter den Boden.
+# Nachbesserung 12.11. (PRUEF_TECHNIK 7.1, Maengel T1): im Rennen sass die Haut schon im LETZTEN Schwungbild am Boden (Fersen-Neigung -7 Grad
+# im spaeten Schwung + "nie unter 0") und schwang noch mit Koerpertempo -> Aufsetz-Rutscher HR 14,8 / VL 7,7 / VR 3,3 cm (bei 1,0).
+# Neu je Gangart: "klar" = freie Pfoten nie unter klar (Rennen 1,5 cm, Gehen 0,8 cm), "ferse" = Fersen-Neigung im spaeten Schwung (Rennen
+# 0, Gehen 3 statt 7 Grad), Rennen "m1" 3,0 = Schwung-Rueckzug (Pfote kommt langsamer an). messen() zaehlt jetzt auch das Aufsetzpaar wie
+# PRUEF_TECHNIK 2 (Hautpunkte < 0,5 cm in ZWEI Folgebildern, Weltverschiebung inkl. Clip-Weg).
 # Ausgabe npz (fuer baer_export_gj2.py neu=...): <Clip>_R, <Clip>_pel, <Clip>_weg (Translation_Data-Ende, E), <Clip>_u (Phase je Bein
 # VL VR HL HR), <Clip>_duty; dazu <Clip>_abroll (Bilder x 4 x 3 Abrollpunkt Welt, tier) fuer die Gleit-Messung.
 # Aufruf: python baer_clips_gj2.py --skelett SK.json --netz NETZ.npz --gewichte GEW.npz --aus GANG.npz [--gang PARAM.json] [--gehen-zyklen 3]
@@ -29,14 +34,15 @@ WALK_J = dict(name="DeerStag_Walk", T=13.5, N=2, duty=0.62,
               kontakt=dict(HL=0.00, VL=0.10, HR=0.50, VR=0.60),
               S=dict(H=0.33, V=0.33), mitte=dict(H=0.0, V=0.0), hub=dict(H=0.045, V=0.055),
               ab=dict(H=19.0, V=19.0), spitze=dict(H=30.0, V=32.0), aussen=0.012, senk=0.004, streck=dict(H=0.97, V=0.985),
-              m0=dict(V=1.0, H=1.0), hexp=dict(V=0.85, H=0.85),
+              m0=dict(V=1.0, H=1.0), hexp=dict(V=0.85, H=0.85), klar=0.008, ferse=3.0,
               becken_roll=4.5, brust_roll=6.0, becken_wipp=0.020, kopf_nick=2.5, kopf_grund=1.5, hals_grund=1.5, klav=10.0)
 # Rennen: Galopp wie RUN_J des Generators (Kontakte RUN), an kurze Beine angepasst; 2 Zyklen je 0,5333 s (T 8)
 RUN_J = dict(name="DeerStag_Run", T=8, N=2, duty=0.20,
              kontakt=dict(HL=0.00, HR=0.08, VL=0.42, VR=0.52),
              S=dict(H=0.42, V=0.42), mitte=dict(H=0.02, V=-0.01), hub=dict(H=0.08, V=0.09),
              ab=dict(H=22.0, V=20.0), spitze=dict(H=40.0, V=45.0), aussen=0.03, senk=0.010, streck=dict(H=0.97, V=0.985),
-             m0=dict(V=0.3, H=1.0), hexp=dict(V=0.6, H=0.85), spur=dict(H=0.01, V=-0.005))
+             m0=dict(V=0.3, H=1.0), hexp=dict(V=0.6, H=0.85), spur=dict(H=0.01, V=-0.005),
+             klar=0.015, ferse=0.0, m1=dict(V=3.0, H=3.0))
 
 
 def log(*a):
@@ -99,7 +105,7 @@ class Gang:
             if s < 0.30:
                 pit = P["ab"][art] + (P["spitze"][art] - P["ab"][art]) * ssf(0.0, 0.30, s)
             else:
-                pit = P["spitze"][art] * (1.0 - ssf(0.30, 0.88, s)) - 7.0 * ssf(0.70, 0.90, s) * (1.0 - ssf(0.92, 1.0, s))
+                pit = P["spitze"][art] * (1.0 - ssf(0.30, 0.88, s)) - P.get("ferse", 7.0) * ssf(0.70, 0.90, s) * (1.0 - ssf(0.92, 1.0, s))
         return np.array((x, y, z)), pit, u
 
     def ziel(self, k, ball, pit):
@@ -141,6 +147,13 @@ class Gang:
         for k, (ank, q, st, u, _b) in ziele.items():
             L = G.leg[k]
             H = G.gelenk(M0, L["o"])
+            if not st:
+                # Schwungbein: Ziel hoechstens 0,99 der Kette (sonst klemmt die IK gleich -- hier ausdruecklich, ohne Ueberstreckt-Zaehler)
+                dv = ank - H
+                dl = float(np.linalg.norm(dv))
+                if dl > 0.99 * (L["a"] + L["b"]):
+                    ank = H + dv * (0.99 * (L["a"] + L["b"]) / dl)
+                    stat["schwung_gekuerzt"] = stat.get("schwung_gekuerzt", 0) + 1
             Ro, Ru, K, A2, sv = G.ik(k, H, ank, L["pol"], ueber)
             Qw[L["o"]] = Ro
             Qw[L["u"]] = Ru
@@ -209,8 +222,8 @@ class Gang:
                     low = float(Pk[G.pfote[k], 2].min())
                     if u[k] < P["duty"]:
                         dzb[i % n, j] -= low
-                    elif low < 0.0:
-                        dzb[i % n, j] -= low
+                    elif low < P.get("klar", 0.0):
+                        dzb[i % n, j] -= low - P.get("klar", 0.0)
                 out.append((R, t, M, u, ball))
             dzb[n] = dzb[0]
         ip = G.idx["Bip01_Pelvis"]
@@ -260,6 +273,19 @@ def messen(G, res, P):
         g = max(sp) if sp else 0.0
         erg["gleiten_cm_gr1"][k] = round(100 * g, 2)
         erg["gleiten_cm_spiel035"][k] = round(100 * g * 1.5 * 0.35, 2)
+    # Aufsetzpaar wie PRUEF_TECHNIK 2 (Nachbesserung 12.11.): Hautpunkte der Pfote < 0,5 cm in ZWEI Folgebildern -> Median der
+    # Weltverschiebung (xy, inkl. Clip-Weg); groesster Wert je Pfote ueber alle Bildpaare (Grenze 3 cm bei 1,0)
+    erg["kontakt_paar_max_cm_gr1"] = {}
+    for k in U.PF:
+        sel = G.pfote[k]
+        best = 0.0
+        for f in range(n - 1):
+            a_, b_ = Ps[f][sel], Ps[f + 1][sel]
+            kk = (a_[:, 2] < 0.005) & (b_[:, 2] < 0.005)
+            if kk.sum() >= 3:
+                dv = (b_[kk, :2] + [d[f + 1], 0]) - (a_[kk, :2] + [d[f], 0])
+                best = max(best, float(np.linalg.norm(np.median(dv, 0))))
+        erg["kontakt_paar_max_cm_gr1"][k] = round(100 * best, 2)
     return erg
 
 

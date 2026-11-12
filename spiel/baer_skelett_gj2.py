@@ -38,10 +38,13 @@ def main(aus):
     import g_lib as g
     std = g.lies("C:/Users/Kevin/NPCCrew-Nebenprojekte/_arbeit/baer_gen_junges/v2/plan/dump/std.txt")
     js = {n: g.tier(np.linalg.inv(std["off"][std["idx"][n]])[:3, 3]) for n in std["names"]}
+    # Nachbesserung 12.11. (PRUEF_TECHNIK 7.3): im Std-Dump ist Bip01_R_Toe0 ungewichtet und hat OFFSET = Einheit -> inv(OFFSET) liefert
+    # dort den Ursprung, R_Toe0 lag dadurch mitten unter der Brust. Toe0 deshalb nur aus der L-Seite holen und fuer R spiegeln (y -> -y).
+    d = js["Bip01_L_Toe0"] - js["Bip01_L_Foot"]
     for s in "LR":
         f, t = "Bip01_%s_Foot" % s, "Bip01_%s_Toe0" % s
-        d = js[t] - js[f]
-        neu[t] = np.array((neu[f][0] + d[0], neu[f][1] + d[1], js[t][2]))
+        sg = 1.0 if s == "L" else -1.0
+        neu[t] = np.array((neu[f][0] + d[0], neu[f][1] + sg * d[1], js["Bip01_L_Toe0"][2]))
     # lage_E: Weltlagen (Dump) ueber die festen Ruhe-Drehungen in lokale Lagen
     J, _B = X.lade_json_glb()
     nodes = {n["name"]: n for n in J["nodes"]}
@@ -87,11 +90,11 @@ def main(aus):
                            dy_schulter_m=DY_V, phi=dict((k_, v_) for k_, v_ in pp.items()))
     out["dx_m"] = sk["dx_m"]       # Huefte x unveraendert -> D.2-Versatz gleich; die Becken-Regel des Exports wird nicht benutzt (alle 15 Clips neu)
     out["gj2"] = dict(lauf="baer-gen-junges-v2", rolle="BEINE", fk_probe_E=fk, fk_probe_gerundet_E=fk2,
-                      toe0_quelle="Standard-Junges d9931d32: Toe0 - Foot (x, y), Toe0-Hoehe wie dort",
+                      toe0_quelle="Standard-Junges d9931d32: L_Toe0 - L_Foot (x, y), Toe0-Hoehe wie dort; R gespiegelt (Nachbesserung 12.11.)",
                       hinweis="gelenke_im_netz, beinachsen, sp_rig, splitter_tausch sind die ALTEN Werte (Generator heute); neu misst BEINE.md")
     json.dump(out, open(aus, "w"), indent=1)
     print("SKELETT dz %.4f m, F_H %.4f, F_V %.5f, FK %.1e E (gerundet %.1e E)" % (dz, F_H, F_V, fk, fk2))
-    for nm in ("Bip01", "Bip01_Pelvis", "Bip01_L_Thigh", "Bip01_L_Calf", "Bip01_L_Foot", "Bip01_L_Toe0", "Bip01_L_Clavicle",
+    for nm in ("Bip01", "Bip01_Pelvis", "Bip01_L_Thigh", "Bip01_L_Calf", "Bip01_L_Foot", "Bip01_L_Toe0", "Bip01_R_Toe0", "Bip01_L_Clavicle",
                "Bip01_L_UpperArm", "Bip01_L_Forearm", "Bip01_L_Hand", "Bip01_Head", "Bip01_Jaw"):
         print("  %-18s alt %s -> neu %s" % (nm, np.round(alt[nm], 4).tolist(), np.round(out["ruhe_m"][nm], 5).tolist()))
 

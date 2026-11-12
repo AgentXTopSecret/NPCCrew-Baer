@@ -1,5 +1,10 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **12.11. 17:17: GENERATOR-JUNGES v2 FERTIG (8/8) + als Testhilfe EINGEBAUT** (Gegenpruefer: schoener JA, kein Giraffen-Gang JA, Kevin zeigen JA; 5 neue NCBearBench*-Dateien,
+> `tools/einbau_gj2.py --baer-nicht-geladen` (Spiel lief ohne NCBearTest), Zips `NCBearTest_vor_gj2_2026-11-12_171701.zip` / `_mit_`; Test-Mod 99e0368; Trockenlauf 0 Fehler).
+> Befehl `NCBear_CubGen()` (neben dem Standard-Jungen), Test `spiel/anleitung_gen_junges_v2.md`, Blatt `../_arbeit/baer_gen_junges/v2/bilder/KEVIN_gen_junges_v2.png` (Foto C drin, nur lokal).
+> Offen fuer Kevin: Gehen 0,34 statt 0,52 Kacheln/s (oder Trippel 0,51), gleich gross wie das Standard-Junge?, Vorderbeine von vorn (M2), liegt auf dem Ruecken (M6).
+
 > **12.11. 16:03: GROSSER BAER EINGEBAUT (baer-gross + baer-kopfnaht)** (Spiel zu; `tools/einbau_gross.py`, 5 Modell-Dateien aus `../_arbeit/baer_kopfnaht/mod`, Zips
 > `NCBearTest_vor_gross_2026-11-12_160331.zip` / `_mit_`; Test-Mod d5ab258; Trockenlauf 0 Fehler). Gegenpruefer kopfnaht: ready=false KNAPP -- Kevins Bogen in allen 8 Posen weg,
 > Rest: Ende Aufrichten ~0,1 s schwacher Kopfumriss (nicht schlechter als vorher), P3 Fell im Band nah knittrig, P4/Kehle minor (`../_arbeit/baer_kopfnaht/gegen_bericht.md`).

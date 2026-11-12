@@ -239,18 +239,26 @@ def baue(netz, gewichte, aus, skelett=SKELETT, sitz=None, hub=None, abw=None, we
         Tc = np.array(c["T"])
         dz = H.get(clip)
         a2 = J2["animations"][ai]
+        # GJ2: dichtester Zeit-Accessor des Clips (der 2c hat fuer viele Kanaele nur 2 Schluessel, z. B. Eat/Sit Becken und Beine);
+        # Kanaele, die hier neu Bild fuer Bild gerechnet werden, bekommen DIESEN (vorhandenen, byte-gleichen) Accessor
+        dicht = max({s_["input"] for s_ in a["samplers"]}, key=lambda i_: J["accessors"][i_]["count"])
         for ci, ch in enumerate(a["channels"]):
             nm = J["nodes"][ch["target"]["node"]]["name"]
             if nm not in sk.idx:
                 continue
             b = sk.idx[nm]
             smp = a["samplers"][ch["sampler"]]
-            tz = acc_np(J, B, smp["input"]).ravel()
-            fr = np.array([int(np.argmin(np.abs(Tc - t_))) for t_ in tz])
             pfad = ch["target"]["path"]
+            eingang = smp["input"]
+            if ((pfad == "rotation" and (clip + "_R") in NEU and nm not in WURZEL) or
+                    (pfad == "translation" and b == ip and (clip + "_pel") in NEU)):
+                eingang = dicht                                                      # GJ2
+            tz = acc_np(J, B, eingang).ravel()
+            fr = np.array([int(np.argmin(np.abs(Tc - t_))) for t_ in tz])
 
             def setze(daten):
                 s2 = dict(a2["samplers"][ch["sampler"]])
+                s2["input"] = eingang                                                # GJ2
                 s2["output"] = neuer(smp["output"], daten)
                 a2["samplers"].append(s2)
                 a2["channels"][ci]["sampler"] = len(a2["samplers"]) - 1
@@ -264,7 +272,7 @@ def baue(netz, gewichte, aus, skelett=SKELETT, sitz=None, hub=None, abw=None, we
                         nv = alt * weg_bezug
                     info["weg"][clip] = [round(float(np.abs(alt).max()), 5), round(float(np.abs(nv).max()), 5)]
                 elif b == ip:
-                    nv = np.zeros_like(alt)
+                    nv = np.zeros((len(fr), 3))                                      # GJ2: Bilder je Zeit-Accessor (dicht)
                     if (clip + "_pel") in NEU:
                         for k_, f_ in enumerate(fr):
                             nv[k_] = FZ @ (NEU[clip + "_pel"][f_] + R_bip.T @ dump(np.array((0.0, 0.0, dz[f_] if dz else 0.0))))
@@ -300,7 +308,10 @@ def baue(netz, gewichte, aus, skelett=SKELETT, sitz=None, hub=None, abw=None, we
                 alt = acc_np(J, B, smp["output"]).astype(np.float64)
                 if q[0] @ alt[0] < 0:
                     q = -q
-                info["dreh_neu"].setdefault(clip, {})[nm] = round(float(np.degrees(2 * np.arccos(np.clip(np.abs((q * alt).sum(1)), 0, 1))).max()), 2)
+                if len(alt) == len(q):                                               # GJ2: bei verdichtetem Kanal kein Vergleich je Bild
+                    info["dreh_neu"].setdefault(clip, {})[nm] = round(float(np.degrees(2 * np.arccos(np.clip(np.abs((q * alt).sum(1)), 0, 1))).max()), 2)
+                else:
+                    info["dreh_neu"].setdefault(clip, {})[nm] = "verdichtet %d->%d" % (len(alt), len(q))
                 setze(q.astype(np.float32))
     # ---- JSON anpassen
     for nm in names:
