@@ -434,3 +434,6 @@ dann sein verstehst du?'*
 * F5 liest die Ertrags-Rechnung des NPC-Anglers in NPC Crew nach (nur lesen: `42/media/lua/.../BanditsNPCFishing.lua`, `BanditsNPCFishNet*.lua`)
   und rechnet mit DERSELBEN Formel x Faktor (keine zweite Wahrheit; fehlt NPC Crew in der Test-Mod: dieselben Zahlen als Kopie mit Fundstelle). Die
   B1d-Platzhalter `fishBase 10 / fishMax 60` werden dadurch ersetzt. Offene F5-Fragen (von selbst/Befehl, Fische bringen, Zusehen) bleiben offen.
+* Nachtrag ~07:00, woertlich: *'genau und die fischer funktion vom baeren soll einfach nach wasser gehen nicht extra noch beachten wie tief das
+  wasser ist etc, einfach wasser das reicht ;D'* -> **Fest:** jede Wasser-Kachel, an der man in Vanilla angeln kann, reicht; kein Unterschied
+  Fluss/See/flach/tief (die Fluss-am-flachen-Wasser-Idee entfaellt).
