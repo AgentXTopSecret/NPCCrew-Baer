@@ -511,3 +511,8 @@ also baby und ganz gross?'*
   (8 Agenten, `spiel/aussehen_workflow.js`, Staging `../_arbeit/baer_zaehmen/mod_look/` = Test-Mod 8a22bf9).
 * Kevin (12.11., weitergegeben von der NPC-Crew-Sitzung): *"nach dem upload aber unsere turret mod und baeren und modelle mod muss dem auch folgen"* -- Sandbox-Optionen
   in Kategorien (Seiten) wie NPC Crew. Vorschlag fuer die 39 Baeren-Optionen in `NAEHTE.md` "Sandbox-Seiten"; umsetzen, sobald NPC Crew die page-Namen meldet.
+* Kevin (12.11. ~17:40) zu den 39 Sandbox-Optionen: *"was wir haben 39 baeren sandbox einstellungen?"* -- *"ja du hast komplett uebertrieben  da muss so einiges
+  rausfliegen ;D"* -- zu Claudes 13er-Liste: *"9 ist ja komplett unnoetig klar sollen die zombides und banditen den angriefen ^^"* -> **Fest: 12 bleiben**
+  (Junge an/aus, Haeufigkeit, Baeren je Spieler, Koederplatz an/aus, Zaehm-Tempo %, Tage bis ausgewachsen, Lerntempo %, Faehigkeiten nach Alter an/aus,
+  kann nicht sterben, Flucht-Schwelle, Schaden des Baeren %, Heil-Tempo %); alle anderen feste Werte (heutige Vorgaben), Zombies/Banditen greifen immer an.
+  Umsetzung im Lauf baer-aussehen (CTX "SANDBOX-KUERZUNG"). Nachfrage Kevin: *"was soll denn nummer 12 sein schaden pro % ?"*

@@ -26,13 +26,24 @@ B.PlaceCub -> B.CreateCub; Eintrag, Name, Zaehmung, Werte, Leben (rec.hp), Ausda
 (ggf. Rasse) mit ENDGUELTIGEM Namen (steht im Spielstand). GEGEN MISSBRAUCH (fest): kein Heilen (Leben/Ausdauer bleiben), Tausch nur wenn
 B.BodySwapReady ja sagt (kein Zombie < 9 Kacheln, nicht fahren/fuettern/streicheln, nicht im Kampf/am Boden -- F2), neue Kachel = eigene oder
 Ring 1-2 (B.SwapSpot, kein Wegzaubern), Abklingzeit GEMEINSAM mit Unstuck (F1 Unstuck = Call to me). F3 spaeter: Beduerfnisse im Register.
-STAND: Test-Mod ${T} (Git main 8a22bf9 = F1 + F1b + F2 + DE) ist 1:1 nach ${S} kopiert = dein Staging (Bauort). Modelle heute in der Test-Mod
-(NUR LESEN, nie aendern): 2c NCBear.glb/.png (Art ncbeargrown; parallel laeuft ein Kopfnaht-Lauf, der NCBear.* spaeter ersetzt -- gleiche Namen),
-Generator NCBearGen.glb + NCBearGen.png (braun) + NCBearGenFoto.png (Fototon), heute nur ueber die Werkbank NCBear_GenLive (shared/
-NCBearBenchGenDefs.lua, client/NCBearBenchGen.lua, scripts/...: dort nur lernen, die echte Funktion braucht eigene NICHT-Bench-Namen fuer Art,
-model-Skript und Uebernahme), Junges NCBearCub.glb/.png (Art ncbearcub), altes Junges ncbearcubalt (nur Werkbank). Das Generator-Junge
-(Lauf baer-gen-junges-v2, Bench-Name NCBearBenchCubGen.*) ist NOCH NICHT fertig: plane es als spaeteren Daten-Eintrag (eine Zeile + Dateien),
-baue heute nur, was es gibt; mit nur einem Aussehen fuer das Junge ist der Knopf beim Jungen grau mit Grund oder unsichtbar (Plan entscheidet).
+STAND: Test-Mod ${T} (Git main 99e0368 = F1 + F1b + F2 + DE + grosser Baer mit Kopfnaht + Generator-Junges als Werkbank) ist 1:1 nach ${S}
+kopiert = dein Staging (Bauort). Modelle heute in der Test-Mod (NUR LESEN, nie aendern): 2c NCBear.glb/.png (Art ncbeargrown; ein spaeterer
+Maul-Lauf ersetzt NCBear.* und NCBearGen.* -- gleiche Namen, also Modell-Dateien nie im Staging aendern), Generator NCBearGen.glb + NCBearGen.png
+(braun) + NCBearGenFoto.png (Fototon), heute nur ueber die Werkbank NCBear_GenLive (shared/NCBearBenchGenDefs.lua, client/NCBearBenchGen.lua,
+scripts/...: dort nur lernen, die echte Funktion braucht eigene NICHT-Bench-Namen fuer Art, model-Skript und Uebernahme), Junges NCBearCub.glb/.png
+(Art ncbearcub), altes Junges ncbearcubalt (nur Werkbank), Generator-Junges v2 FERTIG als Werkbank NCBearBenchCubGen.glb/.png (NCBear_CubGen; eigene
+Clips, gleiche 26 Knochen/15 Clip-Namen): als Aussehen des Jungen aufnehmen -- dafuer Kopien unter eigenen NICHT-Bench-Namen (z. B. NCBearCubGen.*,
+erst greppen), Kevin hat es noch nicht im Spiel gesehen (Frage fuer Kevin, ob es waehlbar bleibt). Achtung Tempo: es geht im Clip 0,34 statt 0,52
+Kacheln/s (walkSpeed je Aussehen beruecksichtigen, C:/Users/Kevin/NPCCrew-Nebenprojekte/_arbeit/baer_gen_junges/v2/GEGEN.md).
+SANDBOX-KUERZUNG (Kevin 12.11.: "ja du hast komplett uebertrieben da muss so einiges rausfliegen" -- "9 ist ja komplett unnoetig klar sollen die
+zombies und banditen den angreifen"): Von 39 Baeren-Optionen bleiben genau ZWOELF: BearCubsEnabled, BearCubForestRate, BearMaxPerPlayer,
+BearBaitEnabled, NEU "Zaehm-Tempo %" (ersetzt BearTameFeedPoints/PetPoints/MixBonus/FavoriteBonus; 100 % = heutige Vorgaben), BearGrowDays,
+BearSkillXpPercent, BearSkillAgeCap, BearCannotDie, BearFleeHits, BearDamagePercent, NEU "Heil-Tempo %" (ersetzt BearHealAwake/BearHealSleep,
+beide skalieren mit; 100 % = heute). ALLE anderen (inkl. BearZombiesAttack -> immer an, BearLog -> nur Testbefehl NCBear_CubLog) werden feste Werte
+in B.CFG mit den HEUTIGEN Vorgaben (Verhalten bei Vorgabe-Sandbox byte-gleich). Optionsnamen der zwoelf bleiben (gespeicherte Werte!), neue Namen
+greppen. sandbox-options.txt, Sandbox.json in 8 Sprachen, B.OPTS/Lesestellen, Fenster-Tooltips, die Texte nennen, Uebernahme-Skript und NAEHTE.md
+("Sandbox-Seiten" auf 12 + Aussehen-Option kuerzen) nachziehen. Alte Spielstaende mit gesetzten, nun entfernten Optionen: kein Fehler (Wert wird
+einfach nicht mehr gelesen) -- in der Attrappe belegen.
 Kevins Texte: 8 Sprachen (EN, PTBR, RU, KO, ES, CN, FR, DE; DE-Regeln: ${B}/NAEHTE.md, NPC Crew CLAUDE.md "ACHT Sprachen", Pruefer ${NC}/_docs/tools/
 langcheck.py, Begriffe: Faehigkeiten, Leben, Herholen, stark; Werkzeuge ${W}/../baer_de/werkzeug/). Uebernahme-Skript ${B}/tools/baer_uebernahme.py
 (kennt acht Sprachen; Trockenlauf heute 0 Fehler) und ${B}/NAEHTE.md nachziehen (neue Modell-Dateien/Arten muessen mit nach NPC Crew, Bench nie).

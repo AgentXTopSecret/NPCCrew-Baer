@@ -1,5 +1,8 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **12.11. ~17:45 SANDBOX-KUERZUNG 39 -> 12 (Kevin):** Liste in ENTSCHEIDUNGEN.md unten; wird im Lauf baer-aussehen mitgebaut (Start 18:43, CTX "SANDBOX-KUERZUNG";
+> Staging mod_look 17:40 neu aus Test-Mod 99e0368 kopiert; Generator-Junges v2 als Aussehen des Jungen aufgenommen).
+
 > **12.11. ~17:30 SANDBOX-SEITEN (Kevin ueber NPC Crew):** Baeren-Optionen in Kategorien wie NPC Crew -- Vorschlag in `NAEHTE.md` "Sandbox-Seiten"; Umbau erst,
 > wenn die NPC-Crew-Sitzung ihre page-Namen meldet (nach ihrem Upload). Neue Optionen (Aussehen, F3, F5) gleich einer Gruppe zuordnen.
 
