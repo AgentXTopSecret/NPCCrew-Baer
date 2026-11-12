@@ -17,6 +17,9 @@ if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: la
 -- B1e (PLAN_B1E.md 3.2 Nr. 5-10, 6.2.3): zwei Koerper -- B.CreateCub(x, y, z, body) erzeugt die Art des Koerpers (Vorgabe Junges),
 -- Entfernen / Finden / Suchlauf sehen beide Arten ueber B.BodyKind (shared/BanditsNPCBear.lua; nie "bear"). B.SwapSpot waehlt die
 -- Kachel fuer den Tausch, B.MoveTo rechnet die Wegzeit mit dem Tempo des Koerpers (B.BodyNum).
+-- Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 5.3): B.CreateCub(x, y, z, body, look) erzeugt die Art des Aussehens (B.ArtOf, B.LOOKS in
+-- shared/BanditsNPCBear.lua; look nil = Standard-Art des Koerpers, wie bisher), B.CubDefOk(body, look) fragt genau diese Art. B.MoveTo
+-- rechnet mit dem Tempo des Aussehens (Generator-Junges geht langsamer, B.BodyNum mit look).
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -166,8 +169,8 @@ function B.PickForestSquare(player, players)
         e = { p = player, x = player:getX(), y = player:getY(), z = player:getZ() }
     end
     players = players or B.Players()
-    local minD = B.Opt("BearCubMinDistance")
-    local maxD = B.Opt("BearCubMaxDistance")
+    local minD = tonumber(B.CFG.cubMinDist) or 30            -- Sandbox-Kuerzung (PLAN_AUSSEHEN.md 9.3): feste Werte (vorher BearCubMinDistance / -MaxDistance)
+    local maxD = tonumber(B.CFG.cubMaxDist) or 50
     if maxD < minD + 5 then maxD = minD + 5 end
     if maxD > 65 then maxD = 65 end                 -- geladen sind 76 Kacheln um den Spieler: nie weiter ansprechen
     if minD > maxD then minD = maxD end
@@ -498,16 +501,26 @@ end
 -- server/ClientCommands.lua:808 (Server, direkt vor addAnimal) und shared/Definitions/animal/ButcheringUtil.lua:79/85 (mit
 -- nil-Pruefung). Nachbesserung A3: vorher getAllAnimalsDefinitions/getBreeds, das nur Client-Belege hatte.
 -- B1e (PLAN_B1E.md 6.2.3): je Koerper die Art (B.BODY_TYPE; unbekannt/nil -> Junges).
-local function findBreed(body)
-    local def = AnimalDefinitions.getDef(B.BODY_TYPE[body] or B.CUB)
+-- Aussehen (PLAN_AUSSEHEN.md 5.3): das Argument ist jetzt der ARTNAME (Text, wie bisher an getDef); nil/kein Text -> Junges.
+local function findBreed(art)
+    if type(art) ~= "string" then art = B.CUB end
+    local def = AnimalDefinitions.getDef(art)
     if def == nil then return nil end
     return def:getBreedByName(B.BREED)
 end
 
+-- Tierart zu Koerper und Aussehen (B.ArtOf, shared/BanditsNPCBear.lua); ohne jene Helfer die Standard-Art des Koerpers.
+local function artOf(body, look)
+    if body ~= "big" then body = "cub" end
+    if B.ArtOf then return B.ArtOf(body, look) end
+    return B.BODY_TYPE[body] or B.CUB
+end
+
 -- B1c (PLAN_B1C.md 3.1): kann ein Koerper erzeugt werden? (Definition und Rasse geladen; sonst nicht einsteigen.)
--- B1e: body = "cub" / "big" (nil = "cub").
-function B.CubDefOk(body)
-    return findBreed(body) ~= nil
+-- B1e: body = "cub" / "big" (nil = "cub"). Aussehen: look = Familie ("std" / "gen" / "foto"; nil = Standard-Art des Koerpers, die
+-- bisherige Bedeutung) -- gefragt wird genau die Art, die B.CreateCub mit denselben Argumenten erzeugte.
+function B.CubDefOk(body, look)
+    return findBreed(artOf(body, look)) ~= nil
 end
 
 -- Die EINZIGE Stelle, die ein Tier in die Welt setzt. Gerufen nur von B.AppearFor und (B1c) B.PlaceCub. Rueckgabe: IsoAnimal oder nil, why.
@@ -517,11 +530,13 @@ end
 -- mit B.SquareFits geprueft (kein Wasser).
 -- B1e (PLAN_B1E.md 6.2.3): body = "cub" (Vorgabe, auch nil/unbekannt; wilde Junge) oder "big" -> Art B.BIG. Gleicher Aufruf, nur ein
 -- anderer Artname (Text) -- wie Vanilla ClientCommands.lua:809 (args.type ist ein Text).
-function B.CreateCub(x, y, z, body)
+-- Aussehen (PLAN_AUSSEHEN.md 5.3): look = Familie des Aussehens (nil = Standard-Art des Koerpers; wilde Junge aus B.AppearFor rufen ohne
+-- look). Wieder nur ein anderer Artname-Text an addAnimal.
+function B.CreateCub(x, y, z, body, look)
     if not B.IsWriter() then return nil, "nowriter" end
     if body ~= "big" then body = "cub" end
-    local kind = B.BODY_TYPE[body] or B.CUB
-    local breed = findBreed(body)
+    local kind = artOf(body, look)
+    local breed = findBreed(kind)
     if not breed then
         B.ErrEvery("nodef:" .. kind, 600000, "create: animal definition " .. tostring(kind) .. " is not loaded")
         return nil, "nodef"
@@ -798,6 +813,8 @@ function B.ScanAnimals(players, force)
                     end
                     -- B1e (PLAN_B1E.md 4.1): Koerper = Art des gefundenen Tiers (vor dem Commit, damit der Spiegel ihn traegt)
                     if rec.st == "tame" or rec.st == "missing" then rec.body = B.BodyKind(hit) end
+                    -- Nachbesserung Aussehen B2: ebenso das Aussehen des Koerpers (server/BanditsNPCBearHeal.lua B.LookFromBody)
+                    if B.LookFromBody then B.LookFromBody(rec, hit) end
                     n = n + 1
                     B.Commit(rec)
                     B.Log("scan: " .. id .. " found again by its animal id, mark written anew")
@@ -936,7 +953,10 @@ function B.MoveTo(rec, animal, x, y, z, opt)
     local key = "runSpeed"
     if walk then key = "walkSpeed" end
     local speed = B.CFG[key]
-    if B.BodyNum then speed = B.BodyNum(rec.body, key, 1) end
+    -- Aussehen (PLAN_AUSSEHEN.md 2): Tempo des Aussehens (B.LookNow, server/BanditsNPCBearLook.lua) -- das Generator-Junges geht langsamer
+    local look = nil
+    if B.LookNow then look = B.LookNow(rec) end
+    if B.BodyNum then speed = B.BodyNum(rec.body, key, 1, look) end
     speed = tonumber(speed) or 1
     if speed <= 0 then speed = 1 end
     local own = way / speed * 1000 + (tonumber(B.CFG.ownSlackMs) or 1500)

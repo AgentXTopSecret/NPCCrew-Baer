@@ -304,7 +304,7 @@ function B.GuardStep(rec, a, env, ms, players)
     end
     local o = nil
     if rec.st == "tame" and env then o = env.owner end
-    if o ~= nil and o.car == true and B.ModeOf(rec) == "follow" and (tonumber(o.dist) or 999) <= B.Opt("BearRideDistance") then
+    if o ~= nil and o.car == true and B.ModeOf(rec) == "follow" and (tonumber(o.dist) or 999) <= (tonumber(B.CFG.rideDist) or 15) then
         return false
     end
     local cx, cy = a:getX(), a:getY()

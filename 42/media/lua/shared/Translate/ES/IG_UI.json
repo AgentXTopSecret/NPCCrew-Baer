@@ -1,6 +1,9 @@
 {
     "IGUI_AnimalType_ncbearcub": "Cría de oso",
+    "IGUI_AnimalType_ncbearcubgen2": "Cría de oso",
     "IGUI_AnimalType_ncbeargrown": "Oso",
+    "IGUI_AnimalType_ncbeargrowngen": "Oso",
+    "IGUI_AnimalType_ncbeargrowngenfoto": "Oso",
     "IGUI_Animal_Group_ncbear": "Oso",
     "IGUI_Breed_brown": "Pardo"
 }

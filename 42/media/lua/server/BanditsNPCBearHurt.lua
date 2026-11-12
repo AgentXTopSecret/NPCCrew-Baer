@@ -181,7 +181,7 @@ function B.DownSlow(rec, now, players)
         rec.down = now
         return
     end
-    if now - t < B.Opt("BearDownedHours") then return end
+    if now - t < cfg("downedHours", 12) then return end           -- Sandbox-Kuerzung (PLAN_AUSSEHEN.md 9.3): fester Wert
     rec.down = nil
     local alone = cfg("downSelfHp", 0.15)
     if (num(rec.hp) or 0) < alone then rec.hp = alone end
@@ -248,7 +248,7 @@ function B.DownView(rec, t, now)
     if d == nil then return end
     now = num(now) or B.Now()
     t.dn = true
-    local left = B.Opt("BearDownedHours") - (now - d)
+    local left = cfg("downedHours", 12) - (now - d)
     if left < 0 then left = 0 end
     t.dnH = B.Round1(left)
 end

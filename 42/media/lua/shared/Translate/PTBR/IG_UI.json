@@ -1,6 +1,9 @@
 {
     "IGUI_AnimalType_ncbearcub": "Filhote de urso",
+    "IGUI_AnimalType_ncbearcubgen2": "Filhote de urso",
     "IGUI_AnimalType_ncbeargrown": "Urso",
+    "IGUI_AnimalType_ncbeargrowngen": "Urso",
+    "IGUI_AnimalType_ncbeargrowngenfoto": "Urso",
     "IGUI_Animal_Group_ncbear": "Urso",
     "IGUI_Breed_brown": "Pardo"
 }

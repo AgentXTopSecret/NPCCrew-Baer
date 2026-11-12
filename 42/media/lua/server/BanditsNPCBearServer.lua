@@ -123,7 +123,7 @@ function B.AppearFor(pkey, src, x, y, z)
     local now = B.Now()
     local ok, why, _ = B.MayAppear(B.SlotsOf(pkey, now), now)
     if not ok then return nil, why end
-    if B.CountWild(onlineSet(B.Players())) >= B.Opt("BearCubWorldCap") or B.CountRecs() >= B.CFG.maxRecs then
+    if B.CountWild(onlineSet(B.Players())) >= (tonumber(B.CFG.cubWorldCap) or 8) or B.CountRecs() >= B.CFG.maxRecs then
         return nil, "UI_BN_Bear_Why_Full"
     end
     x, y, z = math.floor(x), math.floor(y), math.floor(z or 0)
@@ -430,6 +430,12 @@ function B.Handle(player, command, args)
         if B.HandlePassive then B.HandlePassive(player, args) end
         return
     end
+    -- Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 5.1): der Aussehen-Knopf prueft die Bitte selbst (server/BanditsNPCBearLook.lua);
+    -- der Client bittet nur, getauscht wird nur hier beim Schreiber
+    if command == "Look" then
+        if B.HandleLook then B.HandleLook(player, args) end
+        return
+    end
 end
 
 -- Events.OnClientCommand.Add(function(module, command, player, args)): Vanilla server/ClientCommands.lua:1357; Filter auf das
@@ -566,7 +572,7 @@ local function forestRolls(players, now)
         if not done[e.key] then
             done[e.key] = true
             local ok, _, _ = B.MayAppear(B.SlotsOf(e.key, now), now)
-            if ok and B.CountWild(onlineSet(players)) < B.Opt("BearCubWorldCap") and ZombRand(10000) < pct * 100 / 6 then
+            if ok and B.CountWild(onlineSet(players)) < (tonumber(B.CFG.cubWorldCap) or 8) and ZombRand(10000) < pct * 100 / 6 then
                 local sq = B.PickForestSquare(e, players)
                 if sq then
                     -- square:getX(): Vanilla shared/Traps/TrapSystem.lua:12
@@ -905,7 +911,7 @@ local function baitAppear(reg, players)
     for _, bait in pairs(reg.baits) do
         if bait.ready then list[#list + 1] = bait end
     end
-    local due = (B.Opt("BearBaitNights") + B.CFG.baitExtra + 1) * 24      -- Spielstunden ab dem Auslegen (Nachbesserung B5)
+    local due = ((tonumber(B.CFG.baitMaxNights) or 3) + B.CFG.baitExtra + 1) * 24      -- Spielstunden ab dem Auslegen (Nachbesserung B5)
     local nowH = B.Now()
     for i = 1, #list do
         local bait = list[i]

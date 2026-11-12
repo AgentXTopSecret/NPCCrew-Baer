@@ -3,6 +3,8 @@ VERSION = 1,
 /*
  * NPC Crew -- bear cubs (B1a: find and tame a cub). Page BanditsNPC ("NPC Crew").
  * Every value is read by BanditsNPC.Bear.Opt with a fallback to the default below; in multiplayer the server's values count.
+ * Kevin 12.11.2026: from 39 options exactly twelve stay; all others are fixed values in BanditsNPC.Bear.CFG (same numbers as the old defaults).
+ * A save with values set for removed options still loads: those values are never read.
  */
 
 /* Main switch: off = no new cubs (forest and bait); cubs already in the world stay tameable. */
@@ -22,30 +24,6 @@ option BanditsNPC.BearCubForestRate
 	valueTranslation = BanditsNPC_BearCubForestRate,
 }
 
-/* Tiles to EVERY player when a cub appears. */
-option BanditsNPC.BearCubMinDistance
-{
-	type = integer, min = 15, max = 60, default = 30,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearCubMinDistance,
-}
-
-/* Tiles to the player the cub appears for. Code clamps to at least min + 5 and at most 65 (about 76 tiles are loaded). */
-option BanditsNPC.BearCubMaxDistance
-{
-	type = integer, min = 20, max = 65, default = 50,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearCubMaxDistance,
-}
-
-/* At most this many UNTAMED cubs at once in the world. */
-option BanditsNPC.BearCubWorldCap
-{
-	type = integer, min = 1, max = 32, default = 8,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearCubWorldCap,
-}
-
 /* Tamed bears per player (Kevin 08.11.2026: one). */
 option BanditsNPC.BearMaxPerPlayer
 {
@@ -62,116 +40,12 @@ option BanditsNPC.BearBaitEnabled
 	translation = BanditsNPC_BearBaitEnabled,
 }
 
-/* At the latest after this many counted nights the bait is ripe. */
-option BanditsNPC.BearBaitNights
+/* Taming speed in percent: points per feeding and petting (100 = normal: 4 per feeding, 3 per petting). The minimum of 3 feedings and the waits between feedings (2 in-game hours) and pettings (1 in-game hour) stay. Replaces the four taming options (Kevin 12.11.2026). */
+option BanditsNPC.BearTamePercent
 {
-	type = integer, min = 1, max = 7, default = 3,
+	type = integer, min = 25, max = 1000, default = 100,
 	page = BanditsNPC,
-	translation = BanditsNPC_BearBaitNights,
-}
-
-/* Percent on the first counted night, rising evenly to 100 on the last (40 / 70 / 100). */
-option BanditsNPC.BearBaitFirstChance
-{
-	type = integer, min = 0, max = 100, default = 40,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearBaitFirstChance,
-}
-
-/* Bar points per feeding (bar 0..100). */
-option BanditsNPC.BearTameFeedPoints
-{
-	type = integer, min = 1, max = 100, default = 4,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearTameFeedPoints,
-}
-
-/* Bar points per petting. */
-option BanditsNPC.BearTamePetPoints
-{
-	type = integer, min = 0, max = 100, default = 3,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearTamePetPoints,
-}
-
-/* Percent more when the previous counted action was the OTHER one. */
-option BanditsNPC.BearTameMixBonus
-{
-	type = integer, min = 0, max = 200, default = 50,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearTameMixBonus,
-}
-
-/* Percent more for favourite food (honey, fish). */
-option BanditsNPC.BearTameFavoriteBonus
-{
-	type = integer, min = 0, max = 200, default = 50,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearTameFavoriteBonus,
-}
-
-/* Feedings needed before the bar may fill; until then it holds at 99 (Kevin: 3-5 feedings). */
-option BanditsNPC.BearTameMinFeedings
-{
-	type = integer, min = 0, max = 10, default = 3,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearTameMinFeedings,
-}
-
-/* In-game minutes between two counted feedings of the same cub. */
-option BanditsNPC.BearFeedCooldownMinutes
-{
-	type = integer, min = 0, max = 2880, default = 120,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearFeedCooldownMinutes,
-}
-
-/* In-game minutes between two pettings (also after taming). */
-option BanditsNPC.BearPetCooldownMinutes
-{
-	type = integer, min = 0, max = 2880, default = 60,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearPetCooldownMinutes,
-}
-
-/* Never fed and this many in-game hours without contact: the cub wanders off. 0 = never. */
-option BanditsNPC.BearCubVanishHours
-{
-	type = integer, min = 0, max = 240, default = 36,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearCubVanishHours,
-}
-
-/* In-game days after your bear died without a new cub (Kevin 08.11.2026: 7). */
-option BanditsNPC.BearDeathLockDays
-{
-	type = integer, min = 0, max = 60, default = 7,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearDeathLockDays,
-}
-
-/* Tiles: a following cub switches to staying when its owner gets farther away than this. Max 60 stays under the about 76 loaded tiles. */
-option BanditsNPC.BearFollowMaxDistance
-{
-	type = integer, min = 10, max = 60, default = 40,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearFollowMaxDistance,
-}
-
-/* Tiles: a following cub gets into the vehicle with its owner when it is at most this far away (Kevin 11.11.2026: 15). Farther away it waits where it is. */
-option BanditsNPC.BearRideDistance
-{
-	type = integer, min = 3, max = 40, default = 15,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearRideDistance,
-}
-
-/* Real-time minutes between two uses of Call to me on the same cub (Kevin 11.11.2026: 5). 0 = no wait. Not saved: loading a game resets it. */
-option BanditsNPC.BearCallCooldownMinutes
-{
-	type = integer, min = 0, max = 60, default = 5,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearCallCooldownMinutes,
+	translation = BanditsNPC_BearTamePercent,
 }
 
 /* In-game days from taming until a cub is fully grown, size 0.35 -> 1.35 (Kevin 11.11.2026: 100). Faster at first: at 100 days size 0.75 on day 15 and 1.0 on day 45; other values scale the same way. */
@@ -182,55 +56,7 @@ option BanditsNPC.BearGrowDays
 	translation = BanditsNPC_BearGrowDays,
 }
 
-/* Dodge chance in percent at agility level 10; level 0 is 5 (Kevin 11.11.2026: 40). */
-option BanditsNPC.BearDodgeMax
-{
-	type = integer, min = 5, max = 80, default = 40,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearDodgeMax,
-}
-
-/* Extra damage in percent at fighting level 10, on top of the damage from growing (Kevin 11.11.2026: 70). */
-option BanditsNPC.BearFightBonusMax
-{
-	type = integer, min = 0, max = 200, default = 70,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearFightBonusMax,
-}
-
-/* Percent of its maximum health a tamed bear heals per in-game hour while awake (Kevin 11.11.2026: about 1). The game's own healing of the animal is taken back. */
-option BanditsNPC.BearHealAwake
-{
-	type = double, min = 0.0, max = 10.0, default = 1.0,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearHealAwake,
-}
-
-/* Percent of its maximum health per in-game hour while asleep (Kevin 11.11.2026: about 15). No effect until bears can sleep. */
-option BanditsNPC.BearHealSleep
-{
-	type = double, min = 0.0, max = 100.0, default = 15.0,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearHealSleep,
-}
-
-/* Roam free: a tamed bear never strays further than this from the spot where it was given the order (F1; the KERN keeps 12 because the engine wanders up to 8 tiles per axis). */
-option BanditsNPC.BearRoamRadius
-{
-	type = integer, min = 4, max = 30, default = 12,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearRoamRadius,
-}
-
-/* Main switch: zombies and hostile bandits attack tamed bears, cubs too; wild, shy and fed cubs never (Kevin 11.11.2026). */
-option BanditsNPC.BearZombiesAttack
-{
-	type = boolean, default = true,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearZombiesAttack,
-}
-
-/* Off (default): a tamed bear can die. On: it goes down instead; helped up with 45 percent, alone after BearDownedHours with 15 percent (Kevin 08.11.2026). */
+/* Off (default): a tamed bear can die. On: it goes down instead; helped up with 45 percent, alone after 12 in-game hours with 15 percent (Kevin 08.11.2026). */
 option BanditsNPC.BearCannotDie
 {
 	type = boolean, default = false,
@@ -246,22 +72,6 @@ option BanditsNPC.BearFleeHits
 	translation = BanditsNPC_BearFleeHits,
 }
 
-/* Health points per zombie bite, times 0.8 to 1.2 (cub 40, half-grown 150, full-grown 400 health). */
-option BanditsNPC.BearZombieDamage
-{
-	type = integer, min = 0, max = 50, default = 6,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearZombieDamage,
-}
-
-/* Health points per hit of a hostile bandit, times 0.8 to 1.2. */
-option BanditsNPC.BearBanditDamage
-{
-	type = integer, min = 0, max = 80, default = 12,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearBanditDamage,
-}
-
 /* Damage a tamed bear deals, on top of growing and Fighting (100 = normal). */
 option BanditsNPC.BearDamagePercent
 {
@@ -270,28 +80,12 @@ option BanditsNPC.BearDamagePercent
 	translation = BanditsNPC_BearDamagePercent,
 }
 
-/* Extra healing in percent per in-game hour with a clean bandage of strength 4; strips of cloth half. */
-option BanditsNPC.BearBandageHeal
+/* Healing speed in percent of a tamed bear on its own (100 = normal: about 1 percent of its health per in-game hour; 0 = never on its own). Bandages are not affected. Replaces the two healing options (Kevin 12.11.2026); bears do not sleep yet. */
+option BanditsNPC.BearHealPercent
 {
-	type = double, min = 0.0, max = 50.0, default = 6.0,
+	type = integer, min = 0, max = 1000, default = 100,
 	page = BanditsNPC,
-	translation = BanditsNPC_BearBandageHeal,
-}
-
-/* In-game hours one bandage keeps working. */
-option BanditsNPC.BearBandageHours
-{
-	type = integer, min = 1, max = 48, default = 8,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearBandageHours,
-}
-
-/* A bear that is down gets up alone after this many in-game hours (Kevin 08.11.2026: 12). */
-option BanditsNPC.BearDownedHours
-{
-	type = integer, min = 1, max = 72, default = 12,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearDownedHours,
+	translation = BanditsNPC_BearHealPercent,
 }
 
 /* Skill learning speed in percent; scales every credit and the per-minute cap (Kevin 12.11.2026: slower by default, faster by sandbox). */
@@ -308,12 +102,4 @@ option BanditsNPC.BearSkillAgeCap
 	type = boolean, default = true,
 	page = BanditsNPC,
 	translation = BanditsNPC_BearSkillAgeCap,
-}
-
-/* Diagnosis lines [TC-BEAR] in the console; real errors are always written. */
-option BanditsNPC.BearLog
-{
-	type = boolean, default = false,
-	page = BanditsNPC,
-	translation = BanditsNPC_BearLog,
 }

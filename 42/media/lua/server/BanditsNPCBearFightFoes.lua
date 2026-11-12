@@ -420,7 +420,9 @@ end
 -- shared/TimedActions/ISApplyBandage.lua:112 (wie Staging server/BanditsNPCBearWorld.lua:176-177).
 function B.FoeAttackTick(ms)
     ms = num(ms) or getTimestampMs()
-    if B.Opt("BearZombiesAttack") ~= true then
+    -- Sandbox-Kuerzung (PLAN_AUSSEHEN.md 9.3), Kevin 12.11.2026 "klar sollen die zombies und banditen den angreifen": immer an; nur der feste Wert
+    -- B.CFG.zombiesAttack == false (Probebefehl der Test-Mod) schaltet ab (vorher Sandbox BearZombiesAttack, Vorgabe an)
+    if B.CFG.zombiesAttack == false then
         if #B._fa > 0 then B._fa = {} end
         return
     end

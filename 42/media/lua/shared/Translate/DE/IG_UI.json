@@ -1,6 +1,9 @@
 {
     "IGUI_AnimalType_ncbearcub": "Bärenjunges",
+    "IGUI_AnimalType_ncbearcubgen2": "Bärenjunges",
     "IGUI_AnimalType_ncbeargrown": "Bär",
+    "IGUI_AnimalType_ncbeargrowngen": "Bär",
+    "IGUI_AnimalType_ncbeargrowngenfoto": "Bär",
     "IGUI_Animal_Group_ncbear": "Bär",
     "IGUI_Breed_brown": "Braun"
 }

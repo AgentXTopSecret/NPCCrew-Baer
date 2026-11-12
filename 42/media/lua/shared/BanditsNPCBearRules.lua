@@ -4,6 +4,9 @@
 -- Keine Engine in dieser Datei: nur Zahlen, Texte, Tabellen. Dieselben Funktionen rechnen beim Schreiber (auf dem
 -- Register-Eintrag) und beim Client (auf dem Sicht-Eintrag bzw. B.View.me) -- eine Antwort je Frage.
 -- Gelesen wird nur B.Opt (Sandbox) und B.CFG (feste Stellwerte) aus shared/BanditsNPCBear.lua, zur Laufzeit.
+-- Sandbox-Kuerzung (Kevin 12.11.2026, PLAN_AUSSEHEN.md 9): Zaehm-Punkte, Mindest-Fuetterungen, Abklingzeiten, Koeder-Naechte und
+-- -Chance, Verschwinde-Frist, Mitfahr- und Folgen-Weite sind feste Werte (B.CFG, Block "Sandbox-Kuerzung"); neu das Zaehm-Tempo
+-- BearTamePercent (Prozent auf die Punkte je Fuettern und Streicheln).
 --
 -- Zustaende st: "new" (erschienen) -> "shy" (entdeckt) -> "fed" (angefuettert, an bond gebunden) -> "tame" (gezaehmt,
 -- owner gesetzt); "missing" nur fuer gezaehmte. Statisch geprueft, nicht gespielt.
@@ -15,6 +18,14 @@ local B = BanditsNPC.Bear
 
 local function isTame(st)
     return st == "tame" or st == "missing"
+end
+
+-- Fester Stellwert aus B.CFG (Sandbox-Kuerzung), sonst def (fehlender Schluessel, z. B. ein aelteres B.CFG nach Neuladen der Datei).
+local function fixed(key, def)
+    local c = B.CFG
+    local v = c and tonumber(c[key]) or nil
+    if v == nil or v ~= v then return def end
+    return v
 end
 
 -- Resttage einer Sperre, aufgerundet (mindestens 1).
@@ -37,25 +48,28 @@ end
 
 -- kind = "feed" / "pet"; class = "fav" / "ok" / "snack" (nur beim Fuettern); last = vorige gewertete Handlung oder nil.
 -- Rueckgabe: Punkte (eine Nachkommastelle), mixed (die vorige Handlung war die andere und es gibt dafuer mehr).
+-- Sandbox-Kuerzung (PLAN_AUSSEHEN.md 9.2): Grundpunkte = B.CFG.tameFeedPts / tamePetPts x Zaehm-Tempo BearTamePercent / 100 (bei 100 genau
+-- die bisherigen 4 / 3), Lieblingsfutter und Abwechseln feste Prozent (B.CFG.tameFavBonus / tameMixBonus, je 50).
 function B.Gain(kind, class, last)
     local base = 0
     local factor = 1
+    local pct = tonumber(B.Opt("BearTamePercent")) or 100
     if kind == "feed" then
-        base = B.Opt("BearTameFeedPoints")
+        base = fixed("tameFeedPts", 4) * pct / 100
         if class == "fav" then
-            factor = 1 + B.Opt("BearTameFavoriteBonus") / 100
+            factor = 1 + fixed("tameFavBonus", 50) / 100
         elseif class == "snack" then
             factor = B.CFG.snack
         end
     elseif kind == "pet" then
-        base = B.Opt("BearTamePetPoints")
+        base = fixed("tamePetPts", 3) * pct / 100
     else
         return 0, false
     end
     local mix = 1
     local mixed = false
     if (last == "feed" or last == "pet") and last ~= kind then
-        local bonus = B.Opt("BearTameMixBonus")
+        local bonus = fixed("tameMixBonus", 50)
         if bonus > 0 then
             mix = 1 + bonus / 100
             mixed = true
@@ -68,7 +82,7 @@ end
 function B.TameCheck(rec, now)
     if not rec or isTame(rec.st) then return false end
     local tame = tonumber(rec.tame) or 0
-    if tame >= 100 and rec.st == "fed" and rec.bond ~= nil and (tonumber(rec.fedN) or 0) >= B.Opt("BearTameMinFeedings") then
+    if tame >= 100 and rec.st == "fed" and rec.bond ~= nil and (tonumber(rec.fedN) or 0) >= fixed("tameMinFeeds", 3) then
         rec.tame = 100
         rec.st = "tame"
         rec.owner = rec.bond
@@ -108,7 +122,7 @@ function B.ApplyGain(rec, pkey, kind, class, now)
         local full = rec.tame >= 100
         res.tamed = B.TameCheck(rec, now)
         if full and not res.tamed then
-            local need = B.Opt("BearTameMinFeedings") - (tonumber(rec.fedN) or 0)
+            local need = fixed("tameMinFeeds", 3) - (tonumber(rec.fedN) or 0)
             if need < 1 then need = 1 end
             res.need = need
         end
@@ -122,10 +136,10 @@ function B.WaitLeft(rec, kind, now)
     local at, mins
     if kind == "feed" then
         at = tonumber(rec.feedAt)
-        mins = B.Opt("BearFeedCooldownMinutes")
+        mins = fixed("feedCoolMin", 120)
     else
         at = tonumber(rec.petAt)
-        mins = B.Opt("BearPetCooldownMinutes")
+        mins = fixed("petCoolMin", 60)
     end
     if at == nil or mins <= 0 then return 0 end
     local left = at + mins / 60 - now
@@ -196,11 +210,11 @@ function B.MayAppear(slots, now)
     return true, nil, nil
 end
 
--- Koeder-Chance in Prozent nach der n-ten gezaehlten Nacht: steigt gleichmaessig von BearBaitFirstChance auf 100 in der
--- letzten (Vorgabe 40 / 70 / 100).
+-- Koeder-Chance in Prozent nach der n-ten gezaehlten Nacht: steigt gleichmaessig von B.CFG.baitFirstChance auf 100 in der
+-- letzten (40 / 70 / 100; Sandbox-Kuerzung: feste Werte, vorher BearBaitNights / BearBaitFirstChance).
 function B.BaitChance(night)
-    local nights = B.Opt("BearBaitNights")
-    local first = B.Opt("BearBaitFirstChance")
+    local nights = fixed("baitMaxNights", 3)
+    local first = fixed("baitFirstChance", 40)
     local n = tonumber(night) or 1
     if n < 1 then n = 1 end
     if nights <= 1 or n >= nights then return 100 end
@@ -230,7 +244,7 @@ function B.VanishStep(rec, dtH, contact, relevantOnline)
         if idle >= B.CFG.abandonH then return "release" end
         return "keep"
     end
-    local limit = B.Opt("BearCubVanishHours")
+    local limit = fixed("cubVanishH", 36)
     if limit > 0 and idle >= limit then return "go" end
     return "keep"
 end
@@ -560,12 +574,12 @@ function B.FollowDecide(c, o, f, ms)
     local d = tonumber(o.dist) or 0
     if o.car then
         f.lastD = nil
-        if d <= B.Opt("BearRideDistance") then return { act = "ride", rule = 11 } end
+        if d <= fixed("rideDist", 15) then return { act = "ride", rule = 11 } end
         return { act = "stay", why = "car", rule = 11 }
     end
     local lastD = f.lastD
     f.lastD = d
-    if d > B.Opt("BearFollowMaxDistance") then return { act = "stay", why = "far", rule = 12 } end
+    if d > fixed("followMaxDist", 40) then return { act = "stay", why = "far", rule = 12 } end
     if math.floor(tonumber(o.z) or 0) ~= math.floor(tonumber(c.z) or 0) then
         resetProgress(f)
         return { act = "hold", why = "level", rule = 13 }

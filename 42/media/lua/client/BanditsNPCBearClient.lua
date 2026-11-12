@@ -6,7 +6,8 @@
 -- F1, PLAN_F1.md 4a/7.6: Texte des Baeren-Fensters und der neuen Befehle, U.WhyText mit Koerper bd; F1B, PLAN_F1B.md 3.2: Texte der
 -- zwei Tasten (Optionen-Seite), der Fusszeile und des Wachstums-Schalters, zwei neue Werte, "Tag_AgeDone" entfaellt; F2 = B5a,
 -- PLAN_F2.md 2.7, 4.1, 4.4, Nachtrag 11: Texte des Kampfs, Am Boden, Verband, Show damage, Melee damage, Kills, Alters-Deckel; der neue
--- Befehl "Fx" Schreiber -> Client wird an B.OnFx weitergereicht -- shared/BanditsNPCBearFoe.lua, KERN).
+-- Befehl "Fx" Schreiber -> Client wird an B.OnFx weitergereicht -- shared/BanditsNPCBearFoe.lua, KERN); Aussehen (Lauf baer-aussehen,
+-- PLAN_AUSSEHEN.md 10): 27 Texte des Aussehen-Knopfs (Namen, Knopf, Tooltips, Meldung, Ablehnungen des Schreibers mit Big-Fassung).
 --
 -- Laeuft im Einzelspieler und auf jedem MP-Client (der dedizierte Server laedt client/ nicht). Diese Datei entscheidet NICHTS:
 -- sie nimmt die Sicht ("Sync") und die Meldungen ("Note") des Schreibers an, zeigt Meldungen ueber der Figur und bittet beim
@@ -338,7 +339,7 @@ U.EN = {
     UI_BN_Bear_Note_Bandaged = "Your cub is bandaged and heals faster for %1 hour(s).",
     UI_BN_Bear_Note_BandagedBig = "Your bear is bandaged and heals faster for %1 hour(s).",
     UI_BN_Bear_Why_NoBandage = "You have no clean bandage.",
-    UI_BN_Bear_Why_BandageOff = "Bandages do not heal bears in this world (sandbox setting).",
+    UI_BN_Bear_Why_BandageOff = "Bandages do not heal bears in this world.",
     UI_BN_Bear_Why_Dirty = "This bandage is dirty. Use a clean one.",
     UI_BN_Bear_Why_Healthy = "Your cub is not hurt.",
     UI_BN_Bear_Why_HealthyBig = "Your bear is not hurt.",
@@ -391,6 +392,36 @@ U.EN = {
     UI_BN_Bear_Win_Kills = "Kills",
     UI_BN_Bear_Win_KillsVal = "zombies %1, bandits %2",
     UI_BN_Bear_Win_KillsTip = "Counts zombies and bandits that die right after your bear hit them, even if someone else landed the last blow.",
+    -- Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 8.1, 10): Namen der Aussehen (Schluessel stehen in B.LOOKS des Kerns), Knopf "Look"
+    -- mit Uhr und Tooltips (die Uhr ist dieselbe wie bei Unstuck), Meldung des Schreibers und seine Ablehnungen (Big-Fassung = grosser
+    -- Koerper, U.NoteText / U.TB)
+    UI_BN_Bear_Look_Classic = "Classic",
+    UI_BN_Bear_Look_Brown = "Brown",
+    UI_BN_Bear_Look_Natural = "Natural",
+    UI_BN_Bear_Win_Look = "Look: %1",
+    UI_BN_Bear_Win_LookWait = "Look  %1",
+    UI_BN_Bear_Win_LookTip = "Changes how your cub looks, right where it stands. Its health and stamina stay as they are.",
+    UI_BN_Bear_Win_LookTipBig = "Changes how your bear looks, right where it stands. Its health and stamina stay as they are.",
+    UI_BN_Bear_Win_LookShared = "Shares its wait time with Unstuck (%1 min).",
+    UI_BN_Bear_Win_UnstuckShared = "Shares its wait time with Look (%1 min).",
+    UI_BN_Bear_Win_LookWaitClock = "You can change its look again in %1.",
+    UI_BN_Bear_Win_LookOne = "Your cub has only one look in this world.",
+    UI_BN_Bear_Win_LookOneBig = "Your bear has only one look in this world.",
+    UI_BN_Bear_Note_Look = "Your cub has a new look.",
+    UI_BN_Bear_Note_LookBig = "Your bear has a new look.",
+    UI_BN_Bear_Why_LookWait = "You can change your cub's look again in about %1 min.",
+    UI_BN_Bear_Why_LookWaitBig = "You can change your bear's look again in about %1 min.",
+    UI_BN_Bear_Why_LookDanger = "Not now: zombies or enemies are close to your cub.",
+    UI_BN_Bear_Why_LookDangerBig = "Not now: zombies or enemies are close to your bear.",
+    UI_BN_Bear_Why_LookBusy = "Not now: your cub is busy. Try again in a moment.",
+    UI_BN_Bear_Why_LookBusyBig = "Not now: your bear is busy. Try again in a moment.",
+    UI_BN_Bear_Why_LookFight = "Not now: your cub is fighting or catching its breath.",
+    UI_BN_Bear_Why_LookFightBig = "Not now: your bear is fighting or catching its breath.",
+    UI_BN_Bear_Why_LookGrow = "Your cub is about to grow. Try again in a moment.",
+    UI_BN_Bear_Why_LookGrowBig = "Your bear is about to change its body. Try again in a moment.",
+    UI_BN_Bear_Why_LookMissing = "This look is not available in this world.",
+    UI_BN_Bear_Why_LookNoRoom = "There is no free spot right next to your cub.",
+    UI_BN_Bear_Why_LookNoRoomBig = "There is no free spot right next to your bear.",
 }
 
 local KEY_HEAD = "UI_BN_Bear_"

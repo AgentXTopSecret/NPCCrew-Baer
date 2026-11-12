@@ -138,7 +138,7 @@ function B.SetMode(rec, mode, why, players)
             elseif mode == "sit" then
                 n = note("UI_BN_Bear_Note_Sit", nil, nil, "good")
             elseif mode == "roam" then
-                n = note("UI_BN_Bear_Note_Roam", "num", B.Opt("BearRoamRadius"), nil)
+                n = note("UI_BN_Bear_Note_Roam", "num", tonumber(B.CFG.roamRadius) or 12, nil)     -- Sandbox-Kuerzung (PLAN_AUSSEHEN.md 9.3)
             else
                 n = note("UI_BN_Bear_Note_Stay", nil, nil, nil)
             end
@@ -186,7 +186,10 @@ function B.FollowStep(rec, a, env, ms, players)
     if B.BodyNow then body, sz = B.BodyNow(rec) end
     local gap, walkSpeed = 0, nil
     if B.BodyGap then gap = B.BodyGap(body, sz) end
-    if B.BodyNum then walkSpeed = B.BodyNum(body, "walkSpeed", 0.52) end
+    -- Aussehen (PLAN_AUSSEHEN.md 2): Tempo des Aussehens (B.LookNow, server/BanditsNPCBearLook.lua; Generator-Junges geht langsamer)
+    local look = nil
+    if B.LookNow then look = B.LookNow(rec) end
+    if B.BodyNum then walkSpeed = B.BodyNum(body, "walkSpeed", 0.52, look) end
     -- getX/getY am Tier: Vanilla shared/Definitions/animal/ButcheringUtil.lua:575-576
     local c = { x = a:getX(), y = a:getY(), z = rec.z, gap = gap, walkSpeed = walkSpeed }
     local wasStuck = f.stuck == true
@@ -298,7 +301,7 @@ function B.HandleMode(player, args)
             refuse(player, pkey, "Mode", note("UI_BN_Bear_Why_InCar", nil, nil, "bad"))
             return
         end
-        if B.DistXY(player:getX(), player:getY(), a:getX(), a:getY()) > B.Opt("BearFollowMaxDistance") then
+        if B.DistXY(player:getX(), player:getY(), a:getX(), a:getY()) > (tonumber(B.CFG.followMaxDist) or 40) then     -- Sandbox-Kuerzung (PLAN_AUSSEHEN.md 9.3)
             refuse(player, pkey, "Mode", note("UI_BN_Bear_Why_Far", nil, nil, "bad"))
             return
         end

@@ -74,8 +74,26 @@ end
 -- shared/BanditsNPCBearStats.lua; ohne jene Datei "cub") -- so tauschen diese Wege von selbst. Misslingt dort der grosse Koerper
 -- mangels Definition ("nodef"), entsteht ein Junges-Koerper (nie verloren) und eine gedrosselte Fehlerzeile. rec.body = erzeugter
 -- Koerper VOR B.Commit (der Spiegel traegt ihn).
+-- Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 5.3, 6): look GEGEBEN (nur aus B.BodySwap fuer den Aussehen-Knopf) -> genau diese Art,
+-- ohne Rueckfall; bei Erfolg rec.look = look ("std" -> nil) VOR B.Commit (der Spiegel traegt den neuen Wunsch). look nil (Wachsen,
+-- Aussteigen, Call to me, Tod im Auto, C1) -> das Wunsch-Aussehen des Eintrags fuer diesen Koerper (B.LookFor(want, rec.look): Junges
+-- "foto" -> "gen"); ist dessen Art nicht geladen (B.CubDefOk), die Standard-Art desselben Koerpers + gedrosselte Fehlerzeile (nie
+-- verloren). rec.look bleibt dabei unberuehrt (Kevins Wahl gilt beim naechsten Koerper wieder).
 -- ---------------------------------------------------------------------------
-function B.PlaceCub(rec, x, y, z, why, body)
+-- Aussehen des neuen Koerpers ohne gegebenes look: Wunsch des Eintrags, Rueckfall Standard (je eine Fehlerzeile je 10 Minuten).
+local function placeLook(rec, want, why)
+    local lk = "std"
+    if B.LookFor then lk = B.LookFor(want, rec.look).k end
+    if lk ~= "std" and B.CubDefOk and not B.CubDefOk(want, lk) then
+        local art = B.ArtOf and B.ArtOf(want, lk) or tostring(lk)
+        B.ErrEvery("placelook", 600000, "place: animal definition " .. tostring(art) .. " is not loaded, " .. tostring(rec.id)
+            .. " gets its standard look (" .. tostring(why) .. ")")
+        lk = "std"
+    end
+    return lk
+end
+
+function B.PlaceCub(rec, x, y, z, why, body, look)
     if type(rec) ~= "table" or x == nil or y == nil then return nil, "noargs" end
     local want = body
     if want == nil then
@@ -90,12 +108,17 @@ function B.PlaceCub(rec, x, y, z, why, body)
             .. " gets its cub body (" .. tostring(why) .. ")")
         want = "cub"
     end
-    local a, cwhy = B.CreateCub(x, y, z or 0, want)
+    local lk = look
+    if lk == nil then lk = placeLook(rec, want, why) end
+    local a, cwhy = B.CreateCub(x, y, z or 0, want, lk)
     if not a then return nil, cwhy end
     local s = B.Ses(rec.id)
     rec.gen = (tonumber(rec.gen) or 0) + 1
     rec.aid = a:getAnimalID()
     rec.body = want
+    if look ~= nil then
+        if look == "std" then rec.look = nil else rec.look = look end
+    end
     s.obj = a
     clearBodySession(s)
     s.placedAt = getTimestampMs()       -- Nachbesserung B1e B1: erst im naechsten Bild in der Welt (B.HandleCall wartet darauf)
@@ -113,7 +136,7 @@ function B.PlaceCub(rec, x, y, z, why, body)
     if B.CalmDrop then B.CalmDrop(rec.id) end
     if B._zed then B._zed[rec.id] = nil end
     B.Log("place " .. tostring(rec.id) .. " (" .. tostring(why) .. ") at " .. tostring(rec.x) .. "," .. tostring(rec.y)
-        .. " gen " .. tostring(rec.gen) .. " body " .. tostring(want))
+        .. " gen " .. tostring(rec.gen) .. " body " .. tostring(want) .. " look " .. tostring(lk))
     return a, nil
 end
 
@@ -255,7 +278,9 @@ function B.CallLeft(rec, ms)
     if at == nil then return 0 end
     ms = tonumber(ms) or getTimestampMs()
     if ms - at < 0 then return 0 end
-    local mins = B.Opt("BearCallCooldownMinutes")
+    -- Sandbox-Kuerzung (PLAN_AUSSEHEN.md 9.3): fester Wert B.CFG.callCoolMin (vorher BearCallCooldownMinutes, Vorgabe 5). Seit dem Lauf
+    -- baer-aussehen dieselbe Uhr fuer den Aussehen-Knopf (server/BanditsNPCBearLook.lua liest B.CallLeft und startet B.CallStamp).
+    local mins = tonumber(B.CFG.callCoolMin) or 5
     if mins <= 0 then return 0 end
     local left = at + mins * 60000 - ms
     if left <= 0 then return 0 end
@@ -289,9 +314,21 @@ end
 
 -- F2 (PLAN_F2.md 2.4, 4.3): die Abklingzeit von Call/Unstuck JETZT starten (beim Fall zu Boden; Lehre NPC Crew
 -- client/BanditsNPCCombat.lua:91-104, nur gelesen). B._callAt bleibt in dieser Datei.
+-- Nachbesserung Aussehen B1 (PRUEF_B.md): Rueckgabe = der Stempel DAVOR (Zahl oder nil), damit der Koerper-Tausch des Aussehen-Knopfs
+-- (B.BodySwap mit look, server/BanditsNPCBearGrow.lua) die Uhr VOR dem neuen Koerper starten und bei einem Fehlversuch ohne neuen Koerper
+-- zuruecknehmen kann (B.CallUnstamp). Wer den Wert nicht braucht, ruft wie bisher als Anweisung.
 function B.CallStamp(rec, ms)
-    if type(rec) ~= "table" or rec.id == nil then return end
+    if type(rec) ~= "table" or rec.id == nil then return nil end
+    local was = B._callAt[rec.id]
     callMark(rec, tonumber(ms) or getTimestampMs())     -- getTimestampMs: Vanilla server/Foraging/forageServer.lua:456
+    return was
+end
+
+-- Nachbesserung Aussehen B1: einen Stempel von B.CallStamp zuruecknehmen -- was = dessen Rueckgabe (nil loescht den Stempel). Nur fuer
+-- einen Tausch, der KEINEN neuen Koerper erzeugt hat (ein Fehlversuch kostet keine Abklingzeit). Nur Tabellen-Schreiben.
+function B.CallUnstamp(rec, was)
+    if type(rec) ~= "table" or rec.id == nil then return end
+    B._callAt[rec.id] = tonumber(was)
 end
 
 -- Drossel wie die Bitten "Mode"/"Rename" (server/BanditsNPCBearFollow.lua B.AskOk): Wirkung je "Spieler|Call|ok/no".

@@ -62,7 +62,16 @@
 --                            NCBear_CubSet("reviveScans", 0) und NCBear_CubSet("reviveMs", 0)
 --   NCBear_CubView()         meinen Sicht-Eintrag drucken (mode, pas, ld, hide, sit, cm, busy, u, Erfahrung, carry, dodge ...)
 --   NCBear_CubStats()        druckt zusaetzlich mode, passive und die Sitzung des Befehls (sat, standUntil, roam, come, revN)
--- Rechtsklick auf eine Kachel, Untermenue "NC Bear": zwoelf Eintraege "Cub: ...". Texte hier sind englische Literale.
+-- Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 11; der echte Weg ist der Knopf "Look" im Baeren-Fenster):
+--   NCBear_CubLook(k)        mein naechster zahmer Baer bekommt das Aussehen k ("std" / "gen" / "foto"; ohne k das naechste Angebot
+--                            seines Koerpers): setzt NUR die gemeinsame Uhr Unstuck/Look dieses Baeren zurueck und bittet dann wie der
+--                            Knopf (B.Ask "Look") -- alle Pruefungen des Schreibers gelten. Im Mehrspieler nur die Bitte (Uhr bleibt)
+--   NCBear_CubLookInfo()     Aussehen drucken: Register look, Familie und Art des Koerpers, B.LookNow, Rest der gemeinsamen Uhr,
+--                            je Aussehen ob die Art geladen ist (B.CubDefOk) und ob ein Tausch jetzt ginge (B.BodySwapReady) oder warum nicht
+--   NCBear_CubStats()        druckt zusaetzlich das Aussehen (Register look / Familie des Koerpers)
+--   NCBear_CubInfo()         druckt nach der Sandbox (jetzt zwoelf Optionen) die festen Werte der Sandbox-Kuerzung (B.CFG); aendern mit
+--                            NCBear_CubSet(feld, wert), z. B. NCBear_CubSet("callCoolMin", 0)
+-- Rechtsklick auf eine Kachel, Untermenue "NC Bear": sechzehn Eintraege "Cub: ...". Texte hier sind englische Literale.
 -- Jeder Engine-Aufruf hat eine Vanilla-Fundstelle (Kommentar daneben). Statisch geprueft, nicht gespielt.
 --
 
@@ -208,7 +217,7 @@ function NCBear_CubTame(x)
     if x >= 100 then
         rec.bond = key
         if rec.st ~= "tame" then rec.st = "fed" end
-        local minFeed = B.Opt("BearTameMinFeedings") or 0
+        local minFeed = tonumber(B.CFG and B.CFG.tameMinFeeds) or 0       -- Sandbox-Kuerzung: fester Wert (vorher BearTameMinFeedings)
         if (tonumber(rec.fedN) or 0) < minFeed then rec.fedN = minFeed end
         -- wie nach einer echten ersten Fuetterung: Heimat = letzte bekannte Kachel
         if rec.hx == nil then
@@ -366,6 +375,20 @@ function NCBear_CubInfo()
         end
     end
     out(line)
+    -- Sandbox-Kuerzung (Kevin 12.11.2026, PLAN_AUSSEHEN.md 9.3): die frueheren Optionen sind feste Werte in B.CFG (NCBear_CubSet aendert sie)
+    local fixed = { "cubMinDist", "cubMaxDist", "cubWorldCap", "baitMaxNights", "baitFirstChance", "tameFeedPts", "tamePetPts",
+        "tameMixBonus", "tameFavBonus", "tameMinFeeds", "feedCoolMin", "petCoolMin", "cubVanishH", "deathLockDays", "followMaxDist",
+        "rideDist", "callCoolMin", "dodgeMax", "fightBonusMax", "healAwake", "healSleep", "roamRadius", "zombiesAttack", "zombieDmg",
+        "banditDmg", "bandageHeal", "bandageHours", "downedHours" }
+    line = "fixed:  "
+    for i = 1, #fixed do
+        line = line .. " " .. fixed[i] .. "=" .. tostring(B.CFG and B.CFG[fixed[i]])
+        if i % 6 == 0 and i < #fixed then
+            out(line)
+            line = "        "
+        end
+    end
+    out(line .. " | log " .. tostring(B.LogOn == true) .. " (NCBear_CubLog)")
     local s = B.SlotsOf(key, now)
     local lock = (tonumber(s.lockUntil) or 0) - now
     if lock < 0 then lock = 0 end
@@ -479,6 +502,10 @@ function NCBear_CubSet(field, value)
         out("B1e groups: body swap (bodySwap swapSize swapBackSize swapMinMs swapRetryMs swapFailLog swapRing swapFaceDist busyMs),"
             .. " big body (walkSpeedBig runSpeedBig bodyLenBig tilesPerE followRefLen tagBigK petAnimBig), marker (markerAngleAdd"
             .. " markerCloseTiles markerR markerG markerB; the size is in Options > Mods)")
+        out("Sandbox cut (former options, now fixed): cubMinDist cubMaxDist cubWorldCap baitMaxNights baitFirstChance tameFeedPts"
+            .. " tamePetPts tameMixBonus tameFavBonus tameMinFeeds feedCoolMin petCoolMin cubVanishH deathLockDays followMaxDist rideDist"
+            .. " callCoolMin (shared with Look) dodgeMax fightBonusMax healAwake healSleep roamRadius zombiesAttack zombieDmg banditDmg"
+            .. " bandageHeal bandageHours downedHours")
         return
     end
     if type(value) ~= type(cfg[field]) or type(value) == "table" then
@@ -568,7 +595,7 @@ function NCBear_CubFollowTest()
     out("--- follow test, cub " .. tostring(rec.id) .. " ---")
     out("mode " .. modeOf(rec) .. " (field " .. tostring(rec.mode) .. ") name " .. tostring(rec.name) .. " object " .. tostring(a ~= nil))
     out("distance to me " .. num(math.sqrt(dx * dx + dy * dy)) .. " levels cub " .. num(cz) .. " / me " .. num(pz)
-        .. " in vehicle " .. tostring(car) .. " limit " .. tostring(B.Opt("BearFollowMaxDistance")))
+        .. " in vehicle " .. tostring(car) .. " limit " .. tostring(B.CFG and B.CFG.followMaxDist))
     out("home " .. tostring(rec.hx) .. "," .. tostring(rec.hy) .. "," .. tostring(rec.hz) .. " tagZ " .. tostring(B.CFG.tagZ))
     local s = B._s and B._s[rec.id]
     local f = s and s.f
@@ -770,7 +797,7 @@ function NCBear_CubRide()
     local p, key, reg = ready()
     if not p then return end
     local car = p:getVehicle() ~= nil                   -- client/ISUI/Hutch/ISHutchMenu.lua:8
-    out("--- ride: me in a vehicle " .. tostring(car) .. ", distance limit " .. tostring(B.Opt("BearRideDistance")) .. " ---")
+    out("--- ride: me in a vehicle " .. tostring(car) .. ", distance limit " .. tostring(B.CFG and B.CFG.rideDist) .. " ---")
     local n = 0
     for _, rec in pairs(reg.cubs) do
         if rec.owner == key then
@@ -928,6 +955,10 @@ function NCBear_CubStats()
         local fails = 0
         if type(s) == "table" then fails = tonumber(s.swapFailN) or 0 end
         out(ready .. " | last swap " .. last .. " | fails " .. tostring(fails))
+        -- Aussehen (PLAN_AUSSEHEN.md 11): Wunsch im Register und Familie des lebenden Koerpers (B.LookKind des Kerns, nur lesen)
+        local lkNow = "-"
+        if a0 and B.LookKind then lkNow = tostring(B.LookKind(a0)) end
+        out("look " .. tostring(rec.look or "std") .. " (register) / " .. lkNow .. " (body) -- more: NCBear_CubLookInfo()")
     else
         out("body: the core has no body swap (B1e) loaded")
     end
@@ -1074,6 +1105,153 @@ function NCBear_CubView()
 end
 
 -- ---------------------------------------------------------------------------
+-- Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 11). Der echte Weg ist der Knopf "Look" im Baeren-Fenster; hier nur dieselbe Bitte "Look"
+-- (B.Ask -> B.HandleLook des Schreibers, alle Pruefungen) und ein Ausdruck. Liest die Tabelle des Kerns B.LOOKS, aendert nichts daran.
+-- ---------------------------------------------------------------------------
+
+-- Hat der Kern das Aussehen? (shared B.LOOKS / B.LookFor; der Tausch selbst ist server/BanditsNPCBearLook.lua)
+local function lookReady()
+    if type(B.LOOKS) ~= "table" or not B.LookFor or not B.Ask then
+        out("the bear core has no looks (B.LOOKS / B.LookFor missing)")
+        return false
+    end
+    return true
+end
+
+-- Naechstes Angebot nach dem jetzigen Aussehen cur im Koerper body (Reihenfolge von B.LOOKS, ohne hide, nur definierte Arten).
+local function nextLook(body, cur)
+    local list = B.LOOKS[body]
+    if type(list) ~= "table" then return nil end
+    local offer = {}
+    local at = 0
+    for i = 1, #list do
+        local e = list[i]
+        if type(e) == "table" and e.hide ~= true and (not B.LookHas or B.LookHas(e.art)) then
+            offer[#offer + 1] = e.k
+            if e.k == cur then at = #offer end
+        end
+    end
+    if #offer < 2 then return nil end
+    local n = at + 1
+    if n > #offer then n = 1 end
+    return offer[n]
+end
+
+-- Mein naechster Baer aus der Sicht (Mehrspieler-Client: dort gibt es kein Register). Sicht-Lage x/y wie client/ISUI/BanditsNPCBearWindow.lua.
+local function myViewBear(p)
+    local U = B.UI
+    local list = (U and U.WinBears) and U.WinBears() or {}
+    local best, bestD = nil, nil
+    for i = 1, #list do
+        local v = list[i]
+        local dx = (tonumber(v.x) or 0) - p:getX()          -- client/Fishing/TensionUI.lua:11
+        local dy = (tonumber(v.y) or 0) - p:getY()
+        local d = dx * dx + dy * dy
+        if v.st == "tame" and (bestD == nil or d < bestD) then best, bestD = v, d end
+    end
+    return best
+end
+
+function NCBear_CubLook(k)
+    if not lookReady() then return end
+    local p = getSpecificPlayer(0)                      -- client/Farming/CFarmingSystem.lua:45
+    if not p then
+        out("no player yet")
+        return
+    end
+    local sp = (B.IsSP ~= nil and B.IsSP())
+    local id, body, cur = nil, nil, nil
+    if sp then
+        local p2, key, reg = ready()
+        if not p2 then return end
+        local rec = myTame(p2, key, reg)
+        if not rec then
+            say("no tamed bear of yours (NCBear_CubTame(100) first)")
+            return
+        end
+        local have, a = bodyNow(rec)
+        id, body = rec.id, have or "cub"
+        if a and B.LookKind then cur = B.LookKind(a) end
+        if cur == nil and B.LookNow then cur = B.LookNow(rec) end
+    else
+        local v = myViewBear(p)
+        if not v then
+            out("no tamed bear of yours in my view")
+            return
+        end
+        id, body, cur = v.id, (v.bd == "big") and "big" or "cub", v.lk
+    end
+    if cur == nil then cur = "std" end
+    if k == nil then k = nextLook(body, cur) end
+    if type(k) ~= "string" then
+        out("NCBear_CubLook(k): k = std / gen / foto (" .. tostring(body) .. " now " .. tostring(cur) .. ", no other look offered)")
+        return
+    end
+    -- Einzelspieler: NUR die gemeinsame Uhr Unstuck/Look dieses Baeren loeschen (wie NCBear_CubCallReset, nur ein Eintrag)
+    local reset = "kept (multiplayer: only the request)"
+    if sp then
+        local t = B._callAt
+        if type(t) == "table" then
+            t[id] = nil
+            reset = "reset"
+        else
+            reset = "n/a (no B._callAt in this core)"
+        end
+    end
+    B.Ask(p, "Look", { id = id, look = k })
+    out("look: asked " .. tostring(id) .. " " .. tostring(body) .. " " .. tostring(cur) .. " -> " .. k .. ", shared wait " .. reset
+        .. " (the answer shows above your character)")
+end
+
+function NCBear_CubLookInfo()
+    local p, key, reg = ready()
+    if not p then return end
+    if not lookReady() then return end
+    local rec = myTame(p, key, reg)
+    if not rec then
+        say("no tamed bear of yours (NCBear_CubTame(100) first)")
+        return
+    end
+    local have, a = bodyNow(rec)
+    local etype, fam = "- (no living animal)", "-"
+    if a then
+        etype = tostring(a:getAnimalType())                 -- V:client/ISUI/Animal/ISAnimalUI.lua:65 (nur gedruckt)
+        if B.LookKind then fam = tostring(B.LookKind(a)) end
+    end
+    local lkNow = "-"
+    if B.LookNow then lkNow = tostring(B.LookNow(rec)) end
+    local ms = getTimestampMs()                         -- server/Foraging/forageServer.lua:456
+    local left = 0
+    if B.CallLeft then left = tonumber(B.CallLeft(rec, ms)) or 0 end
+    out("--- look " .. tostring(rec.id) .. " (" .. tostring(rec.name) .. ") ---")
+    out("register look " .. tostring(rec.look) .. " (nil = std) | body " .. tostring(have) .. ", family " .. fam .. ", engine type " .. etype
+        .. " | B.LookNow " .. lkNow)
+    out("shared wait Unstuck/Look: " .. fix(left / 1000, 0) .. " s left (callCoolMin " .. tostring(B.CFG and B.CFG.callCoolMin) .. " min)")
+    local want = nil
+    if B.BodyWant then want = B.BodyWant(rec) end
+    out("grow swap waiting: " .. tostring(want ~= nil and have ~= nil and want ~= have) .. " (want " .. tostring(want) .. ")")
+    local s = B._s and B._s[rec.id]
+    for _, body in ipairs({ "cub", "big" }) do
+        local list = B.LOOKS[body]
+        if type(list) == "table" then
+            for i = 1, #list do
+                local e = list[i]
+                local def = "?"
+                if B.CubDefOk then def = tostring(B.CubDefOk(body, e.k)) end
+                local swap = "-"
+                if body == have and B.BodySwapReady and type(s) == "table" then
+                    local ok, why = B.BodySwapReady(rec, s, ms, body, e.k)
+                    if ok then swap = "swap ready" else swap = "swap waits (" .. tostring(why) .. ")" end
+                end
+                local hid = ""
+                if e.hide == true then hid = " hidden" end
+                out("  " .. body .. " " .. tostring(e.k) .. ": art " .. tostring(e.art) .. ", defined " .. def .. hid .. " | " .. swap)
+            end
+        end
+    end
+end
+
+-- ---------------------------------------------------------------------------
 -- Rechtsklick: Eintraege im vorhandenen Untermenue "NC Bear" (seit F2 client/NCBearBenchModel.lua, frueher NCBearTest.lua; nimmt Funktionen
 -- aus NCBearMenu.extra an und
 -- ruft sie nur im Einzelspieler). Keine alte Datei wird geaendert.
@@ -1092,6 +1270,8 @@ local function menuGrow() NCBear_CubGrow(5) end
 local function menuStats() NCBear_CubStats() end
 local function menuWin() NCBear_CubWin() end
 local function menuBodyGone() NCBear_CubBodyGone() end
+local function menuLook() NCBear_CubLook() end
+local function menuLookInfo() NCBear_CubLookInfo() end
 
 NCBearMenu = NCBearMenu or {}
 NCBearMenu.extra = NCBearMenu.extra or {}
@@ -1111,4 +1291,6 @@ table.insert(NCBearMenu.extra, function(sub, square, player)
     sub:addOption("Cub: stats", square, menuStats)
     sub:addOption("Cub: bear window", square, menuWin)
     sub:addOption("Cub: lose the body (C1)", square, menuBodyGone)
+    sub:addOption("Cub: next look (resets the shared wait)", square, menuLook)       -- Aussehen (PLAN_AUSSEHEN.md 11)
+    sub:addOption("Cub: look info", square, menuLookInfo)
 end)

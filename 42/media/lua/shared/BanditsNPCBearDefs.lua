@@ -22,6 +22,9 @@
 -- Erwachsenen, NCBearTest media/scripts/nc_bear_tier.txt; Textur wie NCBearTest shared/NCBearDefs.lua:40-41), minSize 0,72 (= B.CFG.swapSize) / maxSize 1,35, Schatten/Leiche wie der Erwachsene.
 -- NIE die alte Art "bear". F2 (PLAN_F2.md 4.1): die Rasse des grossen Koerpers bekommt die Stimmen des Erwachsenen (pain, death, huff,
 -- huffsoft, growl1-3) -- Schmerz, Tod, Schnauben, Knurren im Kampf (Kampf-Code server/BanditsNPCBearFight.lua, Bild client/BanditsNPCBearFx.lua).
+-- Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 1, 4.1; Kevin 12.11.2026 "ja fuer spieler als knopf"): drei weitere Arten fuer dieselben
+-- zwei Koerper (unten): "ncbeargrowngen" (Generator-Baer braun), "ncbeargrowngenfoto" (Generator-Baer Fototon), "ncbearcubgen2"
+-- (Generator-Junges v2). Artnamen ENDGUELTIG. Welche Art welcher Koerper und welches Aussehen ist, sagt nur B.LOOKS (shared/BanditsNPCBear.lua).
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -228,4 +231,87 @@ end
 -- (Vanilla ButcheringUtil.lua:18).
 if AnimalPartsDefinitions and AnimalPartsDefinitions.animals then
     AnimalPartsDefinitions.animals[BIG .. BREED] = AnimalPartsDefinitions.animals["buckwhitetailed"]
+end
+
+-- ---------------------------------------------------------------------------
+-- Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 1, 4.1). Je Art eine Kopie der Quell-Art (copyOf: Groessen-Grenzen -- gross 0,72..1,35 =
+-- B.CFG.swapSize, Junges 0,35..1,35 --, Gruppe ncbear, Schatten, Gewicht, feedByHandAnim, trailerBaseSize, wild false ...) mit EIGENEN
+-- Tabellen stages / breeds / genes. Die Rasse ist eine Kopie der Quell-Rasse (Symbole; gross: mit den F2-Stimmen) mit eigener Ton-Tabelle,
+-- nur die drei Textur-Felder neu. Jede Zeile mit bodyModel und Textur ist ein Literal (das Uebernahme-Skript prueft die Literale: model-Skript
+-- in scripts/nc_bear_look.txt, Textur-Datei in media/textures/Body). Zwei Arten auf EINEM Modell mit verschiedener Textur: Vanilla
+-- shared/Definitions/animal/RabbitDefinitions.lua:158/:212 (rabdoe / rabbuck, beide Rab_Body). Hinter denselben Riegeln wie oben.
+-- ---------------------------------------------------------------------------
+local GEN = "ncbeargrowngen"              -- Generator-Baer braun (grosser Koerper)
+local GENFOTO = "ncbeargrowngenfoto"      -- Generator-Baer Fototon (grosser Koerper, gleiches Modell)
+local CUBGEN = "ncbearcubgen2"            -- Generator-Junges v2 (Junges-Koerper)
+
+-- Kopie der Quell-Rasse mit eigener Ton-Tabelle (die Textur setzt der Aufrufer als Literal).
+local function breedOf(src)
+    local sb = type(src) == "table" and type(src.breeds) == "table" and src.breeds[BREED] or nil
+    local b = copyOf(sb)
+    b.name = BREED
+    b.sounds = copyOf(type(sb) == "table" and sb.sounds or nil)
+    return b
+end
+
+local bigDef = AnimalDefinitions.animals[BIG]
+if bigDef then
+    local d = copyOf(bigDef)
+    d.bodyModel = "NCBearGen_Body"          -- Generator-Baer (model-Skript in module Base, media/scripts/nc_bear_look.txt)
+    local b = breedOf(bigDef)
+    b.texture = "NCBearGen"
+    b.textureMale = "NCBearGen"
+    b.textureBaby = "NCBearGen"
+    d.breeds = { [BREED] = b }
+    local st = {}
+    st[GEN] = { ageToGrow = 36500 }        -- Eintrag gleich dem Artnamen, kein nextStage (wie oben)
+    d.stages = st
+    d.genes = copyOf(genes)
+    AnimalDefinitions.animals[GEN] = d
+
+    local f = copyOf(bigDef)
+    f.bodyModel = "NCBearGen_Body"          -- dasselbe Modell, andere Textur (Fototon)
+    local fb = breedOf(bigDef)
+    fb.texture = "NCBearGenFoto"
+    fb.textureMale = "NCBearGenFoto"
+    fb.textureBaby = "NCBearGenFoto"
+    f.breeds = { [BREED] = fb }
+    local fst = {}
+    fst[GENFOTO] = { ageToGrow = 36500 }
+    f.stages = fst
+    f.genes = copyOf(genes)
+    AnimalDefinitions.animals[GENFOTO] = f
+end
+
+if cubDef then
+    local d = copyOf(cubDef)
+    d.bodyModel = "NCBearCubGen_Body"       -- Generator-Junges v2 (model-Skript in module Base, media/scripts/nc_bear_look.txt)
+    local b = breedOf(cubDef)
+    b.texture = "NCBearCubGen"
+    b.textureMale = "NCBearCubGen"
+    b.textureBaby = "NCBearCubGen"
+    d.breeds = { [BREED] = b }
+    local st = {}
+    st[CUBGEN] = { ageToGrow = 36500 }
+    d.stages = st
+    d.genes = copyOf(genes)
+    AnimalDefinitions.animals[CUBGEN] = d
+end
+
+-- Fenster "Animal info": Werte wie die Quell-Art (eigene Tabelle); ohne Eintrag wirft Vanilla client/ISUI/Animal/ISAnimalUI.lua:31.
+if AnimalAvatarDefinition then
+    if AnimalAvatarDefinition[BIG] then
+        AnimalAvatarDefinition[GEN] = copyOf(AnimalAvatarDefinition[BIG])
+        AnimalAvatarDefinition[GENFOTO] = copyOf(AnimalAvatarDefinition[BIG])
+    end
+    if AnimalAvatarDefinition[CUB] then
+        AnimalAvatarDefinition[CUBGEN] = copyOf(AnimalAvatarDefinition[CUB])
+    end
+end
+
+-- Teile beim Zerlegen wie die Quell-Art, Schluessel Art .. Rasse (Vanilla ButcheringUtil.lua:18).
+if AnimalPartsDefinitions and AnimalPartsDefinitions.animals then
+    AnimalPartsDefinitions.animals[GEN .. BREED] = AnimalPartsDefinitions.animals[BIG .. BREED]
+    AnimalPartsDefinitions.animals[GENFOTO .. BREED] = AnimalPartsDefinitions.animals[BIG .. BREED]
+    AnimalPartsDefinitions.animals[CUBGEN .. BREED] = AnimalPartsDefinitions.animals[CUB .. BREED]
 end

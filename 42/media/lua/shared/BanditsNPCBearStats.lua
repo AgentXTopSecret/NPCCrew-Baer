@@ -282,7 +282,13 @@ function B.BodyNow(rec)
 end
 
 -- Stellwert je Koerper: beim grossen Koerper B.CFG[key .. "Big"] (wenn Zahl), sonst B.CFG[key], sonst def.
-function B.BodyNum(body, key, def)
+-- Aussehen (PLAN_AUSSEHEN.md 2): look gegeben ("std" / "gen" / "foto") -> zuerst der Stellwert des Aussehens (B.LookNum, z. B. Tempo des
+-- Generator-Jungen aus seinem Clip), dann wie bisher. Ohne look unveraendert.
+function B.BodyNum(body, key, def, look)
+    if look ~= nil and B.LookNum then
+        local lv = num(B.LookNum(body, look, key, nil))
+        if lv ~= nil then return lv end
+    end
     local c = B.CFG
     if c and body == "big" then
         local v = num(c[tostring(key) .. "Big"])
@@ -374,10 +380,10 @@ function B.StatsOf(rec)
     local hpMax = lerpList(s, xs, numList(c.hpAt, HP_DEF)) * (1 + cfg("vitPerLv", 0.05) * lv.vit)
     local staMax = lerpList(s, xs, numList(c.staAt, STA_DEF)) * (1 + cfg("conPerLv", 0.05) * lv.con)
     local carry = lerpList(s, xs, numList(c.carryAt, CARRY_DEF))
-    local fightBonus = opt("BearFightBonusMax", 70) * lv.fgt / 10
+    local fightBonus = cfg("fightBonusMax", 70) * lv.fgt / 10       -- Sandbox-Kuerzung: fester Wert (vorher BearFightBonusMax)
     local dmg = lerpList(s, xs, numList(c.dmgAt, DMG_DEF)) * (1 + fightBonus / 100)
     local dodgeBase = cfg("dodgeBase", 5)
-    local dodge = dodgeBase + (opt("BearDodgeMax", 40) - dodgeBase) * lv.agi / 10
+    local dodge = dodgeBase + (cfg("dodgeMax", 40) - dodgeBase) * lv.agi / 10   -- Sandbox-Kuerzung: fester Wert (vorher BearDodgeMax)
     local at = stageAt()
     local fish = 0
     if s >= at[1] - 0.000001 then
@@ -396,9 +402,13 @@ end
 
 -- Heilung in Prozent des Hoechstwerts je Spielstunde (Kevin 11.11.2026: wach ~1 %, im Schlaf ~15 %). In B1d gibt es keinen Schlaf:
 -- der Schreiber ruft immer B.HealRate(false).
+-- Sandbox-Kuerzung (Kevin 12.11.2026, PLAN_AUSSEHEN.md 9.2): feste Werte B.CFG.healAwake / healSleep x Heil-Tempo BearHealPercent / 100
+-- (100 = wie vorher, 0 = heilt nie von selbst). Der Verband (B.CFG.bandageHeal, server/BanditsNPCBearMend.lua) skaliert nicht.
 function B.HealRate(asleep)
-    if asleep == true then return opt("BearHealSleep", 15) end
-    return opt("BearHealAwake", 1)
+    local pct = opt("BearHealPercent", 100)
+    if pct < 0 then pct = 0 end
+    if asleep == true then return cfg("healSleep", 15) * pct / 100 end
+    return cfg("healAwake", 1) * pct / 100
 end
 
 -- ---------------------------------------------------------------------------

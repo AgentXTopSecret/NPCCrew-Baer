@@ -37,9 +37,43 @@ B.KEY = "TrueCompanionsBears"   -- globale ModData des Registers, nur beim Schre
 B.CMD = "BanditsNPCBear"        -- Modulname fuer sendClientCommand / sendServerCommand
 B.CUB = "ncbearcub"             -- Tierart des Jungen
 B.BIG = "ncbeargrown"           -- B1e: Tierart des grossen Koerpers (ab Halbstark; Artname ENDGUELTIG, shared/BanditsNPCBearDefs.lua)
-B.BODY_TYPE = { cub = B.CUB, big = B.BIG }                -- B1e: Koerper -> Art
+B.BODY_TYPE = { cub = B.CUB, big = B.BIG }                -- B1e: Koerper -> Art (Standard-Aussehen = Rueckfall "nie verloren")
 B.TYPE_BODY = { [B.CUB] = "cub", [B.BIG] = "big" }        -- B1e: Art -> Koerper (nie "bear", "bearstag", "ncbearcubalt")
 B.BREED = "brown"
+
+-- Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 0, 1, 2; Kevin 12.11.2026 "ja fuer spieler als knopf"): je Koerper die Aussehen in
+-- Fenster-Reihenfolge, je Eintrag Familie k ("std" / "gen" / "foto"), ENDGUELTIGE Tierart (steht im Spielstand, shared/
+-- BanditsNPCBearDefs.lua), Textschluessel des Namens; wahlfrei Stellwerte, die vom Modell abhaengen (walkSpeed / runSpeed Kacheln/s aus
+-- dem Clip gemessen, aussehen/werkzeug/glbspeed.py; tagK = Schild-Hoehe gegen das Junge bei gleicher Groesse, aus der Bindepose --
+-- ungespielt), hide = true (Art bleibt erkannt, wird im Fenster nicht mehr angeboten -- fuer ein spaeter gestrichenes Aussehen).
+-- Die Rasse bleibt fuer alle B.BREED. Das Register traegt nur die Familie des Wunsches (rec.look, nil = "std").
+B.LOOKS = B.LOOKS or {
+    cub = {
+        { k = "std", art = "ncbearcub", txt = "UI_BN_Bear_Look_Classic" },
+        { k = "gen", art = "ncbearcubgen2", txt = "UI_BN_Bear_Look_Brown", walkSpeed = 0.34, runSpeed = 2.25, tagK = 1.11 },
+    },
+    big = {
+        { k = "std", art = "ncbeargrown", txt = "UI_BN_Bear_Look_Classic" },
+        { k = "gen", art = "ncbeargrowngen", txt = "UI_BN_Bear_Look_Brown", tagK = 1.08 },
+        { k = "foto", art = "ncbeargrowngenfoto", txt = "UI_BN_Bear_Look_Natural", tagK = 1.08 },
+    },
+}
+B.LOOK_NEAR = B.LOOK_NEAR or { cub = { foto = "gen" } }   -- Familie ohne eigenen Eintrag in diesem Koerper -> diese
+
+-- Aus B.LOOKS gebaut: B.TYPE_BODY (Art -> Koerper, zusaetzlich zu den zwei Standard-Arten oben), B.TYPE_LOOK (Art -> Familie) und
+-- B.LOOK_KEYS (jede Familie, auch "std"). Nur Arten aus B.LOOKS -- nie eine Vergleichs-Art der Test-Mod (ncbeargen, ncbearcubgen ...).
+B.TYPE_LOOK = {}
+B.LOOK_KEYS = {}
+for body, list in pairs(B.LOOKS) do
+    for i = 1, #list do
+        local e = list[i]
+        if type(e) == "table" and type(e.art) == "string" and type(e.k) == "string" then
+            B.TYPE_BODY[e.art] = body
+            B.TYPE_LOOK[e.art] = e.k
+            B.LOOK_KEYS[e.k] = true
+        end
+    end
+end
 B.GROUP = "ncbear"
 B.MARK = "tcBear"               -- Spiegel am Tier: animal:getModData().tcBear (B1c: Spiegel v2, server/BanditsNPCBearHeal.lua B.MarkOf)
 B.MARK_V = 2                    -- B1c (PLAN_B1C.md 2.2): Fassung des Spiegels; fehlt mark.v, ist es ein B1a/B1b-Spiegel { id, st }
@@ -190,60 +224,60 @@ B.CFG = B.CFG or {
     lureMs = 500, lureR = 10, lureNear = 3, lureMax = 6, lureTrackMax = 32, lureRepathMs = 1000,
     -- F2 Am Boden / Verband (2.4, 2.5)
     downFloor = 0.05, helpUpHp = 0.45, downSelfHp = 0.15, helpTime = 250, mendTime = 200, mendRefuseFull = 0.995,
+    -- Sandbox-Kuerzung (Kevin 12.11.2026: "ja du hast komplett uebertrieben da muss so einiges rausfliegen"; Lauf baer-aussehen,
+    -- PLAN_AUSSEHEN.md 9.3): diese 28 Werte waren Sandbox-Optionen und sind jetzt feste Stellwerte mit GENAU den bisherigen Vorgaben
+    -- (bei Vorgabe-Sandbox rechnet alles wie vorher). Die alte Option daneben; BearLog ist kein Wert mehr (nur B.LogOn / NPC Crews DIAG).
+    -- Ein alter Spielstand mit gesetzten alten Optionen laedt ohne Fehler: B.Opt kennt nur noch B.OPTS, der alte Wert wird nie gelesen.
+    cubMinDist = 30, cubMaxDist = 50,                     -- BearCubMinDistance / BearCubMaxDistance (Kacheln zum Spieler)
+    cubWorldCap = 8,                                      -- BearCubWorldCap (ungezaehmte Junge zugleich)
+    baitMaxNights = 3, baitFirstChance = 40,              -- BearBaitNights / BearBaitFirstChance (Prozent)
+    tameFeedPts = 4, tamePetPts = 3,                      -- BearTameFeedPoints / BearTamePetPoints (x Zaehm-Tempo BearTamePercent)
+    tameMixBonus = 50, tameFavBonus = 50,                 -- BearTameMixBonus / BearTameFavoriteBonus (Prozent)
+    tameMinFeeds = 3,                                     -- BearTameMinFeedings
+    feedCoolMin = 120, petCoolMin = 60,                   -- BearFeedCooldownMinutes / BearPetCooldownMinutes (Spielminuten)
+    cubVanishH = 36, deathLockDays = 7,                   -- BearCubVanishHours / BearDeathLockDays
+    followMaxDist = 40, rideDist = 15,                    -- BearFollowMaxDistance / BearRideDistance (Kacheln)
+    callCoolMin = 5,                                      -- BearCallCooldownMinutes (Echtzeit-Minuten; gemeinsam mit dem Aussehen-Knopf)
+    dodgeMax = 40, fightBonusMax = 70,                    -- BearDodgeMax / BearFightBonusMax (Prozent auf Stufe 10)
+    healAwake = 1.0, healSleep = 15.0,                    -- BearHealAwake / BearHealSleep (Prozent je Spielstunde; x Heil-Tempo BearHealPercent)
+    roamRadius = 12,                                      -- BearRoamRadius (Kacheln)
+    zombiesAttack = true,                                 -- BearZombiesAttack (Kevin: "klar sollen die zombies und banditen den angreifen")
+    zombieDmg = 6, banditDmg = 12,                        -- BearZombieDamage / BearBanditDamage (Lebenspunkte je Treffer)
+    bandageHeal = 6.0, bandageHours = 8,                  -- BearBandageHeal (Prozent je Spielstunde) / BearBandageHours
+    downedHours = 12,                                     -- BearDownedHours
 }
 
 -- F1 (PLAN_F1.md 0.3, 6.1): die vier Modi eines gezaehmten Baeren. Jeder andere Wert (auch nil) gilt als "stay" (B.ModeOf).
 B.MODES = B.MODES or { follow = true, stay = true, sit = true, roam = true }
 
 -- Sandbox-Optionen BanditsNPC.<Name> (Plan 3.1): Vorgabe und Bereich. Die Datei sandbox-options.txt nennt dieselben Zahlen.
+-- Sandbox-Kuerzung (Kevin 12.11.2026: von 39 bleiben genau ZWOELF, "ja okay den rest koennen wir so lassen"; PLAN_AUSSEHEN.md 9): zehn
+-- alte (Namen unveraendert, gespeicherte Werte gelten weiter) und zwei neue Prozent-Regler; alle anderen sind feste Werte in B.CFG
+-- (Block "Sandbox-Kuerzung"). Gruppen fuer die spaeteren Kategorien-Seiten (baer/NAEHTE.md "Sandbox-Seiten") im Kommentar.
 B.OPTS = B.OPTS or {
-    BearCubsEnabled = { def = true },
-    BearCubForestRate = { def = 3, min = 1, max = 5 },
-    BearCubMinDistance = { def = 30, min = 15, max = 60 },
-    BearCubMaxDistance = { def = 50, min = 20, max = 65 },
-    BearCubWorldCap = { def = 8, min = 1, max = 32 },
-    BearMaxPerPlayer = { def = 1, min = 1, max = 4 },
-    BearBaitEnabled = { def = true },
-    BearBaitNights = { def = 3, min = 1, max = 7 },
-    BearBaitFirstChance = { def = 40, min = 0, max = 100 },
-    -- Kevin 11.11.2026 (begleiter/ENTSCHEIDUNGEN.md, Zaehm-Dauer): Abklingzeiten bleiben, weniger Punkte je Handlung -> ~12 Spielstunden
-    BearTameFeedPoints = { def = 4, min = 1, max = 100 },
-    BearTamePetPoints = { def = 3, min = 0, max = 100 },
-    BearTameMixBonus = { def = 50, min = 0, max = 200 },
-    BearTameFavoriteBonus = { def = 50, min = 0, max = 200 },
-    BearTameMinFeedings = { def = 3, min = 0, max = 10 },
-    BearFeedCooldownMinutes = { def = 120, min = 0, max = 2880 },
-    BearPetCooldownMinutes = { def = 60, min = 0, max = 2880 },
-    BearCubVanishHours = { def = 36, min = 0, max = 240 },
-    BearDeathLockDays = { def = 7, min = 0, max = 60 },
-    BearFollowMaxDistance = { def = 40, min = 10, max = 60 },   -- B1b: weiter weg -> ein folgendes Junges wartet (Max unter 76 geladenen Kacheln)
-    -- B1c (PLAN_B1C.md 5.1, Kevin 11.11.2026: 15 Kacheln, 5 Minuten Echtzeit)
-    BearRideDistance = { def = 15, min = 3, max = 40 },          -- so weit darf ein folgendes Junges beim Einsteigen weg sein
-    BearCallCooldownMinutes = { def = 5, min = 0, max = 60 },    -- Echtzeit-Minuten zwischen zwei "Call to me" am selben Jungen
-    -- B1d (PLAN_B1D.md 5.1; Kevin 11.11.2026: 100 Tage, Ausweichen 40 %, Kaempfen +70 %, Heilen wach ~1 %, im Schlaf ~15 %)
+    BearCubsEnabled = { def = true },                            -- Finden und Zaehmen
+    BearCubForestRate = { def = 3, min = 1, max = 5 },           -- Finden und Zaehmen
+    BearMaxPerPlayer = { def = 1, min = 1, max = 4 },            -- Finden und Zaehmen
+    BearBaitEnabled = { def = true },                            -- Finden und Zaehmen
+    -- Zaehm-Tempo in Prozent (Finden und Zaehmen): ersetzt BearTameFeedPoints / PetPoints / MixBonus / FavoriteBonus -- multipliziert die
+    -- Punkte je Fuettern und Streicheln (B.CFG.tameFeedPts / tamePetPts); 100 = die bisherigen Vorgaben. Mindest-Fuetterungen und
+    -- Abklingzeiten bleiben (auch bei 1000 % dauert Zaehmen mindestens zwei Fuetter-Pausen).
+    BearTamePercent = { def = 100, min = 25, max = 1000 },
+    -- B1d (PLAN_B1D.md 5.1; Kevin 11.11.2026: 100 Tage) -- Wachsen und Faehigkeiten
     BearGrowDays = { def = 100, min = 10, max = 365 },           -- Spieltage vom Zaehmen bis ausgewachsen
-    BearDodgeMax = { def = 40, min = 5, max = 80 },              -- Ausweichen in Prozent auf Agilitaet 10
-    BearFightBonusMax = { def = 70, min = 0, max = 200 },        -- Mehr-Schaden in Prozent auf Kaempfen 10
-    BearHealAwake = { def = 1.0, min = 0.0, max = 10.0 },
-    BearHealSleep = { def = 15.0, min = 0.0, max = 100.0 },
-    -- F1 (PLAN_F1.md 6.2): so weit darf ein Baer auf "Frei herumlaufen" von der Stelle des Befehls weg (Kevin ENT:284 "Radius 12")
-    BearRoamRadius = { def = 12, min = 4, max = 30 },
-    -- F2 (PLAN_F2.md 3.1): Gegner, Tod / Am Boden, Fliehen, Schaden, Verband. Zahlen TEXTGLEICH in sandbox-options.txt (OBERFLAECHE).
-    BearZombiesAttack = { def = true },                          -- Hauptschalter: Zombies und feindliche Banditen greifen gezaehmte Baeren an
+    -- F2 (PLAN_F2.md 3.1, 11.7) -- Kampf, Leben und Heilen
     BearCannotDie = { def = false },                             -- Kevin ENT:23-24: statt Tod "am Boden"
     -- F2 11.7 (Kevin 12.11. ~07:30): ersetzt BearFleeHealth (20 %, nie ausgeliefert) -- flieht, wenn das Leben nur noch fuer so viele
     -- Treffer reicht (0 = nie)
     BearFleeHits = { def = 3, min = 0, max = 10 },
-    BearZombieDamage = { def = 6, min = 0, max = 50 },           -- Lebenspunkte je Zombie-Biss (Junges 40, Halbstark 150, erwachsen 400)
-    BearBanditDamage = { def = 12, min = 0, max = 80 },          -- Lebenspunkte je Hieb eines feindlichen Banditen
     BearDamagePercent = { def = 100, min = 10, max = 300 },      -- Schaden, den der Baer austeilt (Prozent)
-    BearBandageHeal = { def = 6.0, min = 0.0, max = 50.0 },      -- Zusatz-Heilung mit Verband (Prozent je Spielstunde, Staerke 4)
-    BearBandageHours = { def = 8, min = 1, max = 48 },           -- so viele Spielstunden wirkt ein Verband
-    BearDownedHours = { def = 12, min = 1, max = 72 },           -- Kevin ENT:42: am Boden, steht allein nach 12 Spielstunden auf
-    -- F2 11.4 (Kevin 12.11. ~05:10): Lerntempo der Faehigkeiten in Prozent (Gutschrift und Minuten-Deckel) / Deckel nach dem Alter
+    -- Heil-Tempo in Prozent (Kampf, Leben und Heilen): ersetzt BearHealAwake / BearHealSleep -- multipliziert beide (B.CFG.healAwake /
+    -- healSleep); 100 = die bisherigen Vorgaben, 0 = heilt nie von selbst. Der Verband (B.CFG.bandageHeal) bleibt gleich.
+    BearHealPercent = { def = 100, min = 0, max = 1000 },
+    -- F2 11.4 (Kevin 12.11. ~05:10): Lerntempo der Faehigkeiten in Prozent (Gutschrift und Minuten-Deckel) / Deckel nach dem Alter --
+    -- Wachsen und Faehigkeiten
     BearSkillXpPercent = { def = 100, min = 25, max = 1000 },
     BearSkillAgeCap = { def = true },
-    BearLog = { def = false },
 }
 
 -- Waldzonen (Vanilla shared/Foraging/forageZones.lua:3,27,72,79,91,98,110,122,129,140).
@@ -269,9 +303,15 @@ end
 -- Mit NPC Crew ueber BanditsNPC.Opt (dessen Weltregel-Speicher geht vor), sonst SandboxVars.BanditsNPC
 -- (Form Bandits client/BanditUpdate.lua:495 SandboxVars.Bandits...). Im Mehrspieler gelten die Werte des Servers.
 -- ---------------------------------------------------------------------------
+-- Sandbox-Kuerzung (PLAN_AUSSEHEN.md 9.3): ein Name, der nicht (mehr) in B.OPTS steht, ist ein Fehler im Code (eine vergessene
+-- Lesestelle einer jetzt festen Option) -- gedrosselte Fehlerzeile je Name, Rueckgabe nil. SandboxVars liest NUR diese Funktion, und
+-- nur fuer Namen aus B.OPTS: ein alter Spielstand mit gesetzten, entfernten Optionen wird nie gelesen (kein Fehler).
 function B.Opt(name)
     local o = B.OPTS[name]
-    if not o then return nil end
+    if not o then
+        B.ErrEvery("opt:" .. tostring(name), 600000, "option " .. tostring(name) .. " is not a bear option")
+        return nil
+    end
     local v = nil
     local crewOpt = BanditsNPC.Opt
     if crewOpt then
@@ -295,10 +335,10 @@ end
 -- ---------------------------------------------------------------------------
 B.LogOn = B.LogOn or false
 
--- Diagnose erlaubt? Eigener Schalter, Sandbox-Option BearLog oder NPC Crews Crew logging ab Stufe 2 (BanditsNPC.DIAG).
+-- Diagnose erlaubt? Eigener Schalter (B.LogOn, der Probebefehl der Test-Mod) oder NPC Crews Crew logging ab Stufe 2 (BanditsNPC.DIAG).
+-- Sandbox-Kuerzung (Kevin 12.11.2026): die Sandbox-Option BearLog gibt es nicht mehr.
 function B.LogActive()
-    if B.LogOn == true or BanditsNPC.DIAG == true then return true end
-    return B.Opt("BearLog") == true
+    return B.LogOn == true or BanditsNPC.DIAG == true
 end
 
 -- Diagnose-Zeile: nie nackt, immer hinter dem Schalter.
@@ -572,11 +612,71 @@ end
 -- B1e (PLAN_B1E.md 3.1, 6.2.1): welcher unserer Koerper ist dieses Tier? "cub" (Art B.CUB) / "big" (Art B.BIG) / nil (jedes andere
 -- Tier, auch "bear", "bearstag", "ncbearcubalt"). Die EINZIGE Art-Frage des Baeren-Codes; Schreiber und Client.
 -- animal:getAnimalType(): Vanilla client/ISUI/Animal/ISAnimalUI.lua:65 (Client), shared/Definitions/animal/ButcheringUtil.lua:13 (shared).
+-- Aussehen (PLAN_AUSSEHEN.md 2): ZWEI Rueckgaben -- Koerper und Familie des Aussehens (B.TYPE_LOOK: "std" / "gen" / "foto"), beide nil
+-- fuer jedes fremde Tier. Wer nur den Koerper braucht, nimmt den ersten Wert (alle bisherigen Aufrufer: ein Ziel, Vergleich oder "or").
 function B.BodyKind(animal)
-    if animal == nil then return nil end
+    if animal == nil then return nil, nil end
     local kind = animal:getAnimalType()
-    if kind == nil then return nil end
-    return B.TYPE_BODY[kind]
+    if kind == nil then return nil, nil end
+    local body = B.TYPE_BODY[kind]
+    if body == nil then return nil, nil end
+    return body, B.TYPE_LOOK[kind] or "std"
+end
+
+-- Aussehen eines Tiers ("std" / "gen" / "foto") oder nil (fremdes Tier). Mehrfachrueckgabe erst in Locals.
+function B.LookKind(animal)
+    local body, look = B.BodyKind(animal)
+    if body == nil then return nil end
+    return look
+end
+
+-- Der Eintrag aus B.LOOKS mit GENAU dieser Familie in diesem Koerper, oder nil.
+function B.LookEntry(body, k)
+    local list = B.LOOKS[body]
+    if type(list) ~= "table" or type(k) ~= "string" then return nil end
+    for i = 1, #list do
+        local e = list[i]
+        if type(e) == "table" and e.k == k then return e end
+    end
+    return nil
+end
+
+-- Der Eintrag, der fuer diesen Koerper und diesen Wunsch gilt: die Familie selbst, sonst die naechste (B.LOOK_NEAR, z. B. Junges
+-- "foto" -> "gen"), sonst "std". Nie nil (unbekannter Koerper -> wie "cub"; fehlt selbst "std" in B.LOOKS: die Standard-Art).
+function B.LookFor(body, k)
+    if body ~= "big" then body = "cub" end
+    if type(k) ~= "string" then k = "std" end
+    local e = B.LookEntry(body, k)
+    if e ~= nil then return e end
+    local near = B.LOOK_NEAR[body]
+    local nk = type(near) == "table" and near[k] or nil
+    if nk ~= nil then
+        e = B.LookEntry(body, nk)
+        if e ~= nil then return e end
+    end
+    e = B.LookEntry(body, "std")
+    if e ~= nil then return e end
+    return { k = "std", art = B.BODY_TYPE[body] or B.CUB, txt = "UI_BN_Bear_Look_Classic" }
+end
+
+-- Tierart fuer Koerper und Wunsch (B.LookFor). Nur Tabellen-Lesen.
+function B.ArtOf(body, k)
+    return B.LookFor(body, k).art
+end
+
+-- Stellwert des Aussehens (walkSpeed, runSpeed, tagK ...): Zahl entry[key] des Eintrags B.LookFor(body, k), sonst def.
+function B.LookNum(body, k, key, def)
+    local e = B.LookFor(body, k)
+    local v = tonumber(e[key])
+    if v == nil or v ~= v then return def end
+    return v
+end
+
+-- Ist die Art definiert? Lua-Tabelle der eigenen Definitionen (so liest schon B.FoeReach, shared/BanditsNPCBearFightRules.lua) -- fuer den
+-- Client (graut ein Aussehen ohne Definition aus); der Schreiber fragt B.CubDefOk (Definition UND Rasse bei der Engine).
+function B.LookHas(art)
+    local defs = AnimalDefinitions and AnimalDefinitions.animals
+    return type(art) == "string" and type(defs) == "table" and defs[art] ~= nil
 end
 
 -- B1e (PLAN_B1E.md 0.10, 6.4): Meldung eines Eintrags mit grossem Koerper bekommt bd = "big" (der Client waehlt dann den

@@ -381,10 +381,12 @@ end
 -- getX/getY/getZ am Tier: shared/Definitions/animal/ButcheringUtil.lua:575-577.
 -- B1e (PLAN_B1E.md 1.3 Nr. 5, 3.2 Nr. 4): ein GROSSER Koerper ohne Eintrag ist nie ein neuer Fund ("found" gibt es nur fuer das
 -- Junge): nil, "kind" -- er bleibt unberuehrt (Menue: Why_Gone) bzw. faellt als Waise / Kopie unter die B1b/B1c-Riegel.
+-- Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 3): ebenso ein Junges in einem Nicht-Standard-Aussehen (das erzeugt nur der Aussehen-
+-- Knopf an einem gezaehmten Baeren) -- nie ein WILDES Generator-Junges als neuer Fund.
 function B.RecOf(animal)
     if not reg then return nil, "noreg" end
     if not animal then return nil, "noanimal" end
-    local body = B.BodyKind(animal)
+    local body, look = B.BodyKind(animal)
     if not body then return nil, "kind" end
     for id, s in pairs(B._s) do
         if s.obj == animal then
@@ -420,6 +422,7 @@ function B.RecOf(animal)
         end
     end
     if body == "big" then return nil, "kind" end
+    if look ~= nil and look ~= "std" then return nil, "kind" end
     local x, y, z = math.floor(animal:getX()), math.floor(animal:getY()), math.floor(animal:getZ())
     local rec, why = B.NewRec("found", nil, animal, x, y, z, B.Now())
     if not rec then return nil, why end
@@ -480,7 +483,7 @@ end
 
 -- Sperre nach dem Tod des eigenen Baeren.
 local function setLock(pkey, now)
-    local days = B.Opt("BearDeathLockDays")
+    local days = tonumber(B.CFG.deathLockDays) or 7          -- Sandbox-Kuerzung (PLAN_AUSSEHEN.md 9.3): fester Wert
     if pkey == nil or days <= 0 then return 0 end
     local prec = reg.players[pkey]
     if type(prec) ~= "table" then
@@ -610,6 +613,9 @@ end
 -- u (tame/missing, Kennzeichen als Zahl), ld (Koerper in der Welt, wie oid), hide (Zombie-Wache an), sit (Modus "sit" UND er sitzt
 -- schon, s.sat), cm (Komm her laeuft), busy (Fuettern/Streicheln laeuft, s.busyUntil); fehlt ein Feld, ist es falsch. B.GrowView jetzt
 -- fuer tame UND missing (Werte, Faehigkeiten, Traglast).
+-- Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 3): lk (Familie des JETZIGEN Koerpers, fehlt = "std") und lkg (true = ein Wachs-Tausch
+-- wartet, der Knopf ist grau) ueber B.LookView (server/BanditsNPCBearLook.lua) -- fuer alle tame/missing-Eintraege (das Namensschild
+-- braucht lk auch bei fremden Baeren).
 -- ---------------------------------------------------------------------------
 local function viewEntry(rec, pkey, ms)
     local oid = -1
@@ -652,6 +658,7 @@ local function viewEntry(rec, pkey, ms)
     end
     -- B1d (PLAN_B1D.md 4.1): fertige Zahlen sz hp hpMax sta staMax day stg nst nxt (server/BanditsNPCBearGrow.lua); F1: auch missing
     if tameOrMissing and B.GrowView then B.GrowView(rec, t) end
+    if tameOrMissing and B.LookView then B.LookView(rec, t) end
     -- F2 (PLAN_F2.md 4.7, 11.2, 11.5, 11.7): fst, mdmg*, kZ, kB, fleeP (server/BanditsNPCBearFight.lua), dn / dnH (...Hurt.lua),
     -- bnd (...Mend.lua) -- flach, nur gezaehmt/vermisst
     if tameOrMissing then
@@ -697,7 +704,7 @@ function B.BuildView(player)
     if bait then
         payload.bait = {
             id = bait.id, x = bait.x, y = bait.y, z = bait.z, kind = bait.kind,
-            nights = bait.nights, max = B.Opt("BearBaitNights"), ready = (bait.ready == true),
+            nights = bait.nights, max = tonumber(B.CFG.baitMaxNights) or 3, ready = (bait.ready == true),
         }
     end
     return payload

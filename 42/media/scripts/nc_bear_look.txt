@@ -1,0 +1,37 @@
+module Base
+{
+    /* NPC Crew -- Baer: Modelle der Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 1, 4.2). Kein Testbefehl: das Baeren-Fenster tauscht ueber */
+    /* B.BodySwap (server/BanditsNPCBearLook.lua). Muss in module Base bleiben (bodyModel der Tierart ohne Punkt, shared/BanditsNPCBearDefs.lua). */
+    /* Generator-Baer gross (Arten ncbeargrowngen braun / ncbeargrowngenfoto Fototon): beide Bloecke UNVERAENDERT aus scripts/NCBearBenchGen.txt */
+    /* verschoben (Namen bleiben; die Werkbank-Arten ncbeargen / ncbeargenfoto finden NCBearGen_Body hier). Textur kommt aus der Rasse. */
+    /* Vorbild 'Block unveraendert verschoben': scripts/NCBearBenchStag.txt. Gleiche 26 Knochen und 15 Clip-Namen wie NCBear.glb (2c). */
+    animationsMesh NCBearGen
+    {
+        meshFile = Skinned/NCBearGen.glb,
+        keepMeshAnimations = true,
+    }
+
+    model NCBearGen_Body
+    {
+        mesh = Skinned/NCBearGen.glb,
+        shader = animalEffect,
+        static = false,
+        animationsMesh = NCBearGen,
+    }
+
+    /* Generator-Junges v2 (Art ncbearcubgen2): byte-gleiche Kopie von NCBearBenchCubGen.glb (MD5 989939f2) unter eigenem Namen. Form wie */
+    /* scripts/nc_bear_cub.txt. Gleiche 26 Knochen und 15 Clip-Namen wie das Junge; interne Namen im GLB 'NCBearCub' (wie NCBearBenchCubAlt.glb). */
+    animationsMesh NCBearCubGen
+    {
+        meshFile = Skinned/NCBearCubGen.glb,
+        keepMeshAnimations = true,
+    }
+
+    model NCBearCubGen_Body
+    {
+        mesh = Skinned/NCBearCubGen.glb,
+        shader = animalEffect,
+        static = false,
+        animationsMesh = NCBearCubGen,
+    }
+}

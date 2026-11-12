@@ -121,7 +121,7 @@ function B.OrderStep(rec, a, env, ms, players)
     end
     -- getX/getY am Tier: Vanilla shared/Definitions/animal/ButcheringUtil.lua:575-576
     local c = {
-        mode = mode, st = rec.st, x = a:getX(), y = a:getY(), hx = rec.hx, hy = rec.hy, r = B.Opt("BearRoamRadius"),
+        mode = mode, st = rec.st, x = a:getX(), y = a:getY(), hx = rec.hx, hy = rec.hy, r = tonumber(B.CFG.roamRadius) or 12,
         gap = gapOf(rec), ownBusy = ownBusy, pauseOver = pauseOver, backTried = s.backTried == true,
     }
     local d = B.OrderDecide(c, env)
@@ -290,7 +290,7 @@ function B.HandleCome(player, args)
         refuse(player, pkey, "Come", note("UI_BN_Bear_Why_InCar", nil, nil, "bad"))
         return
     end
-    if B.DistXY(player:getX(), player:getY(), a:getX(), a:getY()) > B.Opt("BearFollowMaxDistance") then
+    if B.DistXY(player:getX(), player:getY(), a:getX(), a:getY()) > (tonumber(B.CFG.followMaxDist) or 40) then     -- Sandbox-Kuerzung (PLAN_AUSSEHEN.md 9.3)
         refuse(player, pkey, "Come", note("UI_BN_Bear_Why_Far", nil, nil, "bad"))
         return
     end

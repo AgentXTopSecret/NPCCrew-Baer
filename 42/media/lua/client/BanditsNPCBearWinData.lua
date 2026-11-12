@@ -22,6 +22,15 @@
 -- (11.7: Sicht fleeP, N Treffer vor dem Tod, "about %1 health"); Zeilen "Melee damage" (11.2, Sicht mdmg / mdmgB / mdmgM / mdmgS / mdmgF) und "Kills"
 -- (11.5, kZ / kB); Schalter "Show damage" (11.1, U.DmgOn, je Spieler); Faehigkeit am Alters-Deckel (11.4: Sicht skCap vom Schreiber)
 -- mit "max for its age" und Tooltip. Die "kommt spaeter"-Zeilen von Agilitaet / Leben / Kaempfen sind weg (sie wirken jetzt).
+-- Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 8.1; Kevin 12.11.2026: "ja fuer spieler als knopf"): Knopf "Look: <Name>" (d.look,
+-- Zelle 3 der vierten Reihe). Name = Text des Eintrags B.LookFor(Koerper, Sicht lk) aus der Tabelle des Kerns B.LOOKS (keine eigene
+-- Liste hier); Angebot = Eintraege des Koerpers ohne hide, deren Art definiert ist (B.LookHas). Grau mit Grund (Vorpruefung aus der
+-- Sicht: mitfahrend, ausser Reichweite, am Boden, im Fahrzeug, Kampf, beschaeftigt, Zombies nah, Wachs-Tausch wartet lkg, gemeinsame Uhr
+-- mit Unstuck, nur ein Aussehen); die Uhr steht wie bei Unstuck als "Look  m:ss" am Knopf. Der Klick oeffnet im Fenster ein kleines
+-- Menue (d.look.picks); entscheiden tut der Schreiber (B.HandleLook). Fehlt B.LOOKS (Kern ohne Aussehen), gibt es keinen Knopf.
+-- Sandbox-Kuerzung (Kevin 12.11.2026, PLAN_AUSSEHEN.md 9.3): Abstand fuer Folgen, Frei-Radius, Ausweichen / Kampf-Bonus auf Stufe 10,
+-- Verband-Stunden und die Unstuck-Abklingzeit sind feste Werte des Kerns (B.CFG followMaxDist, roamRadius, dodgeMax, fightBonusMax,
+-- bandageHours, callCoolMin) -- gelesen ueber cfgNum; ueber optNum nur noch die zwoelf Optionen (hier BearFleeHits, BearDamagePercent).
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -141,6 +150,25 @@ local function statics()
     s.wideDist2 = U.T("UI_BN_Bear_Win_Dist", 888, U.T("UI_BN_Bear_Dir_NW"))
     s.wideMelee = U.T("UI_BN_Bear_Win_MeleeVal", 888)                     -- F2 (11.2)
     s.wideKills = U.T("UI_BN_Bear_Win_KillsVal", 8888, 888)               -- F2 (11.5)
+    -- Aussehen (PLAN_AUSSEHEN.md 8.1): Namen aller Aussehen beider Koerper (Schluessel aus B.LOOKS des Kerns, einmal je Sitzung) und die
+    -- Knopf-Texte mit jedem Namen und mit der Uhr -- das Fenster misst daran die Knopfbreite (nichts springt beim Wechsel)
+    s.lookName = {}
+    s.lookLabels = {}
+    local looks = B.LOOKS
+    if type(looks) == "table" then
+        for _, list in pairs(looks) do
+            if type(list) == "table" then
+                for i = 1, #list do
+                    local key = type(list[i]) == "table" and list[i].txt
+                    if type(key) == "string" and s.lookName[key] == nil then
+                        s.lookName[key] = U.T(key)
+                        s.lookLabels[#s.lookLabels + 1] = U.T("UI_BN_Bear_Win_Look", s.lookName[key])
+                    end
+                end
+            end
+        end
+    end
+    s.wideLook = U.T("UI_BN_Bear_Win_LookWait", "9:59")
     ST = s
     return s
 end
@@ -156,7 +184,8 @@ local function clamp(v, lo, hi)
     return v
 end
 
--- Sandbox-Zahl ueber den Kern (B.Opt klemmt und faellt selbst auf die Vorgabe zurueck); fehlt der Kern: def.
+-- Sandbox-Zahl ueber den Kern (B.Opt klemmt und faellt selbst auf die Vorgabe zurueck); fehlt der Kern: def. Nur fuer die zwoelf
+-- Optionen aus B.OPTS (Sandbox-Kuerzung): alles andere ist ein fester Wert des Kerns -> cfgNum.
 local function optNum(name, def)
     local v = nil
     if B.Opt then v = tonumber(B.Opt(name)) end
@@ -375,7 +404,7 @@ local function careBtn(v, player, s, whyRide, whyAway)
     if not why and not item then why = U.T("UI_BN_Bear_Why_NoBandage") end
     local tip = s.tipBandage
     if item and not why then
-        tip = tip .. TIP_LINE .. U.T("UI_BN_Bear_Menu_BandageTip", item:getDisplayName(), math.floor(optNum("BearBandageHours", 8) + 0.5))
+        tip = tip .. TIP_LINE .. U.T("UI_BN_Bear_Menu_BandageTip", item:getDisplayName(), math.floor(cfgNum("bandageHours", 8) + 0.5))
     end
     local e = cmdBtn(s.bandage, false, why, tip)
     e.kind = "mend"
@@ -385,13 +414,13 @@ end
 -- Wirkung einer Faehigkeit mit der Zahl von jetzt (PLAN_F1.md 1.5 Tabelle; Zahlen aus der Sicht bzw. Kevins Formeln ENT:221-230).
 local function skillEffect(key, v, L)
     if key == "agi" then
-        return U.T("UI_BN_Bear_Win_SkTip_Agi", pctOf(v.dodge), math.floor(optNum("BearDodgeMax", 40) + 0.5))
+        return U.T("UI_BN_Bear_Win_SkTip_Agi", pctOf(v.dodge), math.floor(cfgNum("dodgeMax", 40) + 0.5))
     elseif key == "vit" then
         return U.T("UI_BN_Bear_Win_SkTip_Vit", math.floor(cfgNum("vitPerLv", 0.05) * L * 100 + 0.5))
     elseif key == "con" then
         return U.T("UI_BN_Bear_Win_SkTip_Con", math.floor(cfgNum("conPerLv", 0.05) * L * 100 + 0.5))
     elseif key == "fgt" then
-        return U.T("UI_BN_Bear_Win_SkTip_Fgt", pctOf(v.fgtB), math.floor(optNum("BearFightBonusMax", 70) + 0.5))
+        return U.T("UI_BN_Bear_Win_SkTip_Fgt", pctOf(v.fgtB), math.floor(cfgNum("fightBonusMax", 70) + 0.5))
     elseif key == "fsh" then
         return U.T("UI_BN_Bear_Win_SkTip_Fsh", pctOf(v.fish))
     end
@@ -484,6 +513,71 @@ local function stateOf(v, mode)
     if v.hide == true then return "hide" end
     if v.cm == true then return "come" end
     return mode
+end
+
+-- Aussehen (PLAN_AUSSEHEN.md 8.1): Name eines Eintrags aus B.LOOKS (Text einmal je Sitzung, statics; ein unbekannter Schluessel wird
+-- nachgeholt). Nur Tabellen-Lesen und U.T.
+local function lookNameOf(s, e)
+    local key = type(e) == "table" and e.txt or nil
+    if type(key) ~= "string" then return "?" end
+    local name = s.lookName[key]
+    if name == nil then
+        name = U.T(key)
+        s.lookName[key] = name
+    end
+    return name
+end
+
+-- Erster Grund aus einer Liste (nil-Luecken erlaubt, n = Laenge).
+local function firstIn(list, n)
+    for i = 1, n do
+        if list[i] then return list[i] end
+    end
+    return nil
+end
+
+-- Aussehen (PLAN_AUSSEHEN.md 8.1): Knopf "Look: <Name>" (Uhr: "Look  m:ss"). Vorpruefung aus der Sicht in der Reihenfolge des Plans
+-- (mitfahrend, ausser Reichweite, am Boden, im Fahrzeug, Kampf, beschaeftigt, Zombies nah, Wachs-Tausch wartet, gemeinsame Uhr mit
+-- Unstuck, nur ein Aussehen); entscheiden tut der Schreiber. e.picks = Angebot fuer das Menue des Fensters { k, name, cur } in der
+-- Reihenfolge von B.LOOKS. nil, wenn der Kern kein Aussehen kennt (B.LOOKS / B.LookFor / B.LookHas fehlen) -- dann kein Knopf.
+local function lookBtn(v, bd, s, w, waitMs, cool)
+    if type(B.LOOKS) ~= "table" or not B.LookFor or not B.LookHas then return nil end
+    local body = (bd == "big") and "big" or "cub"
+    local cur = B.LookFor(body, v.lk or "std")
+    local curName = lookNameOf(s, cur)
+    local picks = {}
+    local others = 0
+    local list = B.LOOKS[body]
+    if type(list) == "table" then
+        for i = 1, #list do
+            local e = list[i]
+            if type(e) == "table" and type(e.k) == "string" and e.hide ~= true and B.LookHas(e.art) then
+                picks[#picks + 1] = { k = e.k, name = lookNameOf(s, e), cur = (e.k == cur.k) }
+                if e.k ~= cur.k then others = others + 1 end
+            end
+        end
+    end
+    local label = U.T("UI_BN_Bear_Win_Look", curName)
+    local shared = U.T("UI_BN_Bear_Win_LookShared", cool)
+    local whyWait, whyOne = nil, nil
+    if waitMs > 0 then
+        label = U.T("UI_BN_Bear_Win_LookWait", clock(waitMs))
+        whyWait = U.T("UI_BN_Bear_Win_LookWaitClock", clock(waitMs)) .. TIP_LINE .. shared
+    end
+    -- Nachbesserung Aussehen A1 (PRUEF_A.md): grau "nur ein Aussehen" erst, wenn es AUSSER dem jetzigen kein Angebot gibt. Traegt der
+    -- Baer ein spaeter mit hide gestrichenes Aussehen (es steht dann nicht im Angebot), bleiben die anderen waehlbar -- der Schreiber
+    -- prueft nur das ZIEL (server/BanditsNPCBearLook.lua). Dieselbe Zaehlung oeffnet das Menue (client/ISUI/BanditsNPCBearWindow.lua).
+    if others < 1 then whyOne = U.TB("UI_BN_Bear_Win_LookOne", bd) end
+    local whyFight = v.fst ~= nil and U.TB("UI_BN_Bear_Why_LookFight", bd)
+    local whyBusy = v.busy == true and U.TB("UI_BN_Bear_Why_LookBusy", bd)
+    local whyDanger = v.hide == true and U.TB("UI_BN_Bear_Why_LookDanger", bd)
+    local whyGrow = v.lkg == true and U.TB("UI_BN_Bear_Why_LookGrow", bd)
+    local why = firstIn({ w.ride, w.away, w.down, w.car, whyFight, whyBusy, whyDanger, whyGrow, whyWait, whyOne }, 10)
+    local e = cmdBtn(label, false, why, U.TB("UI_BN_Bear_Win_LookTip", bd) .. TIP_LINE .. shared)
+    e.picks = picks
+    e.others = others
+    e.cur = cur.k
+    return e
 end
 
 -- ---------------------------------------------------------------------------
@@ -589,7 +683,7 @@ function U.WinModel(v, player, nowMs)
     local ride = (v.ride == true)
     local gone = (v.st == "missing") or (v.ld ~= true)
     local inCar = player:getVehicle() ~= nil            -- V:client/ISUI/Hutch/ISHutchMenu.lua:8
-    local far = (not gone) and d.distN ~= nil and d.distN > optNum("BearFollowMaxDistance", 40)
+    local far = (not gone) and d.distN ~= nil and d.distN > cfgNum("followMaxDist", 40)
     local cm = tame and v.cm == true
     local whyRide = ride and U.TB("UI_BN_Bear_Why_Riding", bd)
     local whyAway = gone and U.TB("UI_BN_Bear_Why_OutOfReach", bd)
@@ -598,7 +692,7 @@ function U.WinModel(v, player, nowMs)
     local whyDown = tame and v.dn == true and U.TB("UI_BN_Bear_Why_Down", bd)    -- F2: am Boden nimmt der Schreiber keinen Befehl an
     local act = nil
     if tame then act = mode end
-    local radius = math.floor(optNum("BearRoamRadius", 12) + 0.5)
+    local radius = math.floor(cfgNum("roamRadius", 12) + 0.5)
     local b = {}
     b.follow = cmdBtn(s.btn.follow, act == "follow" and not cm, firstOf(whyRide, whyAway, whyDown, whyCar, whyFar), s.tipFollow)
     b.stay = cmdBtn(s.btn.stay, act == "stay", firstOf(whyRide, whyAway, whyDown), s.tipStay)
@@ -614,8 +708,13 @@ function U.WinModel(v, player, nowMs)
     end
     local uLabel = s.btn.unstuck
     if waitMs > 0 then uLabel = U.T("UI_BN_Bear_Win_UnstuckWait", clock(waitMs)) end
-    local cool = math.floor(optNum("BearCallCooldownMinutes", 5) + 0.5)
-    b.unstuck = cmdBtn(uLabel, false, firstOf(whyRide, whyCar, whyWait), U.TB("UI_BN_Bear_Menu_CallTip", bd, cool))
+    local cool = math.floor(cfgNum("callCoolMin", 5) + 0.5)
+    -- Aussehen (PLAN_AUSSEHEN.md 8.1): Knopf in Zelle 3 der vierten Reihe (nil = Kern ohne Aussehen, kein Knopf); die Uhr ist dieselbe wie
+    -- bei Unstuck -- deshalb nennt auch der Unstuck-Tooltip die gemeinsame Wartezeit (nur, wenn es den Knopf gibt)
+    d.look = lookBtn(v, bd, s, { ride = whyRide, away = whyAway, down = whyDown, car = whyCar }, waitMs, cool)
+    local uTip = U.TB("UI_BN_Bear_Menu_CallTip", bd, cool)
+    if d.look then uTip = uTip .. TIP_LINE .. U.T("UI_BN_Bear_Win_UnstuckShared", cool) end
+    b.unstuck = cmdBtn(uLabel, false, firstOf(whyRide, whyCar, whyWait), uTip)
     d.buttons = b
     d.care = careBtn(v, player, s, whyRide, whyAway)                -- F2: "Bandage" / am Boden "Help up"
     d.ordersInfo = ""

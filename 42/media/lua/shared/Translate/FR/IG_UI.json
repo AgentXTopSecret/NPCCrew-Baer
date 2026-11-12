@@ -1,6 +1,9 @@
 {
     "IGUI_AnimalType_ncbearcub": "Ourson",
+    "IGUI_AnimalType_ncbearcubgen2": "Ourson",
     "IGUI_AnimalType_ncbeargrown": "Ours",
+    "IGUI_AnimalType_ncbeargrowngen": "Ours",
+    "IGUI_AnimalType_ncbeargrowngenfoto": "Ours",
     "IGUI_Animal_Group_ncbear": "Ours",
     "IGUI_Breed_brown": "Brun"
 }

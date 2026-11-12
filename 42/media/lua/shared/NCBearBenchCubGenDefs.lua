@@ -11,7 +11,8 @@
 --                   (NCBearCub_Body / NCBearCub). Eigene Art statt eines echten "ncbearcub", damit (1) beide genau gleich behandelt
 --                   werden (nur Engine, kein Baeren-Kern) und Gang/Tempo fair vergleichbar sind, (2) der Kern es nie als Waise sieht
 --                   und (3) die Testhilfe nie dein eigenes gezaehmtes Junges anfasst.
--- Unser Junge-Code fasst beide nie an (B.BodyKind -> B.TYPE_BODY kennt nur ncbearcub / ncbeargrown, shared/BanditsNPCBear.lua:41).
+-- Unser Junge-Code fasst beide nie an (B.BodyKind -> B.TYPE_BODY kennt seit dem Lauf baer-aussehen die 5 Arten aus B.LOOKS --
+-- ncbearcub, ncbearcubgen2, ncbeargrown, ncbeargrowngen, ncbeargrowngenfoto --, nie eine Werkbank-Art; shared/BanditsNPCBear.lua:41-75).
 -- Gruppe "ncbear" (aus der Kopie): NPC Crews Naht NOT_TENDED["ncbear"] (shared/BanditsNPCBearCrew.lua) -- kein Vieh fuer die Crew.
 --
 -- SPIELSTAND: ein gespeichertes Tier einer Art, die es spaeter nicht mehr gibt, bricht das Laden (shared/BanditsNPCBearDefs.lua Kopf).

@@ -224,7 +224,9 @@ function NCBear_FightDown()
     end
     B.BearDown(rec, a, "bench")
     if B.PushView then B.PushView(p) end
-    say("your bear is down: right-click it \"Help up\" or wait (Sandbox Bear: gets up alone after)")
+    -- Sandbox-Kuerzung (Lauf baer-aussehen): die Liegezeit ist der feste Wert B.CFG.downedHours (vorher Option BearDownedHours)
+    say("your bear is down: right-click it \"Help up\" or wait (gets up alone after " .. tostring(B.CFG and B.CFG.downedHours)
+        .. " in-game hours, NCBear_CubSet('downedHours', n))")
 end
 
 function NCBear_Fight()

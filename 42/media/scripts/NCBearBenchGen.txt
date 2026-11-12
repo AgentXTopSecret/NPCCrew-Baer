@@ -1,21 +1,47 @@
-module Base
+module NCBear
 {
-    /* NUR TESTHILFE (NCBearBench*: wird nie nach NPC Crew kopiert, baer/tools/baer_uebernahme.py BENCH_ANY). Lauf baer-gen-gross, 11.11.2026. */
-    /* Kevin 11.11. ~18:25 (Freigabe 3): der Generator-Baer nur als Vergleich per Testbefehl NCBear_GenLive(), braun und Fototon, er waehlt spaeter. */
-    /* Neuer grosser Baer E: Generator-Netz auf GENAU dem Skelett und den 15 Clips des 2c-Baeren (NCBear.glb 08ec7806), Netz NCBearGen.glb b36d947b. */
-    /* Eigenes animationsMesh, in sich geschlossen: NCBear (2c) bleibt unberuehrt. Form wie scripts/nc_bear_tier.txt (NCBear_Body) und nc_bear_cub.txt. */
-    /* Muss in module Base bleiben (bodyModel der Tierart ohne Punkt, shared/NCBearBenchGenDefs.lua). Textur kommt aus der Rasse (NCBearGen / NCBearGenFoto). */
-    animationsMesh NCBearGen
+    imports
     {
-        meshFile = Skinned/NCBearGen.glb,
-        keepMeshAnimations = true,
+        Base
     }
 
-    model NCBearGen_Body
+    /* NUR TESTHILFE (NCBearBench*: wird nie nach NPC Crew kopiert, baer/tools/baer_uebernahme.py BENCH_ANY). Lauf baer-aussehen, 12.11.2026. */
+    /* Die Generator-Bloecke animationsMesh NCBearGen / model NCBearGen_Body stehen jetzt UNVERAENDERT in scripts/nc_bear_look.txt (echte Datei, */
+    /* Aussehen-Knopf); dieser Block (Standmodelle des Generator-Baeren) kam UNVERAENDERT aus scripts/NCBearBenchVergleich.txt. Gegenstandsnamen */
+    /* NCBear.BenchGenEBraun / NCBear.BenchGenEFototon bleiben (Modul.Name zaehlt, nicht die Datei). */
+
+    /* Grosser Generator-Baer (Foto E) als Standmodell, ohne Knochen; Groesse wie der 2c-Baer bei 1,0 (1,96 m lang). Form wie scripts/nc_bear.txt. */
+    model NCBearBenchGenE_braun_World
     {
-        mesh = Skinned/NCBearGen.glb,
-        shader = animalEffect,
-        static = false,
-        animationsMesh = NCBearGen,
+        mesh = WorldItems/NCBearBenchGenE_braun,
+        texture = WorldItems/NCBearBenchGenE_braun,
+        scale = 0.544,
+    }
+
+    model NCBearBenchGenE_fototon_World
+    {
+        mesh = WorldItems/NCBearBenchGenE_fototon,
+        texture = WorldItems/NCBearBenchGenE_fototon,
+        scale = 0.544,
+    }
+
+    item BenchGenEBraun
+    {
+        DisplayCategory = Junk,
+        ItemType = base:normal,
+        Weight = 1,
+        Icon = NCBear,
+        DisplayName = Test Bear Generator brown (model),
+        WorldStaticModel = NCBearBenchGenE_braun_World,
+    }
+
+    item BenchGenEFototon
+    {
+        DisplayCategory = Junk,
+        ItemType = base:normal,
+        Weight = 1,
+        Icon = NCBear,
+        DisplayName = Test Bear Generator photo tone (model),
+        WorldStaticModel = NCBearBenchGenE_fototon_World,
     }
 }

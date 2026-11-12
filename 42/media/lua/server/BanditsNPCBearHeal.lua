@@ -41,13 +41,24 @@ end
 -- B.BodyKind). Fassung bleibt B.MARK_V = 2.
 -- F1 (PLAN_F1.md 5.2): + passive (Schalter je Baer). Fassung bleibt B.MARK_V = 2; mode traegt jetzt auch "sit" / "roam".
 -- F2 (PLAN_F2.md 4.2, 11.5): + down (am Boden seit Spielstunde), bndH / bndR (Verband), kZ / kB (Kills). Fassung bleibt B.MARK_V = 2.
+-- Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 3): + look (Familie des Wunsches; fehlt = "std"). Fassung bleibt B.MARK_V = 2 (Leser nehmen
+-- Fehlendes als "nicht da", wie B1e body).
 local MARK_FIELDS = {
     "u", "id", "nr", "gen", "r", "kind", "src", "st", "finder", "bond", "owner", "tame", "fedN", "petN", "last",
     "feedAt", "petAt", "born", "tamedAt", "mode", "name", "hx", "hy", "hz",
     "g", "gF", "gFd", "gFn", "xAgi", "xVit", "xCon", "xFgt", "xFsh", "xNos",
     "body", "passive",
     "down", "bndH", "bndR", "kZ", "kB",
+    "look",
 }
+
+-- Aussehen (PLAN_AUSSEHEN.md 3): ein Wunsch-Aussehen aus dem Spiegel nur, wenn es eine bekannte Familie ausser "std" ist (B.LOOK_KEYS,
+-- shared/BanditsNPCBear.lua); sonst nil (= Standard).
+local function markLook(v)
+    local keys = B.LOOK_KEYS
+    if type(v) == "string" and v ~= "std" and type(keys) == "table" and keys[v] == true then return v end
+    return nil
+end
 
 -- F2 (PLAN_F2.md 4.2): die F2-Felder eines gezaehmten Eintrags aus dem Spiegel, geklemmt (Zahl oder nil). Aus B.Restore und B.TakeNewerMark.
 local function markF2(rec, mark, now)
@@ -114,12 +125,28 @@ function B.MarkFresh(rec, mark)
         and mark.r == rec.r
 end
 
+-- Nachbesserung Aussehen B2 (PRUEF_B.md): ein gezaehmter/vermisster Eintrag bekommt diesen Koerper (bind unten, AnimalID-Weg in
+-- B.ScanAnimals, server/BanditsNPCBearWorld.lua). Traegt der Koerper ein ANDERES Nicht-Standard-Aussehen als der Wunsch (MP-Absturz: das
+-- Register ist aelter als die Zelle und gewinnt, B.TakeNewerMark), gilt das Aussehen des Koerpers -- sonst fiele der naechste neue Koerper
+-- (Unstuck, Aussteigen, C1, Wachsen) still auf Classic zurueck. Die Familie kommt aus der Art (B.BodyKind -> getAnimalType, Server-
+-- Wahrheit, kein ModData). Ein Standard-Koerper aendert rec.look nie (Rueckfall "Art fehlt" behaelt den Wunsch); B.LOOK_NEAR bleibt
+-- (Junges "gen" bei Wunsch "foto"). Nur Tabellen-Lesen/-Schreiben; festschreiben tut der Aufrufer (B.Commit). Rueckgabe true = geaendert.
+function B.LookFromBody(rec, o)
+    if type(rec) ~= "table" or o == nil or (rec.st ~= "tame" and rec.st ~= "missing") or B.LookFor == nil then return false end
+    local body, lk = B.BodyKind(o)
+    if body == nil or lk == nil or lk == "std" then return false end
+    if B.LookFor(body, rec.look).k == lk then return false end
+    B.Log("heal: " .. tostring(rec.id) .. " wears look " .. tostring(lk) .. ", entry said " .. tostring(rec.look) .. " -- the body wins")
+    rec.look = lk
+    return true
+end
+
 -- Ein Eintrag bekommt dieses Tier (Heilung 2.3 1a / 1b / 2a): Objekt der Sitzung, AnimalID, Generation, kein ride mehr (ein Koerper
 -- ist da), vermisst -> gezaehmt mit Meldung, Spiegel neu, festschreiben.
 -- Nachbesserung B1c B1: ist der Spiegel NEUER als der Eintrag (B.TakeNewerMark, weiter unten), gewinnt im Einzelspieler zuerst der
 -- Spiegel -- sonst schriebe B.Commit den alten Stand des Registers ueber die neuere Zaehmung (N9 in anderer Form).
 -- B1e (PLAN_B1E.md 1.3 Nr. 5, 6.3): rec.body = Koerper des Tiers (B.BodyKind; nur gezaehmt/vermisst, sonst nil); weicht der Spiegel ab,
--- nur eine Diagnose-Zeile.
+-- nur eine Diagnose-Zeile. Nachbesserung Aussehen B2: rec.look ueber B.LookFromBody (oben), vor B.Commit.
 local function bind(rec, o, mark, players)
     if mark ~= nil and B.TakeNewerMark then B.TakeNewerMark(rec, mark) end
     local s = B.Ses(rec.id)
@@ -128,6 +155,7 @@ local function bind(rec, o, mark, players)
     rec.aid = o:getAnimalID()
     local body = B.BodyKind(o)
     if rec.st == "tame" or rec.st == "missing" then rec.body = body else rec.body = nil end
+    B.LookFromBody(rec, o)
     if type(mark) == "table" and mark.body ~= nil and mark.body ~= body then
         B.Log("heal: " .. tostring(rec.id) .. " mark says body " .. tostring(mark.body) .. ", the animal is " .. tostring(body))
     end
@@ -216,6 +244,8 @@ end
 -- B1e (PLAN_B1E.md 1.3 Nr. 5, 4.3, 6.3): ein GROSSER Koerper gehoert nur zu einem gezaehmten Eintrag -- mit einem Spiegel new/shy/fed
 -- (nur als Faelschung moeglich) wird er nie hergestellt (nil, "body"; der Aufrufer schreibt die Fehlerzeile). Der neue Eintrag traegt
 -- den Koerper des Tiers (body, nur bei tame).
+-- Aussehen (PLAN_AUSSEHEN.md 3): ebenso ein Tier in einem Nicht-Standard-Aussehen (nur der Aussehen-Knopf erzeugt es, also nur gezaehmt):
+-- mit Spiegel new/shy/fed nil, "body". Bei tame rec.look = Wunsch aus dem Spiegel (geklemmt); fehlt er, das Aussehen des Tiers.
 function B.Restore(o, mark, players)
     local reg = B.Reg()
     if not reg or not o or type(mark) ~= "table" then return nil, "state" end
@@ -223,8 +253,10 @@ function B.Restore(o, mark, players)
     local st = mark.st
     if st == "missing" then st = "tame" end
     if st ~= "new" and st ~= "shy" and st ~= "fed" and st ~= "tame" then return nil, "state" end
-    local body = B.BodyKind(o) or "cub"
+    local body, look = B.BodyKind(o)
+    if body == nil then body = "cub" end
     if body == "big" and st ~= "tame" then return nil, "body" end
+    if look ~= nil and look ~= "std" and st ~= "tame" then return nil, "body" end
     local now = B.Now()
     local owner, bond, finder = keyOf(mark.owner), keyOf(mark.bond), keyOf(mark.finder)
     local max = B.Opt("BearMaxPerPlayer")
@@ -290,6 +322,8 @@ function B.Restore(o, mark, players)
     if st == "tame" then
         rec.tame = 100
         rec.body = body                    -- B1e
+        rec.look = markLook(mark.look)     -- Aussehen: Wunsch aus dem Spiegel, sonst das Aussehen des Tiers
+        if rec.look == nil then rec.look = markLook(look) end
         if mark.passive == true then rec.passive = true end      -- F1 (PLAN_F1.md 5.2)
         markF2(rec, mark, now)                                   -- F2 (PLAN_F2.md 4.2)
     end
@@ -399,8 +433,10 @@ function B.TakeNewerMark(rec, mark)
     rec.mode = nil
     rec.passive = nil
     rec.down, rec.bndH, rec.bndR, rec.kZ, rec.kB = nil, nil, nil, nil, nil
+    rec.look = nil
     if st == "tame" then
         rec.mode = markMode(mark.mode)
+        rec.look = markLook(mark.look)                           -- Aussehen (PLAN_AUSSEHEN.md 3)
         if mark.passive == true then rec.passive = true end      -- F1 (PLAN_F1.md 5.2)
         markF2(rec, mark, now)                                   -- F2 (PLAN_F2.md 4.2)
     end
@@ -490,7 +526,7 @@ function B.HealFromMark(o, mark, players)
     if isNewShy(mark.st) then return "stale" end
     if mark.st == "tame" and B.IsSP() then
         local fake = {
-            st = "tame", owner = B.SP_KEY, tame = 100, fedN = B.Opt("BearTameMinFeedings"), src = "found", id = mark.id,
+            st = "tame", owner = B.SP_KEY, tame = 100, fedN = tonumber(B.CFG.tameMinFeeds) or 3, src = "found", id = mark.id,
         }
         local got, why = B.Restore(o, fake, players)
         if got == nil then capLine(mark, why) end

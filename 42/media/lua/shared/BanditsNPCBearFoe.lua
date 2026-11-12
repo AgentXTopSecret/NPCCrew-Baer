@@ -552,7 +552,9 @@ end
 
 local function lureBody(ms)
     local bears, byId = lureBears()
-    if B.Opt("BearZombiesAttack") ~= true then bears, byId = {}, {} end
+    -- Sandbox-Kuerzung (Kevin 12.11.2026: "klar sollen die zombies und banditen den angreifen"): immer an; nur der feste Wert
+    -- B.CFG.zombiesAttack == false (Probebefehl der Test-Mod) schaltet ab (vorher Sandbox BearZombiesAttack, Vorgabe an)
+    if B.CFG.zombiesAttack == false then bears, byId = {}, {} end
     sweep(byId)
     if #bears == 0 then return end
     local r = cfg("lureR", 10)

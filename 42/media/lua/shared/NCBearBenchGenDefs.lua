@@ -12,8 +12,9 @@
 -- Form der Kopie: shared/NCBearBenchVergleichDefs.lua (ncbearcubalt, gespielt) und shared/BanditsNPCBearDefs.lua (ncbeargrown, copyOf).
 --
 -- Wer fasst diese Arten an? NIEMAND ausser der Testhilfe client/NCBearBenchGen.lua:
---   * Der Baeren-Code (Junges/grosser Koerper) fragt nur B.BodyKind -> B.TYPE_BODY (shared/BanditsNPCBear.lua): nur ncbearcub und
---     ncbeargrown. Der Kampf (F2) kennt nur den eigenen gezaehmten Baeren. Die Bench-Befehle fuer die Test-Arten (client/NCBearBench.lua,
+--   * Der Baeren-Code (Junges/grosser Koerper) fragt nur B.BodyKind -> B.TYPE_BODY (shared/BanditsNPCBear.lua): seit dem Lauf
+--     baer-aussehen die 5 Arten aus B.LOOKS (ncbearcub, ncbearcubgen2, ncbeargrown, ncbeargrowngen, ncbeargrowngenfoto), nie eine
+--     Werkbank-Art wie diese. Der Kampf (F2) kennt nur den eigenen gezaehmten Baeren. Die Bench-Befehle fuer die Test-Arten (client/NCBearBench.lua,
 --     NCBearBenchAdult.lua, NCBearBenchAttackProbe.lua) kennen nur ncbear / bear / bearstag.
 --   * Gruppe "ncbear": NPC Crews Naht NOT_TENDED["ncbear"] (shared/BanditsNPCBearCrew.lua) -- kein Vieh fuer die Crew.
 --

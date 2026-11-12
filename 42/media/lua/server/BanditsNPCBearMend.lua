@@ -79,7 +79,7 @@ function B.MendCheck(rec, pkey, item, now)
     end
     if item == nil then return false, "UI_BN_Bear_Why_NoBandage", nil end
     -- Nachbesserung F2 B7: Sandbox BearBandageHeal 0 -> ein Verband wirkt nicht -> ablehnen, nichts wird verbraucht (rote Linie)
-    if B.Opt("BearBandageHeal") <= 0 then return false, "UI_BN_Bear_Why_BandageOff", nil end
+    if cfg("bandageHeal", 6) <= 0 then return false, "UI_BN_Bear_Why_BandageOff", nil end    -- Sandbox-Kuerzung (PLAN_AUSSEHEN.md 9.3): fester Wert 6 (Text unerreichbar)
     local kind = item:getType()
     if type(kind) == "string" and string.match(kind, "Dirty") then return false, "UI_BN_Bear_Why_Dirty", nil end
     if not item:isCanBandage() or (num(item:getBandagePower()) or 0) <= 0 then return false, "UI_BN_Bear_Why_NoBandage", nil end
@@ -123,8 +123,8 @@ function B.MendComplete(character, animal, item)
     local take = B.TakeOne
     if take == nil or not take(character, item) then return false end
     -- ab hier ist das Stueck weg: gutschreiben im selben Aufruf, ohne Engine-Wurf dazwischen
-    local hours = B.Opt("BearBandageHours")
-    local rate = B.Opt("BearBandageHeal") * B.MendPower(power)
+    local hours = cfg("bandageHours", 8)
+    local rate = cfg("bandageHeal", 6) * B.MendPower(power)
     if rate < 0 then rate = 0 end
     if rate > 50 then rate = 50 end
     rec.bndH = now + hours

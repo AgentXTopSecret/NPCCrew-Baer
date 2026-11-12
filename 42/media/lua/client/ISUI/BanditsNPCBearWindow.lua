@@ -28,6 +28,11 @@
 -- vom Plan (schnittstelle_aenderungen.md "F2 OBERFLAECHE"): PLAN_F2.md 3.2 wollte den Knopf in die dritte Zelle der Schalter-Reihe -- die
 -- belegt seit F1B "Growth line". Feste Hoehe (beide Zeilen und die Reihe stehen immer, auch beim Jungen mit "--"): nichts springt, wenn er
 -- waechst, kaempft oder zu Boden geht.
+-- Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 8.1; Kevin 12.11.2026: "ja fuer spieler als knopf"): Knopf "Look: <Name>" in der bisher
+-- freien Zelle 3 der vierten Reihe (Fensterhoehe unveraendert; Breite misst alle Namen und die Uhr). Klick oeffnet Vanillas Kontextmenue
+-- am Knopf mit allen Aussehen dieses Koerpers (das jetzige abgehakt, ohne Funktion); die Wahl schickt die Bitte "Look" { id, look } an
+-- den Schreiber (B.Ask) -- Besitz, Zustand, Zombies, Platz und die gemeinsame Uhr mit Unstuck prueft der Schreiber (B.HandleLook).
+-- Kennt der Kern kein Aussehen (Modell ohne d.look), bleibt die Zelle leer (Knopf unsichtbar).
 -- Jeder Engine-Aufruf hat eine Vanilla-Fundstelle (Kommentar daneben). Statisch geprueft, nicht gespielt.
 --
 
@@ -186,6 +191,11 @@ local function metrics(f, d, n, sw, sh, idx)
     bwNeed = math.max(bwNeed, tw(m.fBody, s.growth) + R(46))
     -- F2: Pflege-Knopf (beide Texte) und Schalter "Show damage"
     bwNeed = math.max(bwNeed, tw(m.fBody, s.bandage) + R(24), tw(m.fBody, s.helpUp) + R(24), tw(m.fBody, s.showDmg) + R(46))
+    -- Aussehen (PLAN_AUSSEHEN.md 8.1): "Look: <Name>" mit jedem Namen und "Look  9:59" -- immer mitgemessen, damit nichts springt
+    bwNeed = math.max(bwNeed, tw(m.fBody, s.wideLook) + R(24))
+    if type(s.lookLabels) == "table" then
+        for i = 1, #s.lookLabels do bwNeed = math.max(bwNeed, tw(m.fBody, s.lookLabels[i]) + R(24)) end
+    end
     grow(2 * P + 3 * bwNeed + R(40))
     local footW = 0
     for _, txt in ipairs({ s.hintMissing, s.hintRide, s.hintAway, s.hintEsc }) do footW = math.max(footW, tw(m.fSmall, txt)) end
@@ -262,11 +272,13 @@ local function place(win, m)
     put(win.tick.pas, P + m.R12, ty0, m.bw, m.th)
     put(win.tick.tag, P + m.R12 + m.bw + m.R8, ty0, m.bw, m.th)
     put(win.tick.age, P + m.R12 + 2 * (m.bw + m.R8), ty0, m.bw, m.th)     -- F1B: dritte Zelle (PLAN_F1B.md 5.3)
-    -- F2: vierte Reihe -- Zelle 1 Pflege-Knopf, Zelle 2 Schalter "Show damage", Zelle 3 frei
+    -- F2: vierte Reihe -- Zelle 1 Pflege-Knopf, Zelle 2 Schalter "Show damage", Zelle 3 (Aussehen) der Knopf "Look"
     local ty1 = ty0 + m.th + m.R8
     put(win.care, P + m.R12, ty1, m.bw, m.th)
     win.care.font, win.care.fh = m.fBody, m.lb
     put(win.tick.dmg, P + m.R12 + m.bw + m.R8, ty1, m.bw, m.th)
+    put(win.look, P + m.R12 + 2 * (m.bw + m.R8), ty1, m.bw, m.th)              -- Aussehen (PLAN_AUSSEHEN.md 8.1)
+    win.look.font, win.look.fh = m.fBody, m.lb
 end
 
 -- Auf den Bildschirm klemmen: mindestens 40 x f px sichtbar, Oberkante nie ueber dem Bild (PLAN_F1.md 1.1 "Lage").
@@ -349,6 +361,7 @@ function Win:build()
     self.tick = { pas = kid(self, U.WinTick, "passive"), tag = kid(self, U.WinTick, "tag"), age = kid(self, U.WinTick, "growth"),
         dmg = kid(self, U.WinTick, "showdmg") }                                     -- F2 (11.1)
     self.care = kid(self, U.WinBtn, "care", "cmd")                                  -- F2: "Bandage" / "Help up"
+    self.look = kid(self, U.WinBtn, "look", "cmd")                                  -- Aussehen: "Look: <Name>"
     self.rows = {
         hp = kid(self, U.WinRow, nil), sta = kid(self, U.WinRow, nil), carry = kid(self, U.WinRow, nil),
         later = kid(self, U.WinRow, nil), melee = kid(self, U.WinRow, nil), kills = kid(self, U.WinRow, nil),
@@ -434,6 +447,18 @@ local function apply(win, d)
         win.care.enable = (c.state ~= "off")                        -- ISButton.lua:45
     end
     win.tick.dmg.on, win.tick.dmg.label, win.tick.dmg.tooltip = t.dmg, t.dmgLabel, t.dmgTip
+    -- Aussehen (PLAN_AUSSEHEN.md 8.1): Knopf "Look"; ohne d.look (Kern ohne Aussehen) unsichtbar -- wie der Wachstums-Schalter oben nur bei
+    -- einem Wechsel umschalten und den offenen Tooltip vorher abmelden (ISButton:setVisible V:client/ISUI/ISButton.lua:9, getIsVisible :34)
+    local lb, le = win.look, d.look
+    if le then
+        lb.label, lb.state, lb.tooltip = le.label, le.state, le.tip
+        lb.enable = (le.state ~= "off")                             -- ISButton.lua:45
+    end
+    local showLook = (le ~= nil)
+    if lb:getIsVisible() ~= showLook then
+        if not showLook then hideTip(lb) end
+        lb:setVisible(showLook)
+    end
 end
 
 -- Neu legen noetig? Option, Bildschirm, Zahl der Baeren, Name (Lage des Umbenennen-Knopfs) oder ein Text, der nicht mehr passt.
@@ -475,6 +500,59 @@ function Win:refresh(now)
     if layoutStale(self, d) then U.WinLayout() end
     apply(self, d)
     return true
+end
+
+-- Aussehen (PLAN_AUSSEHEN.md 8.1): Wahl im Menue des Knopfs. Vanillas Kontextmenue ruft onSelect(Ziel, Wert1, Wert2, ...)
+-- (V:client/ISUI/ISContextMenu.lua:66-70, Aufruf :70 mit param1..param10; addOption speichert sie, :873). Rueckruf mit ZWEI Werten wie
+-- Vanillas addOption(Name, Ziel, Funktion, Wert1, Wert2) V:client/ISUI/Animal/ISAnimalContextMenu.lua:75 / :377 (Form mit einem Wert:
+-- V:client/Chat/ISChat.lua:675). id = Baer, an dem das
+-- Menue aufging: gehoert er (laut Sicht) noch mir, geht genau EINE Bitte "Look" an den Schreiber -- der prueft alles noch einmal (Besitz,
+-- Zustand, Zombies, Platz, gemeinsame Uhr) und setzt nichts, was er nicht selbst geprueft hat.
+function Win.onLookPick(self, k, id)
+    if type(k) ~= "string" or id == nil then return end
+    local player = getSpecificPlayer(0)                 -- V:client/Farming/CFarmingSystem.lua:45
+    if not player then return end
+    local list = U.WinBears()
+    local mine = false
+    for i = 1, #list do
+        if list[i].id == id then mine = true end
+    end
+    if not mine then return end
+    B.Ask(player, "Look", { id = id, look = k })
+    self.dirty = true
+end
+
+-- Aussehen: kleines Menue am Knopf mit allen Aussehen dieses Koerpers (Kevin-Frage K5: Menue statt Weiterschalten -- jeder Wechsel
+-- kostet die gemeinsame Uhr). Das jetzige steht abgehakt und ohne Funktion, die anderen schicken die Bitte (Win.onLookPick).
+-- ISContextMenu.get(Spieler, x, y) am Knopf: V:client/ISUI/Animal/ISButcherHookUI.lua:668 (Lage aus getAbsoluteX/Y des Knopfs),
+-- getHeight eines Knopfs V:client/ISUI/ISButton.lua:338; addOption(Name, Ziel) ohne Funktion V:client/Chat/ISChat.lua:260;
+-- addOption(Name, Ziel, Rueckruf, Wert, ...) ISChat.lua:263 / ISButcherHookUI.lua:674; setOptionChecked(Punkt, true) ISChat.lua:267
+-- (V:client/ISUI/ISContextMenu.lua:1084). Die Namen sind fertige Texte aus Schluesseln (UI_BN_Bear_Look_*, client/BanditsNPCBearWinData.lua).
+-- Nachbesserung Aussehen A1 (PRUEF_A.md): auf geht es, sobald es AUSSER dem jetzigen ein Angebot gibt (e.others, dieselbe Zaehlung wie
+-- das Grau "nur ein Aussehen" in client/BanditsNPCBearWinData.lua) -- auch wenn das jetzige mit hide gestrichen ist und fehlt.
+local function lookMenu(win, button, v)
+    local e = win.model and win.model.look
+    if type(e) ~= "table" or type(e.picks) ~= "table" then return end
+    local others = tonumber(e.others)
+    if others == nil then
+        others = 0
+        for i = 1, #e.picks do
+            if not e.picks[i].cur then others = others + 1 end
+        end
+    end
+    if others < 1 then return end
+    local x = button:getAbsoluteX()
+    local y = button:getAbsoluteY() + button:getHeight()
+    local context = ISContextMenu.get(0, x, y)
+    for i = 1, #e.picks do
+        local p = e.picks[i]
+        if p.cur then
+            local opt = context:addOption(p.name, win)
+            context:setOptionChecked(opt, true)
+        else
+            context:addOption(p.name, win, Win.onLookPick, p.k, v.id)
+        end
+    end
 end
 
 -- Klick auf einen Knopf / Schalter (ISButton ruft onclick(Ziel, Knopf), V:client/ISUI/ISButton.lua:47). Nur Bitten an den Schreiber;
@@ -527,6 +605,9 @@ function Win:onCmd(button)
         -- F2 (11.1): je Spieler, was ICH sehe -- kein Server, kein Befehl
         if U.DmgSet and U.DmgOn then U.DmgSet(not U.DmgOn()) end
         self.dirty = true
+    elseif cmd == "look" then
+        -- Aussehen: grau kam oben schon zurueck (state "off"); hier nur das Menue -- die Bitte schickt erst die Wahl
+        lookMenu(self, button, v)
     end
 end
 

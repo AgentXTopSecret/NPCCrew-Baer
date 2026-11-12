@@ -2,6 +2,7 @@ module Base
 {
     /* NUR TESTHILFE (NCBearBench*: wird nie nach NPC Crew kopiert). Kevin 11.11.2026: "ich will das du die 2 baby varianten einbaust zum spawnen und beide grosse!" */
     /* Altes Junges (Entwurf baer_baby, 6c3f0a96) als eigene Vergleichs-Art ncbearcubalt. Form wie scripts/nc_bear_cub.txt. */
+    /* Lauf baer-aussehen (12.11.2026): der Block module NCBear (GenE-Standmodelle) steht jetzt UNVERAENDERT in scripts/NCBearBenchGen.txt. */
     animationsMesh NCBearBenchCubAlt
     {
         meshFile = Skinned/NCBearBenchCubAlt.glb,
@@ -14,48 +15,5 @@ module Base
         shader = animalEffect,
         static = false,
         animationsMesh = NCBearBenchCubAlt,
-    }
-}
-
-module NCBear
-{
-    imports
-    {
-        Base
-    }
-
-    /* Grosser Generator-Baer (Foto E) als Standmodell, ohne Knochen; Groesse wie der 2c-Baer bei 1,0 (1,96 m lang). Form wie scripts/nc_bear.txt. */
-    model NCBearBenchGenE_braun_World
-    {
-        mesh = WorldItems/NCBearBenchGenE_braun,
-        texture = WorldItems/NCBearBenchGenE_braun,
-        scale = 0.544,
-    }
-
-    model NCBearBenchGenE_fototon_World
-    {
-        mesh = WorldItems/NCBearBenchGenE_fototon,
-        texture = WorldItems/NCBearBenchGenE_fototon,
-        scale = 0.544,
-    }
-
-    item BenchGenEBraun
-    {
-        DisplayCategory = Junk,
-        ItemType = base:normal,
-        Weight = 1,
-        Icon = NCBear,
-        DisplayName = Test Bear Generator brown (model),
-        WorldStaticModel = NCBearBenchGenE_braun_World,
-    }
-
-    item BenchGenEFototon
-    {
-        DisplayCategory = Junk,
-        ItemType = base:normal,
-        Weight = 1,
-        Icon = NCBear,
-        DisplayName = Test Bear Generator photo tone (model),
-        WorldStaticModel = NCBearBenchGenE_fototon_World,
     }
 }

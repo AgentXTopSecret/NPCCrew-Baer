@@ -34,6 +34,8 @@
 -- Ankers ueber den Fuessen (dieselbe Rechnung wie das Schild), damit "DODGE" / "down" (client/BanditsNPCBearFx.lua) darueber schweben.
 -- Die schwebenden Zeilen und Schadenszahlen (Nachtrag 11.1) zeichnet U.FloatDraw aus derselben prerender -- je Bild nur aus fertigen
 -- Listen, auch wenn gerade kein Schild steht.
+-- Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 8.2): die Hoehe des Schilds nimmt den Faktor tagK des Aussehens (Sicht lk, B.LookNum des
+-- Kerns), wenn es einen hat; sonst wie bisher. Die Groessen-Probe vergleicht weiter nur den Koerper (erster Wert von B.BodyKind).
 --
 -- Reine Anzeige: liest nur B.View (die Sicht, die der Schreiber diesem Spieler geschickt hat) und fragt nie den Server.
 -- Einzelspieler und Mehrspieler laufen gleich; im Mehrspieler stammen alle Zahlen vom Server. Der dedizierte Server laedt client/ nicht.
@@ -410,13 +412,27 @@ end
 
 -- B1d: Anker waechst mit der gezeigten Groesse (PLAN_B1D.md 1.2 Punkt 2); fehlt sz (Kern ohne B1d): 1. B1e (PLAN_B1E.md 1.2.5): der
 -- grosse Koerper ist bei gleicher Groesse um tagBigK hoeher (Buckel statt Kopf). F2: als eigene Funktion, damit U.TagLift dasselbe rechnet.
+-- Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 8.2): traegt das Aussehen des Koerpers (Sicht lk) einen eigenen Faktor tagK in B.LOOKS
+-- (B.LookNum des Kerns; Generator-Junges 1,11, Generator gross 1,08 -- aus der Bindepose, ungespielt), gilt er statt tagBigK / 1;
+-- sonst wie bisher. Gerufen beim Listenbau (hoechstens 1 x je Sekunde) und von U.TagLift, nie je Bild.
+local function lookK(c)
+    if c.lk == nil or not B.LookNum then return nil end
+    local body = (c.bd == "big") and "big" or "cub"
+    local k = tonumber(B.LookNum(body, c.lk, "tagK", nil))
+    if k == nil or k ~= k or k <= 0 then return nil end
+    return k
+end
+
 local function zkOf(c)
     local base = tonumber(B.CFG.tagBase) or TAG_BASE
     if base <= 0 then base = TAG_BASE end
     local sz = c.sz
     if not isNum(sz) or sz <= 0 then return 1 end
     local zk = sz / base
-    if c.bd == "big" then
+    local lk = lookK(c)
+    if lk ~= nil then
+        zk = zk * lk
+    elseif c.bd == "big" then
         local k = tonumber(B.CFG.tagBigK) or TAG_BIG_K
         if k <= 0 then k = TAG_BIG_K end
         zk = zk * k

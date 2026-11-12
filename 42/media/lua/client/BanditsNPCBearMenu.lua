@@ -26,6 +26,9 @@
 -- nur aus der Sicht (kein Verband, nicht verletzt, schon verbunden, am Boden); ob es gilt, entscheidet der Schreiber in complete()
 -- (B.MendComplete / B.HelpUpComplete, KERN) -- dort wird GENAU EIN Verband genommen, ein Abbruch verbraucht nichts. Folgen/Bleiben ist am
 -- Boden grau (Why_Down).
+-- Sandbox-Kuerzung (Lauf baer-aussehen, PLAN_AUSSEHEN.md 9.3; Kevin 12.11.2026): Call-Abklingzeit, Verband-Heilung und -Stunden sind feste
+-- Werte des Kerns (B.CFG callCoolMin, bandageHeal, bandageHours) statt Sandbox-Optionen. Das Aussehen hat KEINEN Rechtsklick-Eintrag
+-- (Kevin: "fuer spieler als knopf" -- nur das Baeren-Fenster, PLAN_AUSSEHEN.md 8.3).
 --
 -- Das Menue BIETET nur AN. Es stellt Zeitaktionen an (Fuettern, Streicheln, Koeder) bzw. schickt eine Bitte (Koederplatz
 -- aufgeben); ob etwas gilt, entscheidet der Schreiber in complete() bzw. in B.Handle (Einzelspieler: dasselbe Programm,
@@ -367,7 +370,8 @@ local function callWaitMinutes(v)
 end
 
 -- "Call to me" (B1c, Plan 1.5): nur am eigenen gezaehmten Jungen (der Aufrufer prueft Besitz und Zustand), nie an einem
--- mitfahrenden. Grau mit Grund nur aus der Sicht: im Fahrzeug, Abklingzeit laeuft. Der Tooltip nennt die Abklingzeit der Sandbox.
+-- mitfahrenden. Grau mit Grund nur aus der Sicht: im Fahrzeug, Abklingzeit laeuft. Der Tooltip nennt die Abklingzeit (seit der
+-- Sandbox-Kuerzung der feste Wert B.CFG.callCoolMin; dieselbe Uhr gilt fuer den Aussehen-Knopf im Fenster).
 -- getVehicle() am Spieler: client/ISUI/Hutch/ISHutchMenu.lua:8.
 local function addCall(menu, playerObj, v)
     if v.ride == true then return end
@@ -381,8 +385,8 @@ local function addCall(menu, playerObj, v)
         setGray(opt, U.TB("UI_BN_Bear_Why_CallWait", v.bd, wait))
         return
     end
-    local mins = nil
-    if B.Opt then mins = tonumber(B.Opt("BearCallCooldownMinutes")) end
+    -- Sandbox-Kuerzung (PLAN_AUSSEHEN.md 9.3): die Abklingzeit ist ein fester Wert des Kerns (B.CFG.callCoolMin, Vorgabe 5)
+    local mins = tonumber(B.CFG and B.CFG.callCoolMin)
     if mins == nil then mins = 5 end
     setTip(opt, nil, U.TB("UI_BN_Bear_Menu_CallTip", v.bd, math.floor(mins)))
 end
@@ -421,8 +425,9 @@ function U.MendWhy(v, item)
     if type(v) ~= "table" then return nil end
     if v.ride == true then return U.TB("UI_BN_Bear_Why_Riding", v.bd) end
     if v.st ~= "tame" or v.ld ~= true then return U.TB("UI_BN_Bear_Why_OutOfReach", v.bd) end
-    -- Nachbesserung F2 B7: Sandbox "Verband heilt 0" -> grau mit Grund (der Schreiber lehnt ebenso ab, ohne Verbrauch)
-    if B.Opt and (tonumber(B.Opt("BearBandageHeal")) or 1) <= 0 then return U.T("UI_BN_Bear_Why_BandageOff") end
+    -- Nachbesserung F2 B7: "Verband heilt 0" -> grau mit Grund (der Schreiber lehnt ebenso ab, ohne Verbrauch). Sandbox-Kuerzung
+    -- (PLAN_AUSSEHEN.md 9.3): fester Wert B.CFG.bandageHeal (6) -- mit der Vorgabe unerreichbar, bleibt fuer einen geaenderten Wert
+    if (tonumber(B.CFG and B.CFG.bandageHeal) or 1) <= 0 then return U.T("UI_BN_Bear_Why_BandageOff") end
     if item == nil then return U.T("UI_BN_Bear_Why_NoBandage") end
     if type(v.bnd) == "number" and v.bnd > 0 then return U.TB("UI_BN_Bear_Why_Bandaged", v.bd, hoursOf(v.bnd)) end
     if type(v.hp) == "number" and v.hp >= 100 then return U.TB("UI_BN_Bear_Why_Healthy", v.bd) end
@@ -444,8 +449,7 @@ local function addCare(menu, playerObj, v)
         setGray(opt, why)
         return
     end
-    local hours = nil
-    if B.Opt then hours = tonumber(B.Opt("BearBandageHours")) end
+    local hours = tonumber(B.CFG and B.CFG.bandageHours)            -- Sandbox-Kuerzung: fester Wert des Kerns (Vorgabe 8)
     if hours == nil then hours = 8 end
     setTip(opt, item:getDisplayName(), U.T("UI_BN_Bear_Menu_BandageTip", item:getDisplayName(), math.floor(hours))   -- getDisplayName:
         .. " " .. U.T("UI_BN_Bear_Win_BandageTip"))                 -- S:shared/BanditsNPCBearFood.lua B.FoodList

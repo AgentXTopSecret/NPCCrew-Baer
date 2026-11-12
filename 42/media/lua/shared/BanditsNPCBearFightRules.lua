@@ -258,10 +258,11 @@ function B.FoeReach(kind, bd, sz)
     return 0.3 + w + cfg("foeReachPad", 0.35)
 end
 
--- Lebenspunkte eines Gegner-Treffers: Sandbox BearZombieDamage / BearBanditDamage x (0,8 + 0,4 x r01); r01 0..1 vom Aufrufer.
+-- Lebenspunkte eines Gegner-Treffers: B.CFG.zombieDmg / banditDmg x (0,8 + 0,4 x r01); r01 0..1 vom Aufrufer. Sandbox-Kuerzung (Kevin
+-- 12.11.2026, PLAN_AUSSEHEN.md 9.3): feste Werte 6 / 12 (vorher BearZombieDamage / BearBanditDamage mit denselben Vorgaben).
 function B.FoePts(kind, r01)
     local base
-    if kind == "b" then base = opt("BearBanditDamage", 12) else base = opt("BearZombieDamage", 6) end
+    if kind == "b" then base = cfg("banditDmg", 12) else base = cfg("zombieDmg", 6) end
     return base * (0.8 + 0.4 * clamp(num(r01) or 0.5, 0, 1))
 end
 
@@ -289,14 +290,14 @@ end
 -- ---------------------------------------------------------------------------
 -- Fliehen kurz vor dem Tod (PLAN_F2.md 11.7, Kevin 12.11. ~07:30 "nach 2-3 hits sterben wuerde"; ERSETZT BearFleeHealth 20 %).
 -- kinds = { z = true / b = true } (Gegner, die ihn gerade angreifen bzw. in Reichweite sind; nil/leer = unbekannt). Groesster erwarteter
--- Einzeltreffer = Sandbox-Schaden x 1,2 (die obere Grenze von B.FoePts, Ausweichen NICHT abgezogen); ohne bekannten Gegner der
+-- Einzeltreffer = Schaden B.CFG.zombieDmg / banditDmg x 1,2 (die obere Grenze von B.FoePts, Ausweichen NICHT abgezogen); ohne bekannten Gegner der
 -- Banditen-Hieb (sichere Seite). Rueckgabe: Schwelle in Lebenspunkten (BearFleeHits x Treffer; 0 = flieht nie), Hysterese (1 Treffer).
 -- ---------------------------------------------------------------------------
 function B.FleeHp(kinds)
     local n = math.floor(opt("BearFleeHits", 3))
     if n <= 0 then return 0, 0 end
-    local hz = opt("BearZombieDamage", 6) * 1.2
-    local hb = opt("BearBanditDamage", 12) * 1.2
+    local hz = cfg("zombieDmg", 6) * 1.2
+    local hb = cfg("banditDmg", 12) * 1.2
     local hit = nil
     if type(kinds) == "table" then
         if kinds.b == true then hit = hb end

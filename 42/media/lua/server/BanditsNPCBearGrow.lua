@@ -19,6 +19,10 @@ if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: la
 -- zaehlt nie (B.BodyHp stellt den Koerper zurueck), Schaden nur ueber B.BodyHurt (aus B.BearHurt), Tod B.BodyDie, Ausdauer im Kampf
 -- (B.StaUse, keine Erholung im Kampf), Lerntempo und Alters-Deckel in B.SkillAdd, Tausch nie im Kampf / am Boden, Verband in B.GrowSlow.
 --
+-- Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 3, 5.3): Register-Feld look (Familie des Wunsches, nil = "std", nur tame/missing; B.GrowFix
+-- klemmt es), B.BodySwap / B.BodySwapReady nehmen wahlfrei das Aussehen (nur der Aussehen-Knopf, server/BanditsNPCBearLook.lua) -- ohne
+-- es wie bisher (B.GrowLive: das Wachsen behaelt die Familie ueber B.PlaceCub). Kondition rechnet mit dem Tempo des Aussehens.
+--
 -- Takte (alle aus vorhandenen Takten, keine neuen Ereignisse; je eine EIGENE Schleife nach den B1a-B1c-Schritten, Nachbesserung B1d B2):
 --   Langsam-Takt (10 Spielminuten, server/BanditsNPCBearServer.lua slowTickBody) -> B.GrowSlow: g waechst, Leben abgleichen und heilen,
 --     hoechstens je Spielstunde ein Commit (sofort bei Stufenwechsel oder Schaden).
@@ -46,8 +50,8 @@ local RANK = { cub = 0, half = 1, strong = 2, adult = 3 }
 -- Text der Stufen fuer die Diagnose-Zeile (die Meldung an den Spieler baut die OBERFLAECHE aus dem Schluessel).
 local STAGE_LOG = { half = "half-grown", strong = "strong", adult = "full-grown" }
 
--- Alle B1d-Felder des Eintrags (an anderen Zustaenden nil). B1e: + body.
-local FIELDS = { "g", "gF", "gFd", "gFn", "gAt", "hp", "hpB", "xAgi", "xVit", "xCon", "xFgt", "xFsh", "xNos", "body" }
+-- Alle B1d-Felder des Eintrags (an anderen Zustaenden nil). B1e: + body. Aussehen (PLAN_AUSSEHEN.md 3): + look.
+local FIELDS = { "g", "gF", "gFd", "gFn", "gAt", "hp", "hpB", "xAgi", "xVit", "xCon", "xFgt", "xFsh", "xNos", "body", "look" }
 
 -- ---------------------------------------------------------------------------
 -- Kleine Helfer
@@ -203,6 +207,17 @@ function B.GrowFix(rec, now, log)
     if rec.body ~= nil and rec.body ~= "cub" and rec.body ~= "big" then
         badLine(log, id, "body")
         rec.body = nil
+    end
+    -- Aussehen (PLAN_AUSSEHEN.md 3): nur eine bekannte Familie ausser "std" (B.LOOK_KEYS, shared/BanditsNPCBear.lua); "std" wird nie
+    -- gespeichert (nil); Unbekanntes -> nil (Standard) mit Fehlerzeile beim Laden
+    if rec.look ~= nil then
+        local keys = B.LOOK_KEYS
+        if rec.look == "std" then
+            rec.look = nil
+        elseif type(rec.look) ~= "string" or type(keys) ~= "table" or keys[rec.look] ~= true then
+            badLine(log, id, "look")
+            rec.look = nil
+        end
     end
 end
 
@@ -479,8 +494,11 @@ local function stamina(rec, s, cx, cy, ms)
     local dts = (ms - lastAt) / 1000
     if dts > 10 then dts = 10 end
     local way = B.DistXY(px, py, cx, cy)
-    -- B1e: Sprungdeckel mit dem Tempo des Koerpers (grosser Koerper: runSpeedBig)
-    local run0 = B.BodyNum(rec.body, "runSpeed", 2.47)
+    -- B1e: Sprungdeckel mit dem Tempo des Koerpers (grosser Koerper: runSpeedBig); Aussehen: Tempo des Aussehens (B.LookNow,
+    -- server/BanditsNPCBearLook.lua)
+    local look = nil
+    if B.LookNow then look = B.LookNow(rec) end
+    local run0 = B.BodyNum(rec.body, "runSpeed", 2.47, look)
     if way > cfg("conStepMax", 8) and way > cfg("conStepMul", 4) * run0 * dts then way = 0 end
     local st = B.StatsOf(rec)
     local staMax = st.staMax
@@ -538,7 +556,9 @@ end
 -- (Zombie-Wache an oder Zombie / feindlicher Bandit naeher als
 -- zedSafe), "busy" (Fuettern/Streicheln laeuft), "move" (eigener Rennbefehl laeuft, hoechstens swapMoveMaxMs), "nodef" (Definition
 -- des Ziel-Koerpers fehlt). Liest nur (auch die Bench fragt hier).
-function B.BodySwapReady(rec, s, ms)
+-- Aussehen (PLAN_AUSSEHEN.md 5.2 Nr. 16, 5.3): body / look wahlfrei (der Aussehen-Knopf: Ziel = der JETZIGE Koerper in einem anderen
+-- Aussehen) -- dann prueft "nodef" genau diese Art. Ohne beide wie bisher (Ziel B.BodyWant, Standard-Art; die Bench ruft mit drei).
+function B.BodySwapReady(rec, s, ms, body, look)
     if type(rec) ~= "table" or rec.st ~= "tame" then return false, "state" end
     if rec.ride ~= nil then return false, "ride" end
     if type(s) ~= "table" then s = B.Ses(rec.id) end
@@ -562,8 +582,8 @@ function B.BodySwapReady(rec, s, ms)
         and within(s.swapWantAt, ms, cfg("swapMoveMaxMs", 10000)) then
         return false, "move"
     end
-    local want = B.BodyWant(rec)
-    if B.CubDefOk == nil or not B.CubDefOk(want) then return false, "nodef" end
+    local want = body or B.BodyWant(rec)
+    if B.CubDefOk == nil or not B.CubDefOk(want, look) then return false, "nodef" end
     return true, nil
 end
 
@@ -621,19 +641,34 @@ end
 --   Eine Diagnose-Zeile. square:getX()/getY()/getZ() an der Kachel: Vanilla client/DebugUIs/DebugContextMenu.lua:636
 --   (Nachbesserung B1e A6; derselbe Beleg wie server/BanditsNPCBearWorld.lua und server/BanditsNPCBearRide.lua).
 -- Keine eigene Meldung (die Stufen-Meldung "half-grown" kommt mit derselben Schwelle). Rueckgabe: neues Tier oder nil, why.
-function B.BodySwap(rec, a, want, ms)
+-- Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 5.3): look gegeben (nur der Aussehen-Knopf, B.HandleLook) -> derselbe Weg mit genau
+-- diesem Aussehen (B.PlaceCub(..., want, look) setzt rec.look), Grund "look". Leben (b), Ausdauer (Sitzung), am Boden, Verband, Erfahrung
+-- bleiben -- kein Heilen (Kevin 12.11.: "wird er dabei geheilt etc?" -> nein). Ohne look wie bisher (Wachsen: Familie aus rec.look).
+function B.BodySwap(rec, a, want, ms, look)
     if type(rec) ~= "table" or a == nil then return nil, "noargs" end
     if want ~= "big" then want = "cub" end
     ms = num(ms) or getTimestampMs()
     local s = B.Ses(rec.id)
-    local from = B.BodyKind(a) or "cub"
+    local from, fromLook = B.BodyKind(a)
+    if from == nil then from = "cub" end
     local sq = B.SwapSpot(a, rec.gen)
     if sq == nil then return swapFail(rec, s, ms, "nospot") end
     B.BodyHp(rec, a, 0)
     local why = "shrink"
     if want == "big" then why = "grow" end
-    local n, pwhy = B.PlaceCub(rec, sq:getX(), sq:getY(), sq:getZ(), why, want)
-    if n == nil then return swapFail(rec, s, ms, pwhy) end
+    if look ~= nil then why = "look" end
+    -- Nachbesserung Aussehen B1 (PRUEF_B.md): beim Aussehen-Knopf (look gegeben) startet die gemeinsame Uhr mit Unstuck HIER, direkt vor
+    -- dem neuen Koerper (B.CallStamp, server/BanditsNPCBearRide.lua -- B._callAt bleibt dort). Bricht danach ein Engine-Aufruf ab (neuer
+    -- Koerper da, alter noch nicht weg), laeuft die Uhr schon: jede weitere Bitte wird abgelehnt, hoechstens EIN Extra-Koerper je
+    -- Abklingzeit (die Selbstheilung raeumt ihn weg) statt einer mehr je Klick. Ohne neuen Koerper (n == nil) Stempel zurueck: ein
+    -- Fehlversuch kostet weiter keine Abklingzeit. Ein Fehler davor (Kachel, B.BodyHp) startet keine Uhr. Wachsen (look nil) unveraendert.
+    local was = nil
+    if look ~= nil and B.CallStamp then was = B.CallStamp(rec, ms) end
+    local n, pwhy = B.PlaceCub(rec, sq:getX(), sq:getY(), sq:getZ(), why, want, look)
+    if n == nil then
+        if look ~= nil and B.CallUnstamp then B.CallUnstamp(rec, was) end
+        return swapFail(rec, s, ms, pwhy)
+    end
     if n ~= a then B.RemoveCub(a) end
     s = B.Ses(rec.id)
     s.swapAt = ms
@@ -646,9 +681,10 @@ function B.BodySwap(rec, a, want, ms)
         if p and e and B.DistXY(e.x, e.y, sq:getX() + 0.5, sq:getY() + 0.5) < fd then n:faceThisObject(p) end
     end
     if B.LogActive() then
+        local toLook = B.LookKind and B.LookKind(n) or nil
         B.Log("body: " .. tostring(rec.id) .. " " .. from .. " -> " .. want .. " (" .. why .. ") at " .. tostring(sq:getX()) .. ","
             .. tostring(sq:getY()) .. " gen " .. tostring(rec.gen) .. ", inner " .. tostring(r3(B.GrowSize(rec.g))) .. " shown "
-            .. tostring(B.BodySize(rec, want)))
+            .. tostring(B.BodySize(rec, want)) .. ", look " .. tostring(fromLook) .. " -> " .. tostring(toLook))
     end
     return n, nil
 end

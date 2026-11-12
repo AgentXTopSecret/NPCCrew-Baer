@@ -94,7 +94,7 @@ local function anchorOf(rec, f, players)
         if e ~= nil and math.floor(num(e.z) or 0) == math.floor(num(rec.z) or 0) then return e.x, e.y, leash end
     elseif (mode == "stay" or mode == "sit" or mode == "roam") and rec.hx ~= nil and rec.hy ~= nil then
         if mode == "roam" then
-            local rr = B.Opt("BearRoamRadius") + cfg("fightLeashRoamPad", 2)
+            local rr = cfg("roamRadius", 12) + cfg("fightLeashRoamPad", 2)   -- Sandbox-Kuerzung (PLAN_AUSSEHEN.md 9.3): fester Wert
             if rr > leash then leash = rr end
         end
         return rec.hx + 0.5, rec.hy + 0.5, leash
@@ -307,7 +307,7 @@ function B.FightStep(rec, a, env, ms, players)
     local longOver = (ru ~= nil and ru - ms > 0 and ru - ms <= cfg("fightRestMs", 20000))
         or (type(f) == "table" and ms - (num(f.hitLast) or f.startAt) >= cfg("fightMaxMs", 90000))
     local o = env and env.owner or nil
-    local carNear = o ~= nil and o.car == true and (num(o.dist) or 999) <= B.Opt("BearRideDistance")
+    local carNear = o ~= nil and o.car == true and (num(o.dist) or 999) <= cfg("rideDist", 15)
     local d = B.FightDecide({
         st = rec.st, body = B.BodyKind(a) or rec.body, s = st.s, passive = rec.passive == true, down = rec.down ~= nil,
         ride = rec.ride ~= nil, hpPts = hpPts, fleeHp = fleeHp, fleeHys = hys, fleeOn = s.fleeOn == true, sta = num(s.sta) or 1,
