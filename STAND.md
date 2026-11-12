@@ -1,5 +1,12 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **12.11. 15:08: F2 (Kampf) + DEUTSCH FERTIG UND EINGEBAUT** (Spiel zu; `tools/einbau_f2.py`: 96 Dateien -- 20 neu, 48 ueberschrieben (6 Stummel), 28 gleich,
+> NCBearCub.glb/.png NICHT kopiert, nc_bear_tier.txt bedingt 2a7c5ab1 -> kopiert; Zips `NCBearTest_vor_f2_2026-11-12_150748.zip` / `_mit_`; mod.info aus mod_info_vorschlag.txt
+> + DE-Satz). Gegenpruefer F2 "bereit fuer SP-Test", kein Blocker (`spiel/f2_gegen_bericht.md`, Test `spiel/anleitung_f2.md`). DE: 345 UI / 84 Sandbox / 4 IG_UI
+> (`../_arbeit/baer_de/`), LANGS im Uebernahme-Skript auf acht; Trockenlauf gegen die Test-Mod mit und ohne --vor-b5a **0 Fehler, 2 Warnungen**.
+> ACHTUNG fuer den Kopfnaht-/baer-gross-Einbau: F2 hat nc_bear_tier.txt geaendert (Block model NCBearStag_Body raus) -- beim Grossen-Baeren-Einbau auf den F2-Stand aufsetzen.
+> Offene Kevin-Fragen F2: B10 Pause, B6 Tod am Schutz vorbei, A5 Kill binnen 2 s, A7 Rueckentreffer-Rechnung, B7 Verband bei Heilung 0, R4 Besitzer weit weg, F-G5 Test-Baer kaempft nicht mehr.
+
 > **12.11. ~15:00 MAUL-PLAN FERTIG** (`../_arbeit/baer_maul/FORSCHUNG.md`, `PLAN_MAUL.md`: Maul = ins Fell geschnittenes Rechteck ohne Lippe; Bau 8 Agenten W -> G||T -> PT||PO ->
 > N -> GP -> I). Kevins Antworten K1/K2/K4/K5 in ENTSCHEIDUNGEN.md, drei Commons-Fotos in `begleiter/ref_maul/`. **Bau-Skript `spiel/maul_bau_workflow.js` liegt bereit -- START,
 > sobald baer-kopfnaht (wf_0956985e-5e7) fertig ist** (Eingang = baer_kopfnaht/mod + gen v2/out_schmal).

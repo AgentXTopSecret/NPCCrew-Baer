@@ -4,7 +4,35 @@ hinhalten, Waisen raeumen; B1c: Register-Selbstheilung, Laerm- und Zombie-Wache,
 Karten-Symbol, Anzeige-Optionen; B1d: Wachsen in BearGrowDays Spieltagen, taeglich steigende Werte, Faehigkeiten als Daten, Leben am
 Tier, Werte-Zeilen ueber dem Baeren; B1e: ab Halbstark zweiter Koerper "ncbeargrown" mit dem grossen Modell bis 1,35, groessere
 Markierung als eigenes UI-Element; F1: Baeren-Fenster auf V, Befehle Sitz/Frei/Komm her/Passiv/Unstuck, Namensschild je Baer, Baer ohne
-Koerper kommt von selbst wieder) aus der Test-Mod NCBearTest nach NPC Crew uebernehmen.
+Koerper kommt von selbst wieder; F2 = B5a: Umbenennen der alten NCBear*-Dateien, Zombies und feindliche Banditen greifen den gezaehmten
+Baeren an, er kaempft ab Halbstark, Faehigkeiten wirken, Fliehen, Tod oder am Boden, Verband) aus der Test-Mod NCBearTest nach NPC Crew
+uebernehmen.
+
+F2 (PLAN_F2.md 7.3, Lauf baer-f2 = B5a, Zusammenbau 12.11.2026): die Altlasten sind abgeloest -- ALT_EXPECTED und ALT_DEFS sind leer.
+  * Stummel: eine alte NCBear*.lua (nicht NCBearBench*), die nur noch aus Kommentar-/Leerzeilen besteht ("umbenannt nach ..."), wird nie
+    kopiert und ist kein Fehler (Zeile "Stummel" im Bericht). Steht darin Code, ist sie eine unbekannte Altlast (Fehler).
+  * Grosses Modell und Toene werden kopiert (BIG_ASSET): models_X/Skinned/NCBear.glb, textures/Body/NCBear.png, scripts/nc_bear_tier.txt
+    (seit F2 OHNE den Hirsch-Rueckfall NCBearStag_Body -- der steht in der Werkbank scripts/NCBearBenchStag.txt), scripts/nc_bear_sounds.txt,
+    sound/NCBear_{Roar,Growl1,Growl2,Growl3,Huff,Pain}.wav. Jeder Ton-Name der Rasse (BanditsNPCBearDefs.lua name = "NCBear_*") hat seinen
+    sound-Block in einem kopierten Skript, jede Ton-Datei liegt in der Uebernahme.
+  * Werkbank-Dateien, nie kopiert (WERKBANK_ASSET, je mit Grund): NCBearDeer.glb, WorldItems/NCBear.fbx, Item_NCBear.png,
+    WorldItems/NCBear.png, scripts/nc_bear.txt und (Frage F-G13, bis Kevins Wahl) der Generator-Baer NCBearGen.glb/.png/Foto.png.
+    Werkbank-Texte (BENCH_TEXT_KEYS): IGUI_AnimalType_ncbear / _bear / _bearstag, IGUI_Animal_Group_bear -- werden aus den Texten genommen.
+  * Animations-Knoten: + die sechs Kampf-Knoten NCBear_(Bite|Maul|Rear|Slam|SwipeL|SwipeR).xml (Clip im GLB des grossen Baeren; Fressen und
+    Sitzen in BEIDEN GLBs); jeder Angriff aus B.ATTACKS (shared/BanditsNPCBearFightRules.lua) braucht einen kopierten Knoten; ein unbekannter
+    neuer Knoten der Test-Mod ist ein Fehler. Neu ZOMBIE_ANIM: 42/media/AnimSets/zombie/bumped/BanditsNPCBear*.xml (eigener Zombie-Biss-
+    Knoten, PLAN_F2.md 0.3): genau eine Bedingung BumpType (STRING) = m_Name, Clip in Vanillas anims_X/Zombie, Ende BumpAnimFinished=true,
+    m_Name von der Lua genannt (B.ZBITE / B.ZBITE_LOW) und in NPC Crew, Vanilla und Bandits frei.
+  * Tier-Regeln: setHealth/getHealth zusaetzlich in B.BodyDie (Tod am Koerper) und B.FoeHurt (Leben am ZOMBIE, shared/BanditsNPCBearFoe.lua);
+    neue Regel setIsInvincible nur in B.BodyShield / B.BodyHp / B.BodyDie (server/BanditsNPCBearGrow.lua); probeweg + FightForce (der
+    naechste Angriff von Hand -- nur die Werkbank). Cheat-Ausnahmen: Regel engine fuer genau die zwei setIsInvincible-Zeilen (Kevin
+    baer/STAND.md "Fragen fuer Kevin" B1d Nr. 9 + begleiter/ENTSCHEIDUNGEN.md "Kein Schaden am eigenen Baeren" -- "Spieler/Autos schaden dem
+    Baeren nicht (mit B5a) -> ja", PLAN_F2.md 0.4 / 11.6), Regel befehl fuer die Ton-Namen der Rasse.
+  * Kevins Jar-Ausnahmen (je Methode, sonst gilt die eiserne Regel): animal:pathToLocation(x, y, z) (08.11.) und
+    setVariable("animalRunning", ...) am Tier (11.11.) -- je nur in B.MoveTo, Tier-Regeln unten --, dazu pcall(getTextOrNull, key, "%1"
+    .. "%9") in B.T (shared/BanditsNPCBear.lua, Kevin 12.11. ~04:25 "Ja, wie NPC Crew", begleiter/ENTSCHEIDUNGEN.md). Nachbesserung F2:
+    nur Kommentare/Texte hier (Fundstellen, Naht-Spanne 33-39).
+    PZ_ALLOWED + die zwei neuen Aktionsklassen (Verband, Aufhelfen). --vor-b5a aendert seit F2 nichts mehr (keine Altlast).
 
 Grundregel (Werkstatt-CLAUDE.md Abschnitt 0, Kevin 08.11.2026): alles wird FUER NPC Crew gebaut und soll am Ende "einfach copy paste"
 hinueber; keine Cheat- oder Testmenues kommen mit. Plan: _arbeit/baer_zaehmen/PLAN_ZAEHMEN.md Abschnitt 12 (B1b: PLAN_B1B.md 7),
@@ -42,7 +70,8 @@ Was es tut (erst wenn ALLES geprueft ist, wird geschrieben; sonst Abbruch ohne S
      spielte der Knoten fuer jedes Tier mit Animset buck, auch Vanillas Hirsche --, jeder Clip im GLB des Jungen; Clip-Namen der
      GLB-Datei gegen Vanillas buck-Animset (fehlende nur Warnung, der gespielte Erwachsene hat dieselben 15).
   3. Texte: neue Schluessel sortiert einfuegen, nie die ganze Datei neu sortieren; NPC Crews Datei muss den Round-Trip bestehen;
-     Paritaet ueber sieben Sprachen; CN nur Zeichen, die Vanilla-CN benutzt; EN 'singleplayer'/'multiplayer' zusammen; %1/%2 gleich
+     Paritaet ueber acht Sprachen (DE seit NPC Crew v3.14.75); CN nur Zeichen, die Vanilla-CN benutzt; DE nur Zeichen der Sprech-
+     blasen-Schrift (U+0020-007E, U+00A1-00FF ohne U+00A4/U+00AD); EN 'singleplayer'/'multiplayer' zusammen; %1/%2 gleich
      in allen Sprachen; Namensraum je Datei (UI_BN_Bear_*, Sandbox_BanditsNPC_Bear*, die drei Tiernamen); IG_UI.json hat NPC Crew
      nicht: wird sortiert neu angelegt (bzw. zusammengefuehrt, falls es sie inzwischen gibt); gleicher Schluessel mit gleichem Wert
      (Sandbox_BanditsNPC = "NPC Crew") ist kein Fehler. B1b: kein '<' oder '>' in einem UI.json-Text (Tooltips sind Rich-Text).
@@ -131,7 +160,7 @@ VANILLA_CN = os.path.join(VANILLA_MEDIA, "lua", "shared", "Translate", "CN")
 VANILLA_EN = os.path.join(VANILLA_MEDIA, "lua", "shared", "Translate", "EN")
 VANILLA_BUCK = os.path.join(VANILLA_MEDIA, "AnimSets", "buck")
 LUAC = r"C:/Users/Kevin/Tools/lua51/luac5.1.exe"
-LANGS = ["EN", "PTBR", "RU", "KO", "ES", "CN", "FR"]
+LANGS = ["EN", "PTBR", "RU", "KO", "ES", "CN", "FR", "DE"]   # DE seit NPC Crew v3.14.75 (Reihenfolge wie _docs/tools/langcheck.py CODES)
 PROBE_MARK = ".baer_probe"
 
 # ---------------------------------------------------------------------------------------------------------------------------------
@@ -154,10 +183,31 @@ UI_MAX_PX = 512                                                    # Deckel fuer
 BANDITS_MEDIA = [os.path.normpath(r"C:/Program Files (x86)/Steam/steamapps/workshop/content/108600/3268487204/mods/Bandits/" + v
                                   + "/media") for v in ("42.22", "common")]   # nur lesen: gleicher ui-Dateiname verdeckte Bandits' Bild
 # F1 (PLAN_F1.md 0.5, 11.3): + die drei Sitz-Knoten (Hinsetzen, Sitzen, Aufstehen; Bedingung NCBearAct = sitdown / sit / standup)
-ANIMSET_OK = re.compile(r"^42/media/AnimSets/buck/idle/NCBear_(Eat|SitDown|Sit|StandUp)\.xml$")
+# F2 (PLAN_F2.md 7.3): + die sechs Kampf-Knoten des grossen Baeren (Bedingung NCBearAct = bite / maul / rear / slam / swipeL / swipeR).
+# Fressen und Sitzen tragen BEIDE Koerper (Clip in beiden GLBs), die Kampf-Knoten nur der grosse (das Junge kaempft nie).
+ANIMSET_OK = re.compile(r"^42/media/AnimSets/buck/idle/NCBear_(Eat|SitDown|Sit|StandUp|Bite|Maul|Rear|Slam|SwipeL|SwipeR)\.xml$")
+ANIMSET_BOTH = re.compile(r"^42/media/AnimSets/buck/idle/NCBear_(Eat|SitDown|Sit|StandUp)\.xml$")
 ANIMSET_ADULT = re.compile(r"^42/media/AnimSets/buck/idle/NCBear_[A-Za-z0-9]+\.xml$")
 ANIMSET_ANY = re.compile(r"^(42|common)/media/AnimSets/")
 CUB_GLB = "42/media/models_X/Skinned/NCBearCub.glb"
+# F2 (PLAN_F2.md 7.3): das grosse Modell, sein model-Skript (ohne Hirsch-Rueckfall), die Toene der Rasse ncbeargrown -- bis F1 Altlasten
+BIG_ASSET = re.compile(r"^42/media/(models_X/Skinned/NCBear\.glb|textures/Body/NCBear\.png|scripts/nc_bear_tier\.txt"
+                       r"|scripts/nc_bear_sounds\.txt|sound/NCBear_(Roar|Growl1|Growl2|Growl3|Huff|Pain)\.wav)$")
+BIG_GLB = "42/media/models_X/Skinned/NCBear.glb"
+# F2 (PLAN_F2.md 0.3, 7.3): eigener Zombie-Biss-Knoten (Vanilla-Clip; Name ewig stabil). Kopiert; Form-Pruefung in form_check.
+ZOMBIE_ANIM = re.compile(r"^42/media/AnimSets/zombie/bumped/BanditsNPCBear[A-Za-z0-9]*\.xml$")
+VANILLA_ZOMBIE_ANIMS = os.path.join(r"C:\Program Files (x86)\Steam\steamapps\common\ProjectZomboid\media", "anims_X", "Zombie")
+# F2 (PLAN_F2.md 7.3, Frage F-G13): Werkbank-Dateien der Test-Mod, die nie nach NPC Crew gehen (je mit Grund; ohne NCBearBench-Namen)
+WERKBANK_ASSET = collections.OrderedDict([
+    ("42/media/models_X/Skinned/NCBearDeer.glb", "Test-Modell der ALT-Art bearstag (Hirsch-Bewegung; scripts/NCBearBenchStag.txt)"),
+    ("42/media/models_X/WorldItems/NCBear.fbx", "Test-Gegenstand 'Test Bear (model)' (NCBear_Spawn, Werkbank)"),
+    ("42/media/textures/Item_NCBear.png", "Icon des Test-Gegenstands"),
+    ("42/media/textures/WorldItems/NCBear.png", "Textur des Test-Gegenstands"),
+    ("42/media/scripts/nc_bear.txt", "module NCBear mit dem Test-Gegenstand BearStatic ('Test Bear (model)')"),
+    ("42/media/models_X/Skinned/NCBearGen.glb", "Vergleichs-Modell Generator-Baer E (NCBear_GenLive) bis Kevins Wahl (F-G13)"),
+    ("42/media/textures/Body/NCBearGen.png", "Textur braun des Vergleichs-Modells NCBearGen bis Kevins Wahl (F-G13)"),
+    ("42/media/textures/Body/NCBearGenFoto.png", "Textur Fototon des Vergleichs-Modells NCBearGen bis Kevins Wahl (F-G13)"),
+])
 GIT_ROOT_FILES = (".git", ".gitattributes", ".gitignore")
 ANIM_VAR = "NCBearAct"                                             # B.ACT
 
@@ -173,48 +223,19 @@ TEXT_NS = {
 
 # ---------------------------------------------------------------------------------------------------------------------------------
 # Altlasten bis B5a (Plan 12.1 Punkt 8; Kevin: Umbenennen zu Beginn von B5a). "Erlaubte Fundstellen des Trockenlaufs" (NAEHTE.md):
-# genau diese machen den Trockenlauf ohne --vor-b5a absichtlich rot. Je Eintrag Pfad (bzw. "text:<datei>:<schluessel>") und Grund.
+# genau diese machten den Trockenlauf ohne --vor-b5a absichtlich rot. Je Eintrag Pfad (bzw. "text:<datei>:<schluessel>") und Grund.
+# F2 = B5a (PLAN_F2.md 1, 7.3, Lauf baer-f2): ALLE abgeloest -- die sechs alten Lua-Dateien sind Stummel (nie kopiert), das grosse Modell
+# und die Toene werden kopiert (BIG_ASSET), die Test-Dateien sind Werkbank (WERKBANK_ASSET), die drei Tiernamen Werkbank-Texte
+# (BENCH_TEXT_KEYS). Eine neue Altlast (NCBear*.lua mit Code, unbekannte NCBear*-Datei) ist weiter immer ein Fehler.
 # ---------------------------------------------------------------------------------------------------------------------------------
-ALT_EXPECTED = collections.OrderedDict([
-    ("42/media/lua/shared/NCBearDefs.lua", "Art 'bear' des Erwachsenen (Altname, B5a: Umbenennen in BanditsNPCBear*, Art/Gruppe entscheiden)"),
-    ("42/media/lua/shared/NCBearFight.lua", "Kampf des Erwachsenen im SP (Altname; Kampf ist B5a)"),
-    ("42/media/lua/client/NCBearAttackProbe.lua", "Angriffs-Sonde (Testwerkzeug: B5a streicht oder schiebt nach NCBearBench*)"),
-    ("42/media/lua/client/NCBearSize.lua", "Groessen-Testhilfe (B5a: nach NCBearBench* oder streichen)"),
-    ("42/media/lua/client/NCBearSpawn.lua", "Spawn-Testhilfe des Erwachsenen (B5a: nach NCBearBench*)"),
-    ("42/media/lua/client/NCBearTest.lua", "Testbefehle NCBear_Sit/Stand/Eat (B5a: nach NCBearBench*)"),
-    ("42/media/models_X/Skinned/NCBear.glb", "Modell des Erwachsenen (geht mit der Art 'bear', B5a)"),
-    ("42/media/models_X/Skinned/NCBearDeer.glb", "Test-Modell 'bearstag' mit Hirsch-Bewegung (B5a: streichen)"),
-    ("42/media/models_X/WorldItems/NCBear.fbx", "Test-Gegenstand 'Test Bear (model)' (B5a: streichen)"),
-    ("42/media/textures/Body/NCBear.png", "Textur des Erwachsenen (B5a)"),
-    ("42/media/textures/Item_NCBear.png", "Icon des Test-Gegenstands (B5a: streichen)"),
-    ("42/media/textures/WorldItems/NCBear.png", "Textur des Test-Gegenstands (B5a: streichen)"),
-    ("42/media/scripts/nc_bear.txt", "module NCBear mit Test-Gegenstand BearStatic, DisplayName 'Test Bear (model)' (B5a: streichen)"),
-    ("42/media/scripts/nc_bear_tier.txt", "Modelle NCBear_Body und NCBearStag_Body des Erwachsenen (B5a)"),
-    ("42/media/scripts/nc_bear_sounds.txt", "Toene des Erwachsenen (B5a, mit dem Kampf)"),
-    ("42/media/sound/NCBear_Growl1.wav", "Ton des Erwachsenen (B5a)"),
-    ("42/media/sound/NCBear_Growl2.wav", "Ton des Erwachsenen (B5a)"),
-    ("42/media/sound/NCBear_Growl3.wav", "Ton des Erwachsenen (B5a)"),
-    ("42/media/sound/NCBear_Huff.wav", "Ton des Erwachsenen (B5a)"),
-    ("42/media/sound/NCBear_Pain.wav", "Ton des Erwachsenen (B5a)"),
-    ("42/media/sound/NCBear_Roar.wav", "Ton des Erwachsenen (B5a)"),
-    ("42/media/models_X/Skinned/NCBearGen.glb", "Vergleichs-Modell Generator-Baer E (Lauf baer-gen-gross) bis Kevins Wahl; nie kopieren"),
-    ("42/media/textures/Body/NCBearGen.png", "Textur braun des Vergleichs-Modells NCBearGen bis Kevins Wahl; nie kopieren"),
-    ("42/media/textures/Body/NCBearGenFoto.png", "Textur Fototon des Vergleichs-Modells NCBearGen bis Kevins Wahl; nie kopieren"),
-    ("text:IG_UI.json:IGUI_AnimalType_bear", "Tiername der Test-Art 'bear' ('Brown bear (test)', B5a)"),
-    ("text:IG_UI.json:IGUI_AnimalType_bearstag", "Tiername der Test-Art 'bearstag' (B5a: streichen)"),
-    ("text:IG_UI.json:IGUI_Animal_Group_bear", "Gruppenname der Test-Gruppe 'bear' ('Bear (NC test)', B5a)"),
-])
+ALT_EXPECTED = collections.OrderedDict()
 OLD_ASSET = re.compile(r"^(NCBear|nc_bear|Item_NCBear)", re.I)
-OLD_TEXT_KEYS = {"IG_UI.json": {"IGUI_AnimalType_bear", "IGUI_AnimalType_bearstag", "IGUI_Animal_Group_bear"}}
-# B1e (PLAN_B1E.md 0.13, 10.3, Frage F9): die Art "ncbeargrown" (shared/BanditsNPCBearDefs.lua) nennt Teile des grossen Modells, die als
-# Altlast bis B5a in der Test-Mod bleiben (nc_bear_tier.txt mit dem Hirsch-Rueckfall NCBearStag_Body, NCBear.glb, NCBear.png). Die
-# Defs-Pruefung meldet sie als erlaubte Fundstelle: ohne --vor-b5a Fehler (Trockenlauf absichtlich rot), mit --vor-b5a Warnung. B5a
-# bringt ein eigenes Modell-Skript ohne Hirsch-Rueckfall und zieht bodyModel/Textur nach (der ARTNAME ncbeargrown bleibt).
-ALT_DEFS = collections.OrderedDict([
-    (("texture", "NCBear"), "Rassen-Textur der Art ncbeargrown = Textur des grossen Modells (42/media/textures/Body/NCBear.png, Altlast 10)"),
-    (("bodyModel", "NCBear_Body"), "bodyModel der Art ncbeargrown = model-Skript des grossen Modells (42/media/scripts/nc_bear_tier.txt, "
-                                   "Altlast 14)"),
-])
+# F2 (PLAN_F2.md 1.4, 7.3): Tiernamen der Werkbank-Arten (Test-Art ncbear, ALT-Arten bear/bearstag) -- nie nach NPC Crew, kein Fehler
+BENCH_TEXT_KEYS = {"IG_UI.json": {"IGUI_AnimalType_ncbear", "IGUI_AnimalType_bear", "IGUI_AnimalType_bearstag", "IGUI_Animal_Group_bear"}}
+OLD_TEXT_KEYS = {}
+# B1e (PLAN_B1E.md 0.13, 10.3, Frage F9) bis F1: die Art "ncbeargrown" nannte Teile des grossen Modells, die als Altlast in der Test-Mod
+# blieben. F2 = B5a: nc_bear_tier.txt (ohne Hirsch-Rueckfall), NCBear.glb und NCBear.png werden kopiert -> keine Altlast mehr.
+ALT_DEFS = collections.OrderedDict()
 
 # Erlaubte Fundstellen in NPC Crew (NPC Crew nennt den Baeren SELBST im Code). Heute keine: der Baer beruehrt NPC Crew nur zur Laufzeit
 # (NAEHTE.md). NPC Crew nennt 'NCBear' heute nur in einem Changelog-KOMMENTAR (shared/BanditsNPC.lua, v3.14.58): Warnung, keine Kollision.
@@ -348,14 +369,28 @@ TIER_RULES = [
      "Groesse am Tier setzen (setSizeForced) nur in B.ApplySize"),
     ("getData", re.compile(r"\bgetData\b"), {("42/media/lua/shared/BanditsNPCBearStats.lua", "B.ApplySize")},
      "Datenteil des Tiers (getData) nur in B.ApplySize"),
-    ("setHealth", re.compile(r"(?i)\bsetHealth\b"), {("42/media/lua/server/BanditsNPCBearGrow.lua", "B.BodyHp")},
-     "Leben am Tier setzen (setHealth) nur in B.BodyHp"),
-    ("getHealth", re.compile(r"(?i)\bgetHealth\b"), {("42/media/lua/server/BanditsNPCBearGrow.lua", "B.BodyHp")},
-     "Leben am Tier lesen (getHealth) nur in B.BodyHp"),
+    # F2 (PLAN_F2.md 0.11, 5.1 Nr. 26): + B.BodyDie (Tod am Koerper: setHealth(0), V:server/ClientCommands.lua:932) und B.FoeHurt (die
+    # EINE Stelle fuer Leben am ZOMBIE beim Zombie-Rechner, shared/BanditsNPCBearFoe.lua; B:client/BanditUpdate.lua:2386, :2391-2397)
+    ("setHealth", re.compile(r"(?i)\bsetHealth\b"), {("42/media/lua/server/BanditsNPCBearGrow.lua", "B.BodyHp"),
+                                                    ("42/media/lua/server/BanditsNPCBearGrow.lua", "B.BodyDie"),
+                                                    ("42/media/lua/shared/BanditsNPCBearFoe.lua", "B.FoeHurt")},
+     "Leben setzen (setHealth) nur in B.BodyHp / B.BodyDie (Tier) und B.FoeHurt (Zombie)"),
+    ("getHealth", re.compile(r"(?i)\bgetHealth\b"), {("42/media/lua/server/BanditsNPCBearGrow.lua", "B.BodyHp"),
+                                                    ("42/media/lua/shared/BanditsNPCBearFoe.lua", "B.FoeHurt")},
+     "Leben lesen (getHealth) nur in B.BodyHp (Tier) und B.FoeHurt (Zombie)"),
     # B1d: Vorspulen / Leben / Erfahrung von Hand setzen -- im kopierten Code gibt es keinen erlaubten Aufrufer (leere Menge); die
     # Definitionen zaehlen nicht (TIER_DEF). Ein Aufrufer waere ein Spieler-Weg ohne Spielmechanik (Cheat-Pfad).
-    ("probeweg", re.compile(r"\bGrowSetG\b|\bGrowSetHp\b|\bSkillSet\b"), set(),
-     "B.GrowSetG / B.GrowSetHp / B.SkillSet nur aus der Werkbank (im kopierten Code nur die Definition)"),
+    # F2 (PLAN_F2.md 4.3, 7.3): + B.FightForce (der naechste Angriff von Hand, NCBear_FightNext) -- ebenfalls nur die Werkbank
+    ("probeweg", re.compile(r"\bGrowSetG\b|\bGrowSetHp\b|\bSkillSet\b|\bFightForce\b"), set(),
+     "B.GrowSetG / B.GrowSetHp / B.SkillSet / B.FightForce nur aus der Werkbank (im kopierten Code nur die Definition)"),
+    # F2 (PLAN_F2.md 0.4, 5.1 Nr. 26; Kevin baer/STAND.md "Fragen fuer Kevin" B1d Nr. 9 + begleiter/ENTSCHEIDUNGEN.md "Kein Schaden am eigenen Baeren", 11.6): der gezaehmte Koerper ist fuer die
+    # Engine unverwundbar -- den Schutz
+    # setzen/loesen nur diese drei Stellen (jedes Vorkommen des Namens im Code-Teil). Die Cheat-Regel "engine" meldet den Namen ausserdem;
+    # die zwei Zeilen stehen einzeln in CHEAT_ALLOWED.
+    ("setIsInvincible", re.compile(r"(?i)\bsetIsInvincible\b"), {("42/media/lua/server/BanditsNPCBearGrow.lua", "B.BodyShield"),
+                                                                 ("42/media/lua/server/BanditsNPCBearGrow.lua", "B.BodyHp"),
+                                                                 ("42/media/lua/server/BanditsNPCBearGrow.lua", "B.BodyDie")},
+     "Schutz am Tier (setIsInvincible) nur in B.BodyShield / B.BodyHp / B.BodyDie"),
     # B1e (PLAN_B1E.md 0.8, 10.3): EINE Art-Frage fuer beide Koerper -- getAnimalType (jede Form, auch als String) nur in B.BodyKind,
     # und kein Vergleich mit B.CUB (eine Stelle, die nur das Junge kennt, verloere den grossen Koerper ab Halbstark)
     ("getAnimalType", re.compile(r"(?i)\bgetAnimalType\b"), {("42/media/lua/shared/BanditsNPCBear.lua", "B.BodyKind")},
@@ -420,14 +455,37 @@ def mo_text_hits(code_text):
     return hits
 
 
-TIER_DEF = re.compile(r"^function\s+B\.(CreateCub|AppearFor|RemoveCub|GrowSetG|GrowSetHp|SkillSet|PlaceCub)\s*\(")   # B1d: + die drei
-# Probe-Wege; F1: + PlaceCub
+TIER_DEF = re.compile(r"^function\s+B\.(CreateCub|AppearFor|RemoveCub|GrowSetG|GrowSetHp|SkillSet|PlaceCub|FightForce)\s*\(")   # B1d: + die
+# drei Probe-Wege; F1: + PlaceCub; F2: + FightForce
 # Ausnahmen einzeln mit Grund: Datei, Regel, ein Text im Code-Teil der Zeile. Greift eine nicht mehr, warnt das Skript.
 CHEAT_ALLOWED = [
     {"file": "42/media/lua/shared/BanditsNPCBearDefs.lua", "rule": "befehl", "code": 'bodyModel = "NCBearCub_Body"',
      "why": "Name des model-Skripts (scripts/nc_bear_cub.txt), kein Befehl (Plan 12.1 Punkt 5)"},
     {"file": "42/media/lua/shared/BanditsNPCBearDefs.lua", "rule": "befehl", "code": 'bodyModel = "NCBear_Body"',
-     "why": "B1e: model-Skript des grossen Koerpers (scripts/nc_bear_tier.txt, Altlast bis B5a -- ALT_DEFS), kein Befehl"},
+     "why": "B1e: model-Skript des grossen Koerpers (scripts/nc_bear_tier.txt, seit F2 kopiert, ohne Hirsch-Rueckfall), kein Befehl"},
+    # F2 (PLAN_F2.md 1.1, 7.3): Stimmen der Rasse von ncbeargrown -- Namen der Ton-Skripte (scripts/nc_bear_sounds.txt, sound-Bloecke), kein
+    # Befehl; gespielt ueber animal:playBreedSound(Schluessel) (V:shared/TimedActions/Animals/ISKillAnimalInInventory.lua:19, :41)
+    {"file": "42/media/lua/shared/BanditsNPCBearDefs.lua", "rule": "befehl", "code": 'name = "NCBear_Pain"',
+     "why": "F2: Ton-Skript NCBear_Pain (scripts/nc_bear_sounds.txt) fuer pain und death der Rasse, kein Befehl"},
+    {"file": "42/media/lua/shared/BanditsNPCBearDefs.lua", "rule": "befehl", "code": 'name = "NCBear_Huff"',
+     "why": "F2: Ton-Skript NCBear_Huff (scripts/nc_bear_sounds.txt), kein Befehl"},
+    {"file": "42/media/lua/shared/BanditsNPCBearDefs.lua", "rule": "befehl", "code": 'name = "NCBear_HuffSoft"',
+     "why": "F2: Ton-Skript NCBear_HuffSoft (scripts/nc_bear_sounds.txt), kein Befehl"},
+    {"file": "42/media/lua/shared/BanditsNPCBearDefs.lua", "rule": "befehl", "code": 'name = "NCBear_Growl1"',
+     "why": "F2: Ton-Skript NCBear_Growl1 (scripts/nc_bear_sounds.txt), kein Befehl"},
+    {"file": "42/media/lua/shared/BanditsNPCBearDefs.lua", "rule": "befehl", "code": 'name = "NCBear_Growl2"',
+     "why": "F2: Ton-Skript NCBear_Growl2 (scripts/nc_bear_sounds.txt), kein Befehl"},
+    {"file": "42/media/lua/shared/BanditsNPCBearDefs.lua", "rule": "befehl", "code": 'name = "NCBear_Growl3"',
+     "why": "F2: Ton-Skript NCBear_Growl3 (scripts/nc_bear_sounds.txt), kein Befehl"},
+    # F2 (PLAN_F2.md 0.4, 11.6; Kevin baer/STAND.md "Fragen fuer Kevin" B1d Nr. 9 + begleiter/ENTSCHEIDUNGEN.md "Kein Schaden am eigenen Baeren": "Spieler/Autos schaden dem Baeren
+    # nicht (mit B5a) -> ja"; Kevin 12.11. ~05:20 "der darf kein schaden
+    # bekommen von mir oder meinen turrets ... und von meinen npc's nicht"): Schutz am gezaehmten Koerper. Genau diese zwei Zeilen (exakt),
+    # dazu die Tier-Regel setIsInvincible (nur B.BodyShield / B.BodyHp / B.BodyDie). Belege: V:client/ISUI/Animal/ISAnimalContextMenu.lua:563,
+    # V:server/ClientCommands.lua:911.
+    {"file": "42/media/lua/server/BanditsNPCBearGrow.lua", "rule": "engine", "code": "a:setIsInvincible(true)", "exact": True,
+     "why": "F2: Schutz an (B.BodyShield je Koerper; B.BodyHp nach dem eigenen Senken) -- nur unser Weg senkt das Leben (Kevin: ENTSCHEIDUNGEN 'Kein Schaden am eigenen Baeren', 11.6)"},
+    {"file": "42/media/lua/server/BanditsNPCBearGrow.lua", "rule": "engine", "code": "a:setIsInvincible(false)", "exact": True,
+     "why": "F2: Schutz kurz aus, damit B.BodyHp das Leben senken kann bzw. B.BodyDie (Tod wie Vanilla, PLAN_F2.md 0.11) toeten kann"},
     # F1 (PLAN_F1.md 11.3) / Nachbesserung F1 A1: Baeren-Fenster mit Taste. F1B (PLAN_F1B.md 8.1; Kevin 12.11.2026: "bei E das baeren ui
     # zu oeffnen und wenn man es aus der ferne oeffnen will dann kann man ... den hotkey festelegen ... in sen mod settings"): zwei
     # Tasten auf der eigenen Mod-Optionen-Seite (Nah-Taste E, Fern-Taste ohne Vorgabe), keine Zeile mehr in Vanillas keyBinding, kein
@@ -468,6 +526,8 @@ PZ_ALLOWED = {
     ("BanditsNPCBearMenu.lua", "BanditsNPCBearFeedAction"),
     ("BanditsNPCBearMenu.lua", "BanditsNPCBearPetAction"),
     ("BanditsNPCBearMenu.lua", "BanditsNPCBearBaitAction"),
+    ("BanditsNPCBearMenu.lua", "BanditsNPCBearMendAction"),         # F2: Verband (shared/TimedActions/BanditsNPCBearMendAction.lua)
+    ("BanditsNPCBearMenu.lua", "BanditsNPCBearHelpAction"),         # F2: Aufhelfen (shared/TimedActions/BanditsNPCBearHelpAction.lua)
 }
 
 ARGS = {"erneut": False, "vor_b5a": False, "echt": False}
@@ -592,6 +652,15 @@ def source_map(base, staging, rep):
 # ---------------------------------------------------------------------------------------------------------------------------------
 # 1. Einordnen
 # ---------------------------------------------------------------------------------------------------------------------------------
+def is_stub(data):
+    """F2 (PLAN_F2.md 1.2): Stummel = Lua nur aus Kommentar- und Leerzeilen (kein Code-Teil, lua_split_lines) und mit dem Satz
+    "Umbenannt nach". Jede Zeile Code -> kein Stummel (dann ist die Datei eine unbekannte Altlast)."""
+    text = data.decode("latin-1")
+    if "Umbenannt nach" not in text:
+        return False
+    return all(not code.strip() for code, _com in lua_split_lines(text))
+
+
 def collect_source(src, rep):
     copy_lua, copy_asset, merge, skipped, alt, sandbox = [], [], [], [], [], None
     for rel in sorted(src):
@@ -608,17 +677,27 @@ def collect_source(src, rep):
             copy_lua.append(rel)
         elif rel == SANDBOX:
             sandbox = rel
-        elif CUB_ASSET.match(rel) or ANIMSET_OK.match(rel) or UI_ASSET.match(rel):
+        elif (CUB_ASSET.match(rel) or ANIMSET_OK.match(rel) or UI_ASSET.match(rel) or BIG_ASSET.match(rel)
+              or ZOMBIE_ANIM.match(rel)):                   # F2: + grosses Modell/Toene (BIG_ASSET), Zombie-Biss-Knoten (ZOMBIE_ANIM)
             copy_asset.append(rel)
+        elif rel in WERKBANK_ASSET:                         # F2: Werkbank-Dateien ohne NCBearBench-Namen (je mit Grund)
+            skipped.append((rel, "Werkbank, wird nie kopiert: " + WERKBANK_ASSET[rel]))
         elif ANIMSET_ADULT.match(rel):
-            skipped.append((rel, "Kampf-Knoten des Erwachsenen, bleibt bis B5a in der Test-Mod (NAEHTE.md Naht 9)"))
+            # F2: alle bekannten Knoten werden kopiert (ANIMSET_OK); ein NEUER Knoten (z. B. aus einem Modell-Lauf) muss erst eingeordnet werden
+            rep.err("%s: unbekannter Animations-Knoten des Baeren -- in ANIMSET_OK aufnehmen (Clip im GLB, Bedingung NCBearAct, NAEHTE.md "
+                    "Naht 9) oder in die Werkbank (NCBearBench*)" % rel)
         elif rel.endswith(".lua") and re.match(r"BanditsNPCBear", base):
             rep.err("%s: Unterordner nicht freigegeben (bekannt: shared|client|server, darin ISUI/ oder TimedActions/)" % rel)
+        elif rel.endswith(".lua") and base.startswith("NCBear") and is_stub(rd(src[rel])):
+            # F2 (PLAN_F2.md 0.13, 1.2): umbenannte alte Datei, nur noch Kommentar ("umbenannt nach ..."), damit die Test-Mod beim Einbau
+            # nichts loeschen muss -- wird nie kopiert, kein Fehler
+            skipped.append((rel, "Stummel (umbenannt, nur Kommentar), wird nie kopiert"))
         elif rel in ALT_EXPECTED or (rel.endswith(".lua") and base.startswith("NCBear")) or (
                 rel.startswith(("42/media/", "common/media/")) and OLD_ASSET.match(base)):
             alt.append(rel)
         elif ANIMSET_ANY.match(rel):
-            rep.err("%s: Animations-Datei nur als 42/media/AnimSets/buck/idle/NCBear_*.xml" % rel)
+            rep.err("%s: Animations-Datei nur als 42/media/AnimSets/buck/idle/NCBear_*.xml oder (F2) "
+                    "42/media/AnimSets/zombie/bumped/BanditsNPCBear*.xml" % rel)
         elif rel.endswith(".lua"):
             rep.err("%s: Lua-Datei ohne den Namen BanditsNPCBear* (Kopierregel a) -- umbenennen; Testhilfe nach NCBearBench*" % rel)
         else:
@@ -645,6 +724,9 @@ def alt_report(alt, text_alt, rep):
     for item in ALT_EXPECTED:
         if item not in found:
             rep.warn("Altlast %s ist weg (in B5a erledigt?) -- aus ALT_EXPECTED und NAEHTE.md streichen" % item)
+    if not found and not ALT_EXPECTED:
+        rep.say("  keine Altlasten mehr (F2 = B5a: Stummel, kopiertes grosses Modell, Werkbank-Dateien und -Texte; --vor-b5a aendert nichts)")
+        return 0
     rep.say("  %d Altlasten (%s)" % (len(found), "--vor-b5a: nur Warnung" if ARGS["vor_b5a"] else "Fehler: Trockenlauf absichtlich rot"))
     return len(found)
 
@@ -679,6 +761,61 @@ def vanilla_buck_clips():
                     continue
                 clips.update(re.findall(r"<m_AnimName>\s*([^<\s]+)\s*</m_AnimName>", t))
     return clips
+
+
+def zombie_knot(rel, final, copy_lua, rep):
+    """F2 (PLAN_F2.md 0.3, 7.3): eigener Zombie-Biss-Knoten. Form wie Vanilla media/AnimSets/zombie/bumped/left.xml: genau eine Bedingung
+    BumpType (STRING) = m_Name, Clip in Vanillas anims_X/Zombie, am Ende SetVariable BumpAnimFinished=true (sonst bliebe der Zombie im
+    Zustand bumped haengen, V:media/actiongroups/zombie/bumped/to_idle.xml); der Name steht in der kopierten Lua (B.ZBITE / B.ZBITE_LOW) und
+    ist in NPC Crew (42 + common), Vanilla und Bandits frei (ein gleicher Knoten-Name spielte sonst fremde Bump-Werte mit)."""
+    data = final[rel]
+    if data.startswith(b"\xef\xbb\xbf"):
+        rep.err("%s: BOM" % rel)
+        return
+    eol_of(data, rel, rep)
+    try:
+        root = ET.fromstring(data)
+    except ET.ParseError as ex:
+        rep.err("%s: kein wohlgeformtes XML (%s)" % (rel, ex))
+        return
+    if root.tag != "animNode":
+        rep.err("%s: Wurzel <%s>, erwartet <animNode>" % (rel, root.tag))
+    name = (root.findtext("m_Name") or "").strip()
+    conds = list(root.iter("m_Conditions"))
+    ok = (len(conds) == 1 and (conds[0].findtext("m_Name") or "").strip() == "BumpType"
+          and (conds[0].findtext("m_Type") or "").strip() == "STRING" and (conds[0].findtext("m_Value") or "").strip() == name and name)
+    if not ok:
+        rep.err("%s: genau eine Bedingung BumpType (STRING) = m_Name erwartet -- sonst spielte der Knoten fuer fremde Bump-Werte" % rel)
+    anims = [(a.text or "").strip() for a in root.iter("m_AnimName")]
+    for a in anims:
+        if not (os.path.isfile(os.path.join(VANILLA_ZOMBIE_ANIMS, a + ".X")) or os.path.isfile(os.path.join(VANILLA_ZOMBIE_ANIMS, a + ".x"))):
+            rep.err("%s: Clip '%s' liegt nicht in Vanillas anims_X/Zombie" % (rel, a))
+    if not anims:
+        rep.err("%s: kein m_AnimName" % rel)
+    ends = [e for e in root.iter("m_Events") if (e.findtext("m_EventName") or "").strip() == "SetVariable"
+            and (e.findtext("m_Time") or "").strip() == "End" and (e.findtext("m_ParameterValue") or "").strip() == "BumpAnimFinished=true"]
+    if len(ends) != 1:
+        rep.err("%s: am Ende genau ein SetVariable BumpAnimFinished=true erwartet (sonst haengt der Zombie in bumped)" % rel)
+    named = any(('"%s"' % name) in "\n".join(c for c, _ in lua_split_lines(final[r].decode("latin-1"))) for r in copy_lua) if name else False
+    if not named:
+        rep.err("%s: der Knoten-Name %s steht in keiner kopierten Lua-Datei (B.ZBITE / B.ZBITE_LOW)" % (rel, name))
+    for no, ln in enumerate(data.decode("latin-1").split("\n"), 1):
+        m = XML_CHEAT.search(ln)
+        if m:
+            rep.err("%s:%d: Wort einer Testhilfe/Debug/Cheat im Animations-Knoten (%s)" % (rel, no, m.group(0)))
+    hits = []
+    roots = [os.path.join(VANILLA_MEDIA, "AnimSets"), os.path.join(NC_LIVE, "42", "media", "AnimSets"),
+             os.path.join(NC_LIVE, "common", "media", "AnimSets")] + [os.path.join(b, "AnimSets") for b in BANDITS_MEDIA]
+    pat = re.compile(r"<m_Name>\s*%s\s*</m_Name>|<m_Value>\s*%s\s*</m_Value>" % (re.escape(name), re.escape(name)))
+    for base in roots:
+        for dp, _d, fs in os.walk(base):
+            for fn in fs:
+                if fn.endswith(".xml") and pat.search(rd(os.path.join(dp, fn)).decode("latin-1", errors="ignore")):
+                    hits.append(os.path.join(dp, fn))
+    for h in hits:
+        rep.err("Kollision: Zombie-Knoten-Name %s gibt es schon in %s" % (name, h))
+    rep.say("  %s: Knoten %s, Clip %s, Ende BumpAnimFinished=true: %s, in der Lua: %s, Kollision (Vanilla/NPC Crew/Bandits): %d" % (
+        rel, name, ", ".join(anims), "ja" if len(ends) == 1 else "NEIN", "ja" if named else "NEIN", len(hits)))
 
 
 def form_check(final, copy_lua, copy_asset, rep):
@@ -719,8 +856,26 @@ def form_check(final, copy_lua, copy_asset, rep):
             if miss:
                 rep.warn("%s: %d Clips aus Vanillas Animset buck fehlen im GLB (%s) -- der gespielte Erwachsene hat dieselben 15 "
                          "Clips; ob ein Zustand mit fehlendem Clip einfriert, ist ungespielt" % (CUB_GLB, len(miss), ", ".join(miss)))
+    # F2 (PLAN_F2.md 7.3): GLB des grossen Baeren (seit F2 kopiert; Form wie beim Jungen)
+    big_clips = set()
+    bglb = final.get(BIG_GLB)
+    if bglb is not None:
+        j = glb_json(bglb, BIG_GLB, rep)
+        if j is not None:
+            big_clips = set(a.get("name") for a in j.get("animations", []))
+            nm, ns = len(j.get("meshes", [])), len(j.get("skins", []))
+            joints = len(j["skins"][0].get("joints", [])) if ns else 0
+            rep.say("  %s: MD5 %s, %d KB, %d Netz(e), %d Haut, %d Knochen, %d Clips" % (BIG_GLB, md5(bglb), len(bglb) // 1024, nm, ns,
+                                                                                          joints, len(big_clips)))
+            if nm != 1 or ns != 1:
+                rep.err("%s: erwartet genau ein Netz und eine Haut (Werkstatt-CLAUDE.md 8)" % BIG_GLB)
+    elif any(BIG_ASSET.match(r) for r in copy_asset):
+        rep.err("%s fehlt, aber Teile des grossen Modells werden kopiert" % BIG_GLB)
     used_values = set()
     for rel in copy_asset:
+        if ZOMBIE_ANIM.match(rel):
+            zombie_knot(rel, final, copy_lua, rep)
+            continue
         if not ANIMSET_OK.match(rel):
             continue
         data = final[rel]
@@ -739,8 +894,18 @@ def form_check(final, copy_lua, copy_asset, rep):
         if not anims or not all(anims):
             rep.err("%s: kein m_AnimName" % rel)
         for a in anims:
-            if cub_clips and a not in cub_clips:
-                rep.err("%s: Clip '%s' fehlt im GLB des Jungen -- ein Name ohne Clip friert das Tier ein" % (rel, a))
+            # F2: Fressen/Sitzen tragen beide Koerper (Clip in BEIDEN GLBs); die Kampf-Knoten nur der grosse (das Junge kaempft nie --
+            # fehlt der Clip im Jungen-GLB, nur Warnung)
+            if ANIMSET_BOTH.match(rel):
+                if cub_clips and a not in cub_clips:
+                    rep.err("%s: Clip '%s' fehlt im GLB des Jungen -- ein Name ohne Clip friert das Tier ein" % (rel, a))
+                if big_clips and a not in big_clips:
+                    rep.err("%s: Clip '%s' fehlt im GLB des grossen Baeren -- ein Name ohne Clip friert das Tier ein" % (rel, a))
+            else:
+                if not big_clips or a not in big_clips:
+                    rep.err("%s: Clip '%s' fehlt im GLB des grossen Baeren (%s) -- Kampf-Knoten ohne Clip" % (rel, a, BIG_GLB))
+                if cub_clips and a not in cub_clips:
+                    rep.warn("%s: Clip '%s' nicht im GLB des Jungen (das Junge kaempft nie; nur Hinweis)" % (rel, a))
         conds = list(root.iter("m_Conditions"))
         mine = [c for c in conds if (c.findtext("m_Name") or "").strip() == ANIM_VAR]
         if len(conds) != 1 or len(mine) != 1:
@@ -770,7 +935,23 @@ def form_check(final, copy_lua, copy_asset, rep):
                 rep.err("%s: Sitz-Treiber setzt %s = '%s', dafuer gibt es keinen kopierten Animations-Knoten" % (rel, ANIM_VAR, val))
             else:
                 rep.say("  %s = '%s' (%s, Sitz-Treiber) hat seinen Knoten" % (ANIM_VAR, val, os.path.basename(rel)))
-    rep.say("  Animations-Knoten: %d, Werte %s" % (len([r for r in copy_asset if ANIMSET_OK.match(r)]), ", ".join(sorted(used_values))))
+    # F2 (PLAN_F2.md 0.6, 4.4): die Kampf-Clips setzt U.PoseAct(id, act) mit einer Variablen -- jeder Angriff aus B.ATTACKS
+    # (shared/BanditsNPCBearFightRules.lua) braucht deshalb einen kopierten Knoten
+    rules = final.get("42/media/lua/shared/BanditsNPCBearFightRules.lua")
+    if rules is not None:
+        rcode = "\n".join(c for c, _ in lua_split_lines(rules.decode("latin-1")))
+        am = re.search(r"\bB\.ATTACKS\s*=\s*B\.ATTACKS\s+or\s+\{([^}]*)\}", rcode)
+        if not am:
+            rep.err("shared/BanditsNPCBearFightRules.lua: B.ATTACKS nicht gefunden (Liste der Angriffe fuer die Knoten-Pruefung)")
+        else:
+            for val in sorted(re.findall(r"(\w+)\s*=\s*true", am.group(1))):
+                if val not in used_values:
+                    rep.err("Angriff '%s' (B.ATTACKS): kein kopierter Animations-Knoten mit %s = '%s'" % (val, ANIM_VAR, val))
+                else:
+                    rep.say("  %s = '%s' (Angriff, U.PoseAct) hat seinen Knoten" % (ANIM_VAR, val))
+    rep.say("  Animations-Knoten: %d, Werte %s; Zombie-Knoten: %d" % (len([r for r in copy_asset if ANIMSET_OK.match(r)]),
+                                                                     ", ".join(sorted(used_values)),
+                                                                     len([r for r in copy_asset if ZOMBIE_ANIM.match(r)])))
     # B1c: Bilder der Oberflaeche (PNG-Kopf, IHDR-Groesse, gedeckelt); jedes Bild, das die kopierte Lua als media/ui/... nennt, wird
     # mitkopiert -- und jedes kopierte Bild nennt die Lua auch (sonst toter Ballast)
     rep.say("")
@@ -842,6 +1023,14 @@ def load_json(data, label, rep):
 PLACE = re.compile(r"%\d|<LINE>|<BR>")
 
 
+# DE (NPC Crew v3.14.75, NPC-Crew-CLAUDE.md "JSON-Paritaet"; dort geprueft von _docs/tools/langcheck.py, Art "de-zeichen"): nur Zeichen
+# der Sprechblasen-Schrift zomboidDialogue -- U+0020-007E, U+00A1-00A3, U+00A5-00AC, U+00AE-00FF und Zeilenumbruch. Kein U+00A0,
+# U+00A4, U+00AD, keine typografischen Anfuehrungszeichen oder Gedankenstriche (in DE als " und --).
+def de_char_ok(c):
+    o = ord(c)
+    return c == "\n" or 0x20 <= o <= 0x7E or 0xA1 <= o <= 0xA3 or 0xA5 <= o <= 0xAC or 0xAE <= o <= 0xFF
+
+
 def plan_texts(tgt, src, merge, rep):
     """{rel_ziel: neue bytes}, Zusammenfassung, by_file (ohne Altschluessel), Altschluessel. Schreibt nichts."""
     out, summary, text_alt = {}, [], []
@@ -858,10 +1047,16 @@ def plan_texts(tgt, src, merge, rep):
         if any(a > b for a, b in zip(ks, ks[1:])):
             rep.warn("Quelle %s: nicht sortiert" % rel)
         old = OLD_TEXT_KEYS.get(fname, set())
+        bench = BENCH_TEXT_KEYS.get(fname, set())
         for k in list(d):
             if k in old:
                 if lang == "EN":
                     text_alt.append("text:%s:%s" % (fname, k))
+                del d[k]
+            elif k in bench:
+                # F2 (PLAN_F2.md 1.4, 7.3): Tiername einer Werkbank-Art -- nie nach NPC Crew, kein Fehler
+                if lang == "EN":
+                    rep.say("  Werkbank-Text, nie kopiert: %s %s" % (fname, k))
                 del d[k]
         by_file[fname][lang] = d
     tdir = os.path.join(tgt, "42", "media", "lua", "shared", "Translate")
@@ -869,6 +1064,10 @@ def plan_texts(tgt, src, merge, rep):
         other = [x for x in os.listdir(tdir) if os.path.isdir(os.path.join(tdir, x)) and x not in LANGS]
         if other:
             rep.err("NPC Crew hat Sprachen, die das Skript nicht kennt: %s -- LANGS erweitern" % ", ".join(other))
+    # Eine Sprache der Quelle, die LANGS nicht kennt, fiele sonst STILL weg (die Schleifen unten laufen nur ueber LANGS).
+    src_unknown = sorted(set(l for d in by_file.values() for l in d) - set(LANGS))
+    if src_unknown:
+        rep.err("Quelle hat Sprachen, die das Skript nicht kennt: %s -- LANGS erweitern" % ", ".join(src_unknown))
     cn = None
     for fname, langs in sorted(by_file.items()):
         ns = TEXT_NS.get(fname)
@@ -877,7 +1076,7 @@ def plan_texts(tgt, src, merge, rep):
             continue
         missing = [l for l in LANGS if l not in langs]
         if missing:
-            rep.err("Texte %s: es fehlen Sprachen %s (alle sieben, immer)" % (fname, ",".join(missing)))
+            rep.err("Texte %s: es fehlen Sprachen %s (alle acht, immer)" % (fname, ",".join(missing)))
         keyset = None
         for l in LANGS:
             if l in langs:
@@ -909,6 +1108,11 @@ def plan_texts(tgt, src, merge, rep):
                 bad = sorted(set(c for c in str(v) if ord(c) > 127 and c not in cn))
                 if bad:
                     rep.err("Texte %s %s: CN-Zeichen, die Vanilla-CN nicht benutzt: %s" % (fname, k, " ".join("U+%04X" % ord(c) for c in bad)))
+        if "DE" in langs:
+            for k, v in langs["DE"].items():
+                bad = sorted(set(c for c in str(v) if not de_char_ok(c)))
+                if bad:
+                    rep.err("Texte %s %s: DE-Zeichen ausserhalb der Sprechblasen-Schrift: %s" % (fname, k, " ".join("U+%04X" % ord(c) for c in bad)))
         # Vanilla verdecken? (gleicher Schluessel in Vanillas gleichnamiger Datei)
         vp = os.path.join(VANILLA_EN, fname)
         if os.path.isfile(vp):
@@ -1231,10 +1435,25 @@ def collisions(tgt, final, copy_lua, copy_asset, rep):
             if p not in final:
                 rep.err("%s: %s = %s liegt nicht in der Uebernahme (%s)" % (rel, kind, val, p))
         rep.say("Skript %s: Module %s, Namen %s" % (rel, ", ".join(re.findall(r"^\s*module\s+(\w+)", text, re.M)),
-                                                  ", ".join(re.findall(r"^\s*(?:model|animationsMesh)\s+(\w+)", text, re.M))))
+                                                  ", ".join(re.findall(r"^\s*(?:model|animationsMesh|sound)\s+(\w+)", text, re.M))))
+        # F2 (PLAN_F2.md 7.3): jede Ton-Datei eines sound-Blocks liegt in der Uebernahme (sonst spielte die Rasse einen leeren Ton)
+        for val in re.findall(r"^\s*file\s*=\s*media/(sound/[^,\s]+)", text, re.M):
+            if "42/media/" + val not in final:
+                rep.err("%s: file = media/%s liegt nicht in der Uebernahme" % (rel, val))
     defs = final.get("42/media/lua/shared/BanditsNPCBearDefs.lua")
     if defs:
         dtext = defs.decode("latin-1")
+        # F2 (PLAN_F2.md 1.1): jeder Ton-Name der Rasse (sounds.<schluessel> = { name = "NCBear_*" ... }) hat seinen sound-Block in einem
+        # kopierten Skript (scripts/nc_bear_sounds.txt); playBreedSound spielt sonst nichts
+        snd_def = set()
+        for r in [x for x in final if x.startswith("42/media/scripts/")]:
+            snd_def.update(re.findall(r"^\s*sound\s+(\w+)", final[r].decode("latin-1"), re.M))
+        snd_used = sorted(set(re.findall(r"\bname\s*=\s*\"(NCBear_\w+)\"", "\n".join(c for c, _ in lua_split_lines(dtext)))))
+        for s in snd_used:
+            if s not in snd_def:
+                rep.err("Defs: Ton %s der Rasse hat keinen sound-Block in einem kopierten Skript" % s)
+        rep.say("Toene der Rasse: %s -- je ein sound-Block: %s" % (", ".join(snd_used) or "-",
+                                                                   "ja" if all(s in snd_def for s in snd_used) else "NEIN"))
         # B1e: Fehlt ein Teil, das ALT_DEFS als Altlast bis B5a fuehrt, gilt dieselbe Regel wie fuer ALT_EXPECTED (alt_report): ohne
         # --vor-b5a Fehler, mit Warnung. Ist es inzwischen da (B5a), meldet das Skript, dass der Eintrag zu streichen ist.
         def defs_missing(kind, val, msg):
@@ -1574,6 +1793,18 @@ def checkers(root, lua_rels, final, rep):
                 else:
                     res.append(tool.replace(".py", "") + " ok")
         rep.say("  %s: %s" % (rel, ", ".join(res)))
+    # DE (NPC Crew v3.14.75): NPC Crews Sprachpruefer auf den ZUSAMMENGEFUEHRTEN Texten des geschriebenen Stands (alle LANGS ueber
+    # --extra; prueft UI/Sandbox/Tooltip.json: Paritaet, Platzhalter, Round-Trip, NFC, DE-Zeichen, Schrift-Matrix; IG_UI.json nicht).
+    tr = os.path.join(root, "42", "media", "lua", "shared", "Translate")
+    lc = [os.path.join(TOOLS, "langcheck.py")]
+    for l in LANGS:
+        lc += ["--extra", "%s=%s" % (l, os.path.join(tr, l))]
+    rc, out = run_tool(lc)
+    tail = out.strip().splitlines()
+    if rc != 0:
+        rep.err("langcheck.py meldet Fehler auf dem geschriebenen Stand:\n" + "\n".join(tail[-12:]))
+    else:
+        rep.say("  langcheck.py (%d Sprachen, geschriebener Stand): %s" % (len(LANGS), tail[-1] if tail else "?"))
     rc, out = run_tool([os.path.join(TOOLS, "luacheck_pz.py")] + [os.path.join(root, r) for r in lua_rels])
     if "luacheck_pz:" not in out:
         rep.err("luacheck_pz lief nicht:\n" + out[-400:])
@@ -1650,8 +1881,10 @@ def print_plan(plan, rep):
             "Test-Mod, NAEHTE.md Zeilen 15 und 26; F1/F1B: zwei Tasten auf der eigenen Mod-Optionen-Seite (keine Zeile in Vanillas "
             "keyBinding mehr), Vorfahrt vor NPC Crews 'Talk to NPC' und NC-Stationen nur lesend, layout.ini-Name und Client-Datei "
             "BanditsNPCBear.ini (tagoff/ageoff), Beacon-Basisflaeche fuer 'Frei' nur dokumentiert, Huelle um Vanillas "
-            "AnimalContextMenu.showRadialMenu (ohne Kill), NAEHTE.md Zeilen 27-32); geaendert werden nur NPC Crews Texte (zusammenfuehren) "
-            "und sandbox-options.txt (anhaengen).")
+            "AnimalContextMenu.showRadialMenu (ohne Kill), NAEHTE.md Zeilen 27-32; F2 = B5a: eigener Zombie-Biss-Knoten, Bandits-Aufgabe "
+            "ZombieActions.BNBearSmack in OnGameBoot hinter Riegel, Schutz setIsInvincible am zahmen Baeren, neuer Server->Client-Befehl Fx, "
+            "Naht 1 nur noch ncbear, Turret <-> Baer und NPC-Heiler nur dokumentiert, NAEHTE.md Zeilen 1, 9, 13, 21, 23, 33-39); geaendert "
+            "werden nur NPC Crews Texte (zusammenfuehren) und sandbox-options.txt (anhaengen).")
 
 
 def write_all(root, final, rep):
