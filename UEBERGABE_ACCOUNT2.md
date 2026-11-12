@@ -28,7 +28,7 @@ WICHTIG: `resumeFromRunId` gilt NUR in der alten Sitzung. Eine neue Sitzung setz
 |---|---|---|
 | baer-gross (grosser Baer schoener) | FERTIG 06:45 | Aufrichten/Bruellen wie echte Baeren, Sitzen ok; **Kopfnaht wie heute** (Kevins Bilder `baer\begleiter\kevin_kopfnaht_1112_*.png`, nur lokal) -> NICHT eingebaut. Staging `baer_gross\mod\`, Blatt `baer_gross\bilder\kevin_vorher_nachher.png`, Urteil `baer_gross\gegen_bericht.md`. |
 | baer-kopfnaht | VORBEREITET, nicht gestartet | `baer\spiel\kopfnaht_workflow.js` (6 Agenten, baut auf baer_gross\mod auf). Danach grossen Baeren einbauen (Kevin-Freigabe 2: ersetzt 2c) und Kevin zeigen. |
-| baer-junges-fuss (Junges mit Baerenfuessen) | FERTIG + EINGEBAUT 07:28 (NCBearTest cee4890) | Kevins Test und Fragen: `baer\spielnleitung_jfuss.md` (Sitzhaltung, Liegen tiefer -- Variante fertig, Schweben beim Rennen). |
+| baer-junges-fuss (Junges mit Baerenfuessen) | FERTIG + EINGEBAUT 07:28 (NCBearTest cee4890) | Kevins Test und Fragen: `baer/spiel/anleitung_jfuss.md` (Sitzhaltung, Liegen tiefer -- Variante fertig, Schweben beim Rennen). |
 | F1b (E-Taste, Fern-Taste, Wachstums-Schalter) | lief 07:20 beim Bauer (von 8 Agenten: forschung, plan fertig) | Staging `baer_zaehmen\mod_f1b\`, Plan `baer_zaehmen\PLAN_F1B.md`; letzte Rolle fuehrt in das F2-Staging zusammen (`f1b_merge.md`). Siehe Abschnitt 5. |
 | F2 (Kampf B5a + Nachtraege) | ANGEHALTEN 03:58 im Bau | Forschung + Plan fertig (`baer_zaehmen\forschung_f2_*.md`, `PLAN_F2.md` mit Abschnitt 11). Fortsetzen mit **`baer\spiel\f2_fortsetzung.js`** (7 Agenten, ab Bau), ERST wenn F1b in der Test-Mod ist und `f1b_merge.md` keine Kollision meldet. |
 
