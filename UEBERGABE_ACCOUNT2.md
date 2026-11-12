@@ -31,7 +31,7 @@ Transkripte: `C:\Users\Kevin\.claude\projects\C--Users-Kevin-NPCCrew-Nebenprojek
 |---|---|---|---|---|
 | **baer-aussehen** (Funktion: Aussehen-Knopf + Sandbox 39 -> 12) | `wf_34a802e5-6f8` / wbvwbx4bx | `baer\spiel\aussehen_workflow.js` | forschung, plan, bau:kern, bau:oberflaeche, pruef:logik | pruef:belege, nachbesserung, gegenpruefung |
 | **baer-maul-bau** (Modell: Maul beider grosser Baeren) | `wf_a876c805-e76` / w8qe5etel | `baer\spiel\maul_bau_workflow.js` | W:rahmen, T:textur | G:gebiss, PT+PO, N, GP, I |
-| **baer-f3-plan** (Funktion: F3 Forschung + Plan, nur lesen) | `wf_881b0108-ad0` / whr8tzmw4 | `baer\spiel\f3_plan_workflow.js` | forschung | plan |
+| **baer-f3-plan** (Funktion: F3 Forschung + Plan, nur lesen) | `wf_881b0108-ad0` / whr8tzmw4 | `baer\spiel\f3_plan_workflow.js` | **FERTIG 20:30** (forschung, plan) | Kevins 6 Fragen (`_arbeit\baer_zaehmen\f3\PLAN_F3.md` Ende), dann Bau baer-f3 (7 Agenten) nach Aussehen-Einbau |
 
 **Fortsetzen in einem NEUEN Account/einer neuen Sitzung** (kein Lauf-Cache): wie `baer\spiel\f2_fortsetzung.js` -- fertige Rollen werden
 Text-Konstanten ("X ist fertig: <Bericht>, ganz lesen"), ab der ersten nicht fertigen Rolle echte Agenten mit dem Zusatz "FORTSETZUNG: Zwischenstaende
