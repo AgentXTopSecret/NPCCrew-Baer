@@ -1,5 +1,11 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **12.11. 16:03: GROSSER BAER EINGEBAUT (baer-gross + baer-kopfnaht)** (Spiel zu; `tools/einbau_gross.py`, 5 Modell-Dateien aus `../_arbeit/baer_kopfnaht/mod`, Zips
+> `NCBearTest_vor_gross_2026-11-12_160331.zip` / `_mit_`; Test-Mod d5ab258; Trockenlauf 0 Fehler). Gegenpruefer kopfnaht: ready=false KNAPP -- Kevins Bogen in allen 8 Posen weg,
+> Rest: Ende Aufrichten ~0,1 s schwacher Kopfumriss (nicht schlechter als vorher), P3 Fell im Band nah knittrig, P4/Kehle minor (`../_arbeit/baer_kopfnaht/gegen_bericht.md`).
+> Selbst angesehen: Stehen/Gehen klar besser. Blatt `../_arbeit/baer_kopfnaht/bilder/KEVIN_kopfnaht.png` (enthaelt Kevins Bilder, nur lokal). Kevins Test: gegen_bericht kevin_test.
+> **Maul-Bau startet per Einmal-Wecker um 18:47** (5 h 87 %), Aussehen um 18:43. Restpunkte der Kopfnaht ggf. spaeter mit dem Maul zusammen.
+
 > **12.11. ~15:20 AUSSEHEN-KNOPF als naechster Funktionen-Lauf (Kevin: *"Aussehen-Knopf"*, Start *"Nach 18:40"*):** Skript `spiel/aussehen_workflow.js` (8 Agenten),
 > Staging `../_arbeit/baer_zaehmen/mod_look/` (Kopie Test-Mod 8a22bf9, 136 Dateien). **Einmal-Wecker 6df67d34 um 18:43** startet ihn (nur diese Sitzung) -- noch NICHT gestartet.
 > Laufend: baer-kopfnaht (wf_0956985e-5e7, kopfnaht_workflow.js) und baer-gen-junges-v2 (wf_fccd15a2-a54); Maul-Bau `spiel/maul_bau_workflow.js` wartet auf die Kopfnaht.
