@@ -509,3 +509,5 @@ also baby und ganz gross?'*
   9.966.880 B, CC BY-SA Malene Thyssen) -- alle von commons.wikimedia.org, nur ansehen, in .gitignore, nie in Modell/Textur, nie hochladen.
 * Kevin (12.11. ~15:15) auf "Was soll der naechste Funktionen-Lauf werden?": *"Aussehen-Knopf"* (vor F3); Start: *"Nach 18:40"* (5-h-Reset). Lauf baer-aussehen
   (8 Agenten, `spiel/aussehen_workflow.js`, Staging `../_arbeit/baer_zaehmen/mod_look/` = Test-Mod 8a22bf9).
+* Kevin (12.11., weitergegeben von der NPC-Crew-Sitzung): *"nach dem upload aber unsere turret mod und baeren und modelle mod muss dem auch folgen"* -- Sandbox-Optionen
+  in Kategorien (Seiten) wie NPC Crew. Vorschlag fuer die 39 Baeren-Optionen in `NAEHTE.md` "Sandbox-Seiten"; umsetzen, sobald NPC Crew die page-Namen meldet.

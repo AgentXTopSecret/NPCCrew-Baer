@@ -1,5 +1,8 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **12.11. ~17:30 SANDBOX-SEITEN (Kevin ueber NPC Crew):** Baeren-Optionen in Kategorien wie NPC Crew -- Vorschlag in `NAEHTE.md` "Sandbox-Seiten"; Umbau erst,
+> wenn die NPC-Crew-Sitzung ihre page-Namen meldet (nach ihrem Upload). Neue Optionen (Aussehen, F3, F5) gleich einer Gruppe zuordnen.
+
 > **12.11. 17:17: GENERATOR-JUNGES v2 FERTIG (8/8) + als Testhilfe EINGEBAUT** (Gegenpruefer: schoener JA, kein Giraffen-Gang JA, Kevin zeigen JA; 5 neue NCBearBench*-Dateien,
 > `tools/einbau_gj2.py --baer-nicht-geladen` (Spiel lief ohne NCBearTest), Zips `NCBearTest_vor_gj2_2026-11-12_171701.zip` / `_mit_`; Test-Mod 99e0368; Trockenlauf 0 Fehler).
 > Befehl `NCBear_CubGen()` (neben dem Standard-Jungen), Test `spiel/anleitung_gen_junges_v2.md`, Blatt `../_arbeit/baer_gen_junges/v2/bilder/KEVIN_gen_junges_v2.png` (Foto C drin, nur lokal).

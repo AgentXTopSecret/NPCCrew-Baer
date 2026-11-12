@@ -317,3 +317,18 @@ Bis F1:
   model-Skript des grossen Baeren ohne Hirsch-Rueckfall anlegen, dann `bodyModel` und `texture*` der Art `ncbeargrown` nachziehen und die zwei
   `ALT_DEFS`-Eintraege streichen; der ARTNAME `ncbeargrown` bleibt (steht in Spielstaenden). Kampf und Stimmen fuer `ncbeargrown` gehoeren zu B5a
   (`NCBearFight.lua` kennt nur die Art `bear`); der Fress-Knoten `NCBear_Eat` traegt das grosse Modell auch (`forschung_b1e.md` 4.1).
+
+## Sandbox-Seiten (Kevin 12.11.2026, ueber die NPC-Crew-Sitzung: *"nach dem upload aber unsere turret mod und baeren und modelle mod muss dem auch folgen"*)
+NPC Crew teilt seine Sandbox-Optionen nach dem naechsten Upload in Seiten (`page =` in sandbox-options.txt, Name ueber `Sandbox_<page>` in Sandbox.json,
+acht Sprachen; Beleg Vanilla client/OptionScreens/ServerSettingsScreen.lua:5134-5151; gespeicherte Werte haengen am Optionsnamen, nicht an der Seite).
+Geplante NPC-Crew-Seiten: Allgemein / Crew und Beacon / Kampf und Schutz / Beduerfnisse und Zuneigung / Faehigkeiten / Verhalten / Arbeit / Wilde
+Ueberlebende -- die genauen page-Namen meldet die NPC-Crew-Sitzung nach ihrem Bau. Heute stehen alle 39 Baeren-Optionen auf `page = BanditsNPC`.
+**Vorschlag Baer (Seitennamen erst festlegen, wenn NPC Crew seine meldet; Optionsnamen bleiben, nur `page` und `Sandbox_<page>` kommen dazu):**
+| Seite (Vorschlag) | Optionen |
+|---|---|
+| Baer: Finden und Zaehmen | BearCubsEnabled, BearCubForestRate, BearCubMinDistance, BearCubMaxDistance, BearCubWorldCap, BearMaxPerPlayer, BearBaitEnabled, BearBaitNights, BearBaitFirstChance, BearTameFeedPoints, BearTamePetPoints, BearTameMixBonus, BearTameFavoriteBonus, BearTameMinFeedings, BearFeedCooldownMinutes, BearPetCooldownMinutes, BearCubVanishHours |
+| Baer: Verhalten (wie NPC Crew "Verhalten") | BearFollowMaxDistance, BearRideDistance, BearCallCooldownMinutes, BearRoamRadius |
+| Baer: Wachsen und Faehigkeiten (wie "Faehigkeiten") | BearGrowDays, BearSkillXpPercent, BearSkillAgeCap, BearDodgeMax, BearFightBonusMax |
+| Baer: Kampf, Leben und Heilen (wie "Kampf und Schutz") | BearZombiesAttack, BearCannotDie, BearFleeHits, BearZombieDamage, BearBanditDamage, BearDamagePercent, BearDownedHours, BearDeathLockDays, BearHealAwake, BearHealSleep, BearBandageHeal, BearBandageHours |
+| (NPC Crew "Allgemein") | BearLog |
+Neue Optionen (Aussehen-Knopf, F3 Schlaf/Beduerfnisse -> "Beduerfnisse", F5 Spuernase/Fischen -> "Faehigkeiten"/"Arbeit") gleich einer dieser Gruppen zuordnen.

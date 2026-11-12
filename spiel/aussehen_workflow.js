@@ -43,7 +43,8 @@ EISERNE REGEL: jeder Engine-Aufruf mit Fundstelle als echter Aufruf in Vanilla-L
 als Tarnkappe. SP UND MP: SP-Test "not isServer() and not isClient()"; der Tausch passiert nur beim Schreiber (Server/SP), der Client bittet nur;
 der Server prueft Besitz, Zustand, Abklingzeit selbst. Kevins rote Linien: Baer nie verloren oder verdoppelt, kein Gegenstand verloren/verdoppelt,
 kein Kick, nichts haengt endlos. Namen BanditsNPCBear*/UI_BN_Bear_*/BanditsNPC.Bear*, vor jedem neuen Namen in NPC Crew greppen. Testbefehle nur in
-NCBearBench*.lua. Lua-Pruefer: python ${NC}/_docs/tools/luacheck.py, scopecheck.py, localcount.py, luacheck_pz.py; Attrappen ${W}/attrappe/ (lua5.1
+NCBearBench*.lua. SANDBOX (Kevin 12.11.): Optionen kommen spaeter in Kategorien-Seiten wie NPC Crew (${B}/NAEHTE.md "Sandbox-Seiten"); eine
+neue Option heute noch auf page = BanditsNPC, aber im Bericht ihrer Gruppe zuordnen. Lua-Pruefer: python ${NC}/_docs/tools/luacheck.py, scopecheck.py, localcount.py, luacheck_pz.py; Attrappen ${W}/attrappe/ (lua5.1
 C:/Users/Kevin/Tools/lua51/lua5.1.exe) -- alle bestehenden bleiben gruen.`
 
 const FIND = { type: 'object', properties: { zusammenfassung: { type: 'string' }, findings: { type: 'array', items: { type: 'object',
