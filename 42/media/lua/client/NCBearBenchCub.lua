@@ -53,7 +53,7 @@
 --                            Tausch, Fehlversuche
 --   NCBear_CubClean(), NCBear_CubMark()   sehen beide Koerper (B.BodyKind des Kerns), nie den Test-Baeren "bear"
 -- F1 (PLAN_F1.md 7.8): Baeren-Fenster, Befehle Sitz / Frei / Komm her / Passiv, Baer ohne Koerper (C1).
---   NCBear_CubWin()          das Baeren-Fenster des eigenen Baeren oeffnen (dasselbe wie die Taste V / Rechtsklick "Bear window")
+--   NCBear_CubWin()          das Baeren-Fenster des eigenen Baeren oeffnen (dasselbe wie die Fern-Taste / Rechtsklick "Bear window"; die Nah-Taste E nur am Baeren)
 --   NCBear_CubBodyGone()     den Koerper meines naechsten zahmen Baeren entfernen, der Eintrag BLEIBT (Absturz im Wechsel-Bild
 --                            nachstellen): nach 3 vergeblichen Suchlaeufen "vermisst", ~1-1,5 min spaeter (2 Suchlaeufe UND 60 s in
 --                            geladener Gegend, Nachbesserung F1 B1) bekommt er von selbst genau EINEN neuen Koerper (C1). Schneller:

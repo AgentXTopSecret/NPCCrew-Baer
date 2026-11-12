@@ -23,6 +23,12 @@
 -- client/BanditsNPCBearTags.lua -- je Spieler, was ICH sehe; "TagShow" bleibt der Hauptschalter): bei aus keine Name-/Zustand-Zeilen
 -- fuer diesen Baeren, die Werte-Zeilen folgen weiter ihren Optionen. B.OnView meldet jede neue Sicht zusaetzlich dem Baeren-Fenster
 -- (U.WinOnView) und dem Sitz-Treiber (U.PoseOnView), je hinter einem Existenz-Riegel.
+-- F1B (PLAN_F1B.md 5.2, 5.5; Kevin 12.11.2026: "einen schalter haben das die anzeige aus geht wann der waechst und wenn er bei 100% ist
+-- soll der knopf ganz verschwinden ... also ueber den baeren die anzeige"): die Alter-/Wachstums-Zeile steht nur noch, solange der Baer
+-- waechst (Sicht mit nst; ausgewachsen fehlt nst) UND sein Schalter "Growth line" an ist (U.AgeOn, je Spieler,
+-- client/BanditsNPCBearTags.lua; "TagAge" bleibt der Hauptschalter). Die Zeile "Day N - full-grown" gibt es nicht mehr -- fuer jeden
+-- gezaehmten Baeren, den dieser Spieler sieht. Nebenbefund FB 5.3 (a): wechselt ein Eintrag in einer neuen Sicht auf "geladen" (ld),
+-- sucht die Anzeige sofort (sonst bis 30 s ohne Objekt -- auch fuer die Nah-Taste E, client/BanditsNPCBearKey.lua). Reine Lua-Rechnung.
 --
 -- Reine Anzeige: liest nur B.View (die Sicht, die der Schreiber diesem Spieler geschickt hat) und fragt nie den Server.
 -- Einzelspieler und Mehrspieler laufen gleich; im Mehrspieler stammen alle Zahlen vom Server. Der dedizierte Server laedt client/ nicht.
@@ -102,6 +108,7 @@ local S = {
     objs = {},      -- id -> IsoAnimal (nur in dieser Sitzung, jedes Mal gegengeprueft)
     prev = {},      -- id -> letzter gesehener Zustand (fuer "gerade gezaehmt")
     flash = {},     -- id -> ms, bis wann "Gezaehmt!" steht
+    ldPrev = {},    -- F1B: id -> war der Eintrag in der letzten Sicht geladen (ld)? Gedeckelt wie prev (forget bei neuer Sicht)
     tier = nil,     -- B1c: Groessenstufe der aktuellen Liste (tiers[1..3]); nil = noch keine Liste
     -- B1d: Anzeige-Optionen der aktuellen Liste (einmal je Liste gelesen; EINE Tabelle, nie neu angelegt)
     md = { tags = true, hp = SHOW_BAR, sta = SHOW_OFF, age = true },
@@ -118,6 +125,7 @@ local function reset()
     S.objs = {}
     S.prev = {}
     S.flash = {}
+    S.ldPrev = {}
     S.tier = nil
 end
 
@@ -213,13 +221,26 @@ local function tagOn(c)
     return f(c) ~= false
 end
 
+-- F1B: Wachstums-Zeile dieses Baeren an? (U.AgeOn, client/BanditsNPCBearTags.lua; fehlt die Datei: an)
+local function ageOn(c)
+    local f = U.AgeOn
+    if not f then return true end
+    return f(c) ~= false
+end
+
+-- F1B: nur solange er noch waechst -- ausgewachsen fehlt nst (S:server/BanditsNPCBearGrow.lua:758, :786-787)
+local function growShown(c)
+    return hasAge(c) and c.nst ~= nil and ageOn(c)
+end
+
 -- B1d: hat ein gezaehmtes Junges mit den Optionen dieser Liste (md) ueberhaupt eine Zeile? Sonst bekommt es keinen Eintrag.
--- F1: das Namensschild zaehlt nur, wenn es fuer DIESEN Baeren an ist.
+-- F1: das Namensschild zaehlt nur, wenn es fuer DIESEN Baeren an ist. F1B: die Alter-Zeile nur, solange er waechst und ihr Schalter
+-- an ist (ein ausgewachsener Baer ohne andere Zeile bekommt keinen leeren Eintrag).
 local function tameShown(c, md)
     if md.tags and tagOn(c) then return true end
     if md.hp ~= SHOW_OFF and hasHp(c) then return true end
     if md.sta ~= SHOW_OFF and hasSta(c) then return true end
-    if md.age and hasAge(c) then return true end
+    if md.age and growShown(c) then return true end
     return false
 end
 
@@ -342,15 +363,12 @@ local function describeValues(e, c, md, t)
     if md.sta ~= SHOW_OFF and hasSta(c) then
         e.staFill, e.staText = valueLine(md.sta, c.sta, c.staMax, "UI_BN_Bear_Tag_Stamina", t.barW)
     end
-    if md.age and hasAge(c) then
+    -- F1B: nur solange er waechst und sein Schalter an ist (growShown); die "full-grown"-Zeile entfaellt
+    if md.age and growShown(c) then
         local day = math.floor(c.day)
-        if c.nst ~= nil then
-            local left = math.floor(tonumber(c.nxt) or 1)
-            if left < 1 then left = 1 end
-            e.ageLine = U.T("UI_BN_Bear_Tag_Age", day, U.StageName(c.nst), left)
-        else
-            e.ageLine = U.T("UI_BN_Bear_Tag_AgeDone", day)
-        end
+        local left = math.floor(tonumber(c.nxt) or 1)
+        if left < 1 then left = 1 end
+        e.ageLine = U.T("UI_BN_Bear_Tag_Age", day, U.StageName(c.nst), left)
     end
     local up = 0
     if e.staFill then
@@ -460,6 +478,7 @@ local function rebuild(now)
         forget(S.objs, cubs)
         forget(S.prev, cubs)
         forget(S.flash, cubs)
+        forget(S.ldPrev, cubs)
         S.scanMiss = 0
     end
 
@@ -479,6 +498,12 @@ local function rebuild(now)
             S.flash[id] = now + FLASH_MS
         end
         S.prev[id] = c.st
+        -- F1B (FB 5.3 a): nur bei neuer Sicht -- wechselt der Eintrag auf "geladen", gleich suchen statt bis zu SCAN_IDLE_MS zu warten
+        if wasDirty then
+            local ldNow = (c.ld == true)
+            if ldNow and S.ldPrev[id] ~= true then S.scanAt = 0 end
+            S.ldPrev[id] = ldNow
+        end
         if wanted(c) then
             local obj = S.objs[id]
             if not alive(obj) then

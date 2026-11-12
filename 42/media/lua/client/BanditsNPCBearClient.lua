@@ -3,7 +3,8 @@
 -- Namen fuer das Schild, neue Texte; B1c, PLAN_B1C.md 6.4/6.7: neue Texte, Ankunftszeit der Sicht U.viewAt; B1d, PLAN_B1D.md
 -- 6.5/6.7: Meldungen "stage" (Stufe erreicht) und "skill" (Faehigkeit gestiegen), U.StageName, Texte fuer Schild und Optionen;
 -- B1e, PLAN_B1E.md 6.4/6.5/6.8: Texte je Koerper -- U.TB, Big-Fassungen in U.NoteText und U.CubName, Texte der Markierungs-Groesse;
--- F1, PLAN_F1.md 4a/7.6: Texte des Baeren-Fensters und der neuen Befehle, U.WhyText mit Koerper bd).
+-- F1, PLAN_F1.md 4a/7.6: Texte des Baeren-Fensters und der neuen Befehle, U.WhyText mit Koerper bd; F1B, PLAN_F1B.md 3.2: Texte der
+-- zwei Tasten (Optionen-Seite), der Fusszeile und des Wachstums-Schalters, zwei neue Werte, "Tag_AgeDone" entfaellt).
 --
 -- Laeuft im Einzelspieler und auf jedem MP-Client (der dedizierte Server laedt client/ nicht). Diese Datei entscheidet NICHTS:
 -- sie nimmt die Sicht ("Sync") und die Meldungen ("Note") des Schreibers an, zeigt Meldungen ueber der Figur und bittet beim
@@ -142,7 +143,6 @@ U.EN = {
     UI_BN_Bear_Tag_Health = "Health %1/%2",
     UI_BN_Bear_Tag_Stamina = "Stamina %1/%2",
     UI_BN_Bear_Tag_Age = "Day %1 - %2 in %3 day(s)",
-    UI_BN_Bear_Tag_AgeDone = "Day %1 - full-grown",
     UI_BN_Bear_Stage_Half = "half-grown",
     UI_BN_Bear_Stage_Strong = "strong",
     UI_BN_Bear_Stage_Adult = "full-grown",
@@ -159,7 +159,7 @@ U.EN = {
     UI_BN_Bear_MO_Stamina = "Stamina above tamed bears",
     UI_BN_Bear_MO_StaminaTip = "Off, as a bar or as a number. Stamina drops while a bear runs and comes back while it rests.",
     UI_BN_Bear_MO_Age = "Age and growth above tamed bears",
-    UI_BN_Bear_MO_AgeTip = "Growth day and when the next stage comes.",
+    UI_BN_Bear_MO_AgeTip = "Growth day and when the next stage comes. Main switch: each bear also has its own switch in the bear window. Full-grown bears show no line.",
     UI_BN_Bear_MO_Off = "Off",
     UI_BN_Bear_MO_Bar = "Bar",
     UI_BN_Bear_MO_Number = "Number",
@@ -191,8 +191,8 @@ U.EN = {
     UI_BN_Bear_MO_Pct300 = "300%%",
     -- F1 (PLAN_F1.md 7.6): Baeren-Fenster (Win_*), Rechtsklick "Bear window", Fenstergroesse (MO_WinSize*), Schild Sitz/Frei,
     -- die neuen Meldungen des KERNs mit Big-Fassung (U.NoteText waehlt sie bei bd == "big") und die B1e-Reste A1/B6
-    -- (Why_GoneBig, Note_DeadBig, Menu_HoldBig, Menu_HoldTipBig). Die zwei Tasten-Schluessel UI_optionscreen_binding_* liest
-    -- Vanillas Tastaturbelegung selbst (nur in UI.json).
+    -- (Why_GoneBig, Note_DeadBig, Menu_HoldBig, Menu_HoldTipBig). F1B: keine Zeile mehr in Vanillas Tastaturbelegung -- die zwei
+    -- Schluessel UI_optionscreen_binding_* sind aus allen sieben UI.json entfernt.
     UI_BN_Bear_Win_BodyCub = "Bear cub",
     UI_BN_Bear_Win_BodyBear = "Bear",
     UI_BN_Bear_Win_Sub = "%1 - day %2",
@@ -285,7 +285,7 @@ U.EN = {
     UI_BN_Bear_Win_NoBear = "You do not have a bear yet.",
     UI_BN_Bear_Win_NoData = "The bear window is still loading. Try again in a moment.",
     UI_BN_Bear_Menu_Window = "Bear window",
-    UI_BN_Bear_Menu_WindowTip = "Also opens with a key - Options, Key bindings, NPC Crew: Bear.",
+    UI_BN_Bear_Menu_WindowTip = "Also opens with a key when you stand near your bear (E by default) - Options, Mods, NPC Crew: Bear.",
     UI_BN_Bear_MO_WinSize = "Size of the bear window",
     UI_BN_Bear_MO_WinSizeTip = "Auto grows with the screen height (1080p = 100%%, 4K = 200%%).",
     UI_BN_Bear_Tag_Sit = "sitting",
@@ -310,6 +310,19 @@ U.EN = {
     UI_BN_Bear_Note_DeadBig = "Your bear is dead.",
     UI_BN_Bear_Menu_HoldBig = "Hold out food for the bear",
     UI_BN_Bear_Menu_HoldTipBig = "Takes it in your hand. Stand still and the bear comes closer.",
+    -- F1B (PLAN_F1B.md 3.2): die zwei Tasten auf der Optionen-Seite (MO_Key*; die Namen holt client/BanditsNPCBearOptions.lua selbst
+    -- ueber getText, hier stehen sie nur, damit U.EN wortgleich mit EN/UI.json bleibt), die Fusszeile des Fensters (Win_Hint*) und der
+    -- Wachstums-Schalter (Win_Growth*)
+    UI_BN_Bear_MO_Keys = "Bear window keys",
+    UI_BN_Bear_MO_KeyNear = "Bear window: key near your bear",
+    UI_BN_Bear_MO_KeyNearTip = "Opens and closes the bear window while you stand close to your own bear. It does nothing at a door, window, fence or car, while aiming or when no bear of yours is near, so E keeps working as usual. A single key only (no Shift, Ctrl or Alt). If the game says the key is already used, choose Keep Both.",
+    UI_BN_Bear_MO_KeyFar = "Bear window: key from anywhere",
+    UI_BN_Bear_MO_KeyFarTip = "Opens and closes the bear window wherever you are - handy for Unstuck when your bear is far away or missing. No key by default. A single key only (no Shift, Ctrl or Alt). If the game says the key is already used, choose Keep Both.",
+    UI_BN_Bear_Win_HintNear = "Drag to move.  %1 near your bear or Esc closes.",
+    UI_BN_Bear_Win_HintBoth = "Drag to move.  %1 near your bear, %2 anywhere or Esc closes.",
+    UI_BN_Bear_Win_Growth = "Growth line",
+    UI_BN_Bear_Win_GrowthTip = "Shows the day and growth line above this bear - only on your screen. When it is full-grown, the line and this switch go away.",
+    UI_BN_Bear_Win_GrowthOffAll = "The age line is switched off for all bears in Options - Mods.",
 }
 
 local KEY_HEAD = "UI_BN_Bear_"

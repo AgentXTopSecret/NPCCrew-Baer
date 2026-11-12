@@ -8,6 +8,22 @@
 -- B1e (PLAN_B1E.md 1.7.9, 6.7): danach MarkerSize -- Groesse der Markierung oben am Bildschirm (Auto / 100 ... 300 %, Vorgabe Auto).
 -- F1 (PLAN_F1.md 1.7): danach WinSize -- Groesse des Baeren-Fensters (Auto / 100 ... 300 %, Vorgabe Auto; gleiche Stufen wie MarkerSize,
 -- gelesen ueber U.Opt("WinSize", 1) -> U.MarkerFactor). Wirkt beim naechsten Oeffnen oder im 1-s-Takt des offenen Fensters.
+-- F1B (PLAN_F1B.md 0 E1/E2, 1.1, 3.1; Kevin 12.11.2026: "bei E das baeren ui zu oeffnen und wenn man es aus der ferne oeffnen will dann
+-- kann man ... den hotkey festelegen ... die E taste fuer den baeren wenn man in der naehe ist in sen mod settings zum aendern
+-- eintragen"): danach ein Titel "Bear window keys" und ZWEI Tasten -- KeyNear (Vorgabe E, oeffnet/schliesst nahe am eigenen Baeren)
+-- und KeyFar (Vorgabe KEINE Taste, oeffnet/schliesst aus jeder Entfernung). Reihenfolge jetzt: TagShow, TagHealth, TagStamina, TagAge,
+-- TagSize, MarkerSize, WinSize, Titel Keys, KeyNear, KeyFar. Keine Zeile mehr in Vanillas Tastaturbelegung (keyBinding).
+-- addKeyBind(id, Name, Taste, Tooltip): V:client/PZAPI/ModOptions.lua:182-204 (getValue :191 = Tastencode), Aufrufer derselben Form
+-- B:client/BanditModOptions.lua:14. AUSNAHME von der Regel "hier stehen Schluessel": der NAME einer Tasten-Zeile ist schon
+-- uebersetzt (getText auf Dateiebene wie Bandits :12-14) -- Vanilla beschriftet die Zeile mit getText(option.name)
+-- (V:client/OptionScreens/MainOptions.lua:2985), merkt sich aber btn.internal = option.name (:2992) und sucht die Zeile beim
+-- Tastendruck im Dialog ueber den Beschriftungstext (:3804, :3818) -- mit einem rohen Schluessel liefe das ins Leere (Lua-Fehler).
+-- Der Tooltip bleibt Schluessel (btn:setTooltip(getText(option.tooltip)) :2996-2998). Kein %1 in diesen Namen.
+-- 0 (Keyboard.KEY_NONE, V:shared/keyBinding.lua:143 "-- 0") heisst "keine Taste" (der Dialog "Loeschen" setzt 0,
+-- V:client/ISUI/ISSetKeybindDialog.lua:85-96). Nur eine einfache Taste: save schreibt nur den Code (V:client/PZAPI/ModOptions.lua:276-280),
+-- getValue gibt nur ihn (:191) -- Shift/Strg/Alt waeren nach dem Neustart weg. Gespeichert wird von Vanilla selbst
+-- ("keybind|BanditsNPCBear|KeyNear|18" in ModOptions.ini, :276-282, geladen :326-327). Die Vorgaben stehen in U.KEY_DEF (unten, auf
+-- Dateiebene AUSSERHALB des Riegels), damit client/BanditsNPCBearKey.lua sie auch ohne die Seite kennt.
 --
 -- Warum hier und nicht in der Sandbox: das ist eine Anzeige-Frage des eigenen Rechners, keine Weltregel. Vanilla speichert die
 -- Seite selbst je Rechner in ModOptions.ini (V:client/PZAPI/ModOptions.lua:259-290, geladen V:client/OptionScreens/MainOptions.lua:2791);
@@ -43,7 +59,7 @@ local U = B.UI
 local PAGE = "BanditsNPCBear"
 local CACHE_MS = 1000
 
--- Zwischenspeicher je Wert: { v = Wert oder nil, at = ms }. Gedeckelt durch die festen Ids dieser Seite (B1d: 5, B1e: 6, F1: 7).
+-- Zwischenspeicher je Wert: { v = Wert oder nil, at = ms }. Gedeckelt durch die festen Ids dieser Seite (B1d: 5, B1e: 6, F1: 7, F1B: 9).
 local cache = {}
 
 local function err(msg)
@@ -54,6 +70,11 @@ local function err(msg)
         print("[TC-BEAR] *** " .. tostring(msg))
     end
 end
+
+-- F1B (PLAN_F1B.md 1.1, 3.1): Vorgabe-Tasten der zwei Zeilen unten -- Nah-Taste E (Vanillas Interact-Vorgabe, V:shared/keyBinding.lua:33
+-- Keyboard.KEY_E), Fern-Taste keine (Keyboard.KEY_NONE, V:shared/keyBinding.lua:57 / :143 "-- 0"). Gelesen von U.BearKeys
+-- (client/BanditsNPCBearKey.lua), auch wenn die Seite fehlt. Einziger Ort dieser zwei Zahlen.
+U.KEY_DEF = { KeyNear = Keyboard.KEY_E, KeyFar = Keyboard.KEY_NONE }
 
 -- ---------------------------------------------------------------------------
 -- Die Seite (auf Dateiebene, wie Bandits B:client/BanditModOptions.lua:12-14)
@@ -100,6 +121,12 @@ if PZAPI and PZAPI.ModOptions and PZAPI.ModOptions.create then
     ws:addItem("UI_BN_Bear_MO_Pct200")
     ws:addItem("UI_BN_Bear_MO_Pct250")
     ws:addItem("UI_BN_Bear_MO_Pct300")
+    -- F1B (PLAN_F1B.md 3.1; Kevin 12.11.2026, Kopf dieser Datei): die zwei Tasten des Baeren-Fensters. addTitle :28-30 (gezeichnet mit
+    -- getText, V:client/OptionScreens/MainOptions.lua:2803-2804); addKeyBind :182-204 mit SCHON UEBERSETZTEM Namen (getText wie
+    -- B:client/BanditModOptions.lua:14 -- Grund im Kopf), Tooltip als Schluessel. Vorgaben aus U.KEY_DEF (oben).
+    o:addTitle("UI_BN_Bear_MO_Keys")
+    o:addKeyBind("KeyNear", getText("UI_BN_Bear_MO_KeyNear"), U.KEY_DEF.KeyNear, "UI_BN_Bear_MO_KeyNearTip")
+    o:addKeyBind("KeyFar", getText("UI_BN_Bear_MO_KeyFar"), U.KEY_DEF.KeyFar, "UI_BN_Bear_MO_KeyFarTip")
     -- Spaeter (NICHT jetzt anlegen; ENTSCHEIDUNGEN.md "Anzeige ueber dem Baeren"): Hunger, Durst, Muedigkeit je als Auswahl
     -- Aus / Balken / Zahl wie TagHealth, sobald es die Werte gibt (Beduerfnisse, Schlafen); "DODGE" als addTickBox mit dem Kampf.
     -- Gelesen wird alles ueber U.Opt(id, vorgabe); jeder neue Schluessel in allen sieben UI.json.

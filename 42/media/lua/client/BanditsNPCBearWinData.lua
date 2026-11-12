@@ -11,6 +11,9 @@
 -- bd sz hp hpMax sta staMax day nst nxt). Fehlt ein Wert, steht "--" bzw. die Zeile faellt weg -- nie geraten (PLAN_F1.md 1.4, 1.5).
 -- Was der Spieler sieht, ist nur eine Vorpruefung: entscheiden tut immer der Schreiber (B.Handle; Einzelspieler: dasselbe Programm,
 -- Mehrspieler: der Server).
+-- F1B (PLAN_F1B.md 3.4, 5.3): die Fusszeile nennt die Tasten, die gelten ("E near your bear", die Fern-Taste, falls gesetzt; Namen aus
+-- U.WinKeyName, client/BanditsNPCBearKey.lua); der dritte Schalter "Growth line" (U.AgeOn, client/BanditsNPCBearTags.lua) traegt
+-- ageShow = der Baer waechst noch (Sicht mit day UND nst) -- ausgewachsen verschwindet er aus dem Fenster.
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -93,6 +96,9 @@ local function statics()
     s.tipFollow, s.tipCome = U.T("UI_BN_Bear_Menu_FollowTip"), U.T("UI_BN_Bear_Win_ComeTip")
     s.tipPassive, s.tipTag = U.T("UI_BN_Bear_Win_PassiveTip"), U.T("UI_BN_Bear_Win_TagTip")
     s.tagOffAll, s.active = U.T("UI_BN_Bear_Win_TagOffAll"), U.T("UI_BN_Bear_Win_Active")
+    -- F1B: Wachstums-Schalter (Text, Tooltip, Hinweis auf den Hauptschalter TagAge in Optionen -> Mods)
+    s.growth, s.tipGrowth = U.T("UI_BN_Bear_Win_Growth"), U.T("UI_BN_Bear_Win_GrowthTip")
+    s.growthOffAll = U.T("UI_BN_Bear_Win_GrowthOffAll")
     s.whyCar, s.whyFar = U.T("UI_BN_Bear_Why_InCar"), U.T("UI_BN_Bear_Why_Far")
     s.hintMissing, s.hintRide, s.hintAway = U.T("UI_BN_Bear_Win_HintMissing"), U.T("UI_BN_Bear_Win_HintRide"),
         U.T("UI_BN_Bear_Win_HintAway")
@@ -379,8 +385,19 @@ function U.WinModel(v, player, nowMs)
     elseif st == "away" then
         d.footer = s.hintAway
     else
-        local keyName = U.WinKeyName and U.WinKeyName()
-        if keyName then d.footer = U.T("UI_BN_Bear_Win_Hint", keyName) else d.footer = s.hintEsc end
+        -- F1B (PLAN_F1B.md 3.4): welche Tasten gelten. Liegen beide auf derselben Taste, gilt sie als Fern-Taste (oeffnet ueberall).
+        local nn, fn = nil, nil
+        if U.WinKeyName then nn, fn = U.WinKeyName() end
+        if nn and fn and nn == fn then nn = nil end
+        if nn and fn then
+            d.footer = U.T("UI_BN_Bear_Win_HintBoth", nn, fn)
+        elseif nn then
+            d.footer = U.T("UI_BN_Bear_Win_HintNear", nn)
+        elseif fn then
+            d.footer = U.T("UI_BN_Bear_Win_Hint", fn)
+        else
+            d.footer = s.hintEsc
+        end
     end
     -- Abstand: lebende Kopie (U.CubPos, S:client/ISUI/BanditsNPCBearHud.lua), sonst die letzte Stelle der Sicht (ganze Kacheln)
     local px, py = player:getX(), player:getY()         -- V:client/Fishing/TensionUI.lua:11
@@ -449,7 +466,14 @@ function U.WinModel(v, player, nowMs)
     if U.TagOn then tagOn = U.TagOn(v) ~= false end
     local tagTip = TIP_HEAD .. s.tag .. TIP_BODY .. s.tipTag
     if U.Opt and U.Opt("TagShow", true) == false then tagTip = tagTip .. TIP_LINE .. s.tagOffAll end
+    -- F1B (PLAN_F1B.md 5.3): Wachstums-Schalter -- an/aus je Baer (U.AgeOn, je Spieler), sichtbar nur, solange er waechst (nst fehlt,
+    -- wenn er ausgewachsen ist: S:server/BanditsNPCBearGrow.lua:758, :786-787). TagAge aus (Hauptschalter): Hinweis im Tooltip.
+    local ageOn = true
+    if U.AgeOn then ageOn = U.AgeOn(v) ~= false end
+    local ageTip = TIP_HEAD .. s.growth .. TIP_BODY .. s.tipGrowth
+    if U.Opt and U.Opt("TagAge", true) == false then ageTip = ageTip .. TIP_LINE .. s.growthOffAll end
     d.toggles = { pas = (v.pas == true), tag = tagOn, pasLabel = s.passive, tagLabel = s.tag,
-        pasTip = TIP_HEAD .. s.passive .. TIP_BODY .. s.tipPassive, tagTip = tagTip }
+        pasTip = TIP_HEAD .. s.passive .. TIP_BODY .. s.tipPassive, tagTip = tagTip,
+        age = ageOn, ageShow = isNum(v.day) and v.nst ~= nil, ageLabel = s.growth, ageTip = ageTip }
     return d
 end

@@ -15,6 +15,13 @@
 -- Befehle gehen als Bitte an den Schreiber (B.Ask: Einzelspieler B.Handle direkt, Mehrspieler sendClientCommand, Rolle user genuegt);
 -- Besitz, Lage und Abklingzeit prueft der Schreiber. Das Fenster setzt nie einen Wert selbst (kein Cheat).
 -- Nur Spieler 0 (wie V:client/ISUI/Hutch/ISHutchUI.lua:884-893). Kein Schliessen wegen Abstand (F-j).
+-- F1B (PLAN_F1B.md 0 E8, E11, 1.7, 5.3; Kevin 12.11.2026: "bei E das baeren ui zu oeffnen" und "einen schalter haben das die anzeige
+-- aus geht wann der waechst und wenn er bei 100% ist soll der knopf ganz verschwinden"): das Fenster verbraucht nur noch Esc -- Auf/Zu
+-- mit der Nah-Taste (E) und der Fern-Taste macht allein client/BanditsNPCBearKey.lua (OnKeyPressed). So bekommen alle anderen
+-- Lua-Hoerer ihre Taste auch bei offenem Fenster (NC "Talk to NPC" auf V, Moebel-Cursor und NC-Stationen auf E). Dazu der dritte
+-- Schalter "Growth line" (Wachstums-Zeile UEBER diesem Baeren an/aus, je Spieler wie "Name tag", client/BanditsNPCBearTags.lua) in der
+-- bisher leeren dritten Zelle der Schalterreihe; ist der Baer ausgewachsen (Sicht ohne nst), verschwindet der Schalter (setVisible) --
+-- Breite, Hoehe und alle anderen Kinder haengen nicht daran, die Zelle bleibt leer, nichts springt.
 -- Jeder Engine-Aufruf hat eine Vanilla-Fundstelle (Kommentar daneben). Statisch geprueft, nicht gespielt.
 --
 
@@ -30,7 +37,6 @@ local U = B.UI
 -- Klasse bleibt ein Local. ISPanel:derive: V:client/ISUI/AdminPanel/ISAdminTicketsUI.lua:1.
 local Win = ISPanel:derive("BanditsNPCBearWindow")
 
-local KEY_NAME = "Bear window"                  -- Kennung der Taste in keysB42.ini (client/BanditsNPCBearKey.lua, fuer immer stabil)
 local LAYOUT_NAME = "BanditsNPCBearWindow"      -- Name in Vanillas layout.ini (eindeutig, Kollisionsprobe forschung_f1.md 8)
 local MODEL_MS = 1000
 local FIT = 0.92                                -- passt das Fenster nicht in 92 % der Bildhoehe, wird f eine Stufe kleiner
@@ -166,6 +172,8 @@ local function metrics(f, d, n, sw, sh, idx)
     end
     bwNeed = math.max(bwNeed, tw(m.fBody, s.wideUnstuck) + R(24))
     bwNeed = math.max(bwNeed, tw(m.fBody, s.passive) + R(46), tw(m.fBody, s.tag) + R(46))
+    -- F1B: der dritte Schalter "Growth line" -- immer mitgemessen (auch wenn er gerade verschwunden ist), damit nichts springt
+    bwNeed = math.max(bwNeed, tw(m.fBody, s.growth) + R(46))
     grow(2 * P + 3 * bwNeed + R(40))
     local footW = 0
     for _, txt in ipairs({ s.hintMissing, s.hintRide, s.hintAway, s.hintEsc }) do footW = math.max(footW, tw(m.fSmall, txt)) end
@@ -237,6 +245,7 @@ local function place(win, m)
     local ty0 = by0 + 2 * (m.bh + m.R8) + m.R2
     put(win.tick.pas, P + m.R12, ty0, m.bw, m.th)
     put(win.tick.tag, P + m.R12 + m.bw + m.R8, ty0, m.bw, m.th)
+    put(win.tick.age, P + m.R12 + 2 * (m.bw + m.R8), ty0, m.bw, m.th)     -- F1B: dritte Zelle (PLAN_F1B.md 5.3)
 end
 
 -- Auf den Bildschirm klemmen: mindestens 40 x f px sichtbar, Oberkante nie ueber dem Bild (PLAN_F1.md 1.1 "Lage").
@@ -316,7 +325,7 @@ function Win:build()
     self.prevB = kid(self, U.WinBtn, "prev", "small")
     self.nextB = kid(self, U.WinBtn, "next", "small")
     self.prevB.label, self.nextB.label = "<", ">"
-    self.tick = { pas = kid(self, U.WinTick, "passive"), tag = kid(self, U.WinTick, "tag") }
+    self.tick = { pas = kid(self, U.WinTick, "passive"), tag = kid(self, U.WinTick, "tag"), age = kid(self, U.WinTick, "growth") }
     self.rows = {
         hp = kid(self, U.WinRow, nil), sta = kid(self, U.WinRow, nil), carry = kid(self, U.WinRow, nil),
         later = kid(self, U.WinRow, nil),
@@ -344,16 +353,20 @@ function Win:build()
     self.closeB = c                                 -- nicht "close": das ist ISPanel:close (V:client/ISUI/ISPanel.lua:14)
 end
 
--- Offene Tooltips der Kinder abmelden (wie ISButton:updateTooltip selbst: V:client/ISUI/ISButton.lua:341-343).
+-- Offenen Tooltip EINES Kindes abmelden (wie ISButton:updateTooltip selbst: V:client/ISUI/ISButton.lua:341-343). F1B: auch fuer den
+-- Wachstums-Schalter, bevor er unsichtbar wird -- ein unsichtbarer Knopf bekommt kein prerender mehr, sein Tooltip bliebe sonst stehen.
+local function hideTip(el)
+    local tip = el and el.tooltipUI
+    if tip and tip:getIsVisible() then
+        tip:setVisible(false)
+        tip:removeFromUIManager()
+    end
+end
+
+-- Offene Tooltips aller Kinder abmelden.
 local function hideTips(win)
     if not win.kids then return end
-    for i = 1, #win.kids do
-        local tip = win.kids[i].tooltipUI
-        if tip and tip:getIsVisible() then
-            tip:setVisible(false)
-            tip:removeFromUIManager()
-        end
-    end
+    for i = 1, #win.kids do hideTip(win.kids[i]) end
 end
 
 -- Modell anwenden: Texte, Zustaende, Tooltips der Kinder; Breiten, die je Sekunde wechseln (Chip, Prozent). Nur im 1-s-Takt.
@@ -376,6 +389,15 @@ local function apply(win, d)
     local t = d.toggles
     win.tick.pas.on, win.tick.pas.label, win.tick.pas.tooltip = t.pas, t.pasLabel, t.pasTip
     win.tick.tag.on, win.tick.tag.label, win.tick.tag.tooltip = t.tag, t.tagLabel, t.tagTip
+    -- F1B: Wachstums-Schalter; verschwindet, wenn der Baer ausgewachsen ist (t.ageShow false). ISButton:setVisible V:client/ISUI/ISButton.lua:9
+    -- (wie prev/next oben in place), getIsVisible :34. Nur bei einem Wechsel, und den offenen Tooltip vorher abmelden.
+    local age = win.tick.age
+    age.on, age.label, age.tooltip = t.age, t.ageLabel, t.ageTip
+    local show = (t.ageShow == true)
+    if age:getIsVisible() ~= show then
+        if not show then hideTip(age) end
+        age:setVisible(show)
+    end
     win.rows.hp.tooltip, win.rows.sta.tooltip = d.tips.hp, d.tips.sta
     win.rows.carry.tooltip, win.rows.later.tooltip = d.tips.carry, d.tips.later
 end
@@ -453,6 +475,10 @@ function Win:onCmd(button)
     elseif cmd == "tag" then
         if U.TagSet and U.TagOn then U.TagSet(v, not U.TagOn(v)) end
         self.dirty = true
+    elseif cmd == "growth" then
+        -- F1B: Wachstums-Zeile UEBER diesem Baeren an/aus -- je Spieler, was ICH sehe (wie Name tag); kein Server, kein Befehl
+        if U.AgeSet and U.AgeOn then U.AgeSet(v, not U.AgeOn(v)) end
+        self.dirty = true
     elseif cmd == "rename" then
         if U.AskName then self.nameBox = U.AskName(player, v) end
     end
@@ -529,18 +555,20 @@ function Win:prerender()
     self:drawText(d.footer or "", m.P, m.y3, c[1], c[2], c[3], c[4], m.fSmall)
 end
 
--- Esc oder die eigene Taste schliessen (V:client/ISUI/Crafting/ISHandcraftWindow.lua:289-297; Esc nur Spieler 0 wie
--- V:client/ISUI/Hutch/ISHutchUI.lua:884-893). Nicht, solange der Spieler tippt: Chat (ISChat.focused, V:client/Chat/ISChat.lua:8)
--- oder das Namensfeld dieses Fensters (isReallyVisible, V:client/ISUI/ISUIElement.lua:690) -- sonst schloesse ein "v" im Namen das Fenster.
+-- Esc schliesst (V:client/ISUI/Crafting/ISHandcraftWindow.lua:289-297; Esc nur Spieler 0 wie V:client/ISUI/Hutch/ISHutchUI.lua:884-893).
+-- Nicht, solange der Spieler tippt: Chat (ISChat.focused, V:client/Chat/ISChat.lua:8) oder das Namensfeld dieses Fensters
+-- (isReallyVisible, V:client/ISUI/ISUIElement.lua:690).
 local function typing(self)
     if ISChat and ISChat.focused then return true end
     local box = self.nameBox
     return box ~= nil and box:isReallyVisible()
 end
 
--- Schliess-Taste: Esc oder die eigene Belegung (isKey(Text, key): V:client/ISUI/FPS.lua:9). Die einzige Tastenabfrage dieser Datei.
+-- Schliess-Taste: nur Esc (F1B E8, PLAN_F1B.md 1.7; Form V:client/ISUI/Crafting/ISHandcraftWindow.lua:290). Die einzige Tastenabfrage
+-- dieser Datei. Die Nah- und die Fern-Taste verbraucht das Fenster NICHT: ein verbrauchter Druck naehme allen Lua-Hoerern die Taste
+-- (NC "Talk to NPC" auf V, Moebel-Cursor, NC-Stationen auf E); sie schliessen ueber client/BanditsNPCBearKey.lua (OnKeyPressed).
 local function closeKey(key)
-    return key == Keyboard.KEY_ESCAPE or getCore():isKey(KEY_NAME, key)
+    return key == Keyboard.KEY_ESCAPE
 end
 
 function Win:isKeyConsumed(key)

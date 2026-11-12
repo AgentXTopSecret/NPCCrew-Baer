@@ -15,6 +15,11 @@
 -- client/ISUI/BanditsNPCBearWindow.lua); Gruende der Vorpruefung und "Hold out food" je Koerper (U.WhyText / U.TB mit bd); der
 -- Umschalter kennt vier Modi (bei follow "Stay here", sonst "Follow me"); "Futter hinhalten" lockt nur einen BLEIBENDEN Baeren (der
 -- Schreiber lockt im Sitzen und beim freien Herumlaufen nicht, PLAN_F1.md 2.3/2.4).
+-- F1B (PLAN_F1B.md 0 E9, 2.4; Kevin 12.11.2026: V gehoert wieder NPC Crew und Vanilla): Vanillas Tier-Radial (Taste "Animal Radial
+-- Menu", Vorgabe V) geht an unseren Baeren wieder auf -- aber wie das Rechtsklick-Menue OHNE "Kill", an jedem Baeren unserer Art
+-- (eigen und fremd). Dafuer eine Huelle um AnimalContextMenu.showRadialMenu (Vanilla-Lua, angelegt in OnGameBoot, genau einmal,
+-- Existenz-Riegel): Original rufen, danach die Kill-Scheibe herausnehmen (Vergleich der Funktion, sprachunabhaengig). Neue
+-- Vanilla-Beruehrung -> baer/NAEHTE.md. Der Rechtsklick "Bear window" bleibt; sein Tooltip nennt jetzt die Nah-Taste.
 --
 -- Das Menue BIETET nur AN. Es stellt Zeitaktionen an (Fuettern, Streicheln, Koeder) bzw. schickt eine Bitte (Koederplatz
 -- aufgeben); ob etwas gilt, entscheidet der Schreiber in complete() bzw. in B.Handle (Einzelspieler: dasselbe Programm,
@@ -332,6 +337,54 @@ local function cubMenu(context, playerObj, animal, name, nth)
     end
 end
 
+-- ---------------------------------------------------------------------------
+-- F1B (PLAN_F1B.md 2.4): Vanillas Tier-Radial an jedem Baeren unserer Art ohne "Kill" -- wie das Rechtsklick-Menue (cubMenu oben).
+-- Das Radial ist eine Lua-Tabelle: menu.slices mit { text, texture, command = { fn, a1..a6 } }, menu:clear(), menu:addSlice(...)
+-- (V:client/ISUI/ISRadialMenu.lua:37-53; Vanilla liest slices selbst V:client/ISUI/ISFirearmRadialMenu.lua:267-269). Ein removeSlice gibt
+-- es nicht -- also neu aufbauen, nur wenn etwas wegfiel. Kill erkennt man an command[1] == AnimalContextMenu.onKillAnimal
+-- (V:client/ISUI/Animal/ISAnimalContextMenu.lua:1175, Funktion :1079). Laeuft im selben Lua-Aufruf wie Vanillas Aufbau, also bevor ein
+-- Bild gezeichnet wird; deckt Tastatur (V:client/ISUI/ISUIHandler.lua:56, :93) und Controller (V:client/ISUI/ISDPadWheels.lua:101),
+-- weil beide ueber das Tabellenfeld rufen. Vorbild einer Huelle (gelernt, nicht kopiert): NC:client/BanditsNPCSleep.lua:380-406.
+-- ---------------------------------------------------------------------------
+local function noKill(menu)
+    local kill = AnimalContextMenu.onKillAnimal
+    if kill == nil then return end
+    local keep = {}
+    local dropped = false
+    for i = 1, #menu.slices do
+        local sl = menu.slices[i]
+        local c = sl and sl.command
+        if type(c) == "table" and c[1] == kill then
+            dropped = true
+        else
+            keep[#keep + 1] = sl
+        end
+    end
+    if not dropped then return end
+    menu:clear()                                                                -- ISRadialMenu.lua:37-42
+    for i = 1, #keep do
+        local sl = keep[i]
+        local c = sl.command or {}
+        menu:addSlice(sl.text, sl.texture, c[1], c[2], c[3], c[4], c[5], c[6], c[7])   -- ISRadialMenu.lua:44-53 (Form :18-26)
+    end
+end
+
+local function hookRadial()
+    if U.radialHooked then return end
+    if type(AnimalContextMenu) ~= "table" or type(AnimalContextMenu.showRadialMenu) ~= "function" then return end   -- Existenz-Riegel
+    U.radialHooked = true
+    local orig = AnimalContextMenu.showRadialMenu
+    AnimalContextMenu.showRadialMenu = function(playerObj)
+        local menu = nil
+        if playerObj then menu = getPlayerRadialMenu(playerObj:getPlayerNum()) end   -- ISAnimalContextMenu.lua:1156-1157
+        local wasOpen = menu ~= nil and menu:isReallyVisible()                       -- :1160 (dann schliesst orig nur)
+        orig(playerObj)
+        if wasOpen or menu == nil or not B.BodyKind or type(menu.slices) ~= "table" then return end
+        local an = AnimalContextMenu.getAnimalToInteractWith(playerObj)               -- :1170
+        if an and B.BodyKind(an) ~= nil then noKill(menu) end
+    end
+end
+
 -- Vanillas eigenes Tier-Menue haengt am selben Ereignis (ISAnimalContextMenu.lua:1013-1017, :1235) und laedt vor uns: sein
 -- Untermenue je Tier steht schon, wenn wir drankommen.
 -- B1e: unser Baer ist jedes Tier, fuer das B.BodyKind (Kern, shared) "cub" oder "big" sagt -- der einzige Art-Vergleich (darin
@@ -512,3 +565,4 @@ end
 
 Events.OnClickedAnimalForContext.Add(onClickedAnimals)          -- client/ISUI/Animal/ISAnimalContextMenu.lua:1235
 Events.OnFillWorldObjectContextMenu.Add(onFillWorld)            -- client/ISUI/Hutch/ISHutchMenu.lua:115
+Events.OnGameBoot.Add(hookRadial)                               -- F1B; V:client/Foraging/ISSearchManager.lua:1481
