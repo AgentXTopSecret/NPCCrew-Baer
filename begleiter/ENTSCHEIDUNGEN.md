@@ -520,3 +520,6 @@ also baby und ganz gross?'*
 * Kevin (12.11. ~19:30) zum UI-Entwurf (`../_arbeit/baer_zaehmen/ui_entwurf/`, A hoch / B breit): *"B (breit)"* -> **Fest: Baerenfenster Variante B** -- drei Karten
   nebeneinander (Condition | Needs | Skills), Befehle in 5 Spalten (Reihe 1 Befehle, Reihe 2 Handgriffe Fish/Unstuck/Look/Inventory/Bandage, Reihe 3 Schalter).
   Umbau mit F3 (bringt die Needs-Karte); Vorlage `ui_entwurf/proto/`. Der laufende Aussehen-Lauf baut seinen Knopf noch im heutigen Layout.
+* Kevin (12.11. ~20:10): *"so keinen neuen workflow mehr starten merk dir den stand schonmal und mach alels fuer die uebergabe an eine nanderen clausde ascocunt
+  berreit und wenn die workflows durch sind nochmal alles speichern, stell dir einen waechter ab 95% wochen limit stoppst du alles und machst es berreit fuer die
+  uebergabe und mach ein 5h std waechter an falls er beendet wird deswegen"* -> UEBERGABE_ACCOUNT2.md neu, Waechter 3c536c47.

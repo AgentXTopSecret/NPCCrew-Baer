@@ -1,5 +1,10 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **12.11. 20:15 HALT FUER NEUE LAEUFE + UEBERGABE (Kevin: *"so keinen neuen workflow mehr starten ... mach alles fuer die uebergabe an einen anderen claude account
+> bereit"*):** `UEBERGABE_ACCOUNT2.md` NEU geschrieben (Stand 20:15; ersetzt die Fassung von heute frueh). Laufen zu Ende: baer-aussehen (wf_34a802e5-6f8), baer-maul-bau
+> (wf_a876c805-e76), baer-f3-plan (wf_881b0108-ad0). **Waechter 3c536c47** (alle 10 min, nur diese Sitzung): Woche >= 95 % -> alles anhalten + Fortsetzungs-Skripte +
+> Uebergabe nachziehen; 5-h-Limit -> nach Reset haengende Laeufe mit resumeFromRunId fortsetzen; alle fertig -> final sichern und sich loeschen. Woche 75 %, 5 h 63 %.
+
 > **12.11. ~19:35: Kevin waehlt Fenster-Variante B** (*"B (breit)"*, Umbau mit F3). **F3-Forschung + Plan gestartet:** `wf_881b0108-ad0` (Task whr8tzmw4, 2 Agenten,
 > scriptPath `C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel/f3_plan_workflow.js`) -> `../_arbeit/baer_zaehmen/f3/` (FORSCHUNG_F3.md, PLAN_F3.md mit hoechstens 6 Kevin-Fragen).
 > F3-BAU erst nach baer-aussehen (gleiche Dateien).

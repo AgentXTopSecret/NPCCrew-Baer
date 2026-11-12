@@ -1,78 +1,77 @@
-# Baer -- Uebergabe fuer Kevins anderen Account (12.11.2026, ab ~07:20; wird beim Abschluss bzw. Limit-Halt nachgezogen)
+# Baer -- Uebergabe fuer Kevins anderen Claude-Account (Stand 12.11.2026 20:15, Sitzung d5933cc7; wird bei Lauf-Ende / Limit-Halt nachgezogen)
 
-Kevin (12.11. ~07:10): *"wenn die workflows durch sind alles speichern und berreit machen fuer meinen anderen account das er bescheid weiss wo es
-weiter geht"*. Diese Datei sagt der neuen Sitzung, wo es weitergeht. **Statisch geprueft, nicht gespielt**, ausser wo "gespielt" steht.
+Kevin (12.11. ~20:10): *"so keinen neuen workflow mehr starten merk dir den stand schonmal und mach alels fuer die uebergabe an eine nanderen clausde
+ascocunt berreit und wenn die workflows durch sind nochmal alles speichern, stell dir einen waechter ab 95% wochen limit stoppst du alles und machst es
+berreit fuer die uebergabe und mach ein 5h std waechter an falls er beendet wird deswegen"*. **Statisch geprueft, nicht gespielt**, ausser wo "gespielt" steht.
+Die vorige Uebergabe (12.11. frueh) ist hiermit ersetzt; ihr Inhalt ist erledigt (F1b, F2, Kopfnaht, Generator-Modelle).
 
 ## 0. Zuerst lesen (in dieser Reihenfolge)
-1. `C:\Users\Kevin\NPCCrew-Nebenprojekte\CLAUDE.md` (Werkstatt-Regeln: Deutsch und kurz, hoechstens 10 Agenten je Workflow, nie in NPC Crew schreiben,
-   nur bei geschlossenem Spiel in die Test-Mod kopieren, Zip vorher/nachher, sichern.py + Commit + Push nach jeder Version).
-2. `baer\STAND.md` -- die Bloecke OBEN (neueste zuerst) bis "NACHTSCHICHT 11./12.11.2026".
-3. `baer\begleiter\ENTSCHEIDUNGEN.md` -- UNTEN stehen Kevins neueste Wuensche woertlich (12.11.: E-Taste, Wachstums-Schalter, Show damage,
-   Melee damage, Lerntempo, Kill-Zaehler, kein Schaden durch Freunde, Kopfnaht, Fischen-Balance).
-4. Gedaechtnis-Regel (feste Arbeitsweise): immer eine Modell-Spur UND eine Funktionen-Spur; fertige Laeufe selbst pruefen, einbauen, wenn das Spiel zu
-   ist, committen, pushen, naechsten Lauf starten. Modelle erst Kevin zeigen, wenn sie wirklich schoen sind (Kevins Bild + Spielkamera sind der Massstab).
+1. `C:\Users\Kevin\.claude\CLAUDE.md` (global: max. 10 Agenten je Workflow, **UI-Bilder nur aus echtem Code**, neu 12.11.) und
+   `C:\Users\Kevin\NPCCrew-Nebenprojekte\CLAUDE.md` (Werkstatt-Regeln: Deutsch/kurz, nie in NPC Crew schreiben, nur bei geschlossenem Spiel bzw. nicht
+   geladener NCBearTest in die Test-Mod kopieren, Zip vorher/nachher, sichern.py + Commit + Push nach jeder Version).
+2. Diese Datei, dann `baer\STAND.md` -- die Bloecke OBEN (neueste zuerst).
+3. `baer\begleiter\ENTSCHEIDUNGEN.md` -- UNTEN stehen Kevins neueste Worte woertlich.
+4. Feste Arbeitsweise (Gedaechtnis): eine Modell-Spur UND eine Funktionen-Spur; fertige Laeufe selbst pruefen, einbauen, committen, pushen; Modelle erst
+   zeigen, wenn sie wirklich schoen sind; UI-Bilder per Zeichen-Mitschrift des echten Codes. **ABER: Kevin 20:10 "keinen neuen workflow mehr starten"** --
+   neue Laeufe erst auf Kevins Wort im neuen Account.
 
-## 1. Was im Spiel ist (Test-Mod `C:\Users\Kevin\Zomboid\mods\NCBearTest`, Git main cee4890 = F1 + Junges mit Baerenfuessen)
-- B1a-B1e (finden, zaehmen, folgen, wachsen, ab Tag 15 grosser Koerper `ncbeargrown` = 2c-Modell), Generator-Baer nur als Vergleich (`NCBear_GenLive()`).
-- **F1 Baerenfenster** (gespielt 12.11. frueh: Kevin "neues ui anzeige passt ... das ist top"): heute noch auf Taste **V** -- Kevin will **E in der
-  Naehe** (F1b, siehe 2).
-- Bekannt im Spiel (alles fuer F2 eingeplant, siehe 3): je Text eine harmlose Konsolen-Warnung "Missing arguments" (Fix 3 liegt im F2-Staging);
-  der zahme Baer kann vom Spieler getoetet werden (Kevin hat es passiert, 11.6); Faehigkeiten lernen zu schnell (11.4). Nach einem Baeren-Tod sperrt
-  die Trauerzeit neue Junge -- zum Testen `NCBear_CubClean()`.
-
-## 2. Laeufe und ihr Stand (Arbeitsordner `C:\Users\Kevin\NPCCrew-Nebenprojekte\_arbeit\`)
-WICHTIG: `resumeFromRunId` gilt NUR in der alten Sitzung. Eine neue Sitzung setzt fort, indem sie die fertigen Rollen aus ihren Berichten nimmt
-(Vorbild: `baer\spiel\f2_fortsetzung.js` -- Forschung/Plan als Text-Konstanten, ab Bau echte Agenten).
-
-| Lauf | Stand | Ergebnis / was als Naechstes |
+## 1. Was im Spiel ist (Test-Mod `C:\Users\Kevin\Zomboid\mods\NCBearTest`, Git main 99e0368, alles UNGESPIELT seit F1b)
+| Commit | Was | Kevins Test |
 |---|---|---|
-| baer-gross (grosser Baer schoener) | FERTIG 06:45 | Aufrichten/Bruellen wie echte Baeren, Sitzen ok; **Kopfnaht wie heute** (Kevins Bilder `baer\begleiter\kevin_kopfnaht_1112_*.png`, nur lokal) -> NICHT eingebaut. Staging `baer_gross\mod\`, Blatt `baer_gross\bilder\kevin_vorher_nachher.png`, Urteil `baer_gross\gegen_bericht.md`. |
-| baer-kopfnaht | VORBEREITET, nicht gestartet | `baer\spiel\kopfnaht_workflow.js` (6 Agenten, baut auf baer_gross\mod auf). Danach grossen Baeren einbauen (Kevin-Freigabe 2: ersetzt 2c) und Kevin zeigen. |
-| baer-junges-fuss (Junges mit Baerenfuessen) | FERTIG + EINGEBAUT 07:28 (NCBearTest cee4890) | Kevins Test und Fragen: `baer/spiel/anleitung_jfuss.md` (Sitzhaltung, Liegen tiefer -- Variante fertig, Schweben beim Rennen). |
-| F1b (E-Taste, Fern-Taste, Wachstums-Schalter) | ANGEHALTEN 08:13 (Woche 97 %) in den beiden Pruefern | Forschung, Plan, BAU fertig (`baer_zaehmen/forschung_f1b.md`, `PLAN_F1B.md`, `bau_f1b.md`, Staging `baer_zaehmen/mod_f1b/`, Liste `staging_dateien_f1b.txt`, mod.info-Vorschlag `mod_info_vorschlag_f1b.txt`). Weiter mit **`baer/spiel/f1b_fortsetzung.js`** (5 Agenten: 2 Pruefer, Nachbesserung, Gegenpruefung, Zusammenfuehren ins F2-Staging). Danach einbauen (Spiel zu, `baer/tools/einbau_f1.py` auf SRC mod_f1b / LISTE staging_dateien_f1b.txt umstellen), Testanleitung kommt vom Gegenpruefer (`anleitung_f1b_entwurf.md`). |
-| F2 (Kampf B5a + Nachtraege) | ANGEHALTEN 03:58 im Bau | Forschung + Plan fertig (`baer_zaehmen\forschung_f2_*.md`, `PLAN_F2.md` mit Abschnitt 11). Fortsetzen mit **`baer\spiel\f2_fortsetzung.js`** (7 Agenten, ab Bau), ERST wenn F1b in der Test-Mod ist und `f1b_merge.md` keine Kollision meldet. |
+| db80ad6 | F1b: Baerenfenster mit **E** nah am Baeren, Fern-Taste in Optionen > Mods, V wieder Vanilla, Schalter Growth line | `baer\spiel\anleitung_f1b.md` |
+| 8a22bf9 | **F2 Kampf** (Zombies/feindliche Banditen greifen an, Baer kaempft ab halbstark, flieht 3 Treffer vor dem Tod, Am Boden/Aufhelfen, Verband, Schadenszahlen, Melee damage, Kills, Lerntempo + Alters-Deckel, kein Schaden durch Freunde) + **alle Texte auf Deutsch** (8. Sprache) | `baer\spiel\anleitung_f2.md`; offene Kevin-Fragen in STAND.md Block "15:08" |
+| 71ce40a, 59973dc | Generator-Baer v2 (nur Vergleich `NCBear_GenLive()`), Kevins **schmale Nase** | Blatt `_arbeit\baer_gen_gross\v2\bilder\KEVIN_gen_gross_schmal.png` |
+| d5ab258 | **Grosser Baer** neu: Aufrichten/Bruellen wie ein echter Baer, Kevins roter Bogen am Nacken weg (Rest: ~0,1 s Kopfumriss am Ende des Aufrichtens, Nackenfell nah knittrig) | Blatt `_arbeit\baer_kopfnaht\bilder\KEVIN_kopfnaht.png`; Test in `_arbeit\baer_kopfnaht\gegen_bericht.md` (kevin_test) |
+| 99e0368 | **Generator-Junges v2** (nur Vergleich `NCBear_CubGen()`): kurze Beine, Baerenfuesse, Baerenschritt, groesseres Gesicht | `baer\spiel\anleitung_gen_junges_v2.md`; Fragen: Gehen 0,34 statt 0,52 Kacheln/s (Trippel-Variante 0,51 liegt in `_arbeit\baer_gen_junges\v2\beine\var_gehen3\`), gleich gross wie Standard? |
 
-Dazu Modell-Aufgabe **Junges UND grosser Baer liegend/tot** (Kevin 07:50 "Ja, beide Baeren") (Kevin 07:40: "die beine stecken ineinander (die fuesse)"): Dead/Death neu, Pfoten frei, liegt auf
-(Variante liegen_gesenkt 7005099d in `baer_junges_fuss`), Blatt `baer_junges_fuss/bilder/KEVIN_junges_liegen.png`; eigener kleiner Modell-Lauf.
+## 2. Laufende Laeufe (gestartet in Sitzung d5933cc7 -- `resumeFromRunId` gilt NUR dort)
+Transkripte: `C:\Users\Kevin\.claude\projects\C--Users-Kevin-NPCCrew-Nebenprojekte-baer\d5933cc7-7f9d-46b2-a3a8-0929595b654b\subagents\workflows\<Lauf-ID>\journal.jsonl`
+(eine Zeile `{"type":"result",...}` je FERTIGEM Agenten).
+| Lauf | Lauf-ID / Task | Skript | fertig (20:13) | danach |
+|---|---|---|---|---|
+| **baer-aussehen** (Funktion: Aussehen-Knopf + Sandbox 39 -> 12) | `wf_34a802e5-6f8` / wbvwbx4bx | `baer\spiel\aussehen_workflow.js` | forschung, plan, bau:kern, bau:oberflaeche, pruef:logik | pruef:belege, nachbesserung, gegenpruefung |
+| **baer-maul-bau** (Modell: Maul beider grosser Baeren) | `wf_a876c805-e76` / w8qe5etel | `baer\spiel\maul_bau_workflow.js` | W:rahmen, T:textur | G:gebiss, PT+PO, N, GP, I |
+| **baer-f3-plan** (Funktion: F3 Forschung + Plan, nur lesen) | `wf_881b0108-ad0` / whr8tzmw4 | `baer\spiel\f3_plan_workflow.js` | forschung | plan |
 
-## 3. F2-Inhalt (Kevins Wuensche 12.11., alle in `PLAN_F2.md` Abschnitt 11)
-Kampf: Zombies und feindliche Banditen greifen den gezaehmten Baeren an, er kaempft ab halbstark mit; Faehigkeiten wirken; Fliehen/Tod/Am Boden;
-Verband. Dazu: 11.1 Schalter "Show damage" (Zahlen ueber Zombies wie Kevins Mod CombatText, nur gelesen), 11.2 Zeile "Melee damage" unter Condition
-(Groesse + Kaempfen, `B.MeleeDamage`), 11.4 Lerntempo 2 statt 6 XP/min, Alters-Deckel 3/6/8/10 (Balken ausgegraut UND "max for its age"),
-Sandbox-Prozent 25-1000 und an/aus, 11.5 Kill-Zaehler, 11.6 kein Schaden durch Spieler/Autos/Turrets/NPCs + Bench-Meldung "%1$s" reparieren.
-11.7 Fliehen erst, wenn das Leben nur noch fuer 3 Treffer reicht (Kevin: "nur noch fliehen wenn er low hp ist sodas er nach 2-3 hits sterben
-wuerde"), Sandbox 1-10, Vorgabe 3; ersetzt die 20-%-Schwelle.
+**Fortsetzen in einem NEUEN Account/einer neuen Sitzung** (kein Lauf-Cache): wie `baer\spiel\f2_fortsetzung.js` -- fertige Rollen werden
+Text-Konstanten ("X ist fertig: <Bericht>, ganz lesen"), ab der ersten nicht fertigen Rolle echte Agenten mit dem Zusatz "FORTSETZUNG: Zwischenstaende
+pruefen, nur Vollstaendiges weiterverwenden". Welche Rollen fertig sind: journal.jsonl (oben) bzw. die Berichte in den Ordnern:
+- Aussehen: `_arbeit\baer_zaehmen\aussehen\` (FORSCHUNG.md, PLAN_AUSSEHEN.md, BAU_KERN.md, BAU_OBER.md, PRUEF_A.md, PRUEF_B.md, NACHBESSERUNG.md,
+  GEGEN.md, anleitung_entwurf.md, staging_dateien_look.txt, mod_info_vorschlag_look.txt), Staging `_arbeit\baer_zaehmen\mod_look\` (= Test-Mod 99e0368 + Bau).
+- Maul: `_arbeit\baer_maul\` (FORSCHUNG.md, PLAN_MAUL.md, bau\w|g|t|pt|po\..., bau\NACHBESSERUNG.md, bau\GEGEN.md, BAU_MAUL.md, Staging bau\out_c2\, bau\out_gen\).
+- F3-Plan: `_arbeit\baer_zaehmen\f3\` (FORSCHUNG_F3.md, PLAN_F3.md mit hoechstens 6 Fragen an Kevin).
+Die Stand-Zeile oben in `baer\STAND.md` sagt, ob ein Lauf inzwischen fertig/eingebaut ist (die alte Sitzung zieht sie nach).
 
-## 3b. Schlaf-Pose (Kevin 07:50: "das er darauss eine schlafpose macht fuer unsere baeren ... baby und ganz gross")
-Nach 5 Wikimedia-Commons-Fotos (Liste mit Links, Groessen, Lizenzen: `baer/begleiter/ENTSCHEIDUNGEN.md` ganz unten), fuer Junges UND grossen Baeren
-(am grossen Baeren entwerfen, mit dem Sitz-Umrechner auf das Junge uebertragen). Gehoert zu F3 (Schlafen, `baer/begleiter/SCHLAF_PLAN.md`).
-Download erst nach Kevins Ja je Datei (noch nicht gegeben).
-Dazu Kevins eigenes Bild `baer/begleiter/kevin_schlafen_vorlage_1112.png` (eingerollt auf der Seite, Pfoten frei) -- Vorrang als Vorlage, ggf. zweite
-Haltung "eingerollt" neben der Sphinx (Kevin entscheidet im F3-Plan).
-Beim Schlafen steigt ein z Z z ueber dem Kopf auf (SCHLAF_PLAN.md Abschnitt 2) -- Kevin will dafuer eine passende Farbe (Vorschlag sanftes Hellblau,
-im Plan als Bild zeigen).
+## 3. Was nach den Laeufen zu tun ist (Reihenfolge; NEUE Laeufe nur auf Kevins Wort)
+1. **Aussehen einbauen** (Spiel zu oder NCBearTest nicht im geladenen Spielstand): Liste `_arbeit\baer_zaehmen\aussehen\staging_dateien_look.txt`
+   (Modell-Dateien, die die Test-Mod neuer hat = "NICHT KOPIEREN"), Werkzeug-Vorlage `baer\tools\einbau_f2.py` (kennt neu/ueberschreibt/gleich/NICHT KOPIEREN/
+   bedingt), mod.info aus `mod_info_vorschlag_look.txt`, Trockenlauf `python baer\tools\baer_uebernahme.py` (0 Fehler erwartet), sichern, Commit, Push.
+2. **Maul einbauen**, wenn der Gegenpruefer je Baer empfiehlt (`_arbeit\baer_maul\bau\GEGEN.md`): 2c 5 Dateien aus bau\out_c2, Gen 3 aus bau\out_gen
+   (Vorlage `baer\tools\einbau_gross.py` / `einbau_gg2s.py`); Kevin das Blatt `_arbeit\baer_maul\bilder\KEVIN_maul.png` zeigen.
+3. **F3-Fragen** (PLAN_F3.md, Ende) Kevin stellen; danach F3-Bau (Fenster-Variante B, Kevin 12.11. "B (breit)", Vorlage `_arbeit\baer_zaehmen\ui_entwurf\proto\`).
+4. Spaeter (Kevins Wuensche, ENTSCHEIDUNGEN.md): Liegen/Tot beider Baeren (Pfoten frei), Schlafpose nach Kevins Bild (Modell-Lauf), F4 Traglast/Inventar,
+   F5 Spuernase (abschaltbar) + Fischen, F6 Mehrspieler, Sandbox-Seiten nach NPC-Crew-Schema (Vorschlag `baer\NAEHTE.md` "Sandbox-Seiten"; page-Namen
+   meldet die NPC-Crew-Sitzung), Restpunkte Kopfnaht (Ende Aufrichten, Nackenfell), Generator-Baer bekommt das neue Aufrichten (Kevin: "erstmal so lassen
+   und angucken").
 
-## 4. Spaeter (Funktionen-Liste, STAND.md "NACHTSCHICHT")
-F3 Beduerfnisse + Schlafen (`baer\SCHLAF_PLAN.md`), F4 Traglast/Inventar, F5 Spuernase + Fischen (Balance fest: Ertrag = NPC-Angler gleicher Stufe x
-0,5 halbstark .. 1,0 ausgewachsen, jedes Wasser; offene Fragen: von selbst/Befehl, Fische bringen, Zusehen), F6 Mehrspieler-Pruefung.
+## 4. Kevins Entscheidungen von heute (Kurzfassung; woertlich in ENTSCHEIDUNGEN.md)
+- Aussehen-Knopf als echte Spieler-Funktion; kein Heilen beim Wechsel, Abklingzeit mit Unstuck geteilt.
+- Deutsch als achte Sprache; Begriffe: Faehigkeiten, Leben, Herholen, stark (Vitality = Zaehigkeit).
+- Sandbox nur noch **12 Regler** (Junge an/aus, Haeufigkeit, Baeren je Spieler, Koederplatz, Zaehm-Tempo %, Tage bis ausgewachsen, Lerntempo %,
+  Faehigkeiten nach Alter, kann nicht sterben, Flucht-Schwelle, Schaden %, Heil-Tempo %); Zombies/Banditen greifen IMMER an.
+- Maul: Mundwinkel bis unters Auge, dunkle Lippenlinie auch zu; drei Commons-Fotos in `baer\begleiter\ref_maul\` (nur ansehen, .gitignore).
+- Fenster-Variante **B (breit)**.
+- Generator-Baer: schmale Nase.
 
-## 5. Abschluss-Stand (12.11.2026 08:15, Halt am Wochenlimit 97 %)
-- Fertig und in der Test-Mod (NCBearTest cee4890, ungespielt): F1 Baerenfenster (Taste V), Junges mit Baerenfuessen.
-- Fertig, NICHT eingebaut: grosser Baer neues Aufrichten/Bruellen (wartet auf Kopfnaht-Lauf).
-- Halb: F1b (Bau fertig, Pruefung fehlt) -> `f1b_fortsetzung.js`. F2 (Forschung/Plan fertig, Bau halb) -> `f2_fortsetzung.js`, ERST nach F1b-Einbau.
-- Vorbereitet, nicht gestartet: `kopfnaht_workflow.js` (6 Agenten).
-- Neue Aufgaben (Kevin 12.11.): Liegen/Tot fuer beide Baeren (Pfoten frei), Schlaf-Pose nach Fotos + Kevins Bild (F3), z Z z in Schlaf-Farbe.
-- Reihenfolge (Kevin vorher kurz fragen): F1b fertig -> einbauen -> F2 -> baer-kopfnaht -> grossen Baeren einbauen -> Liegen beider Baeren -> F3 ...
-- In `tools/baer_uebernahme.py` und `NAEHTE.md` liegen UNCOMMITTETE Aenderungen des F1b-Bauers (gehoeren zu F1b: mit F1b pruefen und committen).
-
-## 6. Werkzeuge
-- Einbau in die Test-Mod: `baer\tools\einbau_f1.py` (Vorlage; SRC/LISTE/Zip-Namen anpassen), danach mod.info + 42/mod.info `description=` ersetzen,
-  Trockenlauf `python baer\tools\baer_uebernahme.py --vor-b5a` (0 Fehler erwartet), `python C:/Users/Kevin/Claude-Gedaechtnis/sichern.py`,
-  Commit + Push in Test-Mod (Zweig main) und `baer\` (Zweig unterlagen; ein einfaches `git push` landet richtig).
+## 5. Werkzeuge
+- Einbau: `baer\tools\einbau_f2.py` (Liste mit Arten), `einbau_gross.py`, `einbau_gg2s.py`, `einbau_gj2.py` (je mit `--baer-nicht-geladen`, wenn das Spiel
+  ohne NCBearTest laeuft -- vorher die zweite "Loading Mods"-Liste in `Zomboid\console.txt` lesen).
+- Uebernahme-Trockenlauf: `python baer\tools\baer_uebernahme.py` (kennt 8 Sprachen; heute 0 Fehler, 2 Warnungen).
 - Lua-Pruefer: `python C:\Users\Kevin\Zomboid\mods\NPCCrew\_docs\tools\luacheck.py|scopecheck.py|localcount.py|luacheck_pz.py <datei>`.
-- Fehlerwaechter bei Kevins Tests: `python C:\Users\Kevin\Zomboid\mods\NPCCrew\_docs\tools\bugwatch.py` als Monitor (30 min).
-- Erinnerungen der alten Sitzung: `C:\Users\Kevin\AppData\Local\ClaudeErinnerungen\baer.md`.
+- UI-Bild aus echtem Code: `_arbeit\baer_zaehmen\ui_entwurf\werkzeug\zeichne_entwurf.py` (Vorbild), F1/F2: `_arbeit\baer_zaehmen\f1_entwurf\`.
+- Gedaechtnis sichern: `python C:/Users/Kevin/Claude-Gedaechtnis/sichern.py`; dann Commit + Push in Test-Mod (main) und `baer\` (Zweig unterlagen, einfaches `git push`).
 
-## 7. Verbrauch
-Woche 91 % am 12.11. 07:15 (Reset So 15.11. 23:00). Kevin 06:50: *"erstmal merken ich glaub unser limit laesst das garnichtmehr zu"* -- neue Laeufe
-erst nach dem Reset bzw. mit dem anderen Account; Reihenfolge danach: F2 fortsetzen, dann baer-kopfnaht (Kevin vorher kurz fragen).
+## 6. Verbrauch und Waechter (alte Sitzung)
+12.11. 20:13: Woche 75 % (Reset Sa 14.11. 04:00), 5 h 63 % (Reset 23:40). In der alten Sitzung laeuft ein Waechter (CronCreate, alle 10 min):
+Woche >= 95 % -> alle Laeufe anhalten (TaskStop), diese Datei mit dem Halt-Stand nachziehen, Commit/Push; 5-h-Limit -> nach dem Reset haengende
+Laeufe mit `resumeFromRunId` fortsetzen (nur in der alten Sitzung moeglich).
