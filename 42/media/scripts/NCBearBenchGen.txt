@@ -1,0 +1,21 @@
+module Base
+{
+    /* NUR TESTHILFE (NCBearBench*: wird nie nach NPC Crew kopiert, baer/tools/baer_uebernahme.py BENCH_ANY). Lauf baer-gen-gross, 11.11.2026. */
+    /* Kevin 11.11. ~18:25 (Freigabe 3): der Generator-Baer nur als Vergleich per Testbefehl NCBear_GenLive(), braun und Fototon, er waehlt spaeter. */
+    /* Neuer grosser Baer E: Generator-Netz auf GENAU dem Skelett und den 15 Clips des 2c-Baeren (NCBear.glb 08ec7806), Netz NCBearGen.glb b36d947b. */
+    /* Eigenes animationsMesh, in sich geschlossen: NCBear (2c) bleibt unberuehrt. Form wie scripts/nc_bear_tier.txt (NCBear_Body) und nc_bear_cub.txt. */
+    /* Muss in module Base bleiben (bodyModel der Tierart ohne Punkt, shared/NCBearBenchGenDefs.lua). Textur kommt aus der Rasse (NCBearGen / NCBearGenFoto). */
+    animationsMesh NCBearGen
+    {
+        meshFile = Skinned/NCBearGen.glb,
+        keepMeshAnimations = true,
+    }
+
+    model NCBearGen_Body
+    {
+        mesh = Skinned/NCBearGen.glb,
+        shader = animalEffect,
+        static = false,
+        animationsMesh = NCBearGen,
+    }
+}
