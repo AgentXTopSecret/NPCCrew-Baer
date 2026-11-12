@@ -405,3 +405,13 @@ Meldung zeigte "%1$s" -- Bench-Fehler).
 * **Fest (mit F2, `../_arbeit/baer_zaehmen/PLAN_F2.md` 11.6):** gezaehmter Baer fuer die Engine unverwundbar; Leben sinkt NUR durch Zombies/feindliche
   Banditen (`B.BearHurt`); jeder andere Verlust (Spieler -- Empfehlung: alle Spieler --, Auto, Turret, NPC-Crew-Figur, fremde Mod) wird
   zurueckgenommen. Naht Turret <-> Baer in NAEHTE.md; Turret-Sitzung am 12.11. informiert. Bench-Meldung bekommt die Tage-Zahl.
+
+## Kopfnaht am grossen Baeren muss weg (Kevin 12.11.2026 ~05:35)
+Bilder (nur lokal): `begleiter/kevin_kopfnaht_1112_a.png` (rote Linie = Bogen hinter Stirn/Ohren) und `_b.png`, Spielkamera von vorn-oben auf seinen
+grossen gezaehmten Baeren (2c-Modell). Woertlich: *'guck mal die rote markierung da ist kein sauberer umergang zum kopf das regt mich noch auf da
+sieht man richtig so eine spuhr das bis da gerendet wurde und dann der kopf einfach dran gebaut worden ist'* -- *'oder fixxed du das sowieso schon
+im worklfow?'* -> nur teilweise: baer-gross hob ein 3-cm-Band an (Farbsprung 18,8 -> 16,5), sein Optik-Pruefer sieht den Rand weiter
+(`../_arbeit/baer_gross/pruef_optik.md` Befund 4).
+* **Fest:** baer-gross-Gegenpruefer prueft die Kopfnaht ausdruecklich aus Kevins Kamera; danach eigener Modell-Lauf **baer-kopfnaht**
+  (`spiel/kopfnaht_workflow.js`, 6 Agenten): Uebergang Kopf -> Stirn/Nacken/Hals/Wangen ohne Rand, Ring, Struktur- oder Farbsprung und ohne Stufe,
+  Gesicht unveraendert; geprueft aus Kevins Kamera in 8 Posen; erst zeigen, wenn wirklich weg.
