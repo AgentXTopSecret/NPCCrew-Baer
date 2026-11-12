@@ -33,7 +33,7 @@ WICHTIG: `resumeFromRunId` gilt NUR in der alten Sitzung. Eine neue Sitzung setz
 | F2 (Kampf B5a + Nachtraege) | ANGEHALTEN 03:58 im Bau | Forschung + Plan fertig (`baer_zaehmen\forschung_f2_*.md`, `PLAN_F2.md` mit Abschnitt 11). Fortsetzen mit **`baer\spiel\f2_fortsetzung.js`** (7 Agenten, ab Bau), ERST wenn F1b in der Test-Mod ist und `f1b_merge.md` keine Kollision meldet. |
 
 Dazu Modell-Aufgabe **Junges liegend/tot** (Kevin 07:40: "die beine stecken ineinander (die fuesse)"): Dead/Death neu, Pfoten frei, liegt auf
-(Variante liegen_gesenkt 7005099d in `baer_junges_fuss`), Blatt `baer_junges_fussilder\KEVIN_junges_liegen.png`; eigener kleiner Modell-Lauf.
+(Variante liegen_gesenkt 7005099d in `baer_junges_fuss`), Blatt `baer_junges_fuss/bilder/KEVIN_junges_liegen.png`; eigener kleiner Modell-Lauf.
 
 ## 3. F2-Inhalt (Kevins Wuensche 12.11., alle in `PLAN_F2.md` Abschnitt 11)
 Kampf: Zombies und feindliche Banditen greifen den gezaehmten Baeren an, er kaempft ab halbstark mit; Faehigkeiten wirken; Fliehen/Tod/Am Boden;
