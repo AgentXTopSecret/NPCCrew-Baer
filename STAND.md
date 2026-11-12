@@ -1,5 +1,10 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **12.11. ~20:30: F3-PLAN FERTIG** (`../_arbeit/baer_zaehmen/f3/FORSCHUNG_F3.md`, `PLAN_F3.md`, 691 Zeilen): Beduerfnisse im Register, Kevins Tabelle (E:14-19)
+> als Rechnung, Schlaf ueber den Pose-Treiber (nicht idleAction), Heilen im Schlaf 15 %/h, Fenster B, 1 neuer Regler BearNeedsPercent (12 -> 13). Bau: baer-f3
+> (7 Agenten, nach Aussehen-Einbau, Staging mod_f3) + baer-schlaf-pose (8 Agenten, nach Maul). **6 Fragen an Kevin** in PLAN_F3.md Ende ("Ja, alle so" nimmt jede
+> Empfehlung; 22.2 sagt, was jede andere Antwort aendert). Neue Laeufe erst auf Kevins Wort.
+
 > **12.11. 20:15 HALT FUER NEUE LAEUFE + UEBERGABE (Kevin: *"so keinen neuen workflow mehr starten ... mach alles fuer die uebergabe an einen anderen claude account
 > bereit"*):** `UEBERGABE_ACCOUNT2.md` NEU geschrieben (Stand 20:15; ersetzt die Fassung von heute frueh). Laufen zu Ende: baer-aussehen (wf_34a802e5-6f8), baer-maul-bau
 > (wf_a876c805-e76), baer-f3-plan (wf_881b0108-ad0). **Waechter 3c536c47** (alle 10 min, nur diese Sitzung): Woche >= 95 % -> alles anhalten + Fortsetzungs-Skripte +
