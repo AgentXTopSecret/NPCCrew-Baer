@@ -49,6 +49,8 @@ Nach 5 Wikimedia-Commons-Fotos (Liste mit Links, Groessen, Lizenzen: `baer/begle
 Download erst nach Kevins Ja je Datei (noch nicht gegeben).
 Dazu Kevins eigenes Bild `baer/begleiter/kevin_schlafen_vorlage_1112.png` (eingerollt auf der Seite, Pfoten frei) -- Vorrang als Vorlage, ggf. zweite
 Haltung "eingerollt" neben der Sphinx (Kevin entscheidet im F3-Plan).
+Beim Schlafen steigt ein z Z z ueber dem Kopf auf (SCHLAF_PLAN.md Abschnitt 2) -- Kevin will dafuer eine passende Farbe (Vorschlag sanftes Hellblau,
+im Plan als Bild zeigen).
 
 ## 4. Spaeter (Funktionen-Liste, STAND.md "NACHTSCHICHT")
 F3 Beduerfnisse + Schlafen (`baer\SCHLAF_PLAN.md`), F4 Traglast/Inventar, F5 Spuernase + Fischen (Balance fest: Ertrag = NPC-Angler gleicher Stufe x

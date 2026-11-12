@@ -476,3 +476,7 @@ also baby und ganz gross?'*
   Braunbaer EINGEROLLT auf der Seite, Kopf flach am Boden, Vorderpfote vor dem Bauch, Hintersohle sichtbar, alle Pfoten frei. **Fest:** gilt als
   Vorlage mit Vorrang (Kevins Bild ist der Massstab) fuer eine zweite Schlafhaltung "eingerollt" (Tiefschlaf) neben der Sphinx -- deutlich anders als
   die ausgestreckte Tot-Pose (Beine angezogen, Ruecken rund). Ob beide Haltungen oder nur eine: im F3-Plan vorschlagen, Kevin entscheidet.
+* Nachtrag ~08:00, woertlich: *'ja und wenn er schlaeft kommt ja eh ein z Z z ueber den kopf in einer farbe ;D die gut dafuer ist'* -- *'merk dir das
+  auch noch'*. Das steigende z Z z ist im SCHLAF_PLAN.md Abschnitt 2 schon geplant (dort noch fast weiss wie die NPC-Crew-Namen). **Fest:** eine Farbe,
+  die nach Schlaf aussieht -- Vorschlag sanftes Hellblau (etwa 0,70 / 0,85 / 1,00) mit dunklem Schatten, damit es sich klar vom weissen Namensschild
+  abhebt; im F3-Plan als Bild zeigen, Kevin waehlt.
