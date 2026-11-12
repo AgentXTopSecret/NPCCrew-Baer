@@ -498,3 +498,7 @@ also baby und ganz gross?'*
 * Kevin (12.11. ~13:50) zum Blatt KEVIN_gen_gross_v2.png (Generator-Baer v2): *"variante nase schmaler sieht am besten aus"*. **Fest:** Nase wie die Spalte
   "Variante: Nase schmaler" (= v2/out_vor_fix, ohne den Nasen-Umlauf O2-01). Plan: alle anderen Nachbesserungen behalten (Lippenlinie glatt, Augenring,
   Fototon), nur O2-01 (wrap/unter) aus -> v2/out_schmal/; sieht es von vorn nicht wie seine Wahl aus, out_vor_fix nehmen.
+* Kevin (12.11. ~14:00) nach dem Blatt KEVIN_gen_gross_v2.png: *"und bei beiden baeren sieht der mund schonn scheisse aus das muss besser werden  guck dir dazu
+  vllt bilder an wie nen baeren maul aussieht wenn er das maul offen hat"* -> Lauf **baer-maul** fuer 2c UND Generator-Baer: erst Forschung + Plan
+  (`spiel/maul_plan_workflow.js`), Bau als eigener Lauf, sobald kopfnaht und gen-gross-schmal fertig sind (dieselben Modelle). Vorlage weiter
+  kevin_bruellen_vorlage.webp (nur ansehen) + Netzbilder nur ansehen; freie Fotos nur mit Kevins Ja je Datei.

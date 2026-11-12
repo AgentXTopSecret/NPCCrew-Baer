@@ -1,5 +1,9 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **12.11. ~14:00 MAUL (Kevin: *"bei beiden baeren sieht der mund schonn scheisse aus das muss besser werden"*):** Lauf **baer-maul-plan** `wf_81bda0df-b12`
+> (Task wtedw53gt, 2 Agenten, scriptPath `C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel/maul_plan_workflow.js`): Forschung + Plan nach `../_arbeit/baer_maul/`.
+> BAU erst, wenn kopfnaht (wf_0956985e-5e7) und gen-gross-v2-schmal (wf_b34e1baf-262) fertig sind; Bau-Skript nach PLAN_MAUL.md (Vorbild f2_fortsetzung.js).
+
 > **12.11. ~13:55: Kevin waehlt die SCHMALE NASE** (*"variante nase schmaler sieht am besten aus"*) -> Lauf **baer-gen-gross-v2-schmal** `wf_b34e1baf-262` (Task wq0ceb7xu,
 > 2 Agenten, scriptPath `C:/Users/Kevin/.claude/projects/C--Users-Kevin-NPCCrew-Nebenprojekte-baer/d5933cc7-7f9d-46b2-a3a8-0929595b654b/workflows/scripts/baer-gen-gross-v2-schmal-wf_b34e1baf-262.js`):
 > alle Nachbesserungen ausser Nasen-Umlauf O2-01 -> `../_arbeit/baer_gen_gross/v2/out_schmal/`; Rueckfall out_vor_fix. Danach einbauen (ersetzt die grosse Nase in NCBearTest).
