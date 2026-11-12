@@ -22,6 +22,12 @@
 -- Schalter "Growth line" (Wachstums-Zeile UEBER diesem Baeren an/aus, je Spieler wie "Name tag", client/BanditsNPCBearTags.lua) in der
 -- bisher leeren dritten Zelle der Schalterreihe; ist der Baer ausgewachsen (Sicht ohne nst), verschwindet der Schalter (setVisible) --
 -- Breite, Hoehe und alle anderen Kinder haengen nicht daran, die Zelle bleibt leer, nichts springt.
+-- F2 = B5a (PLAN_F2.md 3.2, Nachtrag 11.1/11.2/11.5): Karte "Condition" bekommt zwei Wert-Zeilen "Melee damage" und "Kills" (nach "Can
+-- carry", gleiche Machart); Karte "Orders" eine vierte Reihe: Zelle 1 der Pflege-Knopf "Bandage" bzw. am Boden "Help up" (U.MendAsk /
+-- U.HelpAsk: hingehen, Zeitaktion -- entscheiden tut der Schreiber), Zelle 2 der Schalter "Show damage" (je Spieler, U.DmgSet). ABWEICHUNG
+-- vom Plan (schnittstelle_aenderungen.md "F2 OBERFLAECHE"): PLAN_F2.md 3.2 wollte den Knopf in die dritte Zelle der Schalter-Reihe -- die
+-- belegt seit F1B "Growth line". Feste Hoehe (beide Zeilen und die Reihe stehen immer, auch beim Jungen mit "--"): nichts springt, wenn er
+-- waechst, kaempft oder zu Boden geht.
 -- Jeder Engine-Aufruf hat eine Vanilla-Fundstelle (Kommentar daneben). Statisch geprueft, nicht gespielt.
 --
 
@@ -118,13 +124,15 @@ local function metrics(f, d, n, sw, sh, idx)
     m.rowBar = lb + R(4) + R(10) + R(10)
     m.rowVal = lb + R(10)
     m.needGrid = 2 * (ls + R(6))
-    local leftH = R(10) + lb + R(8) + 2 * m.rowBar + m.rowVal + R(9) + ls + R(6) + m.needGrid + R(10)
+    -- F2: drei Wert-Zeilen (Can carry, Melee damage, Kills) statt einer
+    local leftH = R(10) + lb + R(8) + 2 * m.rowBar + 3 * m.rowVal + R(9) + ls + R(6) + m.needGrid + R(10)
     m.rowSk = lb + R(4) + R(8) + R(8)
     local rightH = R(10) + lb + R(8) + 6 * m.rowSk + R(4)
     m.cardH = math.max(leftH, rightH)
     m.bh = math.max(R(34), lb + R(12))
     m.th = math.max(R(30), lb + R(10))
-    m.ordH = R(10) + lb + R(8) + m.bh + R(8) + m.bh + R(10) + m.th + R(12)
+    -- F2: vierte Reihe (Pflege-Knopf, Show damage) unter den Schaltern
+    m.ordH = R(10) + lb + R(8) + m.bh + R(8) + m.bh + R(10) + m.th + R(8) + m.th + R(12)
     m.y1 = m.headH + R(16)
     m.y2 = m.y1 + m.cardH + R(16)
     m.y3 = m.y2 + m.ordH + R(10)
@@ -154,7 +162,9 @@ local function metrics(f, d, n, sw, sh, idx)
     col2(tw(m.fBody, s.tHealth), tw(m.fBody, s.wideVal))
     col2(tw(m.fBody, s.tStamina), tw(m.fBody, s.wideVal))
     col2(tw(m.fBody, s.tCarry), tw(m.fBody, s.wideCarry))
-    local lvW, pctW = tw(m.fBody, s.wideLv), math.max(tw(m.fSmall, s.widePct), tw(m.fSmall, s.max))
+    col2(tw(m.fBody, s.tMelee), tw(m.fBody, s.wideMelee))                  -- F2 (11.2)
+    col2(tw(m.fBody, s.tKills), tw(m.fBody, s.wideKills))                  -- F2 (11.5)
+    local lvW, pctW = tw(m.fBody, s.wideLv), math.max(tw(m.fSmall, s.widePct), tw(m.fSmall, s.max), tw(m.fSmall, s.ageMax))
     if type(s.skName) == "table" then
         for i = 1, #s.skName do col2(tw(m.fBody, s.skName[i]), lvW + R(8) + pctW, R(44)) end
     end
@@ -174,6 +184,8 @@ local function metrics(f, d, n, sw, sh, idx)
     bwNeed = math.max(bwNeed, tw(m.fBody, s.passive) + R(46), tw(m.fBody, s.tag) + R(46))
     -- F1B: der dritte Schalter "Growth line" -- immer mitgemessen (auch wenn er gerade verschwunden ist), damit nichts springt
     bwNeed = math.max(bwNeed, tw(m.fBody, s.growth) + R(46))
+    -- F2: Pflege-Knopf (beide Texte) und Schalter "Show damage"
+    bwNeed = math.max(bwNeed, tw(m.fBody, s.bandage) + R(24), tw(m.fBody, s.helpUp) + R(24), tw(m.fBody, s.showDmg) + R(46))
     grow(2 * P + 3 * bwNeed + R(40))
     local footW = 0
     for _, txt in ipairs({ s.hintMissing, s.hintRide, s.hintAway, s.hintEsc }) do footW = math.max(footW, tw(m.fSmall, txt)) end
@@ -226,6 +238,10 @@ local function place(win, m)
     yy = yy + m.rowBar
     put(win.rows.carry, m.lx + m.R4, yy - m.R3, m.CW - m.R8, m.rowVal - m.R2)
     yy = yy + m.rowVal
+    put(win.rows.melee, m.lx + m.R4, yy - m.R3, m.CW - m.R8, m.rowVal - m.R2)      -- F2 (11.2)
+    yy = yy + m.rowVal
+    put(win.rows.kills, m.lx + m.R4, yy - m.R3, m.CW - m.R8, m.rowVal - m.R2)      -- F2 (11.5)
+    yy = yy + m.rowVal
     m.divY = yy
     yy = yy + m.R9
     put(win.rows.later, m.lx + m.R4, yy - m.R3, m.CW - m.R8, 3 * (m.ls + m.R6))
@@ -246,6 +262,11 @@ local function place(win, m)
     put(win.tick.pas, P + m.R12, ty0, m.bw, m.th)
     put(win.tick.tag, P + m.R12 + m.bw + m.R8, ty0, m.bw, m.th)
     put(win.tick.age, P + m.R12 + 2 * (m.bw + m.R8), ty0, m.bw, m.th)     -- F1B: dritte Zelle (PLAN_F1B.md 5.3)
+    -- F2: vierte Reihe -- Zelle 1 Pflege-Knopf, Zelle 2 Schalter "Show damage", Zelle 3 frei
+    local ty1 = ty0 + m.th + m.R8
+    put(win.care, P + m.R12, ty1, m.bw, m.th)
+    win.care.font, win.care.fh = m.fBody, m.lb
+    put(win.tick.dmg, P + m.R12 + m.bw + m.R8, ty1, m.bw, m.th)
 end
 
 -- Auf den Bildschirm klemmen: mindestens 40 x f px sichtbar, Oberkante nie ueber dem Bild (PLAN_F1.md 1.1 "Lage").
@@ -325,14 +346,18 @@ function Win:build()
     self.prevB = kid(self, U.WinBtn, "prev", "small")
     self.nextB = kid(self, U.WinBtn, "next", "small")
     self.prevB.label, self.nextB.label = "<", ">"
-    self.tick = { pas = kid(self, U.WinTick, "passive"), tag = kid(self, U.WinTick, "tag"), age = kid(self, U.WinTick, "growth") }
+    self.tick = { pas = kid(self, U.WinTick, "passive"), tag = kid(self, U.WinTick, "tag"), age = kid(self, U.WinTick, "growth"),
+        dmg = kid(self, U.WinTick, "showdmg") }                                     -- F2 (11.1)
+    self.care = kid(self, U.WinBtn, "care", "cmd")                                  -- F2: "Bandage" / "Help up"
     self.rows = {
         hp = kid(self, U.WinRow, nil), sta = kid(self, U.WinRow, nil), carry = kid(self, U.WinRow, nil),
-        later = kid(self, U.WinRow, nil),
+        later = kid(self, U.WinRow, nil), melee = kid(self, U.WinRow, nil), kills = kid(self, U.WinRow, nil),
     }
     self.rows.hp.kind, self.rows.hp.key = "bar", "hp"
     self.rows.sta.kind, self.rows.sta.key = "bar", "sta"
     self.rows.carry.kind, self.rows.carry.key = "val", "carry"
+    self.rows.melee.kind, self.rows.melee.key = "val", "melee"                      -- F2 (11.2)
+    self.rows.kills.kind, self.rows.kills.key = "val", "kills"                      -- F2 (11.5)
     self.rows.later.kind = "later"
     for i = 1, 6 do
         local r = kid(self, U.WinRow, nil)
@@ -400,6 +425,15 @@ local function apply(win, d)
     end
     win.rows.hp.tooltip, win.rows.sta.tooltip = d.tips.hp, d.tips.sta
     win.rows.carry.tooltip, win.rows.later.tooltip = d.tips.carry, d.tips.later
+    -- F2: Melee damage / Kills, Pflege-Knopf, Show damage; Breite des Leben-Werts fuer das Verband-Zeichen (WinParts drawBar)
+    win.rows.melee.tooltip, win.rows.kills.tooltip = d.tips.melee, d.tips.kills
+    d.hp.valW = tw(m.fBody, d.hp.val)
+    local c = d.care
+    if c then
+        win.care.label, win.care.state, win.care.tooltip, win.care.kind = c.label, c.state, c.tip, c.kind
+        win.care.enable = (c.state ~= "off")                        -- ISButton.lua:45
+    end
+    win.tick.dmg.on, win.tick.dmg.label, win.tick.dmg.tooltip = t.dmg, t.dmgLabel, t.dmgTip
 end
 
 -- Neu legen noetig? Option, Bildschirm, Zahl der Baeren, Name (Lage des Umbenennen-Knopfs) oder ein Text, der nicht mehr passt.
@@ -481,6 +515,18 @@ function Win:onCmd(button)
         self.dirty = true
     elseif cmd == "rename" then
         if U.AskName then self.nameBox = U.AskName(player, v) end
+    elseif cmd == "care" then
+        -- F2: hingehen + Zeitaktion (client/BanditsNPCBearMenu.lua); ob es gilt, entscheidet der Schreiber in complete()
+        if button.kind == "help" then
+            if U.HelpAsk then U.HelpAsk(player, v) end
+        elseif U.MendAsk then
+            U.MendAsk(player, v)
+        end
+        self.dirty = true
+    elseif cmd == "showdmg" then
+        -- F2 (11.1): je Spieler, was ICH sehe -- kein Server, kein Befehl
+        if U.DmgSet and U.DmgOn then U.DmgSet(not U.DmgOn()) end
+        self.dirty = true
     end
 end
 

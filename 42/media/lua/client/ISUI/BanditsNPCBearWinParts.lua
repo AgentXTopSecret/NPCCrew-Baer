@@ -19,6 +19,10 @@
 -- (Aufrufer ISButton.lua:128), drawRectBorder(x, y, w, h, a, r, g, b) :1219 (ISButton.lua:141), drawText(text, x, y, r, g, b, a,
 -- Schrift) :1293 (V:client/ISUI/Animal/ISAnimalUI.lua:58), drawTextRight :1306 (ISAnimalUI.lua:64), drawTextCentre :1280
 -- (V:client/ISUI/ISToolTip.lua:120), drawTextureScaled(tex, x, y, w, h, a, r, g, b) :1032 (V:client/Chat/ISChat.lua:418).
+-- F2 = B5a (PLAN_F2.md 3.2, Nachtrag 11.4): Chip-Farben fuer "am Boden" (rot), "kaempft" (orange), "zieht sich zurueck / verschnauft"
+-- (gelb); am Leben-Balken ein kleines Verband-Zeichen (gruenes Kreuz aus zwei Rechtecken) vor dem Wert, solange ein Verband wirkt; eine
+-- Faehigkeit am Alters-Deckel ist AUSGEGRAUT (Segmente dunkler und entsaettigt, Stufe gedimmt) und rechts steht klein "max for its age"
+-- (Kevin 12.11.2026 ~06:30: "oder der balken ist ausgegraut ... zusaetzlich"). Weiter nur Rechtecke und fertige Texte je Bild.
 -- Kein Engine-Aufruf ohne Vanilla-Fundstelle. Statisch geprueft, nicht gespielt.
 --
 
@@ -52,6 +56,11 @@ local COL = {
     stFollow = { 0.45, 0.78, 0.40, 1 }, stCome = { 0.45, 0.78, 0.40, 1 }, stStay = { 0.95, 0.70, 0.30, 1 },
     stSit = { 0.95, 0.70, 0.30, 1 }, stRoam = { 0.40, 0.75, 0.80, 1 }, stHide = { 0.95, 0.42, 0.30, 1 },
     stRide = { 0.45, 0.62, 0.95, 1 }, stMissing = { 0.90, 0.30, 0.25, 1 }, stAway = { 0.60, 0.58, 0.55, 1 },
+    -- F2 (PLAN_F2.md 3.2): am Boden / kaempft / zieht sich zurueck oder verschnauft
+    stDown = { 0.90, 0.30, 0.25, 1 }, stFight = { 1.00, 0.45, 0.15, 1 }, stBack = { 0.95, 0.70, 0.30, 1 },
+    -- F2: Verband-Zeichen am Leben-Wert; Faehigkeit am Alters-Deckel (11.4) -- Segmente ausgegraut
+    bandage = { 0.55, 0.85, 0.55, 1 }, pipCapGold = { 0.46, 0.43, 0.36, 1 }, pipCapNow = { 0.42, 0.36, 0.28, 1 },
+    pipCapEmpty = { 0.15, 0.14, 0.13, 1 },
 }
 U.WIN_COL = COL
 
@@ -199,6 +208,15 @@ local function drawBar(self, m, e)
     local tc = COL.text
     self:drawText(e.label or "", ox, oy, tc[1], tc[2], tc[3], tc[4], m.fBody)
     self:drawTextRight(e.val or "", self.width - ox, oy, tc[1], tc[2], tc[3], tc[4], m.fBody)
+    if e.bnd and e.valW then
+        -- F2: Verband-Zeichen (Kreuz, Kantenlaenge = halbe Textzeile) links vor dem Wert; valW misst das Fenster im 1-s-Takt
+        local sz = math.floor(m.lb / 2)
+        local th = math.max(m.t, math.floor(sz / 3))
+        local cx = self.width - ox - e.valW - m.R8 - sz
+        local cy = oy + math.floor((m.lb - sz) / 2)
+        rect(self, cx, cy + math.floor((sz - th) / 2), sz, th, COL.bandage)
+        rect(self, cx + math.floor((sz - th) / 2), cy, th, sz, COL.bandage)
+    end
     if e.frac == nil then return end                    -- Wert fehlt: "--" ohne Balken (PLAN_F1.md 1.5), nie ein leerer Balken
     local by = oy + m.lb + m.R4
     local bw = self.width - 2 * ox
@@ -244,10 +262,13 @@ local function drawSkill(self, m, s)
     self:drawText(s.name or "", ox, oy, tc[1], tc[2], tc[3], tc[4], m.fBody)
     local right = self.width - ox
     local c2 = COL.text2
+    if s.capped then c2 = COL.dim end                           -- F2 (11.4): "max for its age" klein und ruhig
     self:drawTextRight(s.pctTxt or "", right, oy + m.lb - m.ls, c2[1], c2[2], c2[3], c2[4], m.fSmall)
     local lc = COL.honeyText
-    if (s.lv or 0) <= 0 then lc = COL.dim end
+    if (s.lv or 0) <= 0 or s.capped then lc = COL.dim end       -- F2 (11.4): Stufe gedimmt
     self:drawTextRight(s.lvTxt or "", right - (s.pctW or 0) - m.R8, oy, lc[1], lc[2], lc[3], lc[4], m.fBody)
+    local gold, now, empty = COL.pipGold, COL.pipNow, COL.pipEmpty
+    if s.capped then gold, now, empty = COL.pipCapGold, COL.pipCapNow, COL.pipCapEmpty end
     local sy = oy + m.lb + m.R4
     local gap = m.R3
     local span = self.width - 2 * ox
@@ -258,12 +279,12 @@ local function drawSkill(self, m, s)
         local x1 = math.floor(ox + k * (segW + gap) + segW + 0.5)
         local sw = x1 - x0
         if s.known and k < L then
-            rect(self, x0, sy, sw, m.R8, COL.pipGold)
+            rect(self, x0, sy, sw, m.R8, gold)
         else
-            rect(self, x0, sy, sw, m.R8, COL.pipEmpty)
+            rect(self, x0, sy, sw, m.R8, empty)
             if s.known and k == L and L < 10 then
                 local fw = math.floor(sw * (s.frac or 0) + 0.5)
-                if fw > 0 then rect(self, x0, sy, fw, m.R8, COL.pipNow) end
+                if fw > 0 then rect(self, x0, sy, fw, m.R8, now) end
             end
             frame(self, x0, sy, sw, m.R8, m.t, COL.pipEdge)
         end

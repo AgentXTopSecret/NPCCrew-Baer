@@ -14,6 +14,9 @@
 -- Koerper, Schild-Faktor, Streichel-Haltung und die neue Markierung (OBERFLAECHE) stehen in B.CFG.
 -- F1 (PLAN_F1.md 0.3, 5.1, 6): vier Modi B.MODES (follow / stay / sit / roam), Stellwerte fuer Bleiben, Sitz, Frei herumlaufen,
 -- Komm her und die Rueckkehr eines Baeren ohne Koerper (C1) in B.CFG, neue Sandbox-Option BearRoamRadius (Vorgabe 12).
+-- F2 = B5a (PLAN_F2.md 3.1, 4.4, 4.5): Stellwerte fuer Kampf, Gegner, Am Boden und Verband in B.CFG (standMs entfaellt: B.StandMs aus der
+-- Clip-Tabelle B.CLIPS, shared/BanditsNPCBearFightRules.lua), Sandbox-Optionen (3.1; mit dem Nachtrag 11: BearFleeHits statt BearFleeHealth,
+-- BearSkillXpPercent, BearSkillAgeCap -- zusammen 11), der Weg Schreiber -> Clients fuer Kampf-Ereignisse (B.Fx).
 --
 -- Laeuft ohne NPC Crew und ohne Bandits. Am Ende kopiert das Uebernahme-Skript diese Datei unveraendert nach NPC Crew.
 -- Deshalb: auf Dateiebene wird kein fremdes Modul eingefangen; jeder Griff nach BanditsNPC.X passiert zur Laufzeit und
@@ -141,7 +144,9 @@ B.CFG = B.CFG or {
     vitPerLv = 0.05, conPerLv = 0.05, dodgeBase = 5,      -- Leben- / Ausdauer-Bonus je Stufe / Ausweichen auf Stufe 0 (%)
     fishBase = 10, fishMax = 60, noseBase = 12, noseStep = 1.5,   -- Fang-Chance % / Warnweite Kacheln
     xpNeed = { 100, 116, 135, 156, 181, 210, 244, 283, 328, 380 },   -- Erfahrung je Stufe (x 1,16, Summe 2133)
-    xpPerMin = 6, xpBucketMin = 3,                        -- Echtzeit-Deckel je Faehigkeit und Minute / so viele Minuten ansparen
+    -- F2 (PLAN_F2.md 11.4, Kevin 12.11.): Grundtempo ein Drittel (6 -> 2; Sandbox BearSkillXpPercent multipliziert Gutschrift UND Deckel)
+    xpPerMin = 2, xpBucketMin = 3,                        -- Echtzeit-Deckel je Faehigkeit und Minute / so viele Minuten ansparen
+    skillCapAt = { 3, 6, 8, 10 },                         -- F2 11.4: hoechste Stufe je Wachstums-Stufe (Junges/halbstark/kraeftig/ausgewachsen)
     xpHitTaken = 10, xpHitDealt = 5, xpFishTry = 2, xpFishCatch = 10, xpSniff = 5,   -- Erfahrung je Ereignis (Haken)
     conTilesPerXp = 5, conBreathXp = 5, conBreathMs = 60000, conStepMax = 8,   -- Kondition: Kacheln je XP / ausser Puste / je / Weg-Deckel
     conStepMul = 4,                                       -- Sprung erst ab Weg > conStepMul x runSpeed x Taktdauer (Nachbesserung B1d B4)
@@ -153,7 +158,7 @@ B.CFG = B.CFG or {
     stayBack = 3,                                         -- Bleiben/Sitz: weiter weg -> zurueck
     backRunDist = 8,                                      -- zurueck gehend bis, sonst rennend
     sitSettleMs = 800,                                    -- so lange ruhig an der Stelle, dann "sitzt"
-    standMs = 2300,                                       -- Aufstehen 1,3 s + 1 s Frist (Clip "StandUp", Animset buck/idle)
+    -- F2 (PLAN_F2.md 0.7): standMs entfaellt -- Aufstehen = B.StandMs() (Clip "standup" aus B.CLIPS + standPadMs, 2300)
     roamMinStep = 3,                                      -- Frei: neues Ziel mindestens so weit vom Tier
     roamPauseMin = 8000, roamPauseMax = 20000,            -- Frei: Pause zwischen zwei Wegen (ms, Zufall)
     comeNear = 3, comeMaxMs = 30000,                      -- Komm her: angekommen bis / aufgeben nach
@@ -161,6 +166,30 @@ B.CFG = B.CFG or {
     -- Nachbesserung F1 B1: C1 erst nach so viel Echtzeit in geladener Gegend mit Besitzer (seit dem ersten passenden Suchlauf) / eine
     -- groessere Luecke zwischen zwei passenden Suchlaeufen (Gegend entladen, Spiel angehalten) beginnt die Frist neu
     reviveMs = 60000, reviveGapMs = 50000,
+    -- F2 Kampf (PLAN_F2.md 2.2, 4.5): Zeiten ms, Weiten Kacheln (x sz, wo genannt), Winkel Grad
+    fightTickMs = 100, foeScanMs = 500, fxDist = 40, fightMax = 4,
+    fightRadius = 10, fightBanditRadius = 12, fightBanditBias = 3, fightLeash = 14, fightLeashRoamPad = 2,
+    fightMaxMs = 90000, fightRestMs = 20000, fightSeekMs = 3000, fightRepathMs = 750,
+    fightStuckMs = 3000, fightStuckGain = 0.5, fightBlockMs = 20000, fightBlockMax = 32, fightStuckMax = 3,
+    fightPauseMs = 350, fightFristMs = 1000, fightArrive = 1.1,
+    swipeReach = 1.4, swipeHalf = 55, biteReach = 1.4, biteHalf = 30, maulReach = 1.1, maulHalf = 30, slamReach = 1.5, slamHalf = 80,
+    dmgMain = 1.0, dmgSide = 0.6, dmgSlam = 0.9, dmgBite = 1.2, dmgMaul = 1.8, sideMax = 3, slamMax = 5, hitCap = 6, sightMax = 12,
+    wSwipe = 25, wBite = 30, wMaul = 70, wSlam = 40, rearCdMs = 120000, rearChance = 50, rearDist = 2.5, slamCdMs = 10000,
+    knockMinPct = 30, knockPush = 0.7, knockKill = 1, pushStep = 0.05, pushMs = 600, pushMax = 8, knockStep = 0.45, knockSamples = 4,
+    staAttackCost = 3, staRestBelow = 0.05, staResume = 0.30, fightRestMaxMs = 30000, xpConFight = 1, staViewMsFight = 1000, hpCommitMs = 2000,
+    huffMinS = 90, huffSpreadS = 150, standPadMs = 1000,  -- fleeHysteresis entfaellt (PLAN_F2.md 11.7: Hysterese = 1 Treffer, B.FleeHp)
+    -- Nachbesserung F2: B1 Kampfbeginn nur mit dem Baeren fightLeashPad innerhalb der Leine, Knurren hoechstens je growlCdMs; B3 Ziel in Weite,
+    -- aber nicht treffbar: nach fightMissMax Faellen (Abstand fightMissGapMs) fuer fightMissBlockMs gesperrt; B2 Kandidaten je Baer (Zombies /
+    -- Banditen / Locken); B9 Fx mit Wirkung am Zombie (hit, zbite, smack) an Spieler bis fxFoeDist (unter der Ladeweite 76)
+    fightLeashPad = 2, growlCdMs = 10000, fightMissMax = 2, fightMissGapMs = 750, fightMissBlockMs = 8000,
+    foeCandZ = 24, foeCandB = 8, lureCandMax = 12, fxFoeDist = 75,
+    killMs = 2000, killMax = 32, killTop = 999999,        -- F2 11.5: Tod nach unserem Treffer zaehlt so lange / Deckel Liste / Zaehler
+    -- F2 Gegner (2.1)
+    foeReachPad = 0.35, foeBanditReach = 1.2, foeMaxCub = 2, foeMaxBig = 4, foeListMax = 8, foePendMax = 64, foeScanMax = 1500,
+    zBiteCdMs = 1600, bSmackCdMs = 2200, foePlayerNear = 1.5,
+    lureMs = 500, lureR = 10, lureNear = 3, lureMax = 6, lureTrackMax = 32, lureRepathMs = 1000,
+    -- F2 Am Boden / Verband (2.4, 2.5)
+    downFloor = 0.05, helpUpHp = 0.45, downSelfHp = 0.15, helpTime = 250, mendTime = 200, mendRefuseFull = 0.995,
 }
 
 -- F1 (PLAN_F1.md 0.3, 6.1): die vier Modi eines gezaehmten Baeren. Jeder andere Wert (auch nil) gilt als "stay" (B.ModeOf).
@@ -199,6 +228,21 @@ B.OPTS = B.OPTS or {
     BearHealSleep = { def = 15.0, min = 0.0, max = 100.0 },
     -- F1 (PLAN_F1.md 6.2): so weit darf ein Baer auf "Frei herumlaufen" von der Stelle des Befehls weg (Kevin ENT:284 "Radius 12")
     BearRoamRadius = { def = 12, min = 4, max = 30 },
+    -- F2 (PLAN_F2.md 3.1): Gegner, Tod / Am Boden, Fliehen, Schaden, Verband. Zahlen TEXTGLEICH in sandbox-options.txt (OBERFLAECHE).
+    BearZombiesAttack = { def = true },                          -- Hauptschalter: Zombies und feindliche Banditen greifen gezaehmte Baeren an
+    BearCannotDie = { def = false },                             -- Kevin ENT:23-24: statt Tod "am Boden"
+    -- F2 11.7 (Kevin 12.11. ~07:30): ersetzt BearFleeHealth (20 %, nie ausgeliefert) -- flieht, wenn das Leben nur noch fuer so viele
+    -- Treffer reicht (0 = nie)
+    BearFleeHits = { def = 3, min = 0, max = 10 },
+    BearZombieDamage = { def = 6, min = 0, max = 50 },           -- Lebenspunkte je Zombie-Biss (Junges 40, Halbstark 150, erwachsen 400)
+    BearBanditDamage = { def = 12, min = 0, max = 80 },          -- Lebenspunkte je Hieb eines feindlichen Banditen
+    BearDamagePercent = { def = 100, min = 10, max = 300 },      -- Schaden, den der Baer austeilt (Prozent)
+    BearBandageHeal = { def = 6.0, min = 0.0, max = 50.0 },      -- Zusatz-Heilung mit Verband (Prozent je Spielstunde, Staerke 4)
+    BearBandageHours = { def = 8, min = 1, max = 48 },           -- so viele Spielstunden wirkt ein Verband
+    BearDownedHours = { def = 12, min = 1, max = 72 },           -- Kevin ENT:42: am Boden, steht allein nach 12 Spielstunden auf
+    -- F2 11.4 (Kevin 12.11. ~05:10): Lerntempo der Faehigkeiten in Prozent (Gutschrift und Minuten-Deckel) / Deckel nach dem Alter
+    BearSkillXpPercent = { def = 100, min = 25, max = 1000 },
+    BearSkillAgeCap = { def = true },
     BearLog = { def = false },
 }
 
@@ -356,6 +400,14 @@ end
 -- wirft dabei jedes Mal eine Ausnahme (Warnung + Stacktrace). Die Existenzfrage deshalb nur EINMAL je Schluessel und Sitzung stellen
 -- (Zwischenspeicher tHas, gedeckelt durch die feste Zahl unserer Schluessel); formatiert wird wie bisher mit getText(key, Werte).
 -- Restwarnung: hoechstens eine je Schluessel mit Platzhalter und Sitzung (wie NPC Crew vor v3.11.19, shared/BanditsNPC.lua:2853-2856).
+-- Fix 3 (Kevin 12.11.2026 "Ja, wie NPC Crew", Jar-Ausnahme fuer GENAU diese Methode in dieser Form, begleiter/ENTSCHEIDUNGEN.md): die
+-- Existenzfrage gibt der Vorlage ihre Platzhalter "%1".."%9" selbst als Argumente, wie NPC Crew seit v3.11.19 (shared/BanditsNPC.lua
+-- BanditsNPC.T ~:2843-2870; Jar laut dort: Translator.getTextOrNull(String, Object...) ruft reportMissingArgumentsFromPastAbuse ->
+-- text.formatted(args)). Java ersetzt jedes %N$s durch "%N", es fliegt keine Ausnahme -> auch die Restwarnung ist weg (Turret- und
+-- NPC-Crew-Sitzung, console.txt 12.11. ab 04:09: je einmal UI_BN_Bear_Note_Heard, _Hud_Taming, _Hud_Feed, _Food_Fav, _Food_Ok ...).
+-- Gebraucht wird nur "gibt es den Schluessel"; den zurueckgegebenen Text (dort wuerde %% zu %) verwirft B.T, eingesetzt wird weiter mit
+-- getText(key, Werte). Ueberzaehlige Argumente ignoriert String.format. Schlaegt der Aufruf fehl: melden (je Schluessel einmal, tHas) und
+-- den englischen Ersatztext nehmen.
 local tHas = {}
 function B.T(key, fallback, a1, a2, a3)
     local s1, s2, s3 = argText(a1), argText(a2), argText(a3)
@@ -364,7 +416,11 @@ function B.T(key, fallback, a1, a2, a3)
     end
     local has = tHas[key]
     if has == nil then
-        has = getTextOrNull(key) ~= nil
+        local ok, txt = pcall(getTextOrNull, key, "%1", "%2", "%3", "%4", "%5", "%6", "%7", "%8", "%9")
+        if not ok then
+            B.Err("text lookup failed for " .. key .. ": " .. tostring(txt))
+        end
+        has = ok and txt ~= nil
         tHas[key] = has
     end
     if not has then
@@ -592,4 +648,40 @@ function B.SendView(player, payload)
     end
     if isClient() then return end
     B.ApplySync(payload)
+end
+
+-- F2 (PLAN_F2.md 0.1, 4.4): Schreiber -> Clients, ein Kampf-Ereignis { k = Art, ... } (nur flache Werte). Der Schreiber entscheidet,
+-- die Clients zeigen (Bild, Ton, Blut, "DODGE", Biss-Pose und Wirkung am Zombie beim Zombie-Rechner). Ruft nur der Kern.
+-- Einzelspieler: B.OnFx direkt (shared/BanditsNPCBearFoe.lua). Mehrspieler-Server: sendServerCommand(player, modul, befehl, args) an jeden
+-- Spieler in fxDist Kacheln um (x, y) bzw. (t.bx, t.by), hoechstens 32 (Vanilla server/BuildingObjects/ISBuildUtil.lua:291). MP-Client:
+-- nichts. Spieler ueber B.Players() (server/BanditsNPCBearWorld.lua, zur Laufzeit geholt). Nachbesserung F2 B9: Ereignisse mit Wirkung AM
+-- Zombie (hit, zbite, smack) gehen bis fxFoeDist (75, unter der Ladeweite), denn der Client mit Hoheit ueber den Zombie kann weiter weg
+-- stehen als 40 Kacheln (MP ungespielt).
+local FX_FOE = { hit = true, zbite = true, smack = true }
+
+function B.Fx(kind, t, x, y)
+    if type(kind) ~= "string" then return end
+    if type(t) ~= "table" then t = {} end
+    t.k = kind
+    if isServer() then
+        local px = tonumber(x) or tonumber(t.bx)
+        local py = tonumber(y) or tonumber(t.by)
+        local list = B.Players and B.Players() or {}
+        if px == nil or py == nil then return end
+        local r = tonumber(B.CFG.fxDist) or 40
+        if FX_FOE[kind] then r = tonumber(B.CFG.fxFoeDist) or 75 end
+        local n = 0
+        for i = 1, #list do
+            local e = list[i]
+            if n >= 32 then break end
+            if B.DistXY(px, py, e.x, e.y) <= r then
+                n = n + 1
+                sendServerCommand(e.p, B.CMD, "Fx", t)
+            end
+        end
+        return
+    end
+    if isClient() then return end
+    local on = B.OnFx
+    if on then on(kind, t) end
 end

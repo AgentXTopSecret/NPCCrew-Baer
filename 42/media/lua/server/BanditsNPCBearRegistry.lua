@@ -174,6 +174,38 @@ function B.InitRegistry()
             end
         end
     end
+    -- F2 (PLAN_F2.md 4.2, 11.5): am Boden (down: Spielstunde), Verband (bndH: Spielstunde bis, bndR: %/h 0..50), Kills (kZ, kB: ganze Zahlen
+    -- 0..killTop) -- nur Zahlen an einem gezaehmten/vermissten Eintrag, sonst nil; je Feld eine Fehlerzeile nur bei Unsinn.
+    local killTop = tonumber(B.CFG.killTop) or 999999
+    for id, rec in pairs(r.cubs) do
+        local tame = rec.st == "tame" or rec.st == "missing"
+        local nums = { "down", "bndH", "bndR", "kZ", "kB" }
+        for i = 1, #nums do
+            local k = nums[i]
+            local v = rec[k]
+            if v ~= nil and (not tame or tonumber(v) == nil) then
+                if tonumber(v) == nil then B.Err("registry: entry " .. tostring(id) .. " had an unusable " .. k .. ", removed") end
+                rec[k] = nil
+            end
+        end
+        if tonumber(rec.bndR) ~= nil then
+            local b = tonumber(rec.bndR)
+            if b < 0 then b = 0 end
+            if b > 50 then b = 50 end
+            rec.bndR = b
+        end
+        if (rec.bndH == nil) ~= (rec.bndR == nil) then rec.bndH, rec.bndR = nil, nil end
+        local kk = { "kZ", "kB" }
+        for i = 1, 2 do
+            local v = tonumber(rec[kk[i]])
+            if v ~= nil then
+                v = math.floor(v)
+                if v < 0 then v = 0 end
+                if v > killTop then v = killTop end
+                rec[kk[i]] = v
+            end
+        end
+    end
     -- B1d (PLAN_B1D.md 2.2): Wachstum, Fuetter-Bonus, Leben, Erfahrung nachtragen / klemmen (server/BanditsNPCBearGrow.lua). Ein
     -- B1c-Eintrag ohne g bekommt es aus tamedAt (nur Diagnose-Zeile); Fehlerzeilen nur bei Unsinn. Wilde Eintraege: alle B1d-Felder nil.
     if B.GrowFix then
@@ -489,6 +521,9 @@ function B.Close(rec, how)
     local id = rec.id
     if reg.cubs[id] ~= rec then return end
     local wasTame = (rec.st == "tame" or rec.st == "missing") and rec.owner ~= nil
+    -- F2 (PLAN_F2.md 4.1): Kampf und laufende Gegner-Angriffe weg, BEVOR die Sitzung geht (server/BanditsNPCBearFight*.lua)
+    if B.FightDrop then B.FightDrop(id, how) end
+    if B.FoeDrop then B.FoeDrop(id) end
     reg.cubs[id] = nil
     B._s[id] = nil
     if B.CalmDrop then B.CalmDrop(id) end          -- B1c: Laerm-Wache (server/BanditsNPCBearGuard.lua)
@@ -617,6 +652,14 @@ local function viewEntry(rec, pkey, ms)
     end
     -- B1d (PLAN_B1D.md 4.1): fertige Zahlen sz hp hpMax sta staMax day stg nst nxt (server/BanditsNPCBearGrow.lua); F1: auch missing
     if tameOrMissing and B.GrowView then B.GrowView(rec, t) end
+    -- F2 (PLAN_F2.md 4.7, 11.2, 11.5, 11.7): fst, mdmg*, kZ, kB, fleeP (server/BanditsNPCBearFight.lua), dn / dnH (...Hurt.lua),
+    -- bnd (...Mend.lua) -- flach, nur gezaehmt/vermisst
+    if tameOrMissing then
+        local now = B.Now()
+        if B.FightView then B.FightView(rec, t, ms) end
+        if B.DownView then B.DownView(rec, t, now) end
+        if B.MendView then B.MendView(rec, t, now) end
+    end
     return t
 end
 

@@ -14,6 +14,11 @@
 -- sonst loeschte ein Klick am einen Schalter die andere Liste. Fremde Zeilen werden ueberlesen; eine alte Datei (nur tagoff) laedt
 -- unveraendert.
 -- Die globale Option "TagShow" (Optionen -> Mods) bleibt der Hauptschalter: ist sie aus, sind alle Schilder aus.
+-- F2 (PLAN_F2.md Nachtrag 11.1; Kevin 12.11.2026: "show damage" button): dazu EINE Zeile "showdmg 0" / "showdmg 1" fuer den Schalter
+-- "Show damage" im Baeren-Fenster -- Schadenszahlen ueber Zombies/Banditen, die DEINE Baeren treffen (client/BanditsNPCBearFx.lua). Gilt
+-- fuer alle Baeren dieses Spielers (kein Kennzeichen), Vorgabe an (fehlt die Zeile: an). Gleicher Leser/Schreiber; wie die Listen nur,
+-- wenn AUS: dann "showdmg 0" als letzte Zeile nach beiden Listen ("showdmg 1" wird gelesen, aber nie geschrieben). Eine Datei ohne diese
+-- Zeile (F1/F1B) laedt unveraendert.
 -- Dateizugriff: getFileReader(Name, true) / readLine / close und getFileWriter(Name, true, false) / write / close wie
 -- V:client/ISUI/ISLayoutManager.lua:127-135, :172-185; string.trim :136.
 -- Statisch geprueft, nicht gespielt.
@@ -34,7 +39,8 @@ local L = {
     age = { pre = "ageoff ", off = {}, order = {} },
 }
 local LISTS = { L.tag, L.age }                      -- Lese- und Schreib-Reihenfolge
-local T = { loaded = false }
+local T = { loaded = false, dmgOff = false }        -- F2: dmgOff = Schalter "Show damage" aus
+local DMG_PRE = "showdmg "
 
 local function keyOf(c)
     if type(c) ~= "table" or c.u == nil then return nil end
@@ -69,6 +75,7 @@ end
 -- Datei lesen (einmal je Spielstart). Fehlt sie, legt Vanilla sie leer an (zweites Argument true, ISLayoutManager.lua:127).
 function U.TagLoad()
     T.loaded = true
+    T.dmgOff = false
     clearAll()
     local r = getFileReader(FILE, true)
     if not r then return end
@@ -76,6 +83,9 @@ function U.TagLoad()
         local line = r:readLine()
         if line == nil then break end
         line = string.trim(line)
+        if string.sub(line, 1, string.len(DMG_PRE)) == DMG_PRE then
+            T.dmgOff = (string.trim(string.sub(line, string.len(DMG_PRE) + 1)) == "0")
+        end
         for i = 1, #LISTS do
             local list = LISTS[i]
             local pre = list.pre
@@ -102,6 +112,7 @@ local function save()
             w:write(list.pre .. list.order[j] .. "\n")
         end
     end
+    if T.dmgOff then w:write(DMG_PRE .. "0\n") end         -- F2: Schalter "Show damage" (nur wenn aus)
     w:close()
 end
 
@@ -146,8 +157,24 @@ function U.AgeSet(c, on)
     setOn(L.age, c, on)
 end
 
+-- F2 (Nachtrag 11.1): Schadenszahlen ueber Zombies/Banditen zeigen? (je Spieler, Vorgabe an)
+function U.DmgOn()
+    if not T.loaded then U.TagLoad() end
+    return T.dmgOff ~= true
+end
+
+-- Schalter setzen; schreibt nur bei einer Aenderung (beide Listen und die Zeile, wie jeder Klick).
+function U.DmgSet(on)
+    if not T.loaded then U.TagLoad() end
+    local off = (on ~= true)
+    if T.dmgOff == off then return end
+    T.dmgOff = off
+    save()
+end
+
 local function onGameStart()
     T.loaded = false
+    T.dmgOff = false
     clearAll()
 end
 

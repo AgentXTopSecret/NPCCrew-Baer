@@ -13,6 +13,10 @@ if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: la
 -- (Futter nehmen, Streicheln zaehlen, Abstand, Hand und Tempo der Spieler), jeder mit Fundstelle.
 -- F1 (PLAN_F1.md 4b, 5.3, 5.4): Bitten "Come"/"Passive", Aufstehen und Bleiben/Sitz/Frei im Hirn-Takt (server/BanditsNPCBearOrder.lua),
 -- Rueckkehr eines vermissten Baeren (C1) nach dem Suchlauf, Sicht-Nachschub bei ld/busy-Wechsel, "missing" wird nie mehr geschlossen.
+-- F2 = B5a (PLAN_F2.md 2.1, 2.2, 2.4, 4.1): im Hirn-Takt Liste B._fightLive und EINE Gegner-Suche (B.FoeScan) nach der Zombie-Suche; in
+-- liveRec "am Boden" (B.DownStep) direkt nach der Laerm-Wache und der Kampf (B.FightStep) VOR der Zombie-Wache; im Langsam-Takt allein
+-- aufstehen (B.DownSlow); handCheck / takeOne als B.HandCheck / B.TakeOne fuer Verband und Aufhelfen (server/BanditsNPCBearMend.lua,
+-- ...Hurt.lua).
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -187,11 +191,16 @@ local function takeOne(character, food)
     inv:Remove(food)
     sendRemoveItemFromContainer(inv, food)
     if inv:contains(food) then
-        B.Err("take: the food is still in the inventory after Remove, nothing credited")
+        B.Err("take: the item is still in the inventory after Remove, nothing credited")
         return false
     end
     return true
 end
+
+-- F2 (PLAN_F2.md 4.1, 4.3): dieselben Pruefungen fuer Verband (B.MendComplete) und Aufhelfen (B.HelpUpComplete) -- nur ausgefuehrt, nie
+-- eingefangen (die Dateien rufen sie zur Laufzeit ueber B.X).
+B.HandCheck = handCheck
+B.TakeOne = takeOne
 
 -- Ort des Tiers als ganze Kachel. getX/getY/getZ am Tier: Vanilla shared/Definitions/animal/ButcheringUtil.lua:575-577.
 local function tileOf(animal)
@@ -504,6 +513,8 @@ end
 -- F1 (PLAN_F1.md 0.8, 4b Nr. 6): ein VERMISSTER zahmer Baer wird nie mehr nach missingH als "lost" geschlossen (rote Linie "der Baer geht
 -- nie verloren"; Unstuck und die Rueckkehr C1 holen ihn). missH zaehlt weiter (Diagnose, eine Zeile beim Ueberschreiten von missingH).
 local function slowRec(rec, dt, players, online, now)
+    -- F2 (PLAN_F2.md 2.4): am Boden -- nach BearDownedHours steht er allein auf (server/BanditsNPCBearHurt.lua)
+    if rec.down ~= nil and B.DownSlow then B.DownSlow(rec, now, players) end
     if rec.st == "missing" then
         if rec.owner ~= nil and online[rec.owner] then
             local was = tonumber(rec.missH) or 0
@@ -773,6 +784,8 @@ local function liveRec(rec, a, players, cache, ms)
     pushMoved(rec, ms)
     -- B1c (PLAN_B1C.md 1.2 Schritt 1): gezaehmte Junge stehen auf der Laerm-Wache (server/BanditsNPCBearGuard.lua)
     if rec.st == "tame" and B.CalmWatch then B.CalmWatch(rec, a, ms) end
+    -- F2 (PLAN_F2.md 2.4): am Boden haelt er still -- vor allem anderen (kein Kampf, kein Verstecken, kein Folgen, kein Befehl)
+    if rec.st == "tame" and B.DownStep and B.DownStep(rec, a, ms) then return end
     local cx, cy = a:getX(), a:getY()
     -- B1d (B.GrowLive: Groesse, Leben, Ausdauer/Kondition) laeuft seit der Nachbesserung B1d B2 am Ende von brainTickBody
     local env, nearD, nearE = buildEnv(rec, cx, cy, players, cache, ms)
@@ -794,6 +807,9 @@ local function liveRec(rec, a, players, cache, ms)
         B.Tell(nearE.p, note("UI_BN_Bear_Note_Seen", nil, nil, "good"))
         B.Log("seen " .. rec.id .. " by " .. tostring(nearE.key))
     end
+    -- F2 (PLAN_F2.md 2.2.1): der Kampf geht vor jedem Befehl und vor der Zombie-Wache (server/BanditsNPCBearFight.lua); false = kein Kampf
+    -- (passiv, zu wenig Leben, verschnaufen, Junges ...) -> die Zombie-Wache versteckt ihn bzw. der Befehl gilt
+    if rec.st == "tame" and B.FightStep and B.FightStep(rec, a, env, ms, players) then return end
     -- B1c (PLAN_B1C.md 1.3 Schritt 5): die Zombie-Wache geht vor Folgen und B.Decide (verstecken bzw. fliehen)
     if B.GuardStep and B.GuardStep(rec, a, env, ms, players) then return end
     -- F1 (PLAN_F1.md 2.3 Nr. 4, 5.4): verlaesst er einen Sitz, haelt er fuer das Aufstehen still (server/BanditsNPCBearOrder.lua)
@@ -1007,11 +1023,16 @@ local function brainTickBody(ms)
     -- (busy; B.BodyBusy meldet An/Aus selbst) -- je Wechsel EIN B.Touch, nie je Takt ohne Wechsel.
     local busySpan = tonumber(B.CFG.busyMs) or 20000
     local loaded = {}
+    local fightLive = {}
     for i = 1, #list do
         local rec = list[i]
         if reg.cubs[rec.id] == rec then
             local a = B.FindAnimal(rec)
-            if a then loaded[#loaded + 1] = { rec = rec, a = a, x = a:getX(), y = a:getY(), z = rec.z } end
+            if a then
+                loaded[#loaded + 1] = { rec = rec, a = a, x = a:getX(), y = a:getY(), z = rec.z }
+                -- F2 (PLAN_F2.md 2.1.1, 4.2): gezaehmt, geladen, nicht mitfahrend -> Gegner-Suche und Kampf-Takt (Deckel 64)
+                if rec.st == "tame" and rec.ride == nil and #fightLive < 64 then fightLive[#fightLive + 1] = loaded[#loaded] end
+            end
             local s = B._s[rec.id]
             local ld = a ~= nil
             if (s ~= nil and s.ldSent == true) ~= ld then
@@ -1028,6 +1049,10 @@ local function brainTickBody(ms)
         end
     end
     if B.GuardScan then B.GuardScan(loaded, ms) end
+    -- F2 (PLAN_F2.md 2.1.1): EINE Gegner-Suche fuer alle gezaehmten Baeren direkt nach der Zombie-Suche (mischt feindliche Banditen in
+    -- B._zed, server/BanditsNPCBearFightFoes.lua)
+    B._fightLive = fightLive
+    if B.FoeScan then B.FoeScan(fightLive, ms, true) end
     -- 5: je Junges
     local cache = {}
     local oids = {}

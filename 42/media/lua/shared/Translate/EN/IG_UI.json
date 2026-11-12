@@ -1,6 +1,7 @@
 {
     "IGUI_AnimalType_bear": "Brown bear (test)",
     "IGUI_AnimalType_bearstag": "Brown bear (test, deer motion)",
+    "IGUI_AnimalType_ncbear": "Brown bear (test)",
     "IGUI_AnimalType_ncbearcub": "Bear cub",
     "IGUI_AnimalType_ncbeargrown": "Bear",
     "IGUI_Animal_Group_bear": "Bear (NC test)",

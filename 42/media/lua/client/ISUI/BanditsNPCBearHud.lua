@@ -29,6 +29,11 @@
 -- client/BanditsNPCBearTags.lua; "TagAge" bleibt der Hauptschalter). Die Zeile "Day N - full-grown" gibt es nicht mehr -- fuer jeden
 -- gezaehmten Baeren, den dieser Spieler sieht. Nebenbefund FB 5.3 (a): wechselt ein Eintrag in einer neuen Sicht auf "geladen" (ld),
 -- sucht die Anzeige sofort (sonst bis 30 s ohne Objekt -- auch fuer die Nah-Taste E, client/BanditsNPCBearKey.lua). Reine Lua-Rechnung.
+-- F2 = B5a (PLAN_F2.md 3.2, 4.6): Zeile 2 des EIGENEN Baeren nennt den Kampfzustand -- "down" (Sicht dn, rot) vor "fighting" (fst fight,
+-- orange) vor "backing off" / "catching its breath" (fst retreat / rest, gelb) vor dem Modus. U.TagLift(c) gibt die Hoehe des Schild-
+-- Ankers ueber den Fuessen (dieselbe Rechnung wie das Schild), damit "DODGE" / "down" (client/BanditsNPCBearFx.lua) darueber schweben.
+-- Die schwebenden Zeilen und Schadenszahlen (Nachtrag 11.1) zeichnet U.FloatDraw aus derselben prerender -- je Bild nur aus fertigen
+-- Listen, auch wenn gerade kein Schild steht.
 --
 -- Reine Anzeige: liest nur B.View (die Sicht, die der Schreiber diesem Spieler geschickt hat) und fragt nie den Server.
 -- Einzelspieler und Mehrspieler laufen gleich; im Mehrspieler stammen alle Zahlen vom Server. Der dedizierte Server laedt client/ nicht.
@@ -312,6 +317,9 @@ end
 -- F1 (PLAN_F1.md 7.1): Zeile 2 je Modus. Schluessel ausgeschrieben.
 local MODE_TAG = { follow = "UI_BN_Bear_Tag_Follow", stay = "UI_BN_Bear_Tag_Stay", sit = "UI_BN_Bear_Tag_Sit",
     roam = "UI_BN_Bear_Tag_Roam" }
+-- F2 (PLAN_F2.md 3.2): Zeile 2 im Kampf (Sicht fst) und am Boden (dn) mit eigener Farbe { Schluessel, r, g, b }. Schluessel ausgeschrieben.
+local FIGHT_TAG = { fight = { "UI_BN_Bear_Tag_Fight", 1.00, 0.55, 0.25 }, retreat = { "UI_BN_Bear_Tag_Retreat", 0.95, 0.78, 0.40 },
+    rest = { "UI_BN_Bear_Tag_Rest", 0.95, 0.78, 0.40 }, down = { "UI_BN_Bear_Tag_Down", 0.95, 0.40, 0.35 } }
 
 -- Namensschild (Plan 2.1): Zeile 1 der Name (U.CubName), Zeile 2 beim eigenen Jungen der Zustand, beim fremden der Besitzer.
 -- Gerade gezaehmt: Zeile 2 blinkt FLASH_MS lang gruen "Tamed!", danach der Zustand. Eigen ist ein Junges, wenn der Besitzer mein
@@ -323,9 +331,17 @@ local function describeTag(e, meKey)
     e.tag = true
     e.line1 = U.CubName(c, meKey)
     local own = (c.owner ~= nil) and (c.owner == meKey or (c.owner == B.SP_KEY and B.IsSP ~= nil and B.IsSP()))
+    e.l2 = nil
     if own then
         e.r, e.g, e.b = 0.96, 0.96, 0.90
         e.line2 = U.T(MODE_TAG[modeOf(c)] or "UI_BN_Bear_Tag_Stay")
+        -- F2: am Boden vor Kampf vor Modus (feste Tabelle, keine neue je Liste)
+        local ft = nil
+        if c.dn == true then ft = FIGHT_TAG.down elseif c.fst ~= nil then ft = FIGHT_TAG[c.fst] end
+        if ft then
+            e.line2 = U.T(ft[1])
+            e.l2 = ft
+        end
         e.till = S.flash[c.id] or 0
         e.flashLine = U.T("UI_BN_Bear_Hud_Tamed")
     else
@@ -392,6 +408,31 @@ local function describeValues(e, c, md, t)
     e.yState = up + t.h2
 end
 
+-- B1d: Anker waechst mit der gezeigten Groesse (PLAN_B1D.md 1.2 Punkt 2); fehlt sz (Kern ohne B1d): 1. B1e (PLAN_B1E.md 1.2.5): der
+-- grosse Koerper ist bei gleicher Groesse um tagBigK hoeher (Buckel statt Kopf). F2: als eigene Funktion, damit U.TagLift dasselbe rechnet.
+local function zkOf(c)
+    local base = tonumber(B.CFG.tagBase) or TAG_BASE
+    if base <= 0 then base = TAG_BASE end
+    local sz = c.sz
+    if not isNum(sz) or sz <= 0 then return 1 end
+    local zk = sz / base
+    if c.bd == "big" then
+        local k = tonumber(B.CFG.tagBigK) or TAG_BIG_K
+        if k <= 0 then k = TAG_BIG_K end
+        zk = zk * k
+    end
+    if zk > ZK_MAX then zk = ZK_MAX end
+    return zk
+end
+
+-- F2 (PLAN_F2.md 3.2): Hoehe des Schild-Ankers ueber den Fuessen (Ebenen) fuer einen Sicht-Eintrag -- fuer "DODGE" / "down"
+-- (client/BanditsNPCBearFx.lua). Ohne Eintrag: wie ein Junges ohne Groesse.
+function U.TagLift(c)
+    local lift = tonumber(B.CFG and B.CFG.tagZ) or TAG_Z
+    if type(c) ~= "table" then return lift end
+    return lift * zkOf(c)
+end
+
 -- Die fertigen Texte eines Eintrags (einmal je Liste, nie je Bild).
 local function describe(e, meKey, nowH)
     local c = e.c
@@ -399,21 +440,7 @@ local function describe(e, meKey, nowH)
     if c.st == "tame" then
         describeTag(e, meKey)
         describeValues(e, c, S.md, S.tier or tierOf(1))
-        -- B1d: Anker waechst mit der gezeigten Groesse (PLAN_B1D.md 1.2 Punkt 2); fehlt sz (Kern ohne B1d): wie bisher.
-        local base = tonumber(B.CFG.tagBase) or TAG_BASE
-        if base <= 0 then base = TAG_BASE end
-        local sz = c.sz
-        if isNum(sz) and sz > 0 then
-            local zk = sz / base
-            -- B1e (PLAN_B1E.md 1.2.5): der grosse Koerper ist bei gleicher Groesse um tagBigK hoeher (Buckel statt Kopf)
-            if c.bd == "big" then
-                local k = tonumber(B.CFG.tagBigK) or TAG_BIG_K
-                if k <= 0 then k = TAG_BIG_K end
-                zk = zk * k
-            end
-            if zk > ZK_MAX then zk = ZK_MAX end
-            e.zk = zk
-        end
+        e.zk = zkOf(c)
         return
     end
     local pct = math.floor(tonumber(c.tame) or 0)
@@ -624,6 +651,8 @@ local function drawTag(self, e, sx, sy, now, t)
             if (now % 700) < 450 then
                 text(self, e.flashLine, sx, y2, 0.55, 1.0, 0.55, 1.0, t.f2)
             end
+        elseif e.l2 then
+            text(self, e.line2, sx, y2, e.l2[2], e.l2[3], e.l2[4], 0.90, t.f2)       -- F2: Kampfzustand / am Boden
         else
             text(self, e.line2, sx, y2, 0.78, 0.78, 0.74, 0.80, t.f2)
         end
@@ -738,6 +767,8 @@ function Hud:prerender()
     if S.n > 0 or S.bait then
         draw(self, now)
     end
+    -- F2 (PLAN_F2.md 3.2, Nachtrag 11.1): "DODGE" / "down" und Schadenszahlen (client/BanditsNPCBearFx.lua), nur aus fertigen Listen
+    if U.FloatDraw then U.FloatDraw(self, now) end
 end
 
 -- ---------------------------------------------------------------------------

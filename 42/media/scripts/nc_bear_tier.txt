@@ -13,12 +13,4 @@ module Base
         static = false,
         animationsMesh = NCBear,
     }
-
-    model NCBearStag_Body
-    {
-        mesh = Skinned/NCBearDeer.glb,
-        shader = animalEffect,
-        static = false,
-        animationsMesh = Deer_Stag,
-    }
 }

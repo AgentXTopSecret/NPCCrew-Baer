@@ -15,6 +15,9 @@ if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: la
 -- Sitzung dazu: swapAt, swapTryAt, swapFailN (Tausch), busyUntil (Fuettern/Streicheln laeuft, B.BodyBusy).
 -- F1 (PLAN_F1.md 5.3): B.GrowView auch fuer "missing" (+ Erfahrung, Traglast, Ausweichen, Kampf-Bonus, Fang-Chance, Warnweite);
 -- B.BodyBusy meldet den Wechsel der Marke an die Sicht (B.Touch, s.busySent).
+-- F2 = B5a (PLAN_F2.md 0.4, 2.3, 2.4, 4.3, 11.4, 11.6): Schutz B.BodyShield (setIsInvincible am gezaehmten Koerper), fremder Lebensverlust
+-- zaehlt nie (B.BodyHp stellt den Koerper zurueck), Schaden nur ueber B.BodyHurt (aus B.BearHurt), Tod B.BodyDie, Ausdauer im Kampf
+-- (B.StaUse, keine Erholung im Kampf), Lerntempo und Alters-Deckel in B.SkillAdd, Tausch nie im Kampf / am Boden, Verband in B.GrowSlow.
 --
 -- Takte (alle aus vorhandenen Takten, keine neuen Ereignisse; je eine EIGENE Schleife nach den B1a-B1c-Schritten, Nachbesserung B1d B2):
 --   Langsam-Takt (10 Spielminuten, server/BanditsNPCBearServer.lua slowTickBody) -> B.GrowSlow: g waechst, Leben abgleichen und heilen,
@@ -24,8 +27,10 @@ if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: la
 -- Alle Uhren laufen nur, solange der Besitzer im Spiel ist, nicht bei "missing" (PLAN_B1D.md 0.9, Fragen F4 / F8). Wilde, scheue,
 -- angefuetterte Junge: nichts (Kevin "ab dem Zaehmen").
 --
--- Engine-Aufrufe hier (je Fundstelle am Aufruf): animal:isDead(), animal:getHealth(), animal:setHealth(Zahl) -- getHealth und setHealth
--- NUR in B.BodyHp. Groesse nur ueber B.ApplySize (shared/BanditsNPCBearStats.lua). Zeit ueber B.Now() / getTimestampMs().
+-- Engine-Aufrufe hier (je Fundstelle am Aufruf): animal:isDead(), animal:getHealth(), animal:setHealth(Zahl), F2: animal:setIsInvincible(
+-- Wahrheitswert), animal:setAttackedBy(getFakeAttacker()) -- getHealth nur in B.BodyHp; setHealth nur in B.BodyHp und B.BodyDie;
+-- setIsInvincible nur in B.BodyHp, B.BodyShield, B.BodyDie (B.BodyHurt geht ueber B.BodyHp). Groesse nur ueber B.ApplySize
+-- (shared/BanditsNPCBearStats.lua). Zeit ueber B.Now() / getTimestampMs().
 -- Ladefolge: diese Datei laedt nach ...Follow und vor ...Guard / ...Heal / ...Registry / ...Ride / ...Server / ...World
 -- (alphabetisch); fremde Funktionen (B.Ses, B.Commit, B.FindAnimal, B.PlayerByKey ...) nur zur Laufzeit. Ohne
 -- shared/BanditsNPCBearStats.lua tut jeder Weg hier nichts (statsOk, Nachbesserung B1d B5).
@@ -202,16 +207,25 @@ function B.GrowFix(rec, now, log)
 end
 
 -- ---------------------------------------------------------------------------
--- Leben am Koerper abgleichen (PLAN_B1D.md 0.5). Die Wahrheit ist rec.hp (Anteil 0..1); rec.hpB ist der Wert, den wir zuletzt am
--- Koerper gesetzt bzw. gesehen haben. Koerper unter hpB - hpLossEps (0,0001, nur Gleitkomma-Rest; Nachbesserung B1d B3: JEDER Verlust
--- zaehlt, auch ein kleiner unter hpEps -- sonst ueberschriebe ihn die naechste Heilung): die Engine hat Schaden gemacht (Spieler-Waffe,
--- anderes Tier, Anhaenger) -> hp sinkt um genau diesen Verlust. Koerper ueber hpB + hpEps: die Engine hat selbst geheilt (NUR JAR
--- dec/AnimalData.java:377-398, ~1,5-2,2 %/h) -> zurueckgenommen, damit es bei Kevins "echt langsam" bleibt (Frage F5). Danach unsere
--- Heilung add; weicht der Koerper um mehr als hpEps ab, wird er gesetzt. Nie ueber 1,0 (das MP-Byte laeuft ab 1,27 ueber, NUR JAR
--- dec_b1b/NetworkPlayerAI.java:280), nie 0 (das ist der Tod), nicht am toten Tier. a == nil (Fahrt, entladen): nur rec.hp heilt;
--- der naechste Abgleich mit Koerper setzt ihn (ein Anstieg zaehlt nie als Schaden). Fehlt hp, wird es aus dem Koerper uebernommen.
--- Die EINZIGE Stelle mit getHealth und setHealth. Rueckgabe: Verlust als Anteil (0 = keiner).
+-- Leben am Koerper abgleichen (PLAN_B1D.md 0.5; F2 = B5a PLAN_F2.md 0.4, 11.6). Die Wahrheit ist rec.hp (Anteil 0..1); rec.hpB ist der
+-- Wert, den wir zuletzt am Koerper gesetzt bzw. gesehen haben.
+-- F2 11.6 (Kevin 12.11. ~05:20, nachdem sein halbstarker Baer an einem eigenen Speerhieb starb): das Leben eines gezaehmten Baeren senkt
+-- NUR B.BearHurt (server/BanditsNPCBearHurt.lua: Zombies und feindliche Banditen). Ein Verlust des Koerpers, der nicht dort herkam
+-- (Spieler-Waffe, Auto, Turret, NPC-Crew-Figur, fremde Mod), zaehlt NIE mehr als Schaden: der Koerper wird auf rec.hp zurueckgestellt
+-- (bis B1d zaehlte jeder Verlust ueber hpLossEps). Dazu ist der Koerper fuer die Engine unverwundbar (B.BodyShield, 0.4). Ein Anstieg
+-- (Engine-Heilung, NUR JAR dec/AnimalData.java:377-398) wird wie bisher zurueckgenommen. Danach unsere Heilung add; weicht der Koerper um
+-- mehr als hpEps ab (oder kam ein fremder Verlust), wird er gesetzt. Nie ueber 1,0 (MP-Byte, NUR JAR dec_b1b/NetworkPlayerAI.java:280),
+-- nie 0 (das ist der Tod, nur B.BodyDie), nicht am toten Tier. a == nil (Fahrt, entladen): nur rec.hp heilt. Fehlt hp, wird es aus dem
+-- Koerper uebernommen (erster Abgleich). getHealth nur hier, setHealth nur hier und in B.BodyDie. Rueckgabe: Schaden als Anteil --
+-- seit F2 immer 0 (Schaden rechnet B.BearHurt selbst).
 -- ---------------------------------------------------------------------------
+
+-- Senken verweigert die Engine an einem unverwundbaren Tier (NUR JAR dec/IsoAnimal.java:1157 "if (!this.isInvincible() || !(health <
+-- this.health))") -- deshalb setzt B.BodyHp beim gezaehmten Baeren Schutz aus -> setHealth -> Schutz an, im selben Lua-Aufruf (PLAN_F2.md
+-- 0.4). animal:setIsInvincible(Wahrheitswert): Vanilla client/ISUI/Animal/ISAnimalContextMenu.lua:563 (SP-Zweig), server/ClientCommands.lua:
+-- 911 (Server). Diagnose: hurtNow markiert den Abgleich aus B.BodyHurt (eigener Schaden, kein "Engine-Anstieg").
+local hurtNow = false
+
 function B.BodyHp(rec, a, add)
     if type(rec) ~= "table" then return 0 end
     add = num(add) or 0
@@ -230,45 +244,86 @@ function B.BodyHp(rec, a, add)
     if h == nil or h <= 0 then return 0 end
     local eps = cfg("hpEps", 0.005)
     local hp = num(rec.hp)
-    local hpB = num(rec.hpB)
     local hp0 = hp
-    local loss, back = 0, 0
+    local foreign, back = 0, 0
     if hp == nil then
-        hp = clamp(h, 0, 1)
-        rec.hpB = h
-    elseif hpB == nil then
-        -- kein Bezug (Spiegel-Heilung, alter Eintrag): einem niedrigeren Koerper glauben, einen hoeheren zuruecksetzen
-        if h < hp then hp = h end
-        rec.hpB = h
-    elseif h < hpB - cfg("hpLossEps", 0.0001) then
-        -- Grenze (ehrlich): heilt die Engine im SELBEN 10-Minuten-Fenster, verrechnet sie sich mit dem Treffer (nur der Rest zaehlt);
-        -- das loest erst F5 (Engine-Heilung in der Definition aus) oder der eigene Schadensweg in B5a
-        loss = hpB - h
-        hp = hp - loss
-        rec.hpB = h
-    elseif h > hpB + eps then
-        back = h - hpB
+        hp = clamp(h, 0.01, 1)
+    elseif h < hp - cfg("hpLossEps", 0.0001) then
+        foreign = hp - h                       -- F2 11.6: nicht ueber B.BearHurt -> kein Schaden, der Koerper wird zurueckgestellt
+    elseif h > hp + eps then
+        back = h - hp
     end
-    hp = hp + add
-    local low = 0.01
-    if h < low then low = h end
-    hp = clamp(hp, low, 1)
+    hp = clamp(hp + add, 0.01, 1)
     rec.hp = hp
     local set = false
-    if math.abs(h - hp) > eps then
+    if foreign > 0 or math.abs(h - hp) > eps then
         -- animal:setHealth(Zahl): Vanilla client/ISUI/Animal/ISAnimalContextMenu.lua:545 (SP-Zweig), server/ClientCommands.lua:932
-        -- (Server), shared/TimedActions/Animals/ISKillAnimal.lua:58 -- Vanilla setzt dort nur 0 (gleicher Typ Zahl); eine Zahl ueber 0
-        -- setzt Bandits server/BanditServerSync.lua:12 am Zombie (geerbte Methode). Werte 0..1 ohne Klemme: NUR JAR
-        -- dec/IsoAnimal.java:1156-1163. Werte zwischen 0 und 1 an einem lebenden Tier: ungeprueft (Testpunkt PLAN_B1D.md 12).
-        a:setHealth(hp)
+        -- (Server); Zwischenwerte ERLAUBT (Kevin: baer/STAND.md "Fragen fuer Kevin" B1d Nr. 9 "setHealth 0..1 ... als belegt zaehlen? ->
+        -- ja", dazu baer/begleiter/ENTSCHEIDUNGEN.md "Kein Schaden am eigenen Baeren", 11.6), Werte 0..1 ohne Klemme NUR JAR
+        -- dec/IsoAnimal.java:1156-1163.
+        if hp < h and (rec.st == "tame" or rec.st == "missing") then
+            a:setIsInvincible(false)
+            a:setHealth(hp)
+            a:setIsInvincible(true)
+            local s = B._s and B._s[rec.id] or nil
+            if s ~= nil and s.obj == a then s.shieldObj = a end
+        else
+            a:setHealth(hp)
+        end
         rec.hpB = hp
         set = true
+    else
+        rec.hpB = h
     end
-    if (loss > 0 or back > 0 or set) and B.LogActive() then
-        B.Log("hp: " .. tostring(rec.id) .. " " .. tostring(r3(hp0)) .. " -> " .. tostring(r3(hp)) .. " (+" .. tostring(r3(add))
-            .. " heal, engine +" .. tostring(r3(back)) .. " taken back, -" .. tostring(r3(loss)) .. " damage)")
+    if (foreign > 0 or back > 0 or set) and B.LogActive() then
+        local what = " heal, engine +" .. tostring(r3(back)) .. " taken back, engine -" .. tostring(r3(foreign)) .. " ignored)"
+        if hurtNow then what = " heal, hurt by a foe)" end
+        B.Log("hp: " .. tostring(rec.id) .. " " .. tostring(r3(hp0)) .. " -> " .. tostring(r3(hp)) .. " (+" .. tostring(r3(add)) .. what)
     end
-    return loss
+    return 0
+end
+
+-- F2 (PLAN_F2.md 0.4, 4.3; 11.6): Schutz -- der gezaehmte Koerper ist fuer die Engine unverwundbar (Spieler-Waffen, Autos, Vanillas "Kill",
+-- Turret, NPC-Crew-Figuren). Wird nicht gespeichert (NUR JAR dec/IsoAnimal.java:147, :2181-2191) -> je Sitzung und Koerper EINMAL
+-- (s.shieldObj); gerufen aus B.GrowBody (jeder neue Koerper: Tausch Tag 15, C1, Unstuck, Aussteigen -- im selben Aufruf, keine Luecke) und
+-- B.GrowLive (jeder Hirn-Takt, ein Vergleich). animal:setIsInvincible(true): Vanilla client/ISUI/Animal/ISAnimalContextMenu.lua:563,
+-- server/ClientCommands.lua:911. Nur gezaehmt/vermisst (wilde Junge bleiben verwundbar).
+function B.BodyShield(rec, a)
+    if type(rec) ~= "table" or a == nil or (rec.st ~= "tame" and rec.st ~= "missing") then return end
+    local s = B.Ses(rec.id)
+    if s.shieldObj == a then return end
+    a:setIsInvincible(true)
+    s.shieldObj = a
+end
+
+-- F2 (PLAN_F2.md 2.4, 4.3): der Schaden eines Gegner-Treffers am Koerper. Erst der ausstehende Abgleich (B.BodyHp), dann hp1 = rec.hp - frac
+-- (Rueckgabe, darf <= 0 sein); rec.hp = max(hp1, 0,01) und der Koerper ueber B.BodyHp (Schutz kurz aus). Bei hp1 <= 0 entscheidet der
+-- Aufrufer (B.BearDown setzt downFloor, B.BearDie toetet). Die EINE Stelle, an der Schaden das Register-Leben senkt.
+function B.BodyHurt(rec, a, frac)
+    if type(rec) ~= "table" then return nil end
+    frac = num(frac) or 0
+    if frac < 0 then frac = 0 end
+    if a ~= nil then B.BodyHp(rec, a, 0) end
+    local hp1 = (num(rec.hp) or 1) - frac
+    rec.hp = clamp(hp1, 0.01, 1)
+    if a ~= nil then
+        hurtNow = true
+        B.BodyHp(rec, a, 0)
+        hurtNow = false
+    end
+    return hp1
+end
+
+-- F2 (PLAN_F2.md 0.11): Tod wie Vanilla (Register ZUERST, das macht B.BearDie): Schutz aus, Angreifer = der Ersatz-Angreifer der Engine
+-- (nie ein Spieler -> kein PVP-Log), Leben 0. animal:setAttackedBy(getFakeAttacker()), animal:setHealth(0): Vanilla server/ClientCommands.lua:
+-- 931-932 (Server), client/ISUI/Animal/ISAnimalContextMenu.lua:544-545 (SP); setIsInvincible: :563 / server/ClientCommands.lua:911.
+-- Rueckgabe: true, wenn gesetzt.
+function B.BodyDie(rec, a)
+    if a == nil or a:isDead() then return false end
+    a:setIsInvincible(false)
+    a:setAttackedBy(getFakeAttacker())
+    a:setHealth(0)
+    return true
 end
 
 -- ---------------------------------------------------------------------------
@@ -276,17 +331,23 @@ end
 -- Sitzung (startet voll mit xpPerMin x xpBucketMin, fuellt xpPerMin je Echtzeit-Minute, Uhr rueckwaerts = voll; Lehre NPC Crew
 -- shared/BanditsNPCSkills.lua:475-565). Nur gezaehmt. Stufenaufstieg -> Commit und Meldung an den Besitzer.
 -- getTimestampMs: Vanilla server/Foraging/forageServer.lua:456. Rueckgabe: gutgeschrieben, hochgestuft (boolean).
+-- F2 (PLAN_F2.md 11.4, Kevin 12.11. ~05:10): langsamer und durch das Alter gedeckelt -- Grundtempo xpPerMin 2 (vorher 6); Sandbox
+-- BearSkillXpPercent (Prozent) multipliziert jede Gutschrift UND den Minuten-Deckel; Erfahrung ueber dem Alters-Deckel (B.SkillCapLv,
+-- shared/BanditsNPCBearFightRules.lua: Junges 3, halbstark 6, kraeftig 8, ausgewachsen 10) wird NICHT gutgeschrieben -- was ein Spielstand
+-- schon darueber hat, bleibt stehen (nichts wird weggenommen). Nur hier (die EINE Stelle aller Gutschriften).
 -- ---------------------------------------------------------------------------
 function B.SkillAdd(rec, key, xp, ms)
     if type(rec) ~= "table" or rec.st ~= "tame" or not statsOk() then return 0, false end
     local f = B.SKILL_FIELD[key]
     if f == nil then return 0, false end
-    xp = num(xp) or 0
+    local pct = num(B.Opt("BearSkillXpPercent")) or 100
+    if pct < 0 then pct = 0 end
+    xp = (num(xp) or 0) * pct / 100
     if xp <= 0 then return 0, false end
     ms = num(ms) or getTimestampMs()
     local s = B.Ses(rec.id)
     if type(s.xb) ~= "table" then s.xb = {} end
-    local per = cfg("xpPerMin", 6)
+    local per = cfg("xpPerMin", 2) * pct / 100
     if per < 0 then per = 0 end
     local cap = per * cfg("xpBucketMin", 3)
     local b = s.xb[key]
@@ -300,7 +361,9 @@ function B.SkillAdd(rec, key, xp, ms)
     local give = xp
     if give > b.t then give = b.t end
     local old = B.SkillXp(rec, key)
-    local top = B.XpCum(10)
+    local capL = 10
+    if B.SkillCapLv then capL = B.SkillCapLv(rec) end
+    local top = B.XpCum(capL)
     if old + give > top then give = top - old end
     if give <= 0 then return 0, false end
     b.t = b.t - give
@@ -358,6 +421,54 @@ end
 -- Vorspulen bis etwa x4 ist ein langer Weg kein Sprung). Erholung in Echtzeit (auch in der Pause; nur Anzeige, ohne Wirkung).
 -- Sicht nur an den Besitzer, gedrosselt (staViewStep Punkte UND viewMoveMs; Rand leer/voll ab einem halben Punkt).
 -- ---------------------------------------------------------------------------
+-- F2 (PLAN_F2.md 2.3, 4.3): Sicht der Ausdauer an den Besitzer, gedrosselt -- im Kampf (s.fight) je staViewMsFight 1 s und ab 1 Punkt,
+-- sonst je viewMoveMs ab staViewStep Punkten; Rand leer/voll ab einem halben Punkt. Aus stamina und B.StaUse.
+local function staView(rec, s, sta, staMax, ms)
+    local pts = sta * staMax
+    local v, vAt = num(s.staV), num(s.staVAt)
+    if v == nil or vAt == nil or ms - vAt < 0 then
+        s.staV, s.staVAt = pts, ms
+        return
+    end
+    local every, step = cfg("viewMoveMs", 5000), cfg("staViewStep", 10)
+    if type(s.fight) == "table" then every, step = cfg("staViewMsFight", 1000), 1 end
+    if ms - vAt < every then return end
+    local d = math.abs(pts - v)
+    local edge = (sta <= 0 or sta >= 1) and d >= 0.5
+    if d >= step or edge then
+        s.staV, s.staVAt = pts, ms
+        if rec.owner ~= nil then B.Touch(nil, rec.owner) end
+    end
+end
+
+-- Ausser Puste (Kondition +conBreathXp, hoechstens je conBreathMs) -- Rennen (stamina) und seit F2 auch der Kampf (B.StaUse).
+local function outOfBreath(rec, s, ms)
+    local b = num(s.breathAt)
+    if b == nil or ms - b < 0 or ms - b >= cfg("conBreathMs", 60000) then
+        s.breathAt = ms
+        B.SkillAdd(rec, "con", cfg("conBreathXp", 5), ms)
+    end
+end
+
+-- F2 (PLAN_F2.md 2.2.3, 2.3): ein Angriff kostet Ausdauer (pts Punkte, staAttackCost 3) -- aus dem Kampf-Takt (server/BanditsNPCBearFight.lua).
+-- Leer -> ausser Puste. Rueckgabe: Ausdauer danach (Anteil 0..1).
+function B.StaUse(rec, pts, ms)
+    if type(rec) ~= "table" or rec.st ~= "tame" or not statsOk() then return 1 end
+    ms = num(ms) or getTimestampMs()
+    local s = B.Ses(rec.id)
+    local staMax = B.StatsOf(rec).staMax
+    if staMax <= 0 then staMax = 1 end
+    local sta = (num(s.sta) or 1) - (num(pts) or 0) / staMax
+    if sta <= 0 then
+        sta = 0
+        outOfBreath(rec, s, ms)
+    end
+    if sta > 1 then sta = 1 end
+    s.sta = sta
+    staView(rec, s, sta, staMax, ms)
+    return sta
+end
+
 local function stamina(rec, s, cx, cy, ms)
     cx, cy = num(cx), num(cy)
     if cx == nil or cy == nil then return end
@@ -387,35 +498,18 @@ local function stamina(rec, s, cx, cy, ms)
             s.kAcc = acc - n * per
             if n > 0 then B.SkillAdd(rec, "con", n, ms) end
         end
-    else
+    elseif type(s.fight) ~= "table" then
+        -- F2 (PLAN_F2.md 2.3): im Kampf keine Erholung (sonst glichen 2 Punkte/s die Angriffe aus und er waere nie ausser Puste)
         sta = sta + cfg("staRegen", 2) * dts * (1 + cfg("conPerLv", 0.05) * st.lv.con) / staMax
     end
     if sta <= 0 then
         sta = 0
-        if run then
-            -- ausser Puste (Kevin: "vor allem Ausser-Puste-Kommen", ENTSCHEIDUNGEN.md:226), hoechstens je conBreathMs
-            local b = num(s.breathAt)
-            if b == nil or ms - b < 0 or ms - b >= cfg("conBreathMs", 60000) then
-                s.breathAt = ms
-                B.SkillAdd(rec, "con", cfg("conBreathXp", 5), ms)
-            end
-        end
+        -- ausser Puste (Kevin: "vor allem Ausser-Puste-Kommen", ENTSCHEIDUNGEN.md:226), hoechstens je conBreathMs
+        if run then outOfBreath(rec, s, ms) end
     end
     if sta > 1 then sta = 1 end
     s.sta = sta
-    local pts = sta * staMax
-    local v, vAt = num(s.staV), num(s.staVAt)
-    if v == nil or vAt == nil or ms - vAt < 0 then
-        s.staV, s.staVAt = pts, ms
-        return
-    end
-    if ms - vAt < cfg("viewMoveMs", 5000) then return end
-    local d = math.abs(pts - v)
-    local edge = (sta <= 0 or sta >= 1) and d >= 0.5
-    if d >= cfg("staViewStep", 10) or edge then
-        s.staV, s.staVAt = pts, ms
-        if rec.owner ~= nil then B.Touch(nil, rec.owner) end
-    end
+    staView(rec, s, sta, staMax, ms)
 end
 
 -- ---------------------------------------------------------------------------
@@ -440,7 +534,8 @@ end
 -- Ist ein Tausch JETZT sicher? (0.6) Sonst beim naechsten Hirn-Takt; der alte Koerper bleibt solange voll benutzbar.
 -- Das lebende Objekt der Sitzung prueft der Aufrufer (brainTickBody Schritt 7, server/BanditsNPCBearServer.lua).
 -- Rueckgabe ok, why: "state" (nicht gezaehmt), "ride" (faehrt mit), "cool" (swapMinMs seit dem letzten Tausch), "retry"
--- (swapRetryMs seit dem letzten Fehlversuch), "calm" (Laerm-Antwort laeuft), "guard" (Zombie-Wache an oder Zombie naeher als
+-- (swapRetryMs seit dem letzten Fehlversuch), F2: "fight" (Kampf laeuft), "down" (am Boden), "calm" (Laerm-Antwort laeuft), "guard"
+-- (Zombie-Wache an oder Zombie / feindlicher Bandit naeher als
 -- zedSafe), "busy" (Fuettern/Streicheln laeuft), "move" (eigener Rennbefehl laeuft, hoechstens swapMoveMaxMs), "nodef" (Definition
 -- des Ziel-Koerpers fehlt). Liest nur (auch die Bench fragt hier).
 function B.BodySwapReady(rec, s, ms)
@@ -448,6 +543,9 @@ function B.BodySwapReady(rec, s, ms)
     if rec.ride ~= nil then return false, "ride" end
     if type(s) ~= "table" then s = B.Ses(rec.id) end
     ms = num(ms) or getTimestampMs()
+    -- F2 (PLAN_F2.md 2.2.8, 4.3): nie waehrend eines Kampfs (s.fight) und nie am Boden (rec.down)
+    if type(s.fight) == "table" then return false, "fight" end
+    if rec.down ~= nil then return false, "down" end
     if within(s.swapAt, ms, cfg("swapMinMs", 60000)) then return false, "cool" end
     if within(s.swapTryAt, ms, cfg("swapRetryMs", 10000)) then return false, "retry" end
     if pending(s.calmUntil, ms, cfg("calmMs", 2500)) then return false, "calm" end
@@ -587,11 +685,13 @@ function B.GrowLive(rec, a, cx, cy, ms)
         s.swapWantAt = nil
     end
     B.ApplySize(a, B.BodySize(rec, have))
-    if rec.hp == nil then
-        B.BodyHp(rec, a, 0)
-        -- Leben jetzt bekannt -> in die Sicht (dieser Schritt laeuft nach B.FlushViews: sie geht mit dem naechsten Takt hinaus)
-        if rec.hp ~= nil then B.Touch(rec) end
-    end
+    B.BodyShield(rec, a)                         -- F2 (PLAN_F2.md 0.4, 11.6): Schutz am gebundenen Koerper (einmal je Objekt)
+    -- Nachbesserung F2 B6 (Befund Z3): der Abgleich Koerper <-> Register laeuft JEDEN Hirn-Takt (ein getHealth je Baer), nicht erst im
+    -- Langsam-Takt -- ein fremder Verlust am Schutz vorbei (11.6) steht so hoechstens einen Hirn-Takt am Koerper und kann sich nicht ueber
+    -- 10 Spielminuten bis zum Tod aufsummieren. Neu bekanntes Leben -> in die Sicht (sie geht mit dem naechsten Takt hinaus).
+    local hpKnown = rec.hp ~= nil
+    B.BodyHp(rec, a, 0)
+    if not hpKnown and rec.hp ~= nil then B.Touch(rec) end
     stamina(rec, s, cx, cy, ms)
 end
 
@@ -599,7 +699,7 @@ end
 -- Je Langsam-Takt (PLAN_B1D.md 1.1 Schritt 2; seit der Nachbesserung B1d B2 in einer eigenen Schleife nach den B1a-B1c-Schritten von
 -- slowTickBody): nur gezaehmt, Besitzer im Spiel. g waechst um dt / (D x 24); Leben abgleichen und mit BearHealAwake heilen (Koerper
 -- nur, wenn geladen; Fahrt/entladen: nur das Register); Commit hoechstens je growCommitH, sofort bei Stufenwechsel (mit Meldung) oder
--- einem Verlust ab hpCommit. Kein Schlaf in B1d -> immer B.HealRate(false).
+-- einem Verlust ab hpCommit. Kein Schlaf in B1d -> immer B.HealRate(false). F2: am Boden ohne Selbstheilung, + Verband (B.MendRateOf).
 -- ---------------------------------------------------------------------------
 function B.GrowSlow(rec, dt, online, now, players)
     if type(rec) ~= "table" or rec.st ~= "tame" or rec.owner == nil or not statsOk() then return end
@@ -619,7 +719,20 @@ function B.GrowSlow(rec, dt, online, now, players)
         s.gDirty = true
     end
     local hp0 = rec.hp
-    local loss = B.BodyHp(rec, B.FindAnimal(rec), B.HealRate(false) / 100 * dt)
+    -- F2 (PLAN_F2.md 2.4, 2.5): am Boden keine Selbstheilung, nur ein Verband; ein Verband heilt zusaetzlich (B.MendRateOf,
+    -- server/BanditsNPCBearMend.lua, %/h). Abgelaufen -> Felder weg (festgeschrieben mit dem naechsten Wachstums-Commit).
+    local rate = 0
+    if rec.down == nil then rate = B.HealRate(false) end
+    if B.MendRateOf then
+        local mend = B.MendRateOf(rec, now)
+        rate = rate + mend
+        if rec.bndH ~= nil and mend <= 0 then
+            rec.bndH, rec.bndR = nil, nil
+            s.gDirty = true
+            B.Touch(rec)
+        end
+    end
+    local loss = B.BodyHp(rec, B.FindAnimal(rec), rate / 100 * dt)
     if rec.hp ~= hp0 then s.gDirty = true end
     local stage1 = B.StageOf(B.GrowSize(rec.g))
     local up = (RANK[stage1] or 0) > rank0
@@ -642,6 +755,8 @@ function B.GrowBody(rec, a)
     local have = B.BodyKind(a) or "cub"
     rec.body = have
     B.ApplySize(a, B.BodySize(rec, have))
+    -- F2 (PLAN_F2.md 11.6.1): Schutz SOFORT am neuen Koerper (Tausch Tag 15, C1, Unstuck, Aussteigen) -- keine Luecke von einem Takt
+    B.BodyShield(rec, a)
     B.BodyHp(rec, a, 0)
     local s = B.Ses(rec.id)
     s.kx, s.ky, s.kAt, s.kAcc = nil, nil, nil, nil
@@ -791,6 +906,11 @@ function B.GrowView(rec, t)
         local k = VIEW_X[i]
         local v = num(rec[k])
         if v ~= nil and v > 0 then t[k] = math.floor(v * 10 + 0.000001) / 10 end
+    end
+    -- F2 (PLAN_F2.md 11.4): Alters-Deckel der Faehigkeiten (nur, wenn unter 10) -- das Fenster graut Balken an der Grenze aus
+    if B.SkillCapLv then
+        local capL = B.SkillCapLv(rec)
+        if capL < 10 then t.skCap = capL end
     end
     t.carry = math.floor((num(st.carry) or 0) + 0.5)
     t.dodge = B.Round1(num(st.dodge) or 0)

@@ -19,8 +19,9 @@
 -- = praktisch 0. Lehnt Kevin F1 ab, werden nur maxSize und ageToGrow zurueckgedreht (das Nachsetzen je Hirn-Takt deckt beides).
 -- B1e (PLAN_B1E.md 2.1, 2.2, 0.13): zweite Art "ncbeargrown" = der GROSSE Koerper desselben Eintrags (ab Halbstark, waechst bis 1,35).
 -- Kopie der Junges-Definition (Felder per pairs, eigene stages/breeds/genes), mit dem heutigen grossen Modell (model-Skript des
--- Erwachsenen, NCBearTest media/scripts/nc_bear_tier.txt; Textur wie NCBearTest shared/NCBearDefs.lua:40-41), minSize 0,72 (= B.CFG.swapSize) / maxSize 1,35, Schatten/Leiche wie der Erwachsene. KEINE
--- Erwachsenen-Stimmen und NIE die alte Art "bear" (NCBearTest shared/NCBearFight.lua:1787 kennt nur "bear"; Kampf ist B5a).
+-- Erwachsenen, NCBearTest media/scripts/nc_bear_tier.txt; Textur wie NCBearTest shared/NCBearDefs.lua:40-41), minSize 0,72 (= B.CFG.swapSize) / maxSize 1,35, Schatten/Leiche wie der Erwachsene.
+-- NIE die alte Art "bear". F2 (PLAN_F2.md 4.1): die Rasse des grossen Koerpers bekommt die Stimmen des Erwachsenen (pain, death, huff,
+-- huffsoft, growl1-3) -- Schmerz, Tod, Schnauben, Knurren im Kampf (Kampf-Code server/BanditsNPCBearFight.lua, Bild client/BanditsNPCBearFx.lua).
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -162,7 +163,7 @@ local cubDef = AnimalDefinitions.animals[CUB]
 if cubDef then
     local d = copyOf(cubDef)
     d.bodyModel = "NCBear_Body"            -- heutiges grosses Modell (model-Skript in module Base, media/scripts/nc_bear_tier.txt)
-    -- Rasse: Kopie der Junges-Rasse (Symbole, Stimmen fallover/petting -- keine Erwachsenen-Stimmen bis B5a), Textur des grossen
+    -- Rasse: Kopie der Junges-Rasse (Symbole, Stimmen fallover/petting; F2: + Erwachsenen-Stimmen, unten), Textur des grossen
     -- Baeren (media/textures/Body/NCBear.png); texture UND textureMale (textureBaby allein wirkt ohne nextStage nicht)
     local b = copyOf(breeds[BREED])
     b.name = BREED
@@ -170,6 +171,16 @@ if cubDef then
     b.textureMale = "NCBear"
     b.textureBaby = "NCBear"
     b.sounds = copyOf(breeds[BREED].sounds)
+    -- F2 (PLAN_F2.md 4.1, FG L4): Stimmen des grossen Koerpers, Werte wie der gespielte Erwachsene (NCBearTest shared/NCBearDefs.lua:48-57).
+    -- Namen sind Ton-Skripte (media/scripts/nc_bear_sounds.txt, Dateinamen bleiben), kein Befehl. Gespielt ueber animal:playBreedSound(Schluessel)
+    -- (Vanilla shared/TimedActions/Animals/ISKillAnimalInInventory.lua:19 "pain", :41 "death"; OBERFLAECHE und Knoten-XML).
+    b.sounds.pain = { name = "NCBear_Pain", slot = "voice", priority = 50 }
+    b.sounds.death = { name = "NCBear_Pain", slot = "voice", priority = 100 }
+    b.sounds.huff = { name = "NCBear_Huff", slot = "voice", priority = 10 }
+    b.sounds.huffsoft = { name = "NCBear_HuffSoft", slot = "voice", priority = 5 }
+    b.sounds.growl1 = { name = "NCBear_Growl1", slot = "voice", priority = 20 }
+    b.sounds.growl2 = { name = "NCBear_Growl2", slot = "voice", priority = 20 }
+    b.sounds.growl3 = { name = "NCBear_Growl3", slot = "voice", priority = 20 }
     d.breeds = { [BREED] = b }
     local st = {}
     st[BIG] = { ageToGrow = 36500 }        -- Eintrag gleich dem Artnamen, kein nextStage (wie das Junge, PLAN_B1D.md 0.3)
@@ -177,9 +188,9 @@ if cubDef then
     d.genes = copyOf(genes)
     d.minSize = 0.72                       -- = B.CFG.swapSize (shared/BanditsNPCBear.lua); ein frischer Koerper steht so gleich bei 0,72
     d.maxSize = 1.35                       -- Kevin: Erwachsen 1,35 (baer/begleiter/ENTSCHEIDUNGEN.md:10)
-    d.animalSize = 0.3                     -- wie "bear" (NCBearTest shared/NCBearDefs.lua:75)
+    d.animalSize = 0.3                     -- wie die fruehere Test-Art "bear" (0,3)
     d.collisionSize = 0.30                 -- wirkt x Groesse: 0,22 beim Tausch, 0,41 bei 1,35 (Frage F10, im Spiel ansehen)
-    d.shadoww = 0.9                        -- wie "bear" (NCBearDefs.lua:77-80)
+    d.shadoww = 0.9                        -- wie die fruehere Test-Art "bear"
     d.shadowfm = 1.8
     d.shadowbm = 1.8
     d.corpseSize = 3.0

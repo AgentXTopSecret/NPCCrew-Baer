@@ -13,6 +13,8 @@
 -- eintragen"): danach ein Titel "Bear window keys" und ZWEI Tasten -- KeyNear (Vorgabe E, oeffnet/schliesst nahe am eigenen Baeren)
 -- und KeyFar (Vorgabe KEINE Taste, oeffnet/schliesst aus jeder Entfernung). Reihenfolge jetzt: TagShow, TagHealth, TagStamina, TagAge,
 -- TagSize, MarkerSize, WinSize, Titel Keys, KeyNear, KeyFar. Keine Zeile mehr in Vanillas Tastaturbelegung (keyBinding).
+-- F2 (PLAN_F2.md 3.2; Kevin ENT:237 '"DODGE" ein/aus'): nach WinSize die Schaltbox TagDodge (Vorgabe an) -- "DODGE" schwebt ueber dem
+-- eigenen Baeren, wenn ein Angriff ihn verfehlt (client/BanditsNPCBearFx.lua U.HudFloat). Reihenfolge: ..., WinSize, TagDodge, Titel Keys, ...
 -- addKeyBind(id, Name, Taste, Tooltip): V:client/PZAPI/ModOptions.lua:182-204 (getValue :191 = Tastencode), Aufrufer derselben Form
 -- B:client/BanditModOptions.lua:14. AUSNAHME von der Regel "hier stehen Schluessel": der NAME einer Tasten-Zeile ist schon
 -- uebersetzt (getText auf Dateiebene wie Bandits :12-14) -- Vanilla beschriftet die Zeile mit getText(option.name)
@@ -59,7 +61,7 @@ local U = B.UI
 local PAGE = "BanditsNPCBear"
 local CACHE_MS = 1000
 
--- Zwischenspeicher je Wert: { v = Wert oder nil, at = ms }. Gedeckelt durch die festen Ids dieser Seite (B1d: 5, B1e: 6, F1: 7, F1B: 9).
+-- Zwischenspeicher je Wert: { v = Wert oder nil, at = ms }. Gedeckelt durch die festen Ids dieser Seite (B1d: 5, B1e: 6, F1: 7, F1B: 9, F2: 10).
 local cache = {}
 
 local function err(msg)
@@ -121,6 +123,8 @@ if PZAPI and PZAPI.ModOptions and PZAPI.ModOptions.create then
     ws:addItem("UI_BN_Bear_MO_Pct200")
     ws:addItem("UI_BN_Bear_MO_Pct250")
     ws:addItem("UI_BN_Bear_MO_Pct300")
+    -- F2 (PLAN_F2.md 3.2): "DODGE" ueber dem eigenen Baeren an/aus (Vorgabe an). addTickBox :64-86 wie TagShow oben.
+    o:addTickBox("TagDodge", "UI_BN_Bear_MO_Dodge", true, "UI_BN_Bear_MO_DodgeTip")
     -- F1B (PLAN_F1B.md 3.1; Kevin 12.11.2026, Kopf dieser Datei): die zwei Tasten des Baeren-Fensters. addTitle :28-30 (gezeichnet mit
     -- getText, V:client/OptionScreens/MainOptions.lua:2803-2804); addKeyBind :182-204 mit SCHON UEBERSETZTEM Namen (getText wie
     -- B:client/BanditModOptions.lua:14 -- Grund im Kopf), Tooltip als Schluessel. Vorgaben aus U.KEY_DEF (oben).
@@ -128,7 +132,7 @@ if PZAPI and PZAPI.ModOptions and PZAPI.ModOptions.create then
     o:addKeyBind("KeyNear", getText("UI_BN_Bear_MO_KeyNear"), U.KEY_DEF.KeyNear, "UI_BN_Bear_MO_KeyNearTip")
     o:addKeyBind("KeyFar", getText("UI_BN_Bear_MO_KeyFar"), U.KEY_DEF.KeyFar, "UI_BN_Bear_MO_KeyFarTip")
     -- Spaeter (NICHT jetzt anlegen; ENTSCHEIDUNGEN.md "Anzeige ueber dem Baeren"): Hunger, Durst, Muedigkeit je als Auswahl
-    -- Aus / Balken / Zahl wie TagHealth, sobald es die Werte gibt (Beduerfnisse, Schlafen); "DODGE" als addTickBox mit dem Kampf.
+    -- Aus / Balken / Zahl wie TagHealth, sobald es die Werte gibt (Beduerfnisse, Schlafen). "DODGE" steht seit F2 oben (TagDodge).
     -- Gelesen wird alles ueber U.Opt(id, vorgabe); jeder neue Schluessel in allen sieben UI.json.
 else
     err("PZAPI.ModOptions is not available -- the bear display page (Options > Mods) was not created; the defaults apply")

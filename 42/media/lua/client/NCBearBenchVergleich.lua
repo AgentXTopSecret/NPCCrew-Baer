@@ -1,9 +1,10 @@
 --
 -- NUR TESTHILFE (NCBearBench*: wird nie nach NPC Crew kopiert). Nur Einzelspieler.
+-- F2 (Lauf baer-f2, PLAN_F2.md 1.1): der grosse 2c-Baer ist jetzt die Test-Art "ncbear" (shared/NCBearBenchDefs.lua) statt "bear".
 -- Kevin 11.11.2026: "ich will das du die 2 baby varianten einbaust zum spawnen und beide grosse!"
 --
 -- Konsole (Debug):
---   NCBear_Vergleich()      alles nebeneinander: altes Junges (lebend), grosser 2c-Baer (lebend) und die zwei Standmodelle
+--   NCBear_Vergleich()      alles nebeneinander: altes Junges (lebend), grosser 2c-Baer (lebend, Test-Art ncbear) und die zwei Standmodelle
 --                           des grossen Generator-Baeren (braun und Fototon) ins Inventar zum Hinlegen
 --   NCBear_CubAlt()         nur das alte Junge (lebend)
 --   NCBear_GenE()           nur die zwei Standmodelle des Generator-Baeren ins Inventar
@@ -11,7 +12,7 @@
 --                           model wachsen? vom alten baby baeren")
 -- Das neue Junge ist dein gezaehmtes (gleiches Modell wie jedes neue Junge); ein weiteres holt NCBear_CubHere().
 --
--- Engine-Aufrufe wie die gespielte Testhilfe client/NCBearSpawn.lua: getAllAnimalsDefinitions/getBreeds (Vanilla
+-- Engine-Aufrufe wie die gespielte Testhilfe client/NCBearSpawn.lua (seit F2 client/NCBearBenchAdult.lua): getAllAnimalsDefinitions/getBreeds (Vanilla
 -- client/DebugUIs/DebugContextMenu.lua:246-275), addAnimal + addToWorld (DebugContextMenu.lua:1462-1471),
 -- getSpecificPlayer(0) (:24), getCurrentSquare (:348), getCell():getGridSquare (:1436),
 -- getInventory():AddItem("Modul.Name") (Vanilla client/DebugUIs/Scenarios/AiteronScenario.lua:74 getPlayer():getInventory():AddItem("Base.FishingRod")).
@@ -53,7 +54,7 @@ function NCBear_CubAlt()
     return spawnAt(2, -2, "ncbearcubalt")
 end
 
--- Groesse der alten Jungen nachstellen. Liste und Abfragen wie die Testhilfe client/NCBearSize.lua (NCBear_Size):
+-- Groesse der alten Jungen nachstellen. Liste und Abfragen wie die Testhilfe NCBear_Size (seit F2 client/NCBearBenchAdult.lua):
 -- getCell():getObjectListForLua(), instanceof(x, "IsoAnimal"), getAnimalType(), getSquare(); Groesse ueber
 -- animal:getData():setSizeForced(zahl) (Vanilla shared/Definitions/animal/ButcheringUtil.lua:569). Haelt auch nach Laden/naechstem Tag,
 -- weil die Vergleichs-Art jetzt maxSize 1,35 hat (shared/NCBearBenchVergleichDefs.lua).
@@ -96,7 +97,7 @@ end
 function NCBear_Vergleich()
     if not sp() then print("[NCBear] singleplayer only"); return end
     NCBear_CubAlt()
-    spawnAt(4, 2, "bear")
+    spawnAt(4, 2, "ncbear")
     NCBear_GenE()
     print("[NCBear] vergleich: altes Junges + grosser 2c-Baer stehen neben dir; das neue Junge ist dein eigenes (oder NCBear_CubHere())")
 end

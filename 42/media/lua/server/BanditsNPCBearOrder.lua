@@ -195,7 +195,9 @@ function B.StandStep(rec, a, ms)
     local s = B._s[rec.id]
     if s == nil or s.standUntil == nil then return false end
     ms = tonumber(ms) or getTimestampMs()
-    if pending(s.standUntil, ms, cfgNum("standMs", 2300)) then
+    local stand = 2300
+    if B.StandMs then stand = B.StandMs() end         -- F2 (PLAN_F2.md 0.7): aus der Clip-Tabelle B.CLIPS
+    if pending(s.standUntil, ms, stand) then
         B.Hold(rec, a, true)
         return true
     end
@@ -271,6 +273,11 @@ function B.HandleCome(player, args)
     end
     if rec.ride ~= nil then
         refuse(player, pkey, "Come", B.NoteBd(note("UI_BN_Bear_Why_Riding", nil, nil, "bad"), rec))
+        return
+    end
+    if rec.down ~= nil then
+        -- F2 (PLAN_F2.md 2.4): am Boden erst aufhelfen
+        refuse(player, pkey, "Come", B.NoteBd(note("UI_BN_Bear_Why_Down", nil, nil, "bad"), rec))
         return
     end
     local a = nil

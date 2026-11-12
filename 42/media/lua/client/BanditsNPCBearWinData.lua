@@ -3,7 +3,8 @@
 -- das fertige Modell eines Baeren (U.WinModel) -- alle Texte, Zahlen, Knopf-Zustaende und Tooltips, die das Fenster zeichnet.
 --
 -- Rein bis auf U.T (Texte) und B.* (Kern): kein Zeichnen, keine Engine-Abfrage ausser player:getX/getY/getVehicle des uebergebenen
--- Spielers (V:client/Fishing/TensionUI.lua:11, V:client/ISUI/Hutch/ISHutchMenu.lua:8). Gebaut wird das Modell nur bei neuer Sicht
+-- Spielers (V:client/Fishing/TensionUI.lua:11, V:client/ISUI/Hutch/ISHutchMenu.lua:8) und -- F2 -- dem besten Verband (U.BestBandage,
+-- client/BanditsNPCBearMenu.lua) mit item:getDisplayName() (S:shared/BanditsNPCBearFood.lua B.FoodList). Gebaut wird das Modell nur bei neuer Sicht
 -- und hoechstens 1 x je Sekunde (client/ISUI/BanditsNPCBearWindow.lua), nie je Bild. Die festen Texte (Knoepfe, Titel, Zustaende,
 -- Hinweise) holt U.T nur einmal je Sitzung (Tabelle ST, gedeckelt durch die feste Zahl der Schluessel).
 -- Daten: der Sicht-Eintrag des Kerns (S:server/BanditsNPCBearRegistry.lua viewEntry, S:server/BanditsNPCBearGrow.lua B.GrowView;
@@ -14,6 +15,13 @@
 -- F1B (PLAN_F1B.md 3.4, 5.3): die Fusszeile nennt die Tasten, die gelten ("E near your bear", die Fern-Taste, falls gesetzt; Namen aus
 -- U.WinKeyName, client/BanditsNPCBearKey.lua); der dritte Schalter "Growth line" (U.AgeOn, client/BanditsNPCBearTags.lua) traegt
 -- ageShow = der Baer waechst noch (Sicht mit day UND nst) -- ausgewachsen verschwindet er aus dem Fenster.
+-- F2 = B5a (PLAN_F2.md 3.2, 4.7, Nachtrag 11): Zustaende "am Boden" (dn) > "kaempft" (fst fight) > "zieht sich zurueck" / "verschnauft"
+-- (fst retreat / rest) nach "ausser Reichweite"; Fusszeile am Boden (Win_HintDown mit dnH); Befehle grau am Boden (Why_Down, Unstuck geht);
+-- Knopf "Bandage" bzw. am Boden "Help up" (d.care, kind "mend" / "help"; grau mit Grund wie das Menue: U.MendWhy, client/BanditsNPCBearMenu.lua;
+-- bester Verband ueber U.BestBandage -- die einzige Inventar-Frage, im 1-s-Takt); Leben-Tooltip mit Verband (bnd) und Flucht-Schwelle
+-- (11.7: Sicht fleeP, N Treffer vor dem Tod, "about %1 health"); Zeilen "Melee damage" (11.2, Sicht mdmg / mdmgB / mdmgM / mdmgS / mdmgF) und "Kills"
+-- (11.5, kZ / kB); Schalter "Show damage" (11.1, U.DmgOn, je Spieler); Faehigkeit am Alters-Deckel (11.4: Sicht skCap vom Schreiber)
+-- mit "max for its age" und Tooltip. Die "kommt spaeter"-Zeilen von Agilitaet / Leben / Kaempfen sind weg (sie wirken jetzt).
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -34,16 +42,13 @@ local CMDS = { "follow", "stay", "sit", "roam", "come", "unstuck" }
 U.WIN_CMDS = CMDS
 
 -- Faehigkeiten in der Reihenfolge von B.SKILLS (S:shared/BanditsNPCBearStats.lua:110). Jeder Schluessel ausgeschrieben.
--- later = ehrlicher Satz, wo die Faehigkeit noch nicht (ganz) wirkt (PLAN_F1.md 1.5; Toughness: der Bonus wirkt, Erfahrung gibt es
--- erst mit dem Kampf -> eigener Satz Win_LaterGrow, Zusatz der OBERFLAECHE).
+-- later = ehrlicher Satz, wo die Faehigkeit noch nicht (ganz) wirkt (PLAN_F1.md 1.5). F2: Agilitaet, Leben und Kaempfen wirken jetzt
+-- (Ausweichen, eingesteckte und ausgeteilte Treffer) -- ihre Saetze Win_LaterFight / Win_LaterGrow sind weg (PLAN_F2.md 2.7).
 local SKILL_ROWS = {
-    { key = "agi", name = "UI_BN_Bear_Win_Sk_Agi", tip = "UI_BN_Bear_Win_SkTip_Agi", from = "UI_BN_Bear_Win_SkFrom_Agi",
-        later = "UI_BN_Bear_Win_LaterFight" },
-    { key = "vit", name = "UI_BN_Bear_Win_Sk_Vit", tip = "UI_BN_Bear_Win_SkTip_Vit", from = "UI_BN_Bear_Win_SkFrom_Vit",
-        later = "UI_BN_Bear_Win_LaterGrow" },
+    { key = "agi", name = "UI_BN_Bear_Win_Sk_Agi", tip = "UI_BN_Bear_Win_SkTip_Agi", from = "UI_BN_Bear_Win_SkFrom_Agi" },
+    { key = "vit", name = "UI_BN_Bear_Win_Sk_Vit", tip = "UI_BN_Bear_Win_SkTip_Vit", from = "UI_BN_Bear_Win_SkFrom_Vit" },
     { key = "con", name = "UI_BN_Bear_Win_Sk_Con", tip = "UI_BN_Bear_Win_SkTip_Con", from = "UI_BN_Bear_Win_SkFrom_Con" },
-    { key = "fgt", name = "UI_BN_Bear_Win_Sk_Fgt", tip = "UI_BN_Bear_Win_SkTip_Fgt", from = "UI_BN_Bear_Win_SkFrom_Fgt",
-        later = "UI_BN_Bear_Win_LaterFight" },
+    { key = "fgt", name = "UI_BN_Bear_Win_Sk_Fgt", tip = "UI_BN_Bear_Win_SkTip_Fgt", from = "UI_BN_Bear_Win_SkFrom_Fgt" },
     { key = "fsh", name = "UI_BN_Bear_Win_Sk_Fsh", tip = "UI_BN_Bear_Win_SkTip_Fsh", from = "UI_BN_Bear_Win_SkFrom_Fsh",
         later = "UI_BN_Bear_Win_LaterFish" },
     { key = "nos", name = "UI_BN_Bear_Win_Sk_Nos", tip = "UI_BN_Bear_Win_SkTip_Nos", from = "UI_BN_Bear_Win_SkFrom_Nos",
@@ -58,8 +63,14 @@ local STATE = {
     come = { "UI_BN_Bear_Win_St_Come", "stCome" }, follow = { "UI_BN_Bear_Win_St_Follow", "stFollow" },
     stay = { "UI_BN_Bear_Win_St_Stay", "stStay" }, sit = { "UI_BN_Bear_Win_St_Sit", "stSit" },
     roam = { "UI_BN_Bear_Win_St_Roam", "stRoam" },
+    -- F2 (PLAN_F2.md 3.2)
+    down = { "UI_BN_Bear_Win_St_Down", "stDown" }, fight = { "UI_BN_Bear_Win_St_Fight", "stFight" },
+    retreat = { "UI_BN_Bear_Win_St_Retreat", "stBack" }, rest = { "UI_BN_Bear_Win_St_Rest", "stBack" },
 }
-local STATE_ORDER = { "missing", "ride", "away", "hide", "come", "follow", "stay", "sit", "roam" }
+local STATE_ORDER = { "missing", "ride", "away", "down", "fight", "retreat", "rest", "hide", "come", "follow", "stay", "sit", "roam" }
+-- F2 (11.4): Tooltip-Satz je Wachstums-Stufe am Alters-Deckel (ausgeschrieben; ausgewachsen gibt es keinen Deckel unter 10)
+local STAGE_IDX = { cub = 1, half = 2, strong = 3, adult = 4 }
+local CAP_TIP = { "UI_BN_Bear_Win_SkAgeTip_Cub", "UI_BN_Bear_Win_SkAgeTip_Half", "UI_BN_Bear_Win_SkAgeTip_Strong" }
 local DIR_KEY = { N = "UI_BN_Bear_Dir_N", NE = "UI_BN_Bear_Dir_NE", E = "UI_BN_Bear_Dir_E", SE = "UI_BN_Bear_Dir_SE",
     S = "UI_BN_Bear_Dir_S", SW = "UI_BN_Bear_Dir_SW", W = "UI_BN_Bear_Dir_W", NW = "UI_BN_Bear_Dir_NW" }
 local BTN_KEY = { follow = "UI_BN_Bear_Win_Follow", stay = "UI_BN_Bear_Win_Stay", sit = "UI_BN_Bear_Win_Sit",
@@ -112,6 +123,14 @@ local function statics()
     end
     s.skTop = U.T("UI_BN_Bear_Win_SkTop")
     s.max = U.T("UI_BN_Bear_Win_Max")
+    -- F2: Verband / Aufhelfen, Show damage, Melee damage, Kills, Alters-Deckel, Flucht
+    s.bandage, s.helpUp = U.T("UI_BN_Bear_Win_Bandage"), U.T("UI_BN_Bear_Win_HelpUp")
+    s.tipBandage, s.tipHelpUp = U.T("UI_BN_Bear_Win_BandageTip"), U.T("UI_BN_Bear_Win_HelpUpTip")
+    s.showDmg, s.tipShowDmg = U.T("UI_BN_Bear_Win_ShowDmg"), U.T("UI_BN_Bear_Win_ShowDmgTip")
+    s.tMelee, s.meleeTip, s.meleeCub = U.T("UI_BN_Bear_Win_Melee"), U.T("UI_BN_Bear_Win_MeleeTip"), U.T("UI_BN_Bear_Win_MeleeCub")
+    s.tKills, s.killsTip = U.T("UI_BN_Bear_Win_Kills"), U.T("UI_BN_Bear_Win_KillsTip")
+    s.ageMax = U.T("UI_BN_Bear_Win_SkAgeMax")
+    s.fledNever = U.T("UI_BN_Bear_Win_FledNever")
     -- Breiteste Texte fuer das Legen des Fensters (Breite waechst nur, wenn ein Text nicht passt, PLAN_F1.md 1.1)
     s.wideVal = U.T("UI_BN_Bear_Win_Count", 888, 888)
     s.wideCarry = U.T("UI_BN_Bear_Win_CarryVal", 888)
@@ -120,6 +139,8 @@ local function statics()
     s.wideUnstuck = U.T("UI_BN_Bear_Win_UnstuckWait", "9:59")
     s.wideDist = U.T("UI_BN_Bear_Win_LastSeen", 888, U.T("UI_BN_Bear_Dir_NW"))
     s.wideDist2 = U.T("UI_BN_Bear_Win_Dist", 888, U.T("UI_BN_Bear_Dir_NW"))
+    s.wideMelee = U.T("UI_BN_Bear_Win_MeleeVal", 888)                     -- F2 (11.2)
+    s.wideKills = U.T("UI_BN_Bear_Win_KillsVal", 8888, 888)               -- F2 (11.5)
     ST = s
     return s
 end
@@ -245,12 +266,120 @@ local function cmdBtn(label, active, why, tip)
     return e
 end
 
-local function firstOf(a, b, c, d)
+local function firstOf(a, b, c, d, e)
     if a then return a end
     if b then return b end
     if c then return c end
     if d then return d end
+    if e then return e end
     return nil
+end
+
+-- F2: ganze Stunden fuer einen Text, mindestens 1 (5,2 -> 5; 0,4 -> 1) -- wie die Vorpruefung im Menue (client/BanditsNPCBearMenu.lua).
+local function hoursOf(h)
+    local n = math.floor(tonumber(h) or 0)
+    if n < 1 then n = 1 end
+    return n
+end
+
+-- F2 (11.1 / 11.2): Schaden in der Einheit von CombatText = Zombie-Leben x 100 (client/BanditsNPCBearFx.lua Kopf). Die Sicht traegt
+-- Zombie-Leben wie das Ereignis "hit" (schnittstelle_aenderungen.md "F2 OBERFLAECHE"); ein Wert ueber 20 ist schon x 100 (ein Treffer ist
+-- hoechstens 1,8 x 1,7 x 3 = 9,2 Zombie-Leben) und bleibt. nil, wenn nichts da ist.
+local function units100(x)
+    if not isNum(x) or x <= 0 then return nil end
+    if x > 20 then return x end
+    return x * 100
+end
+
+-- Zahl fuer die Anzeige: ab 10 ganz, darunter eine Nachkommastelle (wie die schwebenden Zahlen). string.format: S:shared/BanditsNPCBear.lua, V:client/ISUI/ISDebugAvatarUI.lua:224.
+local function fmt100(v)
+    if v >= 10 then return string.format("%d", math.floor(v + 0.5)) end
+    return string.format("%.1f", v)
+end
+
+-- F2 (11.4): Alters-Deckel der Faehigkeiten fuer diesen Eintrag. Der Schreiber rechnet ihn (B.SkillCapLv, S:shared/BanditsNPCBearFightRules.lua
+-- -- dieselbe Zahl, ueber die B.SkillAdd keine Erfahrung gutschreibt) und schickt ihn als Sicht-Feld skCap, nur wenn er unter 10 liegt
+-- (Sandbox BearSkillAgeCap aus oder ausgewachsen: fehlt). Rueckgabe: Deckel und Index der Wachstums-Stufe aus der Sicht stg (fuer den
+-- Tooltip-Satz) -- oder 10, nil. Das Fenster rechnet nichts nach: keine zweite Wahrheit.
+local function ageCap(v)
+    local cap = tonumber(v.skCap)
+    if cap == nil or cap >= 10 then return 10, nil end
+    return cap, STAGE_IDX[v.stg]
+end
+
+-- F2 (11.7): Flucht-Schwelle. Die Sicht traegt sie fertig in Lebenspunkten (fleeP, B.FleeHp des Kerns mit den Gegnern von gerade,
+-- S:server/BanditsNPCBearFight.lua B.FightView; fehlt = er flieht nie); N = Sandbox BearFleeHits.
+local function fleeLine(v, s)
+    local n = math.floor(optNum("BearFleeHits", 3) + 0.5)
+    if n <= 0 or not isNum(v.fleeP) or v.fleeP <= 0 then return s.fledNever end
+    return U.T("UI_BN_Bear_Win_Fled", math.floor(v.fleeP + 0.5), n)
+end
+
+-- F2 (11.2): Zeile "Melee damage": Hieb je Treffer als Hauptzahl, im Tooltip jeder freigeschaltete Angriff, Anteil aus der Groesse,
+-- Kaempfen-Bonus, Sandbox-Prozent. Junges: "--" mit "A cub does not fight." Die Zahlen rechnet der Kern (B.MeleeDamage, dieselbe Rechnung
+-- wie der Kampf); fehlen sie, "--".
+local function meleeRow(v, s)
+    local head = TIP_HEAD .. s.tMelee .. TIP_BODY
+    local e = { label = s.tMelee, val = s.none, tip = head .. s.meleeTip }
+    if v.bd ~= "big" then
+        e.tip = head .. s.meleeCub
+        return e
+    end
+    local main = units100(v.mdmg)
+    if main == nil then return e end
+    e.val = U.T("UI_BN_Bear_Win_MeleeVal", fmt100(main))
+    local t = e.tip .. TIP_LINE .. U.T("UI_BN_Bear_Win_MeleeSwipe", fmt100(main))
+    local bite = units100(v.mdmgB)
+    if bite then t = t .. TIP_LINE .. U.T("UI_BN_Bear_Win_MeleeBite", fmt100(bite)) end
+    local maul = units100(v.mdmgM)
+    if maul then t = t .. TIP_LINE .. U.T("UI_BN_Bear_Win_MeleeMaul", fmt100(maul)) end
+    if isNum(v.mdmgS) then
+        local pct = v.mdmgS
+        if pct <= 1.5 then pct = pct * 100 end                  -- Anteil 0..1 -> Prozent eines ausgewachsenen Baeren
+        t = t .. TIP_LINE .. U.T("UI_BN_Bear_Win_MeleeSize", math.floor(pct + 0.5))
+    end
+    if isNum(v.mdmgF) then
+        local lv = "?"
+        if B.SkillProgress then
+            local L = B.SkillProgress(v, "fgt")                 -- Mehrfachrueckgabe: erst ins Local (CLAUDE.md Abschnitt 5)
+            lv = math.floor(tonumber(L) or 0)
+        end
+        t = t .. TIP_LINE .. U.T("UI_BN_Bear_Win_MeleeFgt", lv, math.floor(v.mdmgF + 0.5))
+    end
+    local dp = math.floor(optNum("BearDamagePercent", 100) + 0.5)
+    if dp ~= 100 then t = t .. TIP_LINE .. U.T("UI_BN_Bear_Win_MeleePct", dp) end
+    e.tip = t
+    return e
+end
+
+-- F2 (11.5): Zeile "Kills" -- Zombies und Banditen, die DIESER Baer selbst erledigt hat (der Schreiber zaehlt). Junges ohne Zaehler: "--".
+local function killsRow(v, s)
+    local e = { label = s.tKills, val = s.none, tip = TIP_HEAD .. s.tKills .. TIP_BODY .. s.killsTip }
+    local z, b = tonumber(v.kZ) or 0, tonumber(v.kB) or 0
+    if v.bd == "big" or z > 0 or b > 0 then e.val = U.T("UI_BN_Bear_Win_KillsVal", math.floor(z), math.floor(b)) end
+    return e
+end
+
+-- F2 (PLAN_F2.md 3.2): Knopf in der Pflege-Zelle -- "Help up" am Boden, sonst "Bandage". Grau mit Grund (dieselben Gruende wie das
+-- Menue, U.MendWhy). Klick: das Fenster ruft U.HelpAsk / U.MendAsk (hingehen, Zeitaktion; entscheiden tut der Schreiber in complete()).
+local function careBtn(v, player, s, whyRide, whyAway)
+    if v.dn == true then
+        local e = cmdBtn(s.helpUp, false, firstOf(whyRide, whyAway), s.tipHelpUp)
+        e.kind = "help"
+        return e
+    end
+    local item = nil
+    if U.BestBandage then item = U.BestBandage(player) end
+    local why = firstOf(whyRide, whyAway)
+    if not why and U.MendWhy then why = U.MendWhy(v, item) end
+    if not why and not item then why = U.T("UI_BN_Bear_Why_NoBandage") end
+    local tip = s.tipBandage
+    if item and not why then
+        tip = tip .. TIP_LINE .. U.T("UI_BN_Bear_Menu_BandageTip", item:getDisplayName(), math.floor(optNum("BearBandageHours", 8) + 0.5))
+    end
+    local e = cmdBtn(s.bandage, false, why, tip)
+    e.kind = "mend"
+    return e
 end
 
 -- Wirkung einer Faehigkeit mit der Zahl von jetzt (PLAN_F1.md 1.5 Tabelle; Zahlen aus der Sicht bzw. Kevins Formeln ENT:221-230).
@@ -280,6 +409,7 @@ local function skillsOf(v, s)
         if isNum(v[SKILL_FIELD[SKILL_ROWS[i].key]]) then known = true end
     end
     if not B.SkillProgress then known = false end
+    local cap, capK = ageCap(v)
     local out = {}
     for i = 1, #SKILL_ROWS do
         local r = SKILL_ROWS[i]
@@ -309,7 +439,17 @@ local function skillsOf(v, s)
         end
         local t = TIP_HEAD .. head .. TIP_BODY .. skillEffect(r.key, v, e.lv) .. TIP_LINE .. s.skFrom[i]
         if s.skLater[i] then t = t .. TIP_LINE .. s.skLater[i] end
-        if prog then t = t .. TIP_LINE .. prog end
+        -- F2 (11.4): am Alters-Deckel ausgegraut + "max for its age"; der Tooltip nennt Stufe und ungefaehren Tag, ab dem es weitergeht
+        if known and cap < 10 and e.lv >= cap then
+            e.capped = true
+            e.pctTxt = s.ageMax
+            local nextDay = "?"
+            if isNum(v.day) and isNum(v.nxt) then nextDay = math.floor(v.day + v.nxt) end
+            local tk = capK and CAP_TIP[capK]
+            if tk then t = t .. TIP_LINE .. U.T(tk, math.floor(cap), nextDay) end
+        elseif prog then
+            t = t .. TIP_LINE .. prog
+        end
         e.tip = t
         out[i] = e
     end
@@ -338,6 +478,9 @@ local function stateOf(v, mode)
     if v.st == "missing" then return "missing" end
     if v.ride == true then return "ride" end
     if v.ld ~= true then return "away" end
+    if v.dn == true then return "down" end                      -- F2 (PLAN_F2.md 3.2): am Boden > kaempft > zurueck / verschnauft
+    if v.fst == "fight" then return "fight" end
+    if v.fst == "retreat" or v.fst == "rest" then return v.fst end
     if v.hide == true then return "hide" end
     if v.cm == true then return "come" end
     return mode
@@ -384,6 +527,11 @@ function U.WinModel(v, player, nowMs)
         d.footer = s.hintRide
     elseif st == "away" then
         d.footer = s.hintAway
+    elseif st == "down" then
+        -- F2: wie lange er noch liegt, wenn ihm keiner aufhilft (Sicht dnH, Stunden; aufgerundet, mindestens 1)
+        local h = math.ceil(tonumber(v.dnH) or 1)
+        if h < 1 then h = 1 end
+        d.footer = U.T("UI_BN_Bear_Win_HintDown", h)
     else
         -- F1B (PLAN_F1B.md 3.4): welche Tasten gelten. Liegen beide auf derselben Taste, gilt sie als Fern-Taste (oeffnet ueberall).
         local nn, fn = nil, nil
@@ -426,7 +574,16 @@ function U.WinModel(v, player, nowMs)
     d.sta = valueRow(s.tStamina, v.sta, v.staMax, "sta", s)
     d.carry = { label = s.tCarry, val = s.none }
     if isNum(v.carry) then d.carry.val = U.T("UI_BN_Bear_Win_CarryVal", math.floor(v.carry + 0.5)) end
-    d.tips = { hp = s.tipHealth, sta = s.tipStamina, carry = s.tipCarry, later = s.tipLater }
+    -- F2: Leben mit Verband (Zeichen am Wert + Tooltip) und Flucht-Schwelle (nur der grosse Koerper kaempft); Melee damage, Kills
+    local hpTip = s.tipHealth
+    if isNum(v.bnd) and v.bnd > 0 then
+        d.hp.bnd = true
+        hpTip = hpTip .. TIP_LINE .. U.T("UI_BN_Bear_Win_Bandaged", hoursOf(v.bnd))
+    end
+    if bd == "big" then hpTip = hpTip .. TIP_LINE .. fleeLine(v, s) end
+    d.melee = meleeRow(v, s)
+    d.kills = killsRow(v, s)
+    d.tips = { hp = hpTip, sta = s.tipStamina, carry = s.tipCarry, later = s.tipLater, melee = d.melee.tip, kills = d.kills.tip }
     d.skills = skillsOf(v, s)
     -- Befehle (PLAN_F1.md 1.6): Vorpruefung aus der Sicht, entscheiden tut der Schreiber
     local ride = (v.ride == true)
@@ -438,15 +595,16 @@ function U.WinModel(v, player, nowMs)
     local whyAway = gone and U.TB("UI_BN_Bear_Why_OutOfReach", bd)
     local whyCar = inCar and s.whyCar
     local whyFar = far and s.whyFar
+    local whyDown = tame and v.dn == true and U.TB("UI_BN_Bear_Why_Down", bd)    -- F2: am Boden nimmt der Schreiber keinen Befehl an
     local act = nil
     if tame then act = mode end
     local radius = math.floor(optNum("BearRoamRadius", 12) + 0.5)
     local b = {}
-    b.follow = cmdBtn(s.btn.follow, act == "follow" and not cm, firstOf(whyRide, whyAway, whyCar, whyFar), s.tipFollow)
-    b.stay = cmdBtn(s.btn.stay, act == "stay", firstOf(whyRide, whyAway), s.tipStay)
-    b.sit = cmdBtn(s.btn.sit, act == "sit", firstOf(whyRide, whyAway), s.tipSit)
-    b.roam = cmdBtn(s.btn.roam, act == "roam", firstOf(whyRide, whyAway), U.T("UI_BN_Bear_Win_RoamTip", radius))
-    b.come = cmdBtn(s.btn.come, cm, firstOf(whyRide, whyAway, whyCar, whyFar), s.tipCome)
+    b.follow = cmdBtn(s.btn.follow, act == "follow" and not cm, firstOf(whyRide, whyAway, whyDown, whyCar, whyFar), s.tipFollow)
+    b.stay = cmdBtn(s.btn.stay, act == "stay", firstOf(whyRide, whyAway, whyDown), s.tipStay)
+    b.sit = cmdBtn(s.btn.sit, act == "sit", firstOf(whyRide, whyAway, whyDown), s.tipSit)
+    b.roam = cmdBtn(s.btn.roam, act == "roam", firstOf(whyRide, whyAway, whyDown), U.T("UI_BN_Bear_Win_RoamTip", radius))
+    b.come = cmdBtn(s.btn.come, cm, firstOf(whyRide, whyAway, whyDown, whyCar, whyFar), s.tipCome)
     -- Unstuck = "Call to me" (B1c): geht auch fuer vermisste und nicht geladene; grau beim Mitfahren, im Fahrzeug, in der Abklingzeit
     local waitMs = callWaitMs(v, nowMs)
     local whyWait = nil
@@ -459,6 +617,7 @@ function U.WinModel(v, player, nowMs)
     local cool = math.floor(optNum("BearCallCooldownMinutes", 5) + 0.5)
     b.unstuck = cmdBtn(uLabel, false, firstOf(whyRide, whyCar, whyWait), U.TB("UI_BN_Bear_Menu_CallTip", bd, cool))
     d.buttons = b
+    d.care = careBtn(v, player, s, whyRide, whyAway)                -- F2: "Bandage" / am Boden "Help up"
     d.ordersInfo = ""
     if act == "roam" then d.ordersInfo = U.T("UI_BN_Bear_Win_RoamInfo", radius) end
     -- Schalter: Passiv (Register, Sicht pas) und Namensschild (je Spieler, client/BanditsNPCBearTags.lua)
@@ -472,8 +631,12 @@ function U.WinModel(v, player, nowMs)
     if U.AgeOn then ageOn = U.AgeOn(v) ~= false end
     local ageTip = TIP_HEAD .. s.growth .. TIP_BODY .. s.tipGrowth
     if U.Opt and U.Opt("TagAge", true) == false then ageTip = ageTip .. TIP_LINE .. s.growthOffAll end
+    -- F2 (11.1): Schalter "Show damage" -- je Spieler fuer ALLE seine Baeren (U.DmgOn, client/BanditsNPCBearTags.lua), Vorgabe an
+    local dmgOn = true
+    if U.DmgOn then dmgOn = U.DmgOn() ~= false end
     d.toggles = { pas = (v.pas == true), tag = tagOn, pasLabel = s.passive, tagLabel = s.tag,
         pasTip = TIP_HEAD .. s.passive .. TIP_BODY .. s.tipPassive, tagTip = tagTip,
-        age = ageOn, ageShow = isNum(v.day) and v.nst ~= nil, ageLabel = s.growth, ageTip = ageTip }
+        age = ageOn, ageShow = isNum(v.day) and v.nst ~= nil, ageLabel = s.growth, ageTip = ageTip,
+        dmg = dmgOn, dmgLabel = s.showDmg, dmgTip = TIP_HEAD .. s.showDmg .. TIP_BODY .. s.tipShowDmg }
     return d
 end

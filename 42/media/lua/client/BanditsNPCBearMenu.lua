@@ -20,6 +20,12 @@
 -- (eigen und fremd). Dafuer eine Huelle um AnimalContextMenu.showRadialMenu (Vanilla-Lua, angelegt in OnGameBoot, genau einmal,
 -- Existenz-Riegel): Original rufen, danach die Kill-Scheibe herausnehmen (Vergleich der Funktion, sprachunabhaengig). Neue
 -- Vanilla-Beruehrung -> baer/NAEHTE.md. Der Rechtsklick "Bear window" bleibt; sein Tooltip nennt jetzt die Nah-Taste.
+-- F2 = B5a (PLAN_F2.md 2.5, 3.2, 4.6; Kevin 11.11.2026: "wir koennen den baeren manuel heilen"): am eigenen gezaehmten Baeren "Bandage the
+-- cub/bear" (Zeitaktion BanditsNPCBearMendAction mit dem besten sauberen Verband aus dem Inventar, U.BestBandage) und am Boden "Help up the
+-- cub/bear" (BanditsNPCBearHelpAction). U.MendAsk / U.HelpAsk stellen die Aktion an -- auch fuer den Knopf im Baeren-Fenster. Grau mit Grund
+-- nur aus der Sicht (kein Verband, nicht verletzt, schon verbunden, am Boden); ob es gilt, entscheidet der Schreiber in complete()
+-- (B.MendComplete / B.HelpUpComplete, KERN) -- dort wird GENAU EIN Verband genommen, ein Abbruch verbraucht nichts. Folgen/Bleiben ist am
+-- Boden grau (Why_Down).
 --
 -- Das Menue BIETET nur AN. Es stellt Zeitaktionen an (Fuettern, Streicheln, Koeder) bzw. schickt eine Bitte (Koederplatz
 -- aufgeben); ob etwas gilt, entscheidet der Schreiber in complete() bzw. in B.Handle (Einzelspieler: dasselbe Programm,
@@ -77,6 +83,88 @@ local function nthOption(context, name, n)
         end
     end
     return nil
+end
+
+-- ---------------------------------------------------------------------------
+-- F2 (PLAN_F2.md 2.5 Nr. 1, 4.6): Verband. U.BestBandage(player) = der saubere Verband mit der hoechsten Staerke im Inventar (auch in
+-- Taschen) und seine Staerke, sonst nil, 0. Sauber wie Vanilla: string.match(item:getType(), "Dirty") (V:shared/TimedActions/
+-- ISApplyBandage.lua:113); Verband ueberhaupt: item:isCanBandage() (V:client/ISUI/ISInventoryPaneContextMenu.lua:169) und
+-- item:getBandagePower() > 0 (V:client/XpSystem/ISUI/ISHealthPanel.lua:1154). Suche: inv:getAllEvalRecurse(fn), :size(), :get(i)
+-- (V:client/ISUI/Animal/ISAnimalContextMenu.lua:33-53, Form S:shared/BanditsNPCBearFood.lua B.FoodList). Nur auf Klick bzw. im 1-s-Takt
+-- des offenen Baeren-Fensters, nie je Bild.
+-- ---------------------------------------------------------------------------
+local function cleanBandage(item)
+    if not item:isCanBandage() then return false end
+    if item:getBandagePower() <= 0 then return false end
+    return string.match(item:getType(), "Dirty") == nil
+end
+
+function U.BestBandage(player)
+    if not player then return nil, 0 end
+    local inv = player:getInventory()
+    if not inv then return nil, 0 end
+    local found = inv:getAllEvalRecurse(cleanBandage)
+    if not found then return nil, 0 end
+    local best, bestP = nil, 0
+    for i = 0, found:size() - 1 do
+        local item = found:get(i)
+        local pw = item:getBandagePower()
+        if pw > bestP then best, bestP = item, pw end
+    end
+    return best, bestP
+end
+
+-- Ist dieser Sicht-Eintrag mein gezaehmter Baer? (U.WinMine, client/BanditsNPCBearWinData.lua; fehlt die Datei: ueber den Spielerschluessel)
+local function ownTame(playerObj, v)
+    if type(v) ~= "table" or v.id == nil or v.st ~= "tame" then return false end
+    if U.WinMine then return U.WinMine(v) == true end
+    return v.owner ~= nil and v.owner == B.PlayerKey(playerObj)
+end
+
+-- Hinweis ueber der Figur. HaloTextHelper.addBadText(Spieler, Text): V:client/ISUI/ISWorldObjectContextMenu.lua:1038.
+local function bad(playerObj, text)
+    HaloTextHelper.addBadText(playerObj, text)
+end
+
+-- U.MendAsk(player, v) (PLAN_F2.md 2.5 Nr. 4): hingehen, den besten sauberen Verband bei Bedarf aus der Tasche holen, dann die Zeitaktion.
+-- Reihenfolge wie Vanilla V:client/ISUI/ISWorldObjectContextMenu.lua:426-428 (walkAdj leert die Warteschlange, transferIfNeeded und die
+-- Aktion kommen danach hinein). Nur am eigenen gezaehmten Baeren mit lebender Kopie (U.CubObj). Nimmt nichts: das tut der Schreiber in
+-- complete(). Rueckgabe true, wenn angestellt.
+function U.MendAsk(playerObj, v)
+    if not playerObj or not ownTame(playerObj, v) then return false end
+    local a = U.CubObj and U.CubObj(v.id) or nil
+    if a == nil or v.ride == true then
+        bad(playerObj, U.TB("UI_BN_Bear_Why_OutOfReach", v.bd))
+        return false
+    end
+    local item = U.BestBandage(playerObj)
+    if item == nil then
+        bad(playerObj, U.T("UI_BN_Bear_Why_NoBandage"))
+        return false
+    end
+    local sq = a:getSquare()                                        -- ISAnimalContextMenu.lua:90
+    if not sq then return false end
+    if luautils.walkAdj(playerObj, sq) then                         -- ISWorldObjectContextMenu.lua:426
+        ISWorldObjectContextMenu.transferIfNeeded(playerObj, item)  -- :427
+        ISTimedActionQueue.add(BanditsNPCBearMendAction:new(playerObj, a, item))     -- Form :428 / ISAnimalContextMenu.lua:94
+    end
+    return true
+end
+
+-- U.HelpAsk(player, v) (PLAN_F2.md 2.5 Nr. 5): hingehen, dann die Zeitaktion "Aufhelfen". Nur am eigenen gezaehmten Baeren.
+function U.HelpAsk(playerObj, v)
+    if not playerObj or not ownTame(playerObj, v) then return false end
+    local a = U.CubObj and U.CubObj(v.id) or nil
+    if a == nil or v.ride == true then
+        bad(playerObj, U.TB("UI_BN_Bear_Why_OutOfReach", v.bd))
+        return false
+    end
+    local sq = a:getSquare()
+    if not sq then return false end
+    if luautils.walkAdj(playerObj, sq) then                         -- ISAnimalContextMenu.lua:90 (Form wie onPet unten)
+        ISTimedActionQueue.add(BanditsNPCBearHelpAction:new(playerObj, a))
+    end
+    return true
 end
 
 -- ---------------------------------------------------------------------------
@@ -236,10 +324,18 @@ end
 local function addMode(menu, playerObj, v)
     if modeOf(v) == "follow" then
         local opt = menu:addOption(U.T("UI_BN_Bear_Menu_Stay"), playerObj, onMode, v.id, "stay")
+        if v.dn == true then
+            setGray(opt, U.TB("UI_BN_Bear_Why_Down", v.bd))         -- F2: am Boden nimmt der Schreiber keinen Befehl an
+            return
+        end
         setTip(opt, nil, U.T("UI_BN_Bear_Menu_StayTip"))
         return
     end
     local opt = menu:addOption(U.T("UI_BN_Bear_Menu_Follow"), playerObj, onMode, v.id, "follow")
+    if v.dn == true then
+        setGray(opt, U.TB("UI_BN_Bear_Why_Down", v.bd))
+        return
+    end
     if playerObj:getVehicle() then
         setGray(opt, U.T("UI_BN_Bear_Why_InCar"))
         return
@@ -303,6 +399,58 @@ local function addWindow(menu, playerObj, v)
     setTip(opt, nil, U.T("UI_BN_Bear_Menu_WindowTip"))
 end
 
+-- F2 (PLAN_F2.md 2.5, 3.2, 4.6): Klick -> U.MendAsk / U.HelpAsk (hingehen, Zeitaktion). Der Sicht-Eintrag wird beim Klick frisch geholt.
+local function onMend(playerObj, v)
+    if U.MendAsk then U.MendAsk(playerObj, v) end
+end
+
+local function onHelp(playerObj, v)
+    if U.HelpAsk then U.HelpAsk(playerObj, v) end
+end
+
+-- Stunden fuer einen Text: ganze Stunden, mindestens 1 (5,2 -> 5; 0,4 -> 1).
+local function hoursOf(h)
+    local n = math.floor(tonumber(h) or 0)
+    if n < 1 then n = 1 end
+    return n
+end
+
+-- Grund, warum "Bandage" gerade nicht geht (aus der Sicht), sonst nil -- dieselben Gruende wie der Knopf im Fenster (Vorpruefung; der
+-- Schreiber prueft in complete() alles noch einmal, PLAN_F2.md 2.5 Nr. 3). item = bester sauberer Verband (oder nil).
+function U.MendWhy(v, item)
+    if type(v) ~= "table" then return nil end
+    if v.ride == true then return U.TB("UI_BN_Bear_Why_Riding", v.bd) end
+    if v.st ~= "tame" or v.ld ~= true then return U.TB("UI_BN_Bear_Why_OutOfReach", v.bd) end
+    -- Nachbesserung F2 B7: Sandbox "Verband heilt 0" -> grau mit Grund (der Schreiber lehnt ebenso ab, ohne Verbrauch)
+    if B.Opt and (tonumber(B.Opt("BearBandageHeal")) or 1) <= 0 then return U.T("UI_BN_Bear_Why_BandageOff") end
+    if item == nil then return U.T("UI_BN_Bear_Why_NoBandage") end
+    if type(v.bnd) == "number" and v.bnd > 0 then return U.TB("UI_BN_Bear_Why_Bandaged", v.bd, hoursOf(v.bnd)) end
+    if type(v.hp) == "number" and v.hp >= 100 then return U.TB("UI_BN_Bear_Why_Healthy", v.bd) end
+    return nil
+end
+
+-- "Bandage the cub/bear" (immer, auch am Boden -- der Verband wirkt dort, PLAN_F2.md 2.4) und am Boden zuerst "Help up the cub/bear".
+-- Existenz-Riegel wie "Bear window" (U.WinOpen): ohne die Zeitaktion (shared/TimedActions/BanditsNPCBear{Help,Mend}Action.lua) kein Punkt.
+local function addCare(menu, playerObj, v)
+    if v.dn == true and BanditsNPCBearHelpAction ~= nil then
+        local hopt = menu:addOption(U.TB("UI_BN_Bear_Menu_HelpUp", v.bd), playerObj, onHelp, v)
+        setTip(hopt, nil, U.T("UI_BN_Bear_Win_HelpUpTip"))
+    end
+    if BanditsNPCBearMendAction == nil then return end
+    local item = U.BestBandage(playerObj)
+    local opt = menu:addOption(U.TB("UI_BN_Bear_Menu_Bandage", v.bd), playerObj, onMend, v)
+    local why = U.MendWhy(v, item)
+    if why then
+        setGray(opt, why)
+        return
+    end
+    local hours = nil
+    if B.Opt then hours = tonumber(B.Opt("BearBandageHours")) end
+    if hours == nil then hours = 8 end
+    setTip(opt, item:getDisplayName(), U.T("UI_BN_Bear_Menu_BandageTip", item:getDisplayName(), math.floor(hours))   -- getDisplayName:
+        .. " " .. U.T("UI_BN_Bear_Win_BandageTip"))                 -- S:shared/BanditsNPCBearFood.lua B.FoodList
+end
+
 -- Ein Junges: Vanillas Untermenue suchen (fehlt es, auf die oberste Ebene), "Kill" entfernen, eigene Punkte anhaengen.
 local function cubMenu(context, playerObj, animal, name, nth)
     local menu = context
@@ -334,6 +482,8 @@ local function cubMenu(context, playerObj, animal, name, nth)
         addCall(menu, playerObj, v)
         -- F1: "Bear window" (PLAN_F1.md 3.3)
         addWindow(menu, playerObj, v)
+        -- F2: "Help up" (am Boden) und "Bandage" (PLAN_F2.md 2.5, 3.2)
+        addCare(menu, playerObj, v)
     end
 end
 

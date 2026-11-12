@@ -40,12 +40,34 @@ end
 -- B1e (PLAN_B1E.md 4.2): + body (Koerper "cub"/"big"; nur Diagnose -- beim Binden und Wiederherstellen gilt die Art des Tiers,
 -- B.BodyKind). Fassung bleibt B.MARK_V = 2.
 -- F1 (PLAN_F1.md 5.2): + passive (Schalter je Baer). Fassung bleibt B.MARK_V = 2; mode traegt jetzt auch "sit" / "roam".
+-- F2 (PLAN_F2.md 4.2, 11.5): + down (am Boden seit Spielstunde), bndH / bndR (Verband), kZ / kB (Kills). Fassung bleibt B.MARK_V = 2.
 local MARK_FIELDS = {
     "u", "id", "nr", "gen", "r", "kind", "src", "st", "finder", "bond", "owner", "tame", "fedN", "petN", "last",
     "feedAt", "petAt", "born", "tamedAt", "mode", "name", "hx", "hy", "hz",
     "g", "gF", "gFd", "gFn", "xAgi", "xVit", "xCon", "xFgt", "xFsh", "xNos",
     "body", "passive",
+    "down", "bndH", "bndR", "kZ", "kB",
 }
+
+-- F2 (PLAN_F2.md 4.2): die F2-Felder eines gezaehmten Eintrags aus dem Spiegel, geklemmt (Zahl oder nil). Aus B.Restore und B.TakeNewerMark.
+local function markF2(rec, mark, now)
+    local function n(v, lo, hi)
+        local x = tonumber(v)
+        if x == nil or x ~= x then return nil end
+        if lo ~= nil and x < lo then x = lo end
+        if hi ~= nil and x > hi then x = hi end
+        return x
+    end
+    local top = tonumber(B.CFG.killTop) or 999999
+    rec.down = n(mark.down, 0, now)
+    rec.bndH = n(mark.bndH, 0)
+    rec.bndR = n(mark.bndR, 0, 50)
+    if rec.bndH == nil or rec.bndR == nil then rec.bndH, rec.bndR = nil, nil end
+    local kz, kb = n(mark.kZ, 0, top), n(mark.kB, 0, top)
+    rec.kZ, rec.kB = nil, nil
+    if kz ~= nil then rec.kZ = math.floor(kz) end
+    if kb ~= nil then rec.kB = math.floor(kb) end
+end
 
 -- F1 (PLAN_F1.md 5.2): ein Modus aus dem Spiegel nur, wenn er in B.MODES steht (sonst nil = "stay").
 local function markMode(v)
@@ -269,6 +291,7 @@ function B.Restore(o, mark, players)
         rec.tame = 100
         rec.body = body                    -- B1e
         if mark.passive == true then rec.passive = true end      -- F1 (PLAN_F1.md 5.2)
+        markF2(rec, mark, now)                                   -- F2 (PLAN_F2.md 4.2)
     end
     if st ~= "tame" then rec.mode = nil end
     -- B1d (PLAN_B1D.md 2.4 "restore"): Wachstum und Erfahrung aus dem Spiegel, geklemmt; im Mehrspieler g gedeckelt (Grow.lua)
@@ -375,9 +398,11 @@ function B.TakeNewerMark(rec, mark)
     rec.feedAt, rec.petAt, rec.tamedAt = num(mark.feedAt), num(mark.petAt), num(mark.tamedAt, 0, now)   -- tamedAt: wie B.Restore (B1d B1)
     rec.mode = nil
     rec.passive = nil
+    rec.down, rec.bndH, rec.bndR, rec.kZ, rec.kB = nil, nil, nil, nil, nil
     if st == "tame" then
         rec.mode = markMode(mark.mode)
         if mark.passive == true then rec.passive = true end      -- F1 (PLAN_F1.md 5.2)
+        markF2(rec, mark, now)                                   -- F2 (PLAN_F2.md 4.2)
     end
     rec.name = nil
     if type(mark.name) == "string" then rec.name = B.CleanName(mark.name) end

@@ -106,7 +106,10 @@ function B.SetMode(rec, mode, why, players)
     local old = B.ModeOf(rec)
     local stillSat = old == "sit" and mode == "sit" and s.sat == true
     if s.sat == true and not stillSat then
-        s.standUntil = getTimestampMs() + (tonumber(B.CFG.standMs) or 2300)
+        -- F2 (PLAN_F2.md 0.7): Aufstehen aus der Clip-Tabelle (B.StandMs, shared/BanditsNPCBearFightRules.lua)
+        local stand = 2300
+        if B.StandMs then stand = B.StandMs() end
+        s.standUntil = getTimestampMs() + stand
     end
     rec.mode = mode
     if mode ~= "follow" and not stillSat then
@@ -278,6 +281,11 @@ function B.HandleMode(player, args)
     if rec.ride ~= nil then
         -- B1c: es faehrt mit (kein Koerper); wie NPC Crews "parked" (forschung_b1c.md 4.1)
         refuse(player, pkey, "Mode", B.NoteBd(note("UI_BN_Bear_Why_Riding", nil, nil, "bad"), rec))
+        return
+    end
+    if rec.down ~= nil then
+        -- F2 (PLAN_F2.md 2.4): am Boden erst aufhelfen
+        refuse(player, pkey, "Mode", B.NoteBd(note("UI_BN_Bear_Why_Down", nil, nil, "bad"), rec))
         return
     end
     local a = B.FindAnimal(rec)

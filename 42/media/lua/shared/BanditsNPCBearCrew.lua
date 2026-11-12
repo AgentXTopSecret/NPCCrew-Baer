@@ -8,8 +8,9 @@
 -- Naht 1, Tierpflege: NPC Crews Tierpflege behandelt jedes Tier in einer ihrer Tierzonen als Vieh (zaehlen, Schlachtplan),
 -- dessen GRUPPE nicht in BanditsNPC.Livestock.NOT_TENDED steht (NPC Crew shared/BanditsNPCLivestock.lua:5152, Schluessel =
 -- Gruppe; "grep -rn NOT_TENDED 42/media/lua" am 10.11.2026: 24 Treffer in 9 Dateien, davon 14 Code-Zeilen in 8 Dateien, der Rest
--- Kommentare; alle Leser fragen zur Laufzeit). Ein Baer ist kein Vieh: beide Gruppen
--- eintragen, die neue "ncbear" und die alte "bear" des Erwachsenen (bis B5a).
+-- Kommentare; alle Leser fragen zur Laufzeit). Ein Baer ist kein Vieh: die Gruppe "ncbear" eintragen.
+-- F2 (PLAN_F2.md 1.4): die alte Gruppe "bear" des frueheren Test-Baeren gehoert nicht zu NPC Crew; die Test-Mod traegt sie bei sich
+-- selbst ein.
 --
 -- Ohne NPC Crew tut diese Datei nichts. Statisch geprueft, nicht gespielt.
 --
@@ -31,8 +32,7 @@ local function install()
         return
     end
     crew.NOT_TENDED[B.GROUP or "ncbear"] = true
-    crew.NOT_TENDED["bear"] = true
-    if B.Log then B.Log("seam 1: bear groups are not tended livestock") end
+    if B.Log then B.Log("seam 1: the bear group is not tended livestock") end
 end
 
 -- Events.OnGameBoot.Add: Vanilla client/Foraging/ISSearchManager.lua:1481.

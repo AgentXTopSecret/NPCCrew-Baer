@@ -98,6 +98,9 @@ end
 -- server/Traps/STrapGlobalObject.lua:238; getX/getY am Tier: shared/Definitions/animal/ButcheringUtil.lua:575-576.
 -- Rueckgabe: true, wenn ein Befehl hinausging.
 function B.CalmAnswer(rec, a, w, ms, why)
+    -- F2 (PLAN_F2.md 2.2.5): im Kampf / am Boden antwortet der Kampf selbst (server/BanditsNPCBearFight.lua B.FightCalm: halten bzw. den
+    -- Kampf-Laufbefehl neu) -- kein Ersatzweg, keine Ruhefrist
+    if B.FightCalm and B.FightCalm(rec, a, ms) then return true end
     local cfg = B.CFG
     local keep = {}
     local hits = w.hits or {}

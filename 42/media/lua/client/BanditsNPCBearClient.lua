@@ -4,7 +4,9 @@
 -- 6.5/6.7: Meldungen "stage" (Stufe erreicht) und "skill" (Faehigkeit gestiegen), U.StageName, Texte fuer Schild und Optionen;
 -- B1e, PLAN_B1E.md 6.4/6.5/6.8: Texte je Koerper -- U.TB, Big-Fassungen in U.NoteText und U.CubName, Texte der Markierungs-Groesse;
 -- F1, PLAN_F1.md 4a/7.6: Texte des Baeren-Fensters und der neuen Befehle, U.WhyText mit Koerper bd; F1B, PLAN_F1B.md 3.2: Texte der
--- zwei Tasten (Optionen-Seite), der Fusszeile und des Wachstums-Schalters, zwei neue Werte, "Tag_AgeDone" entfaellt).
+-- zwei Tasten (Optionen-Seite), der Fusszeile und des Wachstums-Schalters, zwei neue Werte, "Tag_AgeDone" entfaellt; F2 = B5a,
+-- PLAN_F2.md 2.7, 4.1, 4.4, Nachtrag 11: Texte des Kampfs, Am Boden, Verband, Show damage, Melee damage, Kills, Alters-Deckel; der neue
+-- Befehl "Fx" Schreiber -> Client wird an B.OnFx weitergereicht -- shared/BanditsNPCBearFoe.lua, KERN).
 --
 -- Laeuft im Einzelspieler und auf jedem MP-Client (der dedizierte Server laedt client/ nicht). Diese Datei entscheidet NICHTS:
 -- sie nimmt die Sicht ("Sync") und die Meldungen ("Note") des Schreibers an, zeigt Meldungen ueber der Figur und bittet beim
@@ -225,8 +227,8 @@ U.EN = {
     UI_BN_Bear_Win_Thirst = "Thirst",
     UI_BN_Bear_Win_Tired = "Tiredness",
     UI_BN_Bear_Win_Trust = "Trust",
-    UI_BN_Bear_Win_HealthTip = "Grows every day as your bear grows, and with Toughness. Heals slowly on its own.",
-    UI_BN_Bear_Win_StaminaTip = "Drops while your bear runs and comes back while it rests. More with Endurance. It matters once bears fight (comes later).",
+    UI_BN_Bear_Win_HealthTip = "Grows every day as your bear grows, and with Toughness. Heals slowly on its own, faster with a bandage.",
+    UI_BN_Bear_Win_StaminaTip = "Drops while your bear runs and fights, and comes back while it rests. Empty: it backs off to catch its breath. More with Endurance.",
     UI_BN_Bear_Win_CarryTip = "How much your bear could carry. Its own inventory and bags come later.",
     UI_BN_Bear_Win_LaterTip = "Hunger, thirst, tiredness and trust come with a later version. Nothing is counted yet.",
     UI_BN_Bear_Win_Sk_Agi = "Agility",
@@ -253,10 +255,8 @@ U.EN = {
     UI_BN_Bear_Win_SkFrom_Fsh = "Grows while your bear fishes.",
     UI_BN_Bear_Win_SkTip_Nos = "Smells zombies earlier and warns you with a growl: %1 tiles.",
     UI_BN_Bear_Win_SkFrom_Nos = "Grows when it sniffs out zombies.",
-    UI_BN_Bear_Win_LaterFight = "Works once bears fight - comes later.",
     UI_BN_Bear_Win_LaterFish = "Fishing comes later.",
     UI_BN_Bear_Win_LaterNose = "Comes later and can be switched off.",
-    UI_BN_Bear_Win_LaterGrow = "Only grows once bears fight - comes later. The bonus already counts.",
     UI_BN_Bear_Win_Follow = "Follow",
     UI_BN_Bear_Win_Stay = "Stay",
     UI_BN_Bear_Win_Sit = "Sit",
@@ -272,7 +272,7 @@ U.EN = {
     UI_BN_Bear_Win_SitTip = "It sits down right here and stays sitting until you give another order.",
     UI_BN_Bear_Win_RoamTip = "It strolls around freely, but never further than %1 tiles from this spot.",
     UI_BN_Bear_Win_ComeTip = "It walks over to you and waits there. If it is stuck, use Unstuck.",
-    UI_BN_Bear_Win_PassiveTip = "Your bear stays out of fights and keeps to its order or comes back to you. No effect yet: fighting comes with a later version. A cub never fights anyway.",
+    UI_BN_Bear_Win_PassiveTip = "Your bear stays out of fights and comes back to you. A cub never fights anyway.",
     UI_BN_Bear_Win_TagTip = "Shows the name above this bear - only on your screen.",
     UI_BN_Bear_Win_TagOffAll = "All name tags are switched off in Options - Mods.",
     UI_BN_Bear_Win_RoamInfo = "Roams within %1 tiles",
@@ -300,8 +300,8 @@ U.EN = {
     UI_BN_Bear_Note_CameBig = "Your bear is with you and waits here.",
     UI_BN_Bear_Note_ComeFail = "Your cub could not get to you. It waits where it is.",
     UI_BN_Bear_Note_ComeFailBig = "Your bear could not get to you. It waits where it is.",
-    UI_BN_Bear_Note_PassiveOn = "Your cub is passive now. It keeps out of fights once bears can fight (comes later).",
-    UI_BN_Bear_Note_PassiveOnBig = "Your bear is passive now. It keeps out of fights once bears can fight (comes later).",
+    UI_BN_Bear_Note_PassiveOn = "Your cub is passive now: it keeps out of fights and comes back to you.",
+    UI_BN_Bear_Note_PassiveOnBig = "Your bear is passive now: it keeps out of fights and comes back to you.",
     UI_BN_Bear_Note_PassiveOff = "Your cub is no longer passive.",
     UI_BN_Bear_Note_PassiveOffBig = "Your bear is no longer passive.",
     UI_BN_Bear_Why_OutOfReach = "Your cub is out of reach. Use Unstuck.",
@@ -323,6 +323,74 @@ U.EN = {
     UI_BN_Bear_Win_Growth = "Growth line",
     UI_BN_Bear_Win_GrowthTip = "Shows the day and growth line above this bear - only on your screen. When it is full-grown, the line and this switch go away.",
     UI_BN_Bear_Win_GrowthOffAll = "The age line is switched off for all bears in Options - Mods.",
+    -- F2 (PLAN_F2.md 2.7, 3.2, Nachtrag 11): Meldungen Am Boden / Aufgeholfen / Allein aufgestanden / Fliehen (11.7: "a few hits
+    -- from death") / Verbunden mit Big-Fassung, Ablehnungen, Schild, Option DODGE, Fenster (Zustaende, Hinweis, Knopf Verband /
+    -- Aufhelfen, Leben-Tooltip, Show damage 11.1, Melee damage 11.2, Alters-Deckel 11.4, Kills 11.5), Rechtsklick. Geaendert (ehrlich):
+    -- Note_PassiveOn(+Big), Win_PassiveTip, Win_StaminaTip, Win_HealthTip; entfernt: Win_LaterFight, Win_LaterGrow.
+    UI_BN_Bear_Note_Down = "Your cub is down! Help it up.",
+    UI_BN_Bear_Note_DownBig = "Your bear is down! Help it up.",
+    UI_BN_Bear_Note_HelpedUp = "Your cub is back on its feet.",
+    UI_BN_Bear_Note_HelpedUpBig = "Your bear is back on its feet.",
+    UI_BN_Bear_Note_GotUp = "Your cub got back up on its own.",
+    UI_BN_Bear_Note_GotUpBig = "Your bear got back up on its own.",
+    UI_BN_Bear_Note_Flee = "Your cub is badly hurt - a few more hits would kill it. It comes back to you.",
+    UI_BN_Bear_Note_FleeBig = "Your bear is badly hurt - a few more hits would kill it. It comes back to you.",
+    UI_BN_Bear_Note_Bandaged = "Your cub is bandaged and heals faster for %1 hour(s).",
+    UI_BN_Bear_Note_BandagedBig = "Your bear is bandaged and heals faster for %1 hour(s).",
+    UI_BN_Bear_Why_NoBandage = "You have no clean bandage.",
+    UI_BN_Bear_Why_BandageOff = "Bandages do not heal bears in this world (sandbox setting).",
+    UI_BN_Bear_Why_Dirty = "This bandage is dirty. Use a clean one.",
+    UI_BN_Bear_Why_Healthy = "Your cub is not hurt.",
+    UI_BN_Bear_Why_HealthyBig = "Your bear is not hurt.",
+    UI_BN_Bear_Why_Bandaged = "Your cub is already bandaged (%1 hour(s) left).",
+    UI_BN_Bear_Why_BandagedBig = "Your bear is already bandaged (%1 hour(s) left).",
+    UI_BN_Bear_Why_Down = "Your cub is down. Help it up first.",
+    UI_BN_Bear_Why_DownBig = "Your bear is down. Help it up first.",
+    UI_BN_Bear_Why_NotDown = "Your cub is not down.",
+    UI_BN_Bear_Why_NotDownBig = "Your bear is not down.",
+    UI_BN_Bear_Tag_Fight = "fighting",
+    UI_BN_Bear_Tag_Retreat = "backing off",
+    UI_BN_Bear_Tag_Rest = "catching its breath",
+    UI_BN_Bear_Tag_Down = "down",
+    UI_BN_Bear_Tag_Dodge = "DODGE",
+    UI_BN_Bear_MO_Dodge = "Show DODGE above bears",
+    UI_BN_Bear_MO_DodgeTip = "Shows DODGE above your bear when an attack misses it - only on your screen.",
+    UI_BN_Bear_Win_St_Fight = "Fighting",
+    UI_BN_Bear_Win_St_Retreat = "Backing off",
+    UI_BN_Bear_Win_St_Rest = "Catching its breath",
+    UI_BN_Bear_Win_St_Down = "Down",
+    UI_BN_Bear_Win_HintDown = "Your bear is down. Help it up, or it gets up on its own in %1 hour(s).",
+    UI_BN_Bear_Win_Bandage = "Bandage",
+    UI_BN_Bear_Win_HelpUp = "Help up",
+    UI_BN_Bear_Win_BandageTip = "Uses one clean bandage from your inventory. Your bear heals faster for a while.",
+    UI_BN_Bear_Win_HelpUpTip = "Takes a few seconds next to your bear. It gets up with almost half its health.",
+    UI_BN_Bear_Win_Bandaged = "Bandaged: heals faster for %1 more hour(s).",
+    UI_BN_Bear_Win_Fled = "With about %1 health left (%2 hits from death) it stops fighting and comes back to you.",
+    UI_BN_Bear_Win_FledNever = "It never backs off on its own (sandbox setting).",
+    UI_BN_Bear_Menu_Bandage = "Bandage the cub",
+    UI_BN_Bear_Menu_BandageBig = "Bandage the bear",
+    UI_BN_Bear_Menu_BandageTip = "%1 - heals faster for %2 hour(s).",
+    UI_BN_Bear_Menu_HelpUp = "Help up the cub",
+    UI_BN_Bear_Menu_HelpUpBig = "Help up the bear",
+    UI_BN_Bear_Win_ShowDmg = "Show damage",
+    UI_BN_Bear_Win_ShowDmgTip = "Shows the damage your bear deals above zombies and bandits - only on your screen, for all your bears.",
+    UI_BN_Bear_Win_Melee = "Melee damage",
+    UI_BN_Bear_Win_MeleeVal = "%1 per hit",
+    UI_BN_Bear_Win_MeleeCub = "A cub does not fight. It hides behind you.",
+    UI_BN_Bear_Win_MeleeTip = "Damage per hit right now, from its size and Fighting - the same numbers that float above zombies.",
+    UI_BN_Bear_Win_MeleeSwipe = "Paw swipe: %1",
+    UI_BN_Bear_Win_MeleeBite = "Bite: %1",
+    UI_BN_Bear_Win_MeleeMaul = "Maul (enemy on the ground): %1",
+    UI_BN_Bear_Win_MeleeSize = "From its size: %1%% of a full-grown bear",
+    UI_BN_Bear_Win_MeleeFgt = "Fighting level %1: +%2%%",
+    UI_BN_Bear_Win_MeleePct = "Sandbox: %1%% damage",
+    UI_BN_Bear_Win_SkAgeMax = "max for its age",
+    UI_BN_Bear_Win_SkAgeTip_Cub = "Level %1 is the most a cub can learn. More once it is half-grown (about day %2).",
+    UI_BN_Bear_Win_SkAgeTip_Half = "Level %1 is the most a half-grown bear can learn. More once it is strong (about day %2).",
+    UI_BN_Bear_Win_SkAgeTip_Strong = "Level %1 is the most a strong bear can learn. More once it is full-grown (about day %2).",
+    UI_BN_Bear_Win_Kills = "Kills",
+    UI_BN_Bear_Win_KillsVal = "zombies %1, bandits %2",
+    UI_BN_Bear_Win_KillsTip = "Counts zombies and bandits that die right after your bear hit them, even if someone else landed the last blow.",
 }
 
 local KEY_HEAD = "UI_BN_Bear_"
@@ -372,6 +440,8 @@ function U.WhyText(whyKey, whyVal, bd)
     end
     if type(whyVal) == "number" then
         if whyKey == "UI_BN_Bear_Why_Locked" then return U.TB(whyKey, bd, math.ceil(whyVal)) end
+        -- F2: Reststunden eines Verbands ganz, mindestens 1 (0,4 h -> "1 hour(s) left", nie "0")
+        if whyKey == "UI_BN_Bear_Why_Bandaged" then return U.TB(whyKey, bd, math.max(1, math.floor(whyVal))) end
         return U.TB(whyKey, bd, math.floor(whyVal))
     end
     return U.TB(whyKey, bd, tostring(whyVal))
@@ -565,6 +635,10 @@ local function onServerCommand(module, command, args)
         if B.ApplySync then B.ApplySync(args) end
     elseif command == "Note" then
         B.ShowNote(getPlayer(), args)               -- getPlayer(): client/ServerCommands.lua:204
+    elseif command == "Fx" then
+        -- F2 (PLAN_F2.md 4.4): ein Kampf-Ereignis { k = Art, ... } vom Server. B.OnFx (KERN) macht die Zombie-Seite (nur beim Zombie-Rechner)
+        -- und ruft danach U.FightFx (client/BanditsNPCBearFx.lua). Nur Anzeige: dieser Client entscheidet und meldet nichts zurueck.
+        if B.OnFx and type(args.k) == "string" then B.OnFx(args.k, args) end
     end
 end
 

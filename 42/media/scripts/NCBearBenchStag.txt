@@ -1,0 +1,12 @@
+module Base
+{
+    /* NUR TESTHILFE (NCBearBench*: wird nie nach NPC Crew kopiert, baer/tools/baer_uebernahme.py BENCH_ANY). Lauf baer-f2, 12.11.2026 (PLAN_F2.md 1.1, 7.2). */
+    /* Hirsch-Rueckfall der ALT-Art bearstag (shared/NCBearBenchDefs.lua), damit alte Spielstaende laden; vorher in scripts/nc_bear_tier.txt, Block unveraendert verschoben. */
+    model NCBearStag_Body
+    {
+        mesh = Skinned/NCBearDeer.glb,
+        shader = animalEffect,
+        static = false,
+        animationsMesh = Deer_Stag,
+    }
+}

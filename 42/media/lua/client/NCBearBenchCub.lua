@@ -51,8 +51,10 @@
 --                            ("body big (swapped)" / "body cub, swap waits: calm")
 --   NCBear_CubStats()        druckt zusaetzlich body / want / engine type, ob der Tausch bereit ist (sonst warum nicht), letzter
 --                            Tausch, Fehlversuche
---   NCBear_CubClean(), NCBear_CubMark()   sehen beide Koerper (B.BodyKind des Kerns), nie den Test-Baeren "bear"
+--   NCBear_CubClean(), NCBear_CubMark()   sehen beide Koerper (B.BodyKind des Kerns), nie die Test-Baeren "ncbear" / "bear"
 -- F1 (PLAN_F1.md 7.8): Baeren-Fenster, Befehle Sitz / Frei / Komm her / Passiv, Baer ohne Koerper (C1).
+-- F2 (PLAN_F2.md 4.6): NCBear_CubView druckt zusaetzlich fst / dn / dnH / bnd; Kampf-Befehle stehen in client/NCBearBenchFight.lua
+--   (NCBear_FightZed, NCBear_FightInfo, NCBear_FightNext, NCBear_FightDown, NCBear_FightProbe, NCBear_Tune). Leben setzen: NCBear_CubHurt(pct).
 --   NCBear_CubWin()          das Baeren-Fenster des eigenen Baeren oeffnen (dasselbe wie die Fern-Taste / Rechtsklick "Bear window"; die Nah-Taste E nur am Baeren)
 --   NCBear_CubBodyGone()     den Koerper meines naechsten zahmen Baeren entfernen, der Eintrag BLEIBT (Absturz im Wechsel-Bild
 --                            nachstellen): nach 3 vergeblichen Suchlaeufen "vermisst", ~1-1,5 min spaeter (2 Suchlaeufe UND 60 s in
@@ -146,7 +148,16 @@ function NCBear_CubHere(n)
         if fits then
             local rec, refused = B.AppearFor(key, "forest", sq:getX(), sq:getY(), sq:getZ())
             if not rec then
-                say("no cub: " .. whyText(refused))
+                -- F2 (PLAN_F2.md 11.6 Nr. 5, Bench-Fehler "about %1$s day(s)"): B.AppearFor gibt nur den Grund; die Resttage der
+                -- Trauer-Sperre holt dieselbe Regel des Kerns, die B.AppearFor fragt (B.MayAppear(B.SlotsOf(..), now) -> ok, Grund, Wert,
+                -- S:server/BanditsNPCBearServer.lua B.AppearFor; Formel S:shared/BanditsNPCBearRules.lua lockDays).
+                local val = nil
+                if B.MayAppear and B.SlotsOf and B.Now then
+                    local now = B.Now()
+                    local _, why2, v2 = B.MayAppear(B.SlotsOf(key, now), now)
+                    if why2 == refused then val = v2 end
+                end
+                say("no cub: " .. whyText(refused, val))
                 return nil
             end
             push(p)
@@ -405,7 +416,7 @@ function NCBear_CubClean()
     for i = 1, #recs do B.Close(recs[i], "clean") end
     -- Alle geladenen Jungen entfernen, mit und ohne Eintrag. Liste und Rueckwaerts-Schleife: FenrisScenario.lua:505-507;
     -- instanceof(o, "IsoAnimal"): shared/TimedActions/Animals/ISAddAnimalInTrailer.lua:29; entfernt wird nur ueber den Kern.
-    -- B1e: beide Koerper (Junges und grosser Koerper) ueber B.BodyKind des Kerns; der Test-Baer "bear" bleibt.
+    -- B1e: beide Koerper (Junges und grosser Koerper) ueber B.BodyKind des Kerns; die Test-Baeren "ncbear" / "bear" bleiben.
     local objects = getCell():getObjectListForLua()
     local gone = 0
     for i = objects:size(), 1, -1 do
@@ -1047,7 +1058,9 @@ function NCBear_CubView()
         out("my view has no bear of mine (fresh: " .. tostring(U and U.Fresh and U.Fresh()) .. ")")
         return
     end
-    local keys = { "id", "st", "mode", "pas", "ld", "hide", "sit", "cm", "busy", "ride", "u", "bd", "sz", "x", "y", "callWait",
+    -- F2 (PLAN_F2.md 4.7): dazu fst (Kampfzustand), dn / dnH (am Boden, Stunden bis allein aufstehen), bnd (Verband, Stunden uebrig)
+    local keys = { "id", "st", "mode", "pas", "ld", "hide", "sit", "cm", "busy", "ride", "fst", "dn", "dnH", "bnd", "u", "bd", "sz", "x", "y",
+        "callWait",
         "hp", "hpMax", "sta", "staMax", "day", "nst", "nxt", "carry", "dodge", "fgtB", "fish", "nose",
         "xAgi", "xVit", "xCon", "xFgt", "xFsh", "xNos" }
     for _, v in ipairs(list) do
@@ -1061,7 +1074,8 @@ function NCBear_CubView()
 end
 
 -- ---------------------------------------------------------------------------
--- Rechtsklick: Eintraege im vorhandenen Untermenue "NC Bear" (NCBearTest.lua nimmt Funktionen aus NCBearMenu.extra an und
+-- Rechtsklick: Eintraege im vorhandenen Untermenue "NC Bear" (seit F2 client/NCBearBenchModel.lua, frueher NCBearTest.lua; nimmt Funktionen
+-- aus NCBearMenu.extra an und
 -- ruft sie nur im Einzelspieler). Keine alte Datei wird geaendert.
 -- ---------------------------------------------------------------------------
 local function menuHere() NCBear_CubHere() end

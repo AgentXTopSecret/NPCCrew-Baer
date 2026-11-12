@@ -53,11 +53,14 @@ end
 -- Sitzung leeren, die zu einem Koerper gehoert (Folgen, Gegenprobe, Halt, Zombie-Wache, Laerm-Uhren).
 -- F1 (PLAN_F1.md 5.1): + Sitz-Ruhe (sat, satAt, backTried), Aufstehen (standUntil), Frei-Pause (roam) -- der neue Koerper setzt sich neu
 -- hin bzw. bummelt neu los. Nicht: come (Komm her laeuft weiter), revN (C1-Wartefrist).
+-- F2 (PLAN_F2.md 4.2): + Kampf (fight; B._fightN zaehlt der Kampf-Takt neu), Flucht-Meldung, Schnauben, Schutz (shieldObj: der neue
+-- Koerper bekommt ihn in B.GrowBody), Commit-Drossel, Sicht-Merker fst. Nicht: rec.down (bleibt am Boden), rec.bndH/bndR.
 local function clearBodySession(s)
     s.f, s.chk, s.held, s.g = nil, nil, nil, nil
     s.calmUntil, s.ownUntil, s.walk = nil, nil, nil
     s.tx, s.ty, s.td0 = nil, nil, nil                 -- Nachbesserung B1c B5 (Ziel des eigenen Befehls)
     s.sat, s.satAt, s.backTried, s.standUntil, s.roam = nil, nil, nil, nil, nil
+    s.fight, s.fleeSaid, s.huffAt, s.shieldObj, s.hpComAt, s.fstSent, s.holdAt = nil, nil, nil, nil, nil, nil, nil
 end
 
 -- ---------------------------------------------------------------------------
@@ -124,6 +127,7 @@ end
 -- ---------------------------------------------------------------------------
 function B.RideBoard(rec, a, o, players)
     if type(rec) ~= "table" or not a or rec.st ~= "tame" or rec.owner == nil then return false end
+    if rec.down ~= nil then return false end          -- F2 (PLAN_F2.md 2.4): am Boden steigt er nicht ein
     if not B.CubDefOk("cub") then
         B.ErrEvery("ridedef", 600000, "ride: animal definition " .. tostring(B.CUB) .. " (fallback body for "
             .. tostring(B.CUB) .. " and " .. tostring(B.BIG) .. ") is not loaded, " .. tostring(rec.id) .. " waits instead of getting in")
@@ -281,6 +285,13 @@ local function callMark(rec, ms)
         end
     end
     t[rec.id] = ms
+end
+
+-- F2 (PLAN_F2.md 2.4, 4.3): die Abklingzeit von Call/Unstuck JETZT starten (beim Fall zu Boden; Lehre NPC Crew
+-- client/BanditsNPCCombat.lua:91-104, nur gelesen). B._callAt bleibt in dieser Datei.
+function B.CallStamp(rec, ms)
+    if type(rec) ~= "table" or rec.id == nil then return end
+    callMark(rec, tonumber(ms) or getTimestampMs())     -- getTimestampMs: Vanilla server/Foraging/forageServer.lua:456
 end
 
 -- Drossel wie die Bitten "Mode"/"Rename" (server/BanditsNPCBearFollow.lua B.AskOk): Wirkung je "Spieler|Call|ok/no".

@@ -182,7 +182,7 @@ option BanditsNPC.BearGrowDays
 	translation = BanditsNPC_BearGrowDays,
 }
 
-/* Dodge chance in percent at agility level 10; level 0 is 5 (Kevin 11.11.2026: 40). No effect until bears can fight. */
+/* Dodge chance in percent at agility level 10; level 0 is 5 (Kevin 11.11.2026: 40). */
 option BanditsNPC.BearDodgeMax
 {
 	type = integer, min = 5, max = 80, default = 40,
@@ -190,7 +190,7 @@ option BanditsNPC.BearDodgeMax
 	translation = BanditsNPC_BearDodgeMax,
 }
 
-/* Extra damage in percent at fighting level 10, on top of the damage from growing (Kevin 11.11.2026: 70). No effect until bears can fight. */
+/* Extra damage in percent at fighting level 10, on top of the damage from growing (Kevin 11.11.2026: 70). */
 option BanditsNPC.BearFightBonusMax
 {
 	type = integer, min = 0, max = 200, default = 70,
@@ -220,6 +220,94 @@ option BanditsNPC.BearRoamRadius
 	type = integer, min = 4, max = 30, default = 12,
 	page = BanditsNPC,
 	translation = BanditsNPC_BearRoamRadius,
+}
+
+/* Main switch: zombies and hostile bandits attack tamed bears, cubs too; wild, shy and fed cubs never (Kevin 11.11.2026). */
+option BanditsNPC.BearZombiesAttack
+{
+	type = boolean, default = true,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearZombiesAttack,
+}
+
+/* Off (default): a tamed bear can die. On: it goes down instead; helped up with 45 percent, alone after BearDownedHours with 15 percent (Kevin 08.11.2026). */
+option BanditsNPC.BearCannotDie
+{
+	type = boolean, default = false,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearCannotDie,
+}
+
+/* A tamed bear stops fighting and comes back when its health lasts only this many more hits of its current foes (Kevin 12.11.2026: 2-3). 0 = never. */
+option BanditsNPC.BearFleeHits
+{
+	type = integer, min = 0, max = 10, default = 3,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearFleeHits,
+}
+
+/* Health points per zombie bite, times 0.8 to 1.2 (cub 40, half-grown 150, full-grown 400 health). */
+option BanditsNPC.BearZombieDamage
+{
+	type = integer, min = 0, max = 50, default = 6,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearZombieDamage,
+}
+
+/* Health points per hit of a hostile bandit, times 0.8 to 1.2. */
+option BanditsNPC.BearBanditDamage
+{
+	type = integer, min = 0, max = 80, default = 12,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearBanditDamage,
+}
+
+/* Damage a tamed bear deals, on top of growing and Fighting (100 = normal). */
+option BanditsNPC.BearDamagePercent
+{
+	type = integer, min = 10, max = 300, default = 100,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearDamagePercent,
+}
+
+/* Extra healing in percent per in-game hour with a clean bandage of strength 4; strips of cloth half. */
+option BanditsNPC.BearBandageHeal
+{
+	type = double, min = 0.0, max = 50.0, default = 6.0,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearBandageHeal,
+}
+
+/* In-game hours one bandage keeps working. */
+option BanditsNPC.BearBandageHours
+{
+	type = integer, min = 1, max = 48, default = 8,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearBandageHours,
+}
+
+/* A bear that is down gets up alone after this many in-game hours (Kevin 08.11.2026: 12). */
+option BanditsNPC.BearDownedHours
+{
+	type = integer, min = 1, max = 72, default = 12,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearDownedHours,
+}
+
+/* Skill learning speed in percent; scales every credit and the per-minute cap (Kevin 12.11.2026: slower by default, faster by sandbox). */
+option BanditsNPC.BearSkillXpPercent
+{
+	type = integer, min = 25, max = 1000, default = 100,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearSkillXpPercent,
+}
+
+/* Skills limited by growth stage: cub 3, half-grown 6, strong 8, full-grown 10 (Kevin 12.11.2026). */
+option BanditsNPC.BearSkillAgeCap
+{
+	type = boolean, default = true,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearSkillAgeCap,
 }
 
 /* Diagnosis lines [TC-BEAR] in the console; real errors are always written. */
