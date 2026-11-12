@@ -28,6 +28,8 @@ B._s = B._s or {}               -- Sitzung je Eintrag: [id] = { obj, held, moveA
                                 -- B1d: + sta, breathAt, kx, ky, kAt, kAcc, staV, staVAt, xb, gDirty (Wachsen, Ausdauer)
                                 -- B1e: + swapAt, swapTryAt, swapFailN (Koerper-Tausch), busyUntil (Fuettern/Streicheln laeuft)
                                 -- Nachbesserung B1e: + swapWantAt (Wartezeit "move"), placedAt (Koerper erzeugt, "Call to me")
+                                -- F1: + sat, satAt, backTried (Sitz), standUntil (Aufstehen), roam = { pauseUntil } (Frei), come
+                                --     (Komm her), revN, revFail (C1), ldSent, busySent (Sicht nachschicken bei Wechsel)
 B._healUntil = B._healUntil or 0    -- B1c: Echtzeit-Ende des Heil-Fensters nach InitRegistry (PLAN_B1C.md 1.1 Schritt 2)
 B._healScanAt = B._healScanAt or nil
 B._rev = B._rev or 0            -- zaehlt jede Aenderung, die eine Sicht betrifft
@@ -128,10 +130,18 @@ function B.InitRegistry()
         r.cubs[bad[i]] = nil
     end
     -- B1b (PLAN_B1B.md 5.2): Folgen-Zustand und Name pruefen. Unbrauchbar -> nil (Vorgabe "stay" / Vorgabe-Name), je Feld eine Zeile.
+    -- F1 (PLAN_F1.md 5.1): vier Modi (B.MODES); passive nur true an einem gezaehmten/vermissten Eintrag, sonst nil (Zeile nur bei Unsinn).
+    local modes = B.MODES or { follow = true, stay = true, sit = true, roam = true }
     for id, rec in pairs(r.cubs) do
-        if rec.mode ~= nil and rec.mode ~= "follow" and rec.mode ~= "stay" then
+        if rec.mode ~= nil and (type(rec.mode) ~= "string" or modes[rec.mode] ~= true) then
             B.Err("registry: entry " .. tostring(id) .. " had an unknown mode, set to stay")
             rec.mode = nil
+        end
+        if rec.passive ~= nil then
+            if rec.passive ~= true or (rec.st ~= "tame" and rec.st ~= "missing") then
+                B.Err("registry: entry " .. tostring(id) .. " had an unusable passive switch, removed")
+                rec.passive = nil
+            end
         end
         if rec.name ~= nil then
             local clean = nil
@@ -483,13 +493,15 @@ function B.Close(rec, how)
     B._s[id] = nil
     if B.CalmDrop then B.CalmDrop(id) end          -- B1c: Laerm-Wache (server/BanditsNPCBearGuard.lua)
     B.Touch(rec)
+    -- F1 (PLAN_F1.md 4a, A1/B6): Note_Dead und Why_Gone tragen bd = "big" beim grossen Koerper (B.NoteBd, Text "bear" statt "cub").
+    -- "lost" erreicht einen zahmen Eintrag nicht mehr (F1 0.8: missing schliesst nie); es bleibt fuer "fed".
     if how == "dead" then
         if wasTame then
             local days = setLock(rec.owner, B.Now())
             if days > 0 then
                 tellKey(rec.owner, { k = "UI_BN_Bear_Note_BearDead", t = "days", v = days, tone = "bad" })
             else
-                tellKey(rec.owner, { k = "UI_BN_Bear_Note_Dead", tone = "bad" })
+                tellKey(rec.owner, B.NoteBd({ k = "UI_BN_Bear_Note_Dead", tone = "bad" }, rec))
             end
         else
             tellKey(rec.bond or rec.finder, { k = "UI_BN_Bear_Note_Dead", tone = "bad" })
@@ -497,7 +509,7 @@ function B.Close(rec, how)
     elseif how == "vanish" then
         tellKey(rec.bond or rec.finder, { k = "UI_BN_Bear_Note_Vanished" })
     elseif how == "lost" then
-        tellKey(rec.owner or rec.bond, { k = "UI_BN_Bear_Why_Gone", tone = "bad" })
+        tellKey(rec.owner or rec.bond, B.NoteBd({ k = "UI_BN_Bear_Why_Gone", tone = "bad" }, rec))
     end
     B.Log("close " .. tostring(id) .. " " .. tostring(how) .. " st " .. tostring(rec.st) .. " owner " .. tostring(rec.owner))
 end
@@ -559,14 +571,20 @@ end
 -- callWait (Sekunden Rest der "Call to me"-Abklingzeit, aufgerundet; fehlt = bereit). Das wilde Junge des Finders steht IMMER in
 -- seiner Sicht (Bildschirm-Markierung). N3: ein Konto ohne Schluessel bekommt nur Junge in tellDist.
 -- B1d (PLAN_B1D.md 4.1): je gezaehmtem Eintrag zusaetzlich sz, hp, hpMax, sta, staMax, day, stg, nst, nxt (B.GrowView).
+-- F1 (PLAN_F1.md 5.3): flache Felder fuer das Baeren-Fenster -- mode (tame; jetzt auch "sit"/"roam"), pas (tame/missing, rec.passive),
+-- u (tame/missing, Kennzeichen als Zahl), ld (Koerper in der Welt, wie oid), hide (Zombie-Wache an), sit (Modus "sit" UND er sitzt
+-- schon, s.sat), cm (Komm her laeuft), busy (Fuettern/Streicheln laeuft, s.busyUntil); fehlt ein Feld, ist es falsch. B.GrowView jetzt
+-- fuer tame UND missing (Werte, Faehigkeiten, Traglast).
 -- ---------------------------------------------------------------------------
 local function viewEntry(rec, pkey, ms)
     local oid = -1
     local s = B._s[rec.id]
     local a = s and s.obj
+    local ld = nil
     if a ~= nil and a:isExistInTheWorld() then
         local got = a:getOnlineID()          -- Vanilla shared/Definitions/animal/ButcheringUtil.lua:614 (isServer-Zweig)
         if got ~= nil then oid = got end
+        ld = true
     end
     -- B1b (PLAN_B1B.md 5.2): name (nil fehlt im Eintrag), mode nur bei "tame" (Schild Zeile 2)
     local mode = nil
@@ -583,9 +601,22 @@ local function viewEntry(rec, pkey, ms)
         feedAt = rec.feedAt, petAt = rec.petAt, bond = rec.bond, owner = rec.owner, src = rec.src,
         name = rec.name, mode = mode,
         x = math.floor(tonumber(rec.x) or 0), y = math.floor(tonumber(rec.y) or 0), ride = ride, callWait = callWait,
+        ld = ld,
     }
-    -- B1d (PLAN_B1D.md 4.1): fertige Zahlen sz hp hpMax sta staMax day stg nst nxt, nur gezaehmt (server/BanditsNPCBearGrow.lua)
-    if rec.st == "tame" and B.GrowView then B.GrowView(rec, t) end
+    local tameOrMissing = rec.st == "tame" or rec.st == "missing"
+    if tameOrMissing then
+        if rec.passive == true then t.pas = true end
+        t.u = tonumber(rec.u)
+    end
+    if s ~= nil then
+        if type(s.g) == "table" and s.g.on == true then t.hide = true end
+        if rec.st == "tame" and mode == "sit" and s.sat == true then t.sit = true end
+        if s.come ~= nil then t.cm = true end
+        local left = (tonumber(s.busyUntil) or 0) - ms
+        if left > 0 and left <= (tonumber(B.CFG.busyMs) or 20000) then t.busy = true end
+    end
+    -- B1d (PLAN_B1D.md 4.1): fertige Zahlen sz hp hpMax sta staMax day stg nst nxt (server/BanditsNPCBearGrow.lua); F1: auch missing
+    if tameOrMissing and B.GrowView then B.GrowView(rec, t) end
     return t
 end
 

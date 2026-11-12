@@ -60,6 +60,9 @@ function BanditsNPCBearFeedAction:start()
     -- Fress-Clip des Jungen ueber die Text-Variable des Animsets (B.ACT; der Knoten "Eat" liegt unter AnimSets/buck/idle).
     -- setVariable(Name, Text) an einem Tier: ISPetAnimal.lua:43. Im Mehrspieler nur an der Kopie dieses Clients sichtbar.
     if B.ACT then a:setVariable(B.ACT, "eat") end
+    -- F1 (Nachbesserung B3): der Sitz-Treiber dieses Clients schreibt waehrenddessen nichts (client/BanditsNPCBearPose.lua; B.UI gibt es
+    -- nur auf einem Client bzw. im Einzelspieler)
+    if B.UI and B.UI.PoseHands then B.UI.PoseHands(a, true) end
     self.sound = self.character:playSound("GiveFoodAnimal") -- :23
     -- B1e: Beschaeftigt-Marke beim Schreiber, nur im Einzelspieler (im Mehrspieler setzt sie serverStart am Server)
     if not isClient() and not isServer() and B.BodyBusy then B.BodyBusy(a, true) end
@@ -71,6 +74,7 @@ function BanditsNPCBearFeedAction:release()
     if a then
         a:getBehavior():setBlockMovement(false)             -- ISFeedAnimalFromHand.lua:28
         if B.ACT then a:clearVariable(B.ACT) end            -- ISPetAnimal.lua:48
+        if B.UI and B.UI.PoseHands then B.UI.PoseHands(a, false) end   -- F1 B3: B.ACT ist weg, der Sitz-Treiber setzt neu an
     end
     -- Ton: ISFeedAnimalFromHand.lua:60-64
     if self.sound and self.character:getEmitter():isPlaying(self.sound) then

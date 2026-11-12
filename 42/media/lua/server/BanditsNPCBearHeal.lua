@@ -39,12 +39,20 @@ end
 -- da"). Nicht im Spiegel: hp / hpB (das Tier traegt sein Leben selbst, NUR JAR dec/IsoAnimal.java:1340), gAt, Sitzung.
 -- B1e (PLAN_B1E.md 4.2): + body (Koerper "cub"/"big"; nur Diagnose -- beim Binden und Wiederherstellen gilt die Art des Tiers,
 -- B.BodyKind). Fassung bleibt B.MARK_V = 2.
+-- F1 (PLAN_F1.md 5.2): + passive (Schalter je Baer). Fassung bleibt B.MARK_V = 2; mode traegt jetzt auch "sit" / "roam".
 local MARK_FIELDS = {
     "u", "id", "nr", "gen", "r", "kind", "src", "st", "finder", "bond", "owner", "tame", "fedN", "petN", "last",
     "feedAt", "petAt", "born", "tamedAt", "mode", "name", "hx", "hy", "hz",
     "g", "gF", "gFd", "gFn", "xAgi", "xVit", "xCon", "xFgt", "xFsh", "xNos",
-    "body",
+    "body", "passive",
 }
+
+-- F1 (PLAN_F1.md 5.2): ein Modus aus dem Spiegel nur, wenn er in B.MODES steht (sonst nil = "stay").
+local function markMode(v)
+    local modes = B.MODES or { follow = true, stay = true, sit = true, roam = true }
+    if type(v) == "string" and modes[v] == true then return v end
+    return nil
+end
 
 local function plain(v)
     local t = type(v)
@@ -225,8 +233,7 @@ function B.Restore(o, mark, players)
         end
     end
     if id == nil then id, nr = B.NewId() end
-    local mode = nil
-    if mark.mode == "follow" or mark.mode == "stay" then mode = mark.mode end
+    local mode = markMode(mark.mode)
     local name = nil
     if type(mark.name) == "string" then name = B.CleanName(mark.name) end
     local hx, hy, hz = num(mark.hx), num(mark.hy), num(mark.hz)
@@ -261,6 +268,7 @@ function B.Restore(o, mark, players)
     if st == "tame" then
         rec.tame = 100
         rec.body = body                    -- B1e
+        if mark.passive == true then rec.passive = true end      -- F1 (PLAN_F1.md 5.2)
     end
     if st ~= "tame" then rec.mode = nil end
     -- B1d (PLAN_B1D.md 2.4 "restore"): Wachstum und Erfahrung aus dem Spiegel, geklemmt; im Mehrspieler g gedeckelt (Grow.lua)
@@ -366,7 +374,11 @@ function B.TakeNewerMark(rec, mark)
     if mark.last == "feed" or mark.last == "pet" then rec.last = mark.last end
     rec.feedAt, rec.petAt, rec.tamedAt = num(mark.feedAt), num(mark.petAt), num(mark.tamedAt, 0, now)   -- tamedAt: wie B.Restore (B1d B1)
     rec.mode = nil
-    if st == "tame" and (mark.mode == "follow" or mark.mode == "stay") then rec.mode = mark.mode end
+    rec.passive = nil
+    if st == "tame" then
+        rec.mode = markMode(mark.mode)
+        if mark.passive == true then rec.passive = true end      -- F1 (PLAN_F1.md 5.2)
+    end
     rec.name = nil
     if type(mark.name) == "string" then rec.name = B.CleanName(mark.name) end
     local hx, hy, hz = num(mark.hx), num(mark.hy), num(mark.hz)

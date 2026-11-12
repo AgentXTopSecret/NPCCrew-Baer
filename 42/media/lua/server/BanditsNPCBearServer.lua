@@ -11,6 +11,8 @@ if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: la
 -- benennt nur (welcher Koederplatz), Besitz / Balken / Zeiten stehen im Register (server/BanditsNPCBearRegistry.lua).
 -- Engine-Griffe in die Welt stehen in server/BanditsNPCBearWorld.lua; hier nur die, die zu einem Vorgang gehoeren
 -- (Futter nehmen, Streicheln zaehlen, Abstand, Hand und Tempo der Spieler), jeder mit Fundstelle.
+-- F1 (PLAN_F1.md 4b, 5.3, 5.4): Bitten "Come"/"Passive", Aufstehen und Bleiben/Sitz/Frei im Hirn-Takt (server/BanditsNPCBearOrder.lua),
+-- Rueckkehr eines vermissten Baeren (C1) nach dem Suchlauf, Sicht-Nachschub bei ld/busy-Wechsel, "missing" wird nie mehr geschlossen.
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -42,12 +44,15 @@ local WHY_T = {
     UI_BN_Bear_Why_CallWait = "num",       -- B1c: Wert = Minuten bis zum naechsten "Call to me" (die Bitte "Call" baut sie selbst, Ride.lua)
 }
 
-local function tellWhy(player, whyKey, whyVal)
+-- bd = "big" (wahlfrei): der grosse Koerper -- der Client zeigt dann die Big-Fassung ("bear" statt "cub", Nachbesserung F1 A3).
+local function tellWhy(player, whyKey, whyVal, bd)
     if not player or whyKey == nil then return end
     local t = WHY_T[whyKey]
     local v = nil
     if t ~= nil then v = whyVal end
-    B.Tell(player, note(whyKey, t, v, "bad"))
+    local n = note(whyKey, t, v, "bad")
+    if bd == "big" then n.bd = "big" end
+    B.Tell(player, n)
 end
 
 local function tellKey(pkey, n, players)
@@ -153,9 +158,10 @@ end
 -- ---------------------------------------------------------------------------
 local function handCheck(character, animal)
     if not B.IsWriter() or not character or not animal then return nil end
-    if not B.BodyKind(animal) then return nil end
+    local kind = B.BodyKind(animal)
+    if not kind then return nil end
     if not animal:isExistInTheWorld() or animal:isDead() then
-        tellWhy(character, "UI_BN_Bear_Why_Gone")
+        tellWhy(character, "UI_BN_Bear_Why_Gone", nil, kind)
         return nil
     end
     local here = character:getSquare()
@@ -166,7 +172,7 @@ local function handCheck(character, animal)
     end
     local rec, why = B.RecOf(animal)
     if not rec then
-        if why == "full" then tellWhy(character, "UI_BN_Bear_Why_Full") else tellWhy(character, "UI_BN_Bear_Why_Gone") end
+        if why == "full" then tellWhy(character, "UI_BN_Bear_Why_Full") else tellWhy(character, "UI_BN_Bear_Why_Gone", nil, kind) end
         return nil
     end
     return rec
@@ -218,7 +224,7 @@ function B.FeedComplete(character, animal, food)
     local now = B.Now()
     local ok, whyKey, whyVal = B.CheckFeed(rec, pkey, B.SlotsOf(pkey, now), now)
     if not ok then
-        tellWhy(character, whyKey, whyVal)
+        tellWhy(character, whyKey, whyVal, rec.body)    -- Big-Fassung, wo es eine gibt (F1 A3)
         return false
     end
     if not character:getInventory():contains(food) then
@@ -236,7 +242,10 @@ function B.FeedComplete(character, animal, food)
     local res = B.ApplyGain(rec, pkey, "feed", class, now)
     local x, y, z = tileOf(animal)
     rec.x, rec.y, rec.z = x, y, z
-    rec.hx, rec.hy, rec.hz = x, y, z
+    -- F1 (PLAN_F1.md 2.3, 2.4; Zusatz "F1 KERN"): Sitz und Frei behalten ihren Mittelpunkt (die Stelle des Befehls) -- sonst wanderte der
+    -- Kreis von "Frei" mit jeder Fuetterung; sonst wie bisher (Heimat = Stelle der Fuetterung)
+    local keepHome = wasTame and (B.ModeOf(rec) == "sit" or B.ModeOf(rec) == "roam")
+    if not keepHome then rec.hx, rec.hy, rec.hz = x, y, z end
     rec.idleH = 0
     rec.goneP = nil
     -- B1d (PLAN_B1D.md 1.1 Schritt 4): gutes Fuettern beschleunigt das Wachsen ein wenig (gedeckelt, server/BanditsNPCBearGrow.lua)
@@ -266,7 +275,7 @@ function B.PetComplete(character, animal)
     local now = B.Now()
     local ok, whyKey, whyVal = B.CheckPet(rec, pkey, B.SlotsOf(pkey, now), now)
     if not ok then
-        tellWhy(character, whyKey, whyVal)
+        tellWhy(character, whyKey, whyVal, rec.body)    -- Big-Fassung, wo es eine gibt (F1 A3)
         return false
     end
     local wasTame = isTame(rec.st)
@@ -403,6 +412,15 @@ function B.Handle(player, command, args)
         if B.HandleCall then B.HandleCall(player, args) end
         return
     end
+    -- F1 (PLAN_F1.md 2.5, 2.6, 7.3): "Komm her" und "Passiv" pruefen die Bitten selbst (server/BanditsNPCBearOrder.lua)
+    if command == "Come" then
+        if B.HandleCome then B.HandleCome(player, args) end
+        return
+    end
+    if command == "Passive" then
+        if B.HandlePassive then B.HandlePassive(player, args) end
+        return
+    end
 end
 
 -- Events.OnClientCommand.Add(function(module, command, player, args)): Vanilla server/ClientCommands.lua:1357; Filter auf das
@@ -483,11 +501,17 @@ local function hint(rec, players, now)
     B.Tell(p, note("UI_BN_Bear_Note_Heard", "dir", B.DirOf(rec.x - e.x, rec.y - e.y), nil))
 end
 
+-- F1 (PLAN_F1.md 0.8, 4b Nr. 6): ein VERMISSTER zahmer Baer wird nie mehr nach missingH als "lost" geschlossen (rote Linie "der Baer geht
+-- nie verloren"; Unstuck und die Rueckkehr C1 holen ihn). missH zaehlt weiter (Diagnose, eine Zeile beim Ueberschreiten von missingH).
 local function slowRec(rec, dt, players, online, now)
     if rec.st == "missing" then
         if rec.owner ~= nil and online[rec.owner] then
-            rec.missH = (tonumber(rec.missH) or 0) + dt
-            if rec.missH >= B.CFG.missingH then B.Close(rec, "lost") end
+            local was = tonumber(rec.missH) or 0
+            rec.missH = was + dt
+            if was < B.CFG.missingH and rec.missH >= B.CFG.missingH then
+                B.Log("missing " .. tostring(rec.id) .. " for " .. tostring(B.Round1(rec.missH))
+                    .. " h -- kept (a tame bear is never lost)")
+            end
         end
         return
     end
@@ -772,11 +796,16 @@ local function liveRec(rec, a, players, cache, ms)
     end
     -- B1c (PLAN_B1C.md 1.3 Schritt 5): die Zombie-Wache geht vor Folgen und B.Decide (verstecken bzw. fliehen)
     if B.GuardStep and B.GuardStep(rec, a, env, ms, players) then return end
+    -- F1 (PLAN_F1.md 2.3 Nr. 4, 5.4): verlaesst er einen Sitz, haelt er fuer das Aufstehen still (server/BanditsNPCBearOrder.lua)
+    if rec.st == "tame" and B.StandStep and B.StandStep(rec, a, ms) then return end
     -- B1b (PLAN_B1B.md 1.2): ein folgendes gezaehmtes Junges rechnet B.FollowDecide statt B.Decide, ohne Gegenprobe B.MoveWatch
     if rec.st == "tame" and B.ModeOf(rec) == "follow" and B.FollowStep then
         B.FollowStep(rec, a, env, ms, players)
         return
     end
+    -- F1 (PLAN_F1.md 5.4): Bleiben / Sitz / Frei rechnet B.OrderStep (server/BanditsNPCBearOrder.lua) statt B.Decide; fehlt die Datei,
+    -- gilt der B1b-Weg darunter (Bleiben im Radius stayR)
+    if rec.st == "tame" and B.OrderStep and B.OrderStep(rec, a, env, ms, players) then return end
     local s = B.Ses(rec.id)
     local big = B.CFG.curiousMs + 1
     local c = {
@@ -811,6 +840,9 @@ local function resolve(list)
             missing[#missing + 1] = rec
             if B.AreaLoaded(rec.x, rec.y) then
                 if rec.st == "missing" then needSlow = true else need = true end
+            elseif rec.st == "missing" and s ~= nil and s.revAt ~= nil and B.ReviveForget then
+                -- Nachbesserung F1 B1: Gegend nicht geladen -> die C1-Wartefrist beginnt beim naechsten geladenen Suchlauf neu
+                B.ReviveForget(rec)
             end
         end
     end
@@ -834,6 +866,9 @@ local function countMisses(missing, players, now)
                     rec.missH = 0
                     rec.missN = 0
                     rec.missAt = nil
+                    -- F1 (PLAN_F1.md 4b): die Wartefrist der Rueckkehr (C1) beginnt hier neu
+                    local s = B._s[rec.id]
+                    if s ~= nil then s.revN, s.revFail = nil, nil end
                     -- B1b (PLAN_B1B.md 1.3): ein vermisstes Junges folgt nicht mehr -- still auf "Bleiben", Heimat = letzte Kachel
                     if B.ModeOf(rec) == "follow" then
                         if B.SetMode then B.SetMode(rec, "stay", "missing", players) else rec.mode = "stay" end
@@ -946,8 +981,16 @@ local function brainTickBody(ms)
         B._scanAt = ms
         B._orphAt = ms                 -- dieser Suchlauf fuehrt die Waisen-Liste mit (B.ScanAnimals)
         scanned = true
+        -- F1 (PLAN_F1.md 4b): wer schon VOR diesem Suchlauf vermisst war (der Suchlauf, der "missing" setzt, zaehlt nicht mit)
+        local wasMissing = {}
+        for i = 1, #missing do
+            if missing[i].st == "missing" then wasMissing[#wasMissing + 1] = missing[i] end
+        end
         B.ScanAnimals(players)
         countMisses(missing, players, B.Now())
+        -- F1 C1 (PLAN_F1.md 0.8, 4b): ein vermisster Baer in geladener Gegend bekommt nach reviveScans vergeblichen Suchlaeufen genau EINEN
+        -- neuen Koerper (server/BanditsNPCBearOrder.lua; hoechstens einer je Takt)
+        if B.ReviveMissing and #wasMissing > 0 then B.ReviveMissing(wasMissing, players, ms) end
     end
     -- 3: Heil-Fenster nach InitRegistry (PLAN_B1C.md 1.1 Schritt 2, 2.6): je healScanMs ein Suchlauf, auch ohne Vermisste -- die
     -- Zellen laden nach, und ein Junges mit Spiegel ohne Eintrag kommt so zurueck. Fuehrt die Waisen-Liste mit (B._orphAt).
@@ -960,12 +1003,28 @@ local function brainTickBody(ms)
     end
     -- 4: geladene, lebende Junge dieses Takts; EINE Zombie-Suche fuer alle (server/BanditsNPCBearGuard.lua)
     -- getX/getY am Tier: Vanilla shared/Definitions/animal/ButcheringUtil.lua:575-576
+    -- F1 (PLAN_F1.md 5.3): Sicht nachschicken, wenn ein Baer geladen/entladen wird (ld) oder seine Beschaeftigt-Marke von selbst ablief
+    -- (busy; B.BodyBusy meldet An/Aus selbst) -- je Wechsel EIN B.Touch, nie je Takt ohne Wechsel.
+    local busySpan = tonumber(B.CFG.busyMs) or 20000
     local loaded = {}
     for i = 1, #list do
         local rec = list[i]
         if reg.cubs[rec.id] == rec then
             local a = B.FindAnimal(rec)
             if a then loaded[#loaded + 1] = { rec = rec, a = a, x = a:getX(), y = a:getY(), z = rec.z } end
+            local s = B._s[rec.id]
+            local ld = a ~= nil
+            if (s ~= nil and s.ldSent == true) ~= ld then
+                B.Ses(rec.id).ldSent = ld
+                B.Touch(rec)
+            end
+            if s ~= nil and s.busySent == true then
+                local left = (tonumber(s.busyUntil) or 0) - ms
+                if not (left > 0 and left <= busySpan) then
+                    s.busySent = nil
+                    B.Touch(rec)
+                end
+            end
         end
     end
     if B.GuardScan then B.GuardScan(loaded, ms) end

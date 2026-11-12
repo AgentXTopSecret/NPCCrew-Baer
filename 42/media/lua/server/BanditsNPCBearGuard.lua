@@ -315,6 +315,8 @@ function B.GuardStep(rec, a, env, ms, players)
         gap = B.BodyGap(bd, bsz)
     end
     local d = B.GuardDecide({ x = cx, y = cy, z = rec.z, st = rec.st, gap = gap }, o, zz, g, ms)
+    -- F1 (PLAN_F1.md 5.3): Wache an/aus -> die Sicht (hide) geht neu hinaus; ein sitzender Baer steht dafuer auf (Sitz-Treiber der Clients)
+    if (g.on == true) ~= wasOn then B.Touch(rec) end
     if d.act == "none" then
         if wasOn then B.Log("guard: " .. tostring(rec.id) .. " is safe again") end
         g.tx, g.ty, g.orderAt = nil, nil, nil

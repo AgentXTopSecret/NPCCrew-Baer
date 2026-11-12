@@ -49,6 +49,8 @@
     "Sandbox_BanditsNPC_BearPetCooldownMinutes_tooltip": "Игровых минут до того, как того же медвежонка можно снова погладить. Действует и после приручения.",
     "Sandbox_BanditsNPC_BearRideDistance": "Медведь: расстояние для посадки в транспорт",
     "Sandbox_BanditsNPC_BearRideDistance_tooltip": "В клетках. Медвежонок, который идёт за хозяином, садится с ним в транспорт, если он не дальше этого расстояния.",
+    "Sandbox_BanditsNPC_BearRoamRadius": "Медведь: радиус прогулки (клетки)",
+    "Sandbox_BanditsNPC_BearRoamRadius_tooltip": "Как далеко медведь в режиме «Гулять свободно» может уходить от места, где вы дали команду.",
     "Sandbox_BanditsNPC_BearTameFavoriteBonus": "Приручение: бонус за любимую еду",
     "Sandbox_BanditsNPC_BearTameFavoriteBonus_tooltip": "На сколько процентов больше доверия за мёд и рыбу.",
     "Sandbox_BanditsNPC_BearTameFeedPoints": "Приручение: очки за кормление",

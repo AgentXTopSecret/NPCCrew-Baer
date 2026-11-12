@@ -9,6 +9,7 @@ if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: la
 -- B.Hold (setBlockMovement) aus server/BanditsNPCBearWorld.lua; B1c: Einsteigen ueber B.RideBoard (server/BanditsNPCBearRide.lua);
 -- eigene Engine-Aufrufe hier nur player:getVehicle, getX/getY und getTimestampMs (Fundstelle je am Aufruf), sonst Register und Regeln.
 -- Der Name lebt nur im Register (Plan 0.3): kein Vanilla-Tiername am Tier.
+-- F1 (PLAN_F1.md 2.1-2.5, 7.2): vier Modi in B.SetMode / B.HandleMode, "Komm her" endet ueber B.ComeCheck (server/BanditsNPCBearOrder.lua).
 --
 -- Ladefolge: diese Datei laedt VOR ...Registry / ...Server / ...World (alphabetisch). Deshalb wird auf Dateiebene nichts
 -- eingefangen; jede fremde Funktion wird zur Laufzeit ueber B.X geholt.
@@ -82,22 +83,48 @@ local function refuse(player, pkey, command, n)
 end
 
 -- ---------------------------------------------------------------------------
--- Zustand setzen (Plan 5.3). mode = "follow" / "stay"; why = "ask" / "car" / "far" / "lost" / "offline" / "missing"; B1c auch
+-- Zustand setzen (Plan 5.3). mode = "follow" / "stay" (F1: + "sit" / "roam"); why = "ask" / "car" / "far" / "lost" / "offline" /
+-- "missing"; B1c auch
 -- "call" / "ride" / "dead" (ohne Meldung: Ride.lua meldet selbst).
 -- Bei "stay" wird die Heimat die Kachel, an der das Junge jetzt steht (Plan 1.4). Leert die Folgen-Sitzung B._s[id].f und die
 -- alte Lauf-Gegenprobe (sonst meldete B.MoveWatch nach dem Wechsel einen Folgen-Befehl als "bewegt sich nicht").
 -- Meldung an den Besitzer nach why; die Richtung ist die vom Besitzer zum Jungen. Rueckgabe: true, wenn gesetzt.
 -- B1e (PLAN_B1E.md 6.4): die Meldungen tragen bd = "big", wenn der Eintrag den grossen Koerper hat (B.NoteBd).
+-- F1 (PLAN_F1.md 2.1-2.5, 7.2): mode in B.MODES (follow / stay / sit / roam); stay, sit und roam setzen die Heimat (Mittelpunkt) auf die
+-- Kachel von jetzt. why += "come" (Note_Coming), "came" (Note_Came), "comefail" (Note_ComeFail); bei "ask" je Modus Note_Follow /
+-- Note_Stay / Note_Sit / Note_Roam (t "num", v = BearRoamRadius). Immer: s.come und s.roam weg. Verlaesst er einen Sitz, in dem er
+-- schon SASS (s.sat), haelt der Schreiber ihn standMs fuer das Aufstehen (s.standUntil, B.StandStep). Nochmals "Sit" an einem sitzenden
+-- Baeren aendert nichts ausser der Meldung (er steht nicht auf). getTimestampMs: Vanilla server/Foraging/forageServer.lua:456.
 -- ---------------------------------------------------------------------------
+local MODES_DEF = { follow = true, stay = true, sit = true, roam = true }
+
 function B.SetMode(rec, mode, why, players)
-    if type(rec) ~= "table" or (mode ~= "follow" and mode ~= "stay") then return false end
+    local modes = B.MODES
+    if type(modes) ~= "table" then modes = MODES_DEF end
+    if type(rec) ~= "table" or type(mode) ~= "string" or modes[mode] ~= true then return false end
+    local s = B.Ses(rec.id)
+    local old = B.ModeOf(rec)
+    local stillSat = old == "sit" and mode == "sit" and s.sat == true
+    if s.sat == true and not stillSat then
+        s.standUntil = getTimestampMs() + (tonumber(B.CFG.standMs) or 2300)
+    end
     rec.mode = mode
-    if mode == "stay" then
+    if mode ~= "follow" and not stillSat then
         rec.hx, rec.hy, rec.hz = rec.x, rec.y, rec.z
     end
-    local s = B.Ses(rec.id)
+    if not stillSat then
+        s.sat = nil
+        s.satAt = nil
+        s.backTried = nil
+    end
     s.f = nil
     s.chk = nil
+    s.come = nil
+    s.roam = nil
+    -- Nachbesserung F1 B4: ein noch laufender eigener Weg (Folgen, Komm her, Frei) gilt nach dem Wechsel auf Bleiben/Sitz/Frei nicht mehr
+    -- (B.OrderStep, server/BanditsNPCBearOrder.lua ownLive) -- sonst liefe er bis stayBack weiter und kehrte dann um. s.ownUntil bleibt
+    -- stehen (die Laerm-Wache haelt einen Lauf ohne eigenen Befehl sonst fuer eine Flucht, server/BanditsNPCBearGuard.lua).
+    if mode ~= "follow" then s.ownCut = s.ownUntil end
     B.Commit(rec)
     local p, e = ownerNear(rec, players)
     if p then
@@ -105,9 +132,19 @@ function B.SetMode(rec, mode, why, players)
         if why == "ask" then
             if mode == "follow" then
                 n = note("UI_BN_Bear_Note_Follow", nil, nil, "good")
+            elseif mode == "sit" then
+                n = note("UI_BN_Bear_Note_Sit", nil, nil, "good")
+            elseif mode == "roam" then
+                n = note("UI_BN_Bear_Note_Roam", "num", B.Opt("BearRoamRadius"), nil)
             else
                 n = note("UI_BN_Bear_Note_Stay", nil, nil, nil)
             end
+        elseif why == "come" then
+            n = note("UI_BN_Bear_Note_Coming", nil, nil, "good")
+        elseif why == "came" then
+            n = note("UI_BN_Bear_Note_Came", nil, nil, "good")
+        elseif why == "comefail" then
+            n = note("UI_BN_Bear_Note_ComeFail", nil, nil, "bad")
         elseif why == "car" then
             n = note("UI_BN_Bear_Note_StayCar", nil, nil, "bad")
         elseif why == "far" then
@@ -128,8 +165,14 @@ end
 -- B1e (PLAN_B1E.md 1.5, 6.3): c.gap = Zuschlag mit der Koerperlaenge (B.BodyGap, nur grosser Koerper) und c.walkSpeed = Tempo des
 -- Koerpers (B.BodyNum) fuer B.FollowDecide; fehlt shared/BanditsNPCBearStats.lua: Junges, Zuschlag 0, Tempo aus B.CFG (wie B1c).
 -- ---------------------------------------------------------------------------
+-- F1 (PLAN_F1.md 2.5 Nr. 3): am Anfang B.ComeCheck (server/BanditsNPCBearOrder.lua) -- "Komm her" angekommen / aufgegeben -> Bleiben,
+-- in diesem Takt halten. Steigt es ein (Regel 11), endet "Komm her" (s.come weg).
 function B.FollowStep(rec, a, env, ms, players)
     if type(rec) ~= "table" or not a then return end
+    if B.ComeCheck and B.ComeCheck(rec, env, ms, players) then
+        B.Hold(rec, a, true)
+        return
+    end
     local s = B.Ses(rec.id)
     local f = s.f
     if type(f) ~= "table" then
@@ -148,6 +191,7 @@ function B.FollowStep(rec, a, env, ms, players)
     if d.act == "ride" then
         -- B1c (PLAN_B1C.md 1.4, 6.3): Besitzer im Fahrzeug und nah genug -> einsteigen (Koerper verschwindet); geht das nicht
         -- (Definition fehlt), wie B1b "Bleiben" mit Meldung
+        s.come = nil
         local board = B.RideBoard
         if not (board and board(rec, a, env and env.owner or nil, players)) then B.SetMode(rec, "stay", "car", players) end
         return
@@ -214,13 +258,17 @@ end
 -- "Mode" { id, mode }: nur der Besitzer, nur am gezaehmten, geladenen Jungen; "follow" nicht aus dem Fahrzeug und nicht weiter
 -- als BearFollowMaxDistance. player:getVehicle(): Vanilla server/Vehicles/VehicleCommands.lua:11 (Spieler eines Client-Befehls).
 -- getX/getY am Spieler: Bandits server/BanditServerSpawner.lua:179; am Tier: Vanilla ButcheringUtil.lua:575-576.
+-- F1 (PLAN_F1.md 2.1-2.4): mode in B.MODES (sonst still verwerfen); Koerper nicht geladen -> Why_OutOfReach (statt Why_Gone; "Unstuck"
+-- holt ihn); Why_Gone / Why_Riding / Why_OutOfReach tragen bd ueber B.NoteBd (A1).
 function B.HandleMode(player, args)
     local pkey, rec = askRec(player, args)
     if pkey == nil then return end
     local mode = args.mode
-    if mode ~= "follow" and mode ~= "stay" then return end
+    local modes = B.MODES
+    if type(modes) ~= "table" then modes = MODES_DEF end
+    if type(mode) ~= "string" or modes[mode] ~= true then return end
     if rec == nil or rec.st == "missing" then
-        refuse(player, pkey, "Mode", note("UI_BN_Bear_Why_Gone", nil, nil, "bad"))
+        refuse(player, pkey, "Mode", B.NoteBd(note("UI_BN_Bear_Why_Gone", nil, nil, "bad"), rec))
         return
     end
     if rec.st ~= "tame" or rec.owner ~= pkey then
@@ -234,7 +282,7 @@ function B.HandleMode(player, args)
     end
     local a = B.FindAnimal(rec)
     if a == nil then
-        refuse(player, pkey, "Mode", note("UI_BN_Bear_Why_Gone", nil, nil, "bad"))
+        refuse(player, pkey, "Mode", B.NoteBd(note("UI_BN_Bear_Why_OutOfReach", nil, nil, "bad"), rec))
         return
     end
     if mode == "follow" then
@@ -248,7 +296,13 @@ function B.HandleMode(player, args)
         end
     end
     if not allow(pkey, "Mode", "ok") then return end
+    -- Nachbesserung F1 B4: die Heimat ist die Kachel, auf der er JETZT steht (rec.x/y stammt vom letzten Hirn-Takt, bis 1,5 s alt -- ein
+    -- rennender Baer waere sonst bis zu ~4 Kacheln weiter und liefe zurueck). getX/getY am Tier: Vanilla ButcheringUtil.lua:575-576.
+    if mode ~= "follow" then rec.x, rec.y = math.floor(a:getX()), math.floor(a:getY()) end
     B.SetMode(rec, mode, "ask", nil)
+    -- Nachbesserung F1 B4: Bleiben/Sitz/Frei halten ihn sofort an (B.Hold = setBlockMovement, server/BanditsNPCBearWorld.lua), statt den
+    -- laufenden Weg bis zum naechsten Hirn-Takt weiterzurennen; Frei sucht danach sein erstes Ziel (B.OrderStep, B.MoveTo loest die Sperre)
+    if mode ~= "follow" and B.Hold then B.Hold(rec, a, true) end
     B.FlushViews()
 end
 

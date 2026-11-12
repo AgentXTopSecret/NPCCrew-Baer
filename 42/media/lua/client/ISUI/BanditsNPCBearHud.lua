@@ -19,6 +19,10 @@
 -- bindet beide Koerper (nur B.BodyKind des Kerns fragt die Art); das Schild sitzt beim grossen Koerper (Sicht bd == "big") um
 -- B.CFG.tagBigK (1,06 = Oberkante Buckel / Kopf des Jungen bei gleicher Groesse, gemessen) hoeher; die MP-Groessen-Probe setzt nur
 -- an einer Kopie der passenden Art (im Tauschfenster kann die alte Kopie noch da sein). Vorgabe-Name "<Spieler>'s bear" (U.CubName).
+-- F1 (PLAN_F1.md 2.9, 7.1): Zeile 2 kennt die Modi "sitting" / "roaming"; das Namensschild ist je Baer abschaltbar (U.TagOn,
+-- client/BanditsNPCBearTags.lua -- je Spieler, was ICH sehe; "TagShow" bleibt der Hauptschalter): bei aus keine Name-/Zustand-Zeilen
+-- fuer diesen Baeren, die Werte-Zeilen folgen weiter ihren Optionen. B.OnView meldet jede neue Sicht zusaetzlich dem Baeren-Fenster
+-- (U.WinOnView) und dem Sitz-Treiber (U.PoseOnView), je hinter einem Existenz-Riegel.
 --
 -- Reine Anzeige: liest nur B.View (die Sicht, die der Schreiber diesem Spieler geschickt hat) und fragt nie den Server.
 -- Einzelspieler und Mehrspieler laufen gleich; im Mehrspieler stammen alle Zahlen vom Server. Der dedizierte Server laedt client/ nicht.
@@ -202,9 +206,17 @@ local function hasAge(c)
     return isNum(c.day)
 end
 
+-- F1: Namensschild dieses Baeren an? (U.TagOn, client/BanditsNPCBearTags.lua; fehlt die Datei: an)
+local function tagOn(c)
+    local f = U.TagOn
+    if not f then return true end
+    return f(c) ~= false
+end
+
 -- B1d: hat ein gezaehmtes Junges mit den Optionen dieser Liste (md) ueberhaupt eine Zeile? Sonst bekommt es keinen Eintrag.
+-- F1: das Namensschild zaehlt nur, wenn es fuer DIESEN Baeren an ist.
 local function tameShown(c, md)
-    if md.tags then return true end
+    if md.tags and tagOn(c) then return true end
     if md.hp ~= SHOW_OFF and hasHp(c) then return true end
     if md.sta ~= SHOW_OFF and hasSta(c) then return true end
     if md.age and hasAge(c) then return true end
@@ -266,14 +278,19 @@ local function waitWord(c, kind, nowH)
     return U.WaitText(left)
 end
 
--- Zustand eines gezaehmten Jungen. B.ModeOf ist die Regel des Kerns (shared, Plan 5.3: nil und alles andere = "stay"); fehlt
--- die Kern-Datei, gilt dieselbe Regel hier.
+-- Zustand eines gezaehmten Jungen. B.ModeOf ist die Regel des Kerns (shared, Plan 5.3: nil und alles andere = "stay"; F1: follow /
+-- stay / sit / roam); fehlt die Kern-Datei, gilt dieselbe Regel hier.
 local function modeOf(c)
     local f = B.ModeOf
     if f then return f(c) end
-    if c.mode == "follow" then return "follow" end
+    local m = c.mode
+    if m == "follow" or m == "sit" or m == "roam" then return m end
     return "stay"
 end
+
+-- F1 (PLAN_F1.md 7.1): Zeile 2 je Modus. Schluessel ausgeschrieben.
+local MODE_TAG = { follow = "UI_BN_Bear_Tag_Follow", stay = "UI_BN_Bear_Tag_Stay", sit = "UI_BN_Bear_Tag_Sit",
+    roam = "UI_BN_Bear_Tag_Roam" }
 
 -- Namensschild (Plan 2.1): Zeile 1 der Name (U.CubName), Zeile 2 beim eigenen Jungen der Zustand, beim fremden der Besitzer.
 -- Gerade gezaehmt: Zeile 2 blinkt FLASH_MS lang gruen "Tamed!", danach der Zustand. Eigen ist ein Junges, wenn der Besitzer mein
@@ -287,11 +304,7 @@ local function describeTag(e, meKey)
     local own = (c.owner ~= nil) and (c.owner == meKey or (c.owner == B.SP_KEY and B.IsSP ~= nil and B.IsSP()))
     if own then
         e.r, e.g, e.b = 0.96, 0.96, 0.90
-        if modeOf(c) == "follow" then
-            e.line2 = U.T("UI_BN_Bear_Tag_Follow")
-        else
-            e.line2 = U.T("UI_BN_Bear_Tag_Stay")
-        end
+        e.line2 = U.T(MODE_TAG[modeOf(c)] or "UI_BN_Bear_Tag_Stay")
         e.till = S.flash[c.id] or 0
         e.flashLine = U.T("UI_BN_Bear_Hud_Tamed")
     else
@@ -321,7 +334,7 @@ end
 -- dem Anker (Pixel), von unten nach oben: Ausdauer, Leben, Alter, Zustand (darueber der Name). Zeilenhoehe Balken t.barH + t.gap2,
 -- Textzeile t.h2 + 1. Ohne Werte-Zeilen sitzt der Zustand wie in B1b/B1c mit der Unterkante am Anker.
 local function describeValues(e, c, md, t)
-    e.showName = md.tags
+    e.showName = md.tags and tagOn(c)
     e.hpFill, e.hpText, e.staFill, e.staText, e.ageLine = nil, nil, nil, nil, nil
     if md.hp ~= SHOW_OFF and hasHp(c) then
         e.hpFill, e.hpText = valueLine(md.hp, c.hp, c.hpMax, "UI_BN_Bear_Tag_Health", t.barW)
@@ -763,6 +776,8 @@ end
 function B.OnView()
     S.dirty = true
     if U.NoteSync then U.NoteSync() end
+    if U.WinOnView then U.WinOnView() end           -- F1: Baeren-Fenster (client/ISUI/BanditsNPCBearWindow.lua)
+    if U.PoseOnView then U.PoseOnView() end         -- F1: Sitz-Treiber (client/BanditsNPCBearPose.lua)
 end
 
 -- Je Spielstart ein frisches Element. Ein altes (Hauptmenue und neu laden) wird vorher abgemeldet und vergessen:

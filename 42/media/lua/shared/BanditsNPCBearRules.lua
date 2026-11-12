@@ -327,9 +327,88 @@ end
 -- ---------------------------------------------------------------------------
 
 -- Zustand eines gezaehmten Jungen: "follow" oder "stay". Fehlt das Feld (alte Spielstaende) oder steht Unsinn darin: "stay".
+-- F1 (PLAN_F1.md 0.3, 7.2): vier Modi "follow" / "stay" / "sit" / "roam" (B.MODES, shared/BanditsNPCBear.lua); Register- ODER
+-- Sicht-Eintrag (gleiches Feld mode), auch der Client ruft. Fehlt B.MODES (Teilkopie), gilt dieselbe Liste hier.
+local MODES_DEF = { follow = true, stay = true, sit = true, roam = true }
+
 function B.ModeOf(rec)
-    if type(rec) == "table" and rec.mode == "follow" then return "follow" end
+    if type(rec) ~= "table" or type(rec.mode) ~= "string" then return "stay" end
+    local modes = B.MODES
+    if type(modes) ~= "table" then modes = MODES_DEF end
+    if modes[rec.mode] == true then return rec.mode end
     return "stay"
+end
+
+-- ---------------------------------------------------------------------------
+-- F1 (PLAN_F1.md 2.2-2.4, 7.2): Bleiben / Sitz / Frei herumlaufen. Rein: keine Engine, auch der Client darf rufen.
+-- c   = { mode, st, x, y, hx, hy, r, gap, ownBusy, pauseOver, backTried }: Tier-Mitte x/y, Heimat-Kachel hx/hy (Mittelpunkt = Kachel-Mitte
+--       hx + 0,5 / hy + 0,5; fehlt sie: die Stelle des Tiers), r = Radius von "Frei" (BearRoamRadius), gap = Zuschlag mit der
+--       Koerperlaenge (B.BodyGap), ownBusy = ein eigener Laufbefehl laeuft noch (s.ownUntil), pauseOver = die Frei-Pause ist um,
+--       backTried = beim Sitz wurde nach dem letzten Versatz schon einmal nachgerueckt (Zusatz, schnittstelle_aenderungen.md "F1 KERN").
+-- env = wie B.Decide (lure, mate; P = { key, x, y, dist, food, fast, still }).
+-- Rueckgabe { act, tx, ty, walk, lead, rule }: act "hold" (stehen/sitzen), "back" (zurueck zur Heimat bzw. in den Kreis; walk =
+-- Weg bis zum Ziel <= backRunDist), "stroll" (Frei: neues eigenes Ziel suchen, der Schreiber waehlt es mit B.RoamSpot), "keep" (eigener
+-- Weg laeuft weiter), "come" (Regel 6: Besitzer haelt still Futter hin, lead = die Heimat wandert mit), "none" (kein Fall fuer diese
+-- Regeln: follow, nicht gezaehmt). Erste passende Regel gewinnt.
+--   S1 sit : weiter als stayBack -> back (31) / eigener Weg -> keep (32) / weiter als stayNear und noch nicht nachgerueckt -> back (33)
+--            / hold (34). Kein Futter-Locken (er sitzt).
+--   S2 stay: Regel 6 come (6) / Regel 7 hold (7) / weiter als stayBack -> back (35) / eigener Weg -> keep (36) / hold (37)
+--   S3 roam: Regel 7 hold (7) / weiter als r -> back in den Kreis (38) / eigener Weg -> keep (39) / Pause laeuft -> hold (40) /
+--            stroll (41). Kein Locken mit Heimat (sonst zoege Futter ihn aus dem Bereich).
+-- Ziel "back": Bleiben/Sitz die Mitte der Heimat-Kachel; Frei der Punkt r - stayBack vom Mittelpunkt auf der Linie zum Tier (zurueck
+-- IN den Kreis, nicht bis zur Mitte -- so geht er von 15 Kacheln aus, Plan 8.1 Nr. 6).
+-- ---------------------------------------------------------------------------
+local function backTo(c, tx, ty, rule)
+    local walk = B.DistXY(c.x, c.y, tx, ty) <= (tonumber(B.CFG.backRunDist) or 8)
+    return { act = "back", tx = tx, ty = ty, walk = walk, lead = false, rule = rule }
+end
+
+function B.OrderDecide(c, env)
+    local cfg = B.CFG
+    env = env or {}
+    local mode = nil
+    if type(c) == "table" then mode = c.mode end
+    if mode ~= "sit" and mode ~= "stay" and mode ~= "roam" then return { act = "none", rule = 0 } end
+    if c.st ~= "tame" then return { act = "none", rule = 0 } end
+    local lure, mate = env.lure, env.mate
+    local cx, cy = c.x, c.y
+    local hx, hy = tonumber(c.hx), tonumber(c.hy)
+    if hx ~= nil and hy ~= nil then cx, cy = hx + 0.5, hy + 0.5 end
+    local dist = B.DistXY(c.x, c.y, cx, cy)
+    local stayBack = tonumber(cfg.stayBack) or 3
+    if mode == "sit" then
+        if dist > stayBack then return backTo(c, cx, cy, 31) end
+        if c.ownBusy == true then return { act = "keep", lead = false, rule = 32 } end
+        if dist > (tonumber(cfg.stayNear) or 1.5) and c.backTried ~= true then return backTo(c, cx, cy, 33) end
+        return { act = "hold", lead = false, rule = 34 }
+    end
+    if mode == "stay" then
+        local gap = tonumber(c.gap) or 0
+        if lure and lure.still and lure.dist > cfg.comeFed + gap then
+            local tx, ty = toward(lure.x, lure.y, c.x, c.y, cfg.comeFed + gap)
+            return { act = "come", tx = tx, ty = ty, walk = false, lead = true, rule = 6 }
+        end
+        if (lure and lure.dist <= cfg.shyDist) or (mate and mate.dist < cfg.reach) then
+            return { act = "hold", lead = false, rule = 7 }
+        end
+        if dist > stayBack then return backTo(c, cx, cy, 35) end
+        if c.ownBusy == true then return { act = "keep", lead = false, rule = 36 } end
+        return { act = "hold", lead = false, rule = 37 }
+    end
+    -- roam
+    if (lure and lure.dist <= cfg.shyDist) or (mate and mate.dist < cfg.reach) then
+        return { act = "hold", lead = false, rule = 7 }
+    end
+    local r = tonumber(c.r) or 12
+    if dist > r then
+        local inner = r - stayBack
+        if inner < 0 then inner = 0 end
+        local tx, ty = toward(cx, cy, c.x, c.y, inner)
+        return backTo(c, tx, ty, 38)
+    end
+    if c.ownBusy == true then return { act = "keep", lead = false, rule = 39 } end
+    if c.pauseOver ~= true then return { act = "hold", lead = false, rule = 40 } end
+    return { act = "stroll", lead = false, rule = 41 }
 end
 
 local NAME_BAD = "UI_BN_Bear_Why_NameBad"

@@ -49,6 +49,8 @@
     "Sandbox_BanditsNPC_BearPetCooldownMinutes_tooltip": "同一只小熊再次可以抚摸之前的游戏分钟数。驯服后也适用。",
     "Sandbox_BanditsNPC_BearRideDistance": "熊: 一起上车的距离",
     "Sandbox_BanditsNPC_BearRideDistance_tooltip": "单位为格。正在跟随的小熊在这个距离以内时，会和主人一起上车。",
+    "Sandbox_BanditsNPC_BearRoamRadius": "熊: 自由活动半径 (格)",
+    "Sandbox_BanditsNPC_BearRoamRadius_tooltip": "处于自由活动状态的熊离开你下达命令的地点最远能走多远。",
     "Sandbox_BanditsNPC_BearTameFavoriteBonus": "驯服: 最爱食物奖励",
     "Sandbox_BanditsNPC_BearTameFavoriteBonus_tooltip": "蜂蜜和鱼额外获得的信任百分比。",
     "Sandbox_BanditsNPC_BearTameFeedPoints": "驯服: 每次喂食的点数",

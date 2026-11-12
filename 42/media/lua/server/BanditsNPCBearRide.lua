@@ -51,10 +51,13 @@ local function tellOwner(rec, players, n)
 end
 
 -- Sitzung leeren, die zu einem Koerper gehoert (Folgen, Gegenprobe, Halt, Zombie-Wache, Laerm-Uhren).
+-- F1 (PLAN_F1.md 5.1): + Sitz-Ruhe (sat, satAt, backTried), Aufstehen (standUntil), Frei-Pause (roam) -- der neue Koerper setzt sich neu
+-- hin bzw. bummelt neu los. Nicht: come (Komm her laeuft weiter), revN (C1-Wartefrist).
 local function clearBodySession(s)
     s.f, s.chk, s.held, s.g = nil, nil, nil, nil
     s.calmUntil, s.ownUntil, s.walk = nil, nil, nil
     s.tx, s.ty, s.td0 = nil, nil, nil                 -- Nachbesserung B1c B5 (Ziel des eigenen Befehls)
+    s.sat, s.satAt, s.backTried, s.standUntil, s.roam = nil, nil, nil, nil, nil
 end
 
 -- ---------------------------------------------------------------------------
@@ -362,7 +365,7 @@ function B.HandleCall(player, args)
     local a, why = B.PlaceCub(rec, sq:getX(), sq:getY(), sq:getZ(), "call")
     if not a then
         B.Err("call: no new body for " .. tostring(rec.id) .. " (" .. tostring(why) .. "), nothing changed")
-        B.Tell(player, note("UI_BN_Bear_Why_Gone", nil, nil, "bad"))
+        B.Tell(player, B.NoteBd(note("UI_BN_Bear_Why_Gone", nil, nil, "bad"), rec))     -- F1 (PLAN_F1.md 4a): bd beim grossen Koerper
         B.PushView(player)
         return
     end

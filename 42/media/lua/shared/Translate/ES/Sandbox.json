@@ -49,6 +49,8 @@
     "Sandbox_BanditsNPC_BearPetCooldownMinutes_tooltip": "Minutos de juego antes de poder acariciar otra vez a la misma cría. También vale después de domesticarla.",
     "Sandbox_BanditsNPC_BearRideDistance": "Oso: distancia para subir al vehículo",
     "Sandbox_BanditsNPC_BearRideDistance_tooltip": "En casillas. Una cría que sigue a su dueño sube al vehículo con él si está como mucho a esta distancia.",
+    "Sandbox_BanditsNPC_BearRoamRadius": "Oso: radio de paseo (casillas)",
+    "Sandbox_BanditsNPC_BearRoamRadius_tooltip": "Hasta dónde puede alejarse un oso en Pasear libre del lugar donde le diste la orden.",
     "Sandbox_BanditsNPC_BearTameFavoriteBonus": "Doma: bonificación por comida favorita",
     "Sandbox_BanditsNPC_BearTameFavoriteBonus_tooltip": "Porcentaje de confianza extra con miel y pescado.",
     "Sandbox_BanditsNPC_BearTameFeedPoints": "Doma: puntos por comida",

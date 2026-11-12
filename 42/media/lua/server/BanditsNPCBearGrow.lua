@@ -13,6 +13,8 @@ if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: la
 -- Leben sofort) und DANN B.RemoveCub(alt) -- genau wie "Call to me". Genau EIN Koerper, Register-Eintrag bleibt derselbe. Nur, wenn es
 -- sicher ist (B.BodySwapReady), sonst beim naechsten Hirn-Takt. Zurueck zum Jungen erst unter swapBackSize (nie flackern).
 -- Sitzung dazu: swapAt, swapTryAt, swapFailN (Tausch), busyUntil (Fuettern/Streicheln laeuft, B.BodyBusy).
+-- F1 (PLAN_F1.md 5.3): B.GrowView auch fuer "missing" (+ Erfahrung, Traglast, Ausweichen, Kampf-Bonus, Fang-Chance, Warnweite);
+-- B.BodyBusy meldet den Wechsel der Marke an die Sicht (B.Touch, s.busySent).
 --
 -- Takte (alle aus vorhandenen Takten, keine neuen Ereignisse; je eine EIGENE Schleife nach den B1a-B1c-Schritten, Nachbesserung B1d B2):
 --   Langsam-Takt (10 Spielminuten, server/BanditsNPCBearServer.lua slowTickBody) -> B.GrowSlow: g waechst, Leben abgleichen und heilen,
@@ -471,17 +473,26 @@ end
 -- complete() / stop() / serverStop()). Sucht den Eintrag mit s.obj == animal (hoechstens 64 Sitzungen). on -> busyUntil = jetzt +
 -- busyMs (Deckel: eine nie beendete Aktion sperrt hoechstens so lange), sonst nil. Rueckgabe: true, wenn gefunden.
 -- getTimestampMs: Vanilla server/Foraging/forageServer.lua:456.
+-- F1 (PLAN_F1.md 5.3): wechselt die Marke (an/aus), geht die Sicht neu hinaus (busy; der Sitz-Treiber der Clients wartet so lange) --
+-- B.Touch des Eintrags, s.busySent merkt den gemeldeten Stand (laeuft die Marke von selbst ab, meldet es der Hirn-Takt).
 function B.BodyBusy(animal, on)
     if animal == nil or type(B._s) ~= "table" then return false end
     local n = 0
-    for _, s in pairs(B._s) do
+    for id, s in pairs(B._s) do
         n = n + 1
         if n > 64 then break end
         if type(s) == "table" and s.obj == animal then
-            if on == true then
+            local busy = on == true
+            if busy then
                 s.busyUntil = getTimestampMs() + cfg("busyMs", 20000)
             else
                 s.busyUntil = nil
+            end
+            if (s.busySent == true) ~= busy then
+                s.busySent = busy or nil
+                local reg = B.Reg and B.Reg()
+                local rec = reg and reg.cubs[id] or nil
+                if rec ~= nil and B.Touch then B.Touch(rec) end
             end
             return true
         end
@@ -747,9 +758,14 @@ end
 -- day, stg, nst / nxt (fehlen, wenn ausgewachsen).
 -- B1e (PLAN_B1E.md 4.2): bd = Koerper, den der Eintrag JETZT hat ("cub"/"big"), sz = dessen gezeigte Groesse (B.BodyNow ueber
 -- B.StatsOf). Ein Junges, dessen Tausch noch wartet, zeigt also bd "cub" und 0,75.
+-- F1 (PLAN_F1.md 5.3): fuer tame UND missing (das Baeren-Fenster zeigt auch einen vermissten Baeren); dazu die Erfahrung je Faehigkeit
+-- xAgi .. xNos (auf 0,1), carry (ganze Zahl), dodge / fgtB / fish (Prozent, auf 0,1) und nose (Kacheln, auf 0,1) aus B.StatsOf.
+-- Fehlt rec.hp (noch nie abgeglichen), fehlt hp -- nie 0.
 -- ---------------------------------------------------------------------------
+local VIEW_X = { "xAgi", "xVit", "xCon", "xFgt", "xFsh", "xNos" }
+
 function B.GrowView(rec, t)
-    if type(rec) ~= "table" or type(t) ~= "table" or rec.st ~= "tame" or not statsOk() then return end
+    if type(rec) ~= "table" or type(t) ~= "table" or not isTame(rec.st) or not statsOk() then return end
     local st = B.StatsOf(rec)
     t.sz = st.sz
     t.bd = st.body
@@ -769,6 +785,18 @@ function B.GrowView(rec, t)
     t.stg = st.stage
     t.nst = st.next
     t.nxt = st.nextDays
+    -- F1: Faehigkeiten (Erfahrung; Stufe und Fortschritt rechnet der Client mit B.SkillProgress auf demselben Feldnamen) und Werte.
+    -- Erfahrung ABGERUNDET auf 0,1: so zeigt der Client nie eine hoehere Stufe als der Schreiber rechnet (99,96 bliebe Stufe 0).
+    for i = 1, #VIEW_X do
+        local k = VIEW_X[i]
+        local v = num(rec[k])
+        if v ~= nil and v > 0 then t[k] = math.floor(v * 10 + 0.000001) / 10 end
+    end
+    t.carry = math.floor((num(st.carry) or 0) + 0.5)
+    t.dodge = B.Round1(num(st.dodge) or 0)
+    t.fgtB = B.Round1(num(st.fightBonus) or 0)
+    t.fish = B.Round1(num(st.fish) or 0)
+    t.nose = B.Round1(num(st.nose) or 0)
 end
 
 -- ---------------------------------------------------------------------------

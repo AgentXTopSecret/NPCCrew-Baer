@@ -304,6 +304,41 @@ function B.SpotNear(x, y, z, r, turn)
     return nil
 end
 
+-- F1 (PLAN_F1.md 2.4, 5.5): Zufallsziel fuer "Frei herumlaufen". Mittelpunkt = Heimat rec.hx/hy/hz (fehlt: rec.x/y/z), Kachel-Mitte.
+-- Bis B.CFG.tries Versuche: Winkel ZombRandFloat(0, 2 pi) und Abstand ZombRandFloat(0, r) (Form B.PickForestSquare oben, Bandits
+-- server/BanditServerSpawner.lua:217; zwei Zahlen wie Vanilla server/Foraging/forageServer.lua:98), Kachel getCell():getGridSquare
+-- (Vanilla server/Animal/ISPickDungCursor.lua:104). Gilt nur, wenn: Kachel-Mitte hoechstens r vom Mittelpunkt (nie hinaus), spotOk
+-- (Platzregeln wie B.SpotNear: Boden, kein Wasser/Baum, frei, kein Fahrzeug), mindestens roamMinStep vom Tier, und drinnen/draussen wie
+-- der Mittelpunkt: (sq:getRoom() == nil) == (Mitte:getRoom() == nil) -- getRoom wie Vanilla shared/Util/AdjacentFreeTileFinder.lua:240.
+-- getX/getY am Tier: Vanilla shared/Definitions/animal/ButcheringUtil.lua:575-576. Rueckgabe: Kachel oder nil (dann Pause, neuer Versuch).
+function B.RoamSpot(rec, a, r)
+    if type(rec) ~= "table" or a == nil then return nil end
+    r = tonumber(r)
+    if r == nil or r <= 0 then return nil end
+    local hx, hy, hz = tonumber(rec.hx), tonumber(rec.hy), tonumber(rec.hz)
+    if hx == nil or hy == nil then hx, hy, hz = tonumber(rec.x), tonumber(rec.y), tonumber(rec.z) end
+    if hx == nil or hy == nil then return nil end
+    hx, hy, hz = math.floor(hx), math.floor(hy), math.floor(hz or 0)
+    local cell = getCell()
+    local center = cell:getGridSquare(hx, hy, hz)
+    if center == nil then return nil end
+    local inside = center:getRoom() ~= nil
+    local mx, my = hx + 0.5, hy + 0.5
+    local ax, ay = a:getX(), a:getY()
+    local minStep = tonumber(B.CFG.roamMinStep) or 3
+    for _ = 1, B.CFG.tries do
+        local theta = ZombRandFloat(0, 2 * math.pi)
+        local d = ZombRandFloat(0, r)
+        local x = math.floor(mx + d * math.cos(theta))
+        local y = math.floor(my + d * math.sin(theta))
+        if B.DistXY(x + 0.5, y + 0.5, mx, my) <= r and B.DistXY(x + 0.5, y + 0.5, ax, ay) >= minStep then
+            local sq = cell:getGridSquare(x, y, hz)
+            if sq ~= nil and spotOk(sq) and (sq:getRoom() ~= nil) == inside then return sq end
+        end
+    end
+    return nil
+end
+
 -- B1c (PLAN_B1C.md 3.4): Kachel eines TOTEN Spielers mit diesem Schluessel (Besitzer starb im Auto). Rueckgabe x, y, z oder nil.
 -- Server: getOnlinePlayers() :size() / :get(i) (Vanilla server/Foraging/forageServer.lua:463-466); Einzelspieler:
 -- getNumActivePlayers() (client/Fishing/FishingHandler.lua:6), getSpecificPlayer(i) (server/BuildingObjects/ISBuildingObject.lua:183).
@@ -667,12 +702,16 @@ function B.ScanAnimals(players, force)
     local list = getCell():getObjectListForLua()
     if not list then return 0, 0 end
     players = players or B.Players()
+    B._aidSeen = {}                             -- F1: [id] = true, je Suchlauf neu (Deckel: Zahl der Eintraege); liest B.ReviveMissing
     local n = 0
     local loose = nil                           -- Tiere ohne Spiegel (Waisen-Kandidaten)
     local marked = nil                          -- { o, mark } mit Spiegel, ungebunden
     for i = 0, list:size() - 1 do
         local o = list:get(i)
         if instanceof(o, "IsoAnimal") and B.BodyKind(o) ~= nil and not o:isDead() then
+            -- F1 (Zusatz "F1 KERN"): der Suchlauf hat in dieser Sitzung einen unserer Baeren gesehen -- erst dann darf die Rueckkehr C1
+            -- im Mehrspieler einen neuen Koerper erzeugen (A3: getObjectListForLua am MP-Server unbelegt; ohne Beweis kein Doppel)
+            B._scanSeen = true
             local md = o:getModData()
             local mark = md and md[B.MARK]
             local hasMark = type(mark) == "table" and mark.id ~= nil
@@ -719,6 +758,10 @@ function B.ScanAnimals(players, force)
                     if o and o:getAnimalID() == rec.aid then
                         guard = guard or {}
                         guard[j] = true
+                        -- F1 (Zusatz "F1 KERN"): ein ungebundenes Tier mit der AnimalID dieses Eintrags ist geladen (auch
+                        -- weiter als 40 oder mehrdeutig) -- die Rueckkehr C1 erzeugt dann KEINEN neuen Koerper (der echte
+                        -- Koerper bliebe sonst als Waise zurueck)
+                        B._aidSeen[id] = true
                         if B.DistXY(o:getX(), o:getY(), rec.x, rec.y) <= 40 then
                             hit, hitL, hitM = o, j, nil
                             hits = hits + 1

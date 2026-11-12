@@ -96,7 +96,12 @@ AnimalDefinitions.animals[CUB] = {
     corpseSize = 1.0,
     minBlood = 200,
     maxBlood = 500,
-    trailerBaseSize = 100,
+    -- Nachbesserung F1 B2: nie in Vanillas Tier-Anhaenger (jeder Spieler koennte ihn sonst ohne Besitzfrage einladen; im Anhaenger ist
+    -- der Koerper nicht in der Welt -> "missing" -> C1 setzt einen neuen, der alte waere beim Ausladen ein zweiter Baer). Platz im
+    -- Anhaenger = trailerBaseSize x Groesse (NUR JAR dec/IsoAnimal.java:2794-2796); Vanilla graut die Zeile dann "zu gross" aus
+    -- (V:client/Vehicles/ISUI/ISVehicleMenu.lua:796-800, Anhaenger hoechstens 500: V:scripts/generated/vehicles/
+    -- vehicle_trailer_livestock.txt:51). Der Baer faehrt wie die Crew im Auto mit (B1c, Kevin ENTSCHEIDUNGEN.md:244).
+    trailerBaseSize = 100000,
     wild = false,                         -- Plan 0.1
     canBeDomesticated = false,
     alwaysFleeHumans = false,             -- Vorgabe waere true; die Scheu spielt unser Takt
@@ -182,7 +187,7 @@ if cubDef then
     d.maxWeight = 200
     d.minBlood = 800
     d.maxBlood = 2000
-    d.trailerBaseSize = 300
+    d.trailerBaseSize = 100000             -- Nachbesserung F1 B2: nie in den Tier-Anhaenger (siehe Junges oben)
     -- Nachbesserung B1e B4: Haltung der Figur beim Fuettern wie bei grossen Vanilla-Tieren (Kuh CowDefinitions.lua:245, Hirschkuh
     -- DeerDefinitions.lua:137; Knoten AnimSets/player/actions/AnimalLureHigh.xml) statt gebueckt wie beim Jungen (oben "AnimalLureLow").
     -- Die Fuetter-Aktion spielt a:getFeedByHandAnim() (shared/TimedActions/BanditsNPCBearFeedAction.lua). Im Spiel ansehen.

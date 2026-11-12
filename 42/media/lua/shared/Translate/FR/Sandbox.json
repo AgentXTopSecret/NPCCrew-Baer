@@ -49,6 +49,8 @@
     "Sandbox_BanditsNPC_BearPetCooldownMinutes_tooltip": "Minutes de jeu avant de pouvoir caresser à nouveau le même ourson. S'applique aussi une fois apprivoisé.",
     "Sandbox_BanditsNPC_BearRideDistance": "Ours : distance pour monter à bord",
     "Sandbox_BanditsNPC_BearRideDistance_tooltip": "En cases. Un ourson qui suit son propriétaire monte dans le véhicule avec lui s'il est au plus à cette distance.",
+    "Sandbox_BanditsNPC_BearRoamRadius": "Ours : rayon de balade (cases)",
+    "Sandbox_BanditsNPC_BearRoamRadius_tooltip": "Jusqu'où un ours en Balade libre peut s'éloigner de l'endroit où vous avez donné l'ordre.",
     "Sandbox_BanditsNPC_BearTameFavoriteBonus": "Apprivoisement : bonus nourriture préférée",
     "Sandbox_BanditsNPC_BearTameFavoriteBonus_tooltip": "Pourcentage de confiance en plus pour le miel et le poisson.",
     "Sandbox_BanditsNPC_BearTameFeedPoints": "Apprivoisement : points par repas",

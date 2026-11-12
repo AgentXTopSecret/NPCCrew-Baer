@@ -49,6 +49,8 @@
     "Sandbox_BanditsNPC_BearPetCooldownMinutes_tooltip": "Minutos de jogo antes que o mesmo filhote possa receber carinho de novo. Vale também depois de domado.",
     "Sandbox_BanditsNPC_BearRideDistance": "Urso: distância para ir junto no veículo",
     "Sandbox_BanditsNPC_BearRideDistance_tooltip": "Em quadrados. Um filhote que está seguindo entra no veículo com o dono se estiver no máximo a essa distância.",
+    "Sandbox_BanditsNPC_BearRoamRadius": "Urso: raio para passear (quadrados)",
+    "Sandbox_BanditsNPC_BearRoamRadius_tooltip": "Até onde um urso em Passear livre pode se afastar do lugar onde você deu a ordem.",
     "Sandbox_BanditsNPC_BearTameFavoriteBonus": "Domar: bônus por comida favorita",
     "Sandbox_BanditsNPC_BearTameFavoriteBonus_tooltip": "Porcentagem a mais de confiança com mel e peixe.",
     "Sandbox_BanditsNPC_BearTameFeedPoints": "Domar: pontos por alimentação",

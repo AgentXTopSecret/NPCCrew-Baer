@@ -11,6 +11,10 @@
 -- B1e (PLAN_B1E.md 1.4, 3.2 Nr. 12): alles gilt fuer BEIDE Koerper -- das Junge (Art B.CUB) und den grossen Koerper ab Halbstark
 -- (Art B.BIG). Ob ein Tier unser Baer ist, fragt nur B.BodyKind (Kern, einziger Art-Vergleich); "bear" (Test-Baer) bekommt nichts.
 -- Beim grossen Koerper (Sicht bd == "big") heissen "Name the bear", der Call-Tooltip und die Wartezeit "bear" statt "cub" (U.TB).
+-- F1 (PLAN_F1.md 3.3, 4a): am eigenen gezaehmten Baeren zusaetzlich "Bear window" (oeffnet das Baeren-Fenster,
+-- client/ISUI/BanditsNPCBearWindow.lua); Gruende der Vorpruefung und "Hold out food" je Koerper (U.WhyText / U.TB mit bd); der
+-- Umschalter kennt vier Modi (bei follow "Stay here", sonst "Follow me"); "Futter hinhalten" lockt nur einen BLEIBENDEN Baeren (der
+-- Schreiber lockt im Sitzen und beim freien Herumlaufen nicht, PLAN_F1.md 2.3/2.4).
 --
 -- Das Menue BIETET nur AN. Es stellt Zeitaktionen an (Fuettern, Streicheln, Koeder) bzw. schickt eine Bitte (Koederplatz
 -- aufgeben); ob etwas gilt, entscheidet der Schreiber in complete() bzw. in B.Handle (Einzelspieler: dasselbe Programm,
@@ -181,7 +185,7 @@ local function addFeed(menu, playerObj, animal, v, me, key)
     if v and me then
         local ok, whyKey, whyVal = B.CheckFeed(v, key, me, B.Now())
         if not ok then
-            setGray(feedOpt, U.WhyText(whyKey, whyVal))
+            setGray(feedOpt, U.WhyText(whyKey, whyVal, v.bd))
             return
         end
     end
@@ -204,18 +208,20 @@ local function addPet(menu, playerObj, animal, v, me, key)
     if v and me then
         local ok, whyKey, whyVal = B.CheckPet(v, key, me, B.Now())
         if not ok then
-            setGray(petOpt, U.WhyText(whyKey, whyVal))
+            setGray(petOpt, U.WhyText(whyKey, whyVal, v.bd))
             return
         end
     end
     tipStatus(petOpt, v)
 end
 
--- Zustand des Jungen laut Sicht (Regel des Kerns B.ModeOf, Plan 5.3: nil und alles andere heisst "stay").
+-- Zustand des Jungen laut Sicht (Regel des Kerns B.ModeOf, Plan 5.3: nil und alles andere heisst "stay"; F1: follow / stay / sit /
+-- roam, PLAN_F1.md 7.2).
 local function modeOf(v)
     local f = B.ModeOf
     if f then return f(v) end
-    if v.mode == "follow" then return "follow" end
+    local m = v.mode
+    if m == "follow" or m == "sit" or m == "roam" then return m end
     return "stay"
 end
 
@@ -280,6 +286,18 @@ local function addCall(menu, playerObj, v)
     setTip(opt, nil, U.TB("UI_BN_Bear_Menu_CallTip", v.bd, math.floor(mins)))
 end
 
+-- F1 (PLAN_F1.md 3.3): "Bear window" -- oeffnet das Baeren-Fenster dieses Baeren (U.WinOpen, client/ISUI/BanditsNPCBearWindow.lua).
+local function onWindow(playerObj, id)
+    if not playerObj or id == nil or not U.WinOpen then return end
+    U.WinOpen(playerObj, id)
+end
+
+local function addWindow(menu, playerObj, v)
+    if not U.WinOpen then return end
+    local opt = menu:addOption(U.T("UI_BN_Bear_Menu_Window"), playerObj, onWindow, v.id)    -- Form wie :241 / ISAnimalContextMenu.lua:287
+    setTip(opt, nil, U.T("UI_BN_Bear_Menu_WindowTip"))
+end
+
 -- Ein Junges: Vanillas Untermenue suchen (fehlt es, auf die oberste Ebene), "Kill" entfernen, eigene Punkte anhaengen.
 local function cubMenu(context, playerObj, animal, name, nth)
     local menu = context
@@ -309,6 +327,8 @@ local function cubMenu(context, playerObj, animal, name, nth)
         addName(menu, playerObj, v)
         -- B1c: "Call to me" (Plan 1.5)
         addCall(menu, playerObj, v)
+        -- F1: "Bear window" (PLAN_F1.md 3.3)
+        addWindow(menu, playerObj, v)
     end
 end
 
@@ -405,27 +425,30 @@ end
 -- Steht ein Junges mit Objekt in B.CFG.lureDist Kacheln um den Spieler, das auf sein Futter reagiert? Wie die Regel des
 -- Schreibers (server keysOf): scheue (new/shy) jeder, angefuetterte nur der Gebundene, gezaehmte nur der Besitzer -- und nur,
 -- solange es bleibt: ein folgendes Junges rechnet B.FollowDecide, dort spielt Futter keine Rolle (Nachbesserung B1b B6).
+-- F1 (PLAN_F1.md 2.3, 2.4, 4a): gezaehmt nur im Modus "stay" (sitzend und frei herumlaufend lockt der Schreiber nicht). Gibt das
+-- naechste passende Junge zurueck (fuer den Text je Koerper), sonst nil.
 local function holdWanted(playerObj, key)
-    if not U.CubsNear or key == nil then return false end
+    if not U.CubsNear or key == nil then return nil end
     local near = U.CubsNear(playerObj, B.CFG.lureDist or 15)
     for i = 1, #near do
         local c = near[i].c
         local st = c.st
-        if st == "new" or st == "shy" then return true end
-        if st == "fed" and c.bond == key then return true end
-        if st == "tame" and c.owner == key and modeOf(c) ~= "follow" then return true end
+        if st == "new" or st == "shy" then return c end
+        if st == "fed" and c.bond == key then return c end
+        if st == "tame" and c.owner == key and modeOf(c) == "stay" then return c end
     end
-    return false
+    return nil
 end
 
-local function addHold(context, playerObj)
-    local opt = context:addOption(U.T("UI_BN_Bear_Menu_Hold"), nil, nil)
+local function addHold(context, playerObj, c)
+    local bd = c and c.bd
+    local opt = context:addOption(U.TB("UI_BN_Bear_Menu_Hold", bd), nil, nil)
     local rows = B.FoodList(playerObj, B.CFG.menuFoods)
     if not rows or #rows == 0 then
         setGray(opt, U.T("UI_BN_Bear_Menu_NoFood"))
         return
     end
-    setTip(opt, nil, U.T("UI_BN_Bear_Menu_HoldTip"))
+    setTip(opt, nil, U.TB("UI_BN_Bear_Menu_HoldTip", bd))
     local sub = ISContextMenu:getNew(context)                   -- client/ISUI/Animal/ISAnimalContextMenu.lua:48
     context:addSubMenu(opt, sub)                                -- :49
     for _, row in ipairs(rows) do
@@ -465,9 +488,10 @@ local function onFillWorld(player, context, worldobjects, test)
 
     -- B1b: Futter hinhalten -- nur wenn ein passendes Junges nah ist (sonst kein Menue-Muell in der Stadt). Steht VOR dem Riegel
     -- des Koeder-Teils: auch mit ausgeschaltetem Koeder oder ausgeschalteten neuen Jungen bleibt das eigene Junge lockbar.
-    if holdWanted(playerObj, B.PlayerKey(playerObj)) then
+    local holdCub = holdWanted(playerObj, B.PlayerKey(playerObj))
+    if holdCub then
         if test then return ISWorldObjectContextMenu.setTest() end
-        addHold(context, playerObj)
+        addHold(context, playerObj, holdCub)
     end
 
     -- Auslegen: nur wenn Junge und Koeder eingeschaltet sind (sonst kein Menue-Muell).

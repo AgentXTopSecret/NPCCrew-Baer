@@ -2,7 +2,8 @@
 -- NPC Crew -- Baer, Client-Seite der Befehle und Meldungen (B1a, PLAN_ZAEHMEN.md 5.6, 6.2.4, 6.2.6; B1b, PLAN_B1B.md 5.4:
 -- Namen fuer das Schild, neue Texte; B1c, PLAN_B1C.md 6.4/6.7: neue Texte, Ankunftszeit der Sicht U.viewAt; B1d, PLAN_B1D.md
 -- 6.5/6.7: Meldungen "stage" (Stufe erreicht) und "skill" (Faehigkeit gestiegen), U.StageName, Texte fuer Schild und Optionen;
--- B1e, PLAN_B1E.md 6.4/6.5/6.8: Texte je Koerper -- U.TB, Big-Fassungen in U.NoteText und U.CubName, Texte der Markierungs-Groesse).
+-- B1e, PLAN_B1E.md 6.4/6.5/6.8: Texte je Koerper -- U.TB, Big-Fassungen in U.NoteText und U.CubName, Texte der Markierungs-Groesse;
+-- F1, PLAN_F1.md 4a/7.6: Texte des Baeren-Fensters und der neuen Befehle, U.WhyText mit Koerper bd).
 --
 -- Laeuft im Einzelspieler und auf jedem MP-Client (der dedizierte Server laedt client/ nicht). Diese Datei entscheidet NICHTS:
 -- sie nimmt die Sicht ("Sync") und die Meldungen ("Note") des Schreibers an, zeigt Meldungen ueber der Figur und bittet beim
@@ -188,6 +189,127 @@ U.EN = {
     UI_BN_Bear_MO_Pct200 = "200%%",
     UI_BN_Bear_MO_Pct250 = "250%%",
     UI_BN_Bear_MO_Pct300 = "300%%",
+    -- F1 (PLAN_F1.md 7.6): Baeren-Fenster (Win_*), Rechtsklick "Bear window", Fenstergroesse (MO_WinSize*), Schild Sitz/Frei,
+    -- die neuen Meldungen des KERNs mit Big-Fassung (U.NoteText waehlt sie bei bd == "big") und die B1e-Reste A1/B6
+    -- (Why_GoneBig, Note_DeadBig, Menu_HoldBig, Menu_HoldTipBig). Die zwei Tasten-Schluessel UI_optionscreen_binding_* liest
+    -- Vanillas Tastaturbelegung selbst (nur in UI.json).
+    UI_BN_Bear_Win_BodyCub = "Bear cub",
+    UI_BN_Bear_Win_BodyBear = "Bear",
+    UI_BN_Bear_Win_Sub = "%1 - day %2",
+    UI_BN_Bear_Win_Next = "%1 in %2 day(s)",
+    UI_BN_Bear_Win_Grown = "full-grown",
+    UI_BN_Bear_Win_St_Follow = "Following you",
+    UI_BN_Bear_Win_St_Stay = "Staying",
+    UI_BN_Bear_Win_St_Sit = "Sitting",
+    UI_BN_Bear_Win_St_Roam = "Roaming",
+    UI_BN_Bear_Win_St_Come = "Coming to you",
+    UI_BN_Bear_Win_St_Hide = "Hiding",
+    UI_BN_Bear_Win_St_Ride = "Riding with you",
+    UI_BN_Bear_Win_St_Missing = "Missing",
+    UI_BN_Bear_Win_St_Away = "Out of reach",
+    UI_BN_Bear_Win_Here = "right next to you",
+    UI_BN_Bear_Win_Dist = "%1 tiles to the %2",
+    UI_BN_Bear_Win_LastSeen = "last seen %1 tiles to the %2",
+    UI_BN_Bear_Win_Count = "%1 / %2",
+    UI_BN_Bear_Win_Rename = "Rename",
+    UI_BN_Bear_Win_Cond = "Condition",
+    UI_BN_Bear_Win_Skills = "Skills",
+    UI_BN_Bear_Win_Orders = "Orders",
+    UI_BN_Bear_Win_Health = "Health",
+    UI_BN_Bear_Win_Stamina = "Stamina",
+    UI_BN_Bear_Win_Carry = "Can carry",
+    UI_BN_Bear_Win_CarryVal = "up to %1",
+    UI_BN_Bear_Win_None = "--",
+    UI_BN_Bear_Win_Later = "Coming later:",
+    UI_BN_Bear_Win_Hunger = "Hunger",
+    UI_BN_Bear_Win_Thirst = "Thirst",
+    UI_BN_Bear_Win_Tired = "Tiredness",
+    UI_BN_Bear_Win_Trust = "Trust",
+    UI_BN_Bear_Win_HealthTip = "Grows every day as your bear grows, and with Toughness. Heals slowly on its own.",
+    UI_BN_Bear_Win_StaminaTip = "Drops while your bear runs and comes back while it rests. More with Endurance. It matters once bears fight (comes later).",
+    UI_BN_Bear_Win_CarryTip = "How much your bear could carry. Its own inventory and bags come later.",
+    UI_BN_Bear_Win_LaterTip = "Hunger, thirst, tiredness and trust come with a later version. Nothing is counted yet.",
+    UI_BN_Bear_Win_Sk_Agi = "Agility",
+    UI_BN_Bear_Win_Sk_Vit = "Toughness",
+    UI_BN_Bear_Win_Sk_Con = "Endurance",
+    UI_BN_Bear_Win_Sk_Fgt = "Fighting",
+    UI_BN_Bear_Win_Sk_Fsh = "Fishing",
+    UI_BN_Bear_Win_Sk_Nos = "Keen nose",
+    UI_BN_Bear_Win_Lv = "Lv %1",
+    UI_BN_Bear_Win_Pct = "%1%%",
+    UI_BN_Bear_Win_Max = "max",
+    UI_BN_Bear_Win_SkHead = "%1 - level %2",
+    UI_BN_Bear_Win_SkProg = "%1 of %2 to level %3",
+    UI_BN_Bear_Win_SkTop = "Level 10 - the highest level.",
+    UI_BN_Bear_Win_SkTip_Agi = "A hit misses your bear completely: %1%% now, %2%% at level 10.",
+    UI_BN_Bear_Win_SkFrom_Agi = "Grows with every hit your bear takes.",
+    UI_BN_Bear_Win_SkTip_Vit = "Adds +%1%% health on top of the daily growth.",
+    UI_BN_Bear_Win_SkFrom_Vit = "Grows with every hit your bear takes.",
+    UI_BN_Bear_Win_SkTip_Con = "Bigger stamina bar (+%1%%) and faster rest.",
+    UI_BN_Bear_Win_SkFrom_Con = "Grows when your bear runs and gets out of breath.",
+    UI_BN_Bear_Win_SkTip_Fgt = "+%1%% damage now, +%2%% at level 10, on top of the daily growth.",
+    UI_BN_Bear_Win_SkFrom_Fgt = "Grows with every hit your bear lands.",
+    UI_BN_Bear_Win_SkTip_Fsh = "Catch chance %1%% (from half-grown; clumsy at first, much better later).",
+    UI_BN_Bear_Win_SkFrom_Fsh = "Grows while your bear fishes.",
+    UI_BN_Bear_Win_SkTip_Nos = "Smells zombies earlier and warns you with a growl: %1 tiles.",
+    UI_BN_Bear_Win_SkFrom_Nos = "Grows when it sniffs out zombies.",
+    UI_BN_Bear_Win_LaterFight = "Works once bears fight - comes later.",
+    UI_BN_Bear_Win_LaterFish = "Fishing comes later.",
+    UI_BN_Bear_Win_LaterNose = "Comes later and can be switched off.",
+    UI_BN_Bear_Win_LaterGrow = "Only grows once bears fight - comes later. The bonus already counts.",
+    UI_BN_Bear_Win_Follow = "Follow",
+    UI_BN_Bear_Win_Stay = "Stay",
+    UI_BN_Bear_Win_Sit = "Sit",
+    UI_BN_Bear_Win_Roam = "Roam free",
+    UI_BN_Bear_Win_Come = "Come here",
+    UI_BN_Bear_Win_Unstuck = "Unstuck",
+    UI_BN_Bear_Win_UnstuckWait = "Unstuck  %1",
+    UI_BN_Bear_Win_CallWaitClock = "You can call your cub again in %1.",          -- Nachbesserung F1 B6 (Tooltip mit m:ss)
+    UI_BN_Bear_Win_CallWaitClockBig = "You can call your bear again in %1.",
+    UI_BN_Bear_Win_Passive = "Passive",
+    UI_BN_Bear_Win_Tag = "Name tag",
+    UI_BN_Bear_Win_StayTip = "It stays right at this spot and waits.",
+    UI_BN_Bear_Win_SitTip = "It sits down right here and stays sitting until you give another order.",
+    UI_BN_Bear_Win_RoamTip = "It strolls around freely, but never further than %1 tiles from this spot.",
+    UI_BN_Bear_Win_ComeTip = "It walks over to you and waits there. If it is stuck, use Unstuck.",
+    UI_BN_Bear_Win_PassiveTip = "Your bear stays out of fights and keeps to its order or comes back to you. No effect yet: fighting comes with a later version. A cub never fights anyway.",
+    UI_BN_Bear_Win_TagTip = "Shows the name above this bear - only on your screen.",
+    UI_BN_Bear_Win_TagOffAll = "All name tags are switched off in Options - Mods.",
+    UI_BN_Bear_Win_RoamInfo = "Roams within %1 tiles",
+    UI_BN_Bear_Win_Active = "This is its current order.",
+    UI_BN_Bear_Win_Hint = "Drag to move.  %1 or Esc closes.",
+    UI_BN_Bear_Win_HintEsc = "Drag to move.  Esc closes.",
+    UI_BN_Bear_Win_HintMissing = "No body now. It can come back while you are near, or use Unstuck.",
+    UI_BN_Bear_Win_HintRide = "It rides with you and gets out when you stop.",
+    UI_BN_Bear_Win_HintAway = "Too far away for orders. Unstuck brings it to you.",
+    UI_BN_Bear_Win_NoBear = "You do not have a bear yet.",
+    UI_BN_Bear_Win_NoData = "The bear window is still loading. Try again in a moment.",
+    UI_BN_Bear_Menu_Window = "Bear window",
+    UI_BN_Bear_Menu_WindowTip = "Also opens with a key - Options, Key bindings, NPC Crew: Bear.",
+    UI_BN_Bear_MO_WinSize = "Size of the bear window",
+    UI_BN_Bear_MO_WinSizeTip = "Auto grows with the screen height (1080p = 100%%, 4K = 200%%).",
+    UI_BN_Bear_Tag_Sit = "sitting",
+    UI_BN_Bear_Tag_Roam = "roaming",
+    UI_BN_Bear_Note_Sit = "Your cub sits down.",
+    UI_BN_Bear_Note_SitBig = "Your bear sits down.",
+    UI_BN_Bear_Note_Roam = "Your cub roams around here (up to %1 tiles).",
+    UI_BN_Bear_Note_RoamBig = "Your bear roams around here (up to %1 tiles).",
+    UI_BN_Bear_Note_Coming = "Your cub is coming to you.",
+    UI_BN_Bear_Note_ComingBig = "Your bear is coming to you.",
+    UI_BN_Bear_Note_Came = "Your cub is with you and waits here.",
+    UI_BN_Bear_Note_CameBig = "Your bear is with you and waits here.",
+    UI_BN_Bear_Note_ComeFail = "Your cub could not get to you. It waits where it is.",
+    UI_BN_Bear_Note_ComeFailBig = "Your bear could not get to you. It waits where it is.",
+    UI_BN_Bear_Note_PassiveOn = "Your cub is passive now. It keeps out of fights once bears can fight (comes later).",
+    UI_BN_Bear_Note_PassiveOnBig = "Your bear is passive now. It keeps out of fights once bears can fight (comes later).",
+    UI_BN_Bear_Note_PassiveOff = "Your cub is no longer passive.",
+    UI_BN_Bear_Note_PassiveOffBig = "Your bear is no longer passive.",
+    UI_BN_Bear_Why_OutOfReach = "Your cub is out of reach. Use Unstuck.",
+    UI_BN_Bear_Why_OutOfReachBig = "Your bear is out of reach. Use Unstuck.",
+    UI_BN_Bear_Why_GoneBig = "The bear is gone.",
+    UI_BN_Bear_Note_DeadBig = "Your bear is dead.",
+    UI_BN_Bear_Menu_HoldBig = "Hold out food for the bear",
+    UI_BN_Bear_Menu_HoldTipBig = "Takes it in your hand. Stand still and the bear comes closer.",
 }
 
 local KEY_HEAD = "UI_BN_Bear_"
@@ -227,17 +349,19 @@ end
 
 -- Text einer Ablehnung der Regel-Funktionen (B.CheckFeed, B.CheckPet, B.CheckBait): whyVal ist bei Wartezeiten die Reststunden,
 -- bei der Sperre die Resttage, sonst nil (Plan 6.2.2).
-function U.WhyText(whyKey, whyVal)
+-- F1 (PLAN_F1.md 4a, B1e-Rest A1/B6): bd = Koerper aus der Sicht ("big" -> Big-Fassung ueber U.TB, z. B. "The bear is gone."); ohne
+-- bd wie bisher.
+function U.WhyText(whyKey, whyVal, bd)
     if type(whyKey) ~= "string" then return "" end
-    if whyVal == nil then return U.T(whyKey) end
+    if whyVal == nil then return U.TB(whyKey, bd) end
     if whyKey == "UI_BN_Bear_Why_FeedWait" or whyKey == "UI_BN_Bear_Why_PetWait" then
-        return U.T(whyKey, U.WaitText(whyVal))
+        return U.TB(whyKey, bd, U.WaitText(whyVal))
     end
     if type(whyVal) == "number" then
-        if whyKey == "UI_BN_Bear_Why_Locked" then return U.T(whyKey, math.ceil(whyVal)) end
-        return U.T(whyKey, math.floor(whyVal))
+        if whyKey == "UI_BN_Bear_Why_Locked" then return U.TB(whyKey, bd, math.ceil(whyVal)) end
+        return U.TB(whyKey, bd, math.floor(whyVal))
     end
-    return U.T(whyKey, tostring(whyVal))
+    return U.TB(whyKey, bd, tostring(whyVal))
 end
 
 -- B1d (PLAN_B1D.md 6.5): Name einer Wachstums-Stufe ("half" / "strong" / "adult"), sonst "?". Gerufen fuer Meldungen und beim

@@ -52,6 +52,14 @@
 --   NCBear_CubStats()        druckt zusaetzlich body / want / engine type, ob der Tausch bereit ist (sonst warum nicht), letzter
 --                            Tausch, Fehlversuche
 --   NCBear_CubClean(), NCBear_CubMark()   sehen beide Koerper (B.BodyKind des Kerns), nie den Test-Baeren "bear"
+-- F1 (PLAN_F1.md 7.8): Baeren-Fenster, Befehle Sitz / Frei / Komm her / Passiv, Baer ohne Koerper (C1).
+--   NCBear_CubWin()          das Baeren-Fenster des eigenen Baeren oeffnen (dasselbe wie die Taste V / Rechtsklick "Bear window")
+--   NCBear_CubBodyGone()     den Koerper meines naechsten zahmen Baeren entfernen, der Eintrag BLEIBT (Absturz im Wechsel-Bild
+--                            nachstellen): nach 3 vergeblichen Suchlaeufen "vermisst", ~1-1,5 min spaeter (2 Suchlaeufe UND 60 s in
+--                            geladener Gegend, Nachbesserung F1 B1) bekommt er von selbst genau EINEN neuen Koerper (C1). Schneller:
+--                            NCBear_CubSet("reviveScans", 0) und NCBear_CubSet("reviveMs", 0)
+--   NCBear_CubView()         meinen Sicht-Eintrag drucken (mode, pas, ld, hide, sit, cm, busy, u, Erfahrung, carry, dodge ...)
+--   NCBear_CubStats()        druckt zusaetzlich mode, passive und die Sitzung des Befehls (sat, standUntil, roam, come, revN)
 -- Rechtsklick auf eine Kachel, Untermenue "NC Bear": zwoelf Eintraege "Cub: ...". Texte hier sind englische Literale.
 -- Jeder Engine-Aufruf hat eine Vanilla-Fundstelle (Kommentar daneben). Statisch geprueft, nicht gespielt.
 --
@@ -931,6 +939,16 @@ function NCBear_CubStats()
     out("dodge " .. fix(st.dodge, 1) .. "% | fight bonus +" .. fix(st.fightBonus, 1) .. "% | catch chance " .. fix(st.fish, 1)
         .. "% | warning range " .. fix(st.nose, 1) .. " tiles")
     out("feed bonus gF " .. tostring(rec.gF) .. " (" .. tostring(rec.gFn) .. " on day " .. tostring(rec.gFd) .. ")")
+    -- F1 (PLAN_F1.md 7.8): Befehl und Sitzung des Befehls (Kern, nur lesen)
+    local so = B._s and B._s[rec.id]
+    local function ses(k)
+        if type(so) ~= "table" or so[k] == nil then return "-" end
+        if type(so[k]) == "table" then return "{...}" end
+        return tostring(so[k])
+    end
+    out("order: mode " .. modeOf(rec) .. " (raw " .. tostring(rec.mode) .. "), passive " .. tostring(rec.passive == true)
+        .. " | session sat " .. ses("sat") .. ", standUntil " .. ses("standUntil") .. ", roam " .. ses("roam") .. ", come "
+        .. ses("come") .. ", revN " .. ses("revN") .. ", revFail " .. ses("revFail"))
     local a = B.FindAnimal(rec)
     if a then
         -- animal:getData():getSize(): V:client/ISUI/Animal/ISAnimalUI.lua:31; animal:getHealth(): V:client/ISUI/Animal/ISAnimalUI.lua:15
@@ -971,6 +989,78 @@ function NCBear_CubHurt(pct)
 end
 
 -- ---------------------------------------------------------------------------
+-- F1 (PLAN_F1.md 7.8): Baeren-Fenster, Koerper weg (C1), Sicht drucken
+-- ---------------------------------------------------------------------------
+
+function NCBear_CubWin()
+    if B.IsSP and not B.IsSP() then
+        out("singleplayer only")
+        return
+    end
+    local U = B.UI
+    if not U or not U.WinOpen then
+        out("the bear window is not loaded (client/ISUI/BanditsNPCBearWindow.lua)")
+        return
+    end
+    local p = getSpecificPlayer(0)                      -- client/Farming/CFarmingSystem.lua:45
+    if not p then
+        out("no player yet")
+        return
+    end
+    local ok = U.WinOpen(p)
+    out(ok and "bear window open" or "bear window not opened (see the text above your character)")
+end
+
+function NCBear_CubBodyGone()
+    local p, key, reg = ready()
+    if not p then return end
+    local rec = myTame(p, key, reg)
+    if not rec then
+        say("no tamed cub of yours (NCBear_CubTame(100) first)")
+        return
+    end
+    local a = B.FindAnimal(rec)
+    if not a then
+        say("cub " .. tostring(rec.id) .. " has no living body right now (riding, not loaded or already missing)")
+        return
+    end
+    B.RemoveCub(a)                                      -- Kern: entfernt das Tier (server/BanditsNPCBearWorld.lua)
+    local s = B._s and B._s[rec.id]
+    if type(s) == "table" then s.obj = nil end
+    say("body of cub " .. tostring(rec.id) .. " removed, the entry stays: missing after ~15 s, back by itself about a minute later"
+        .. " (faster: NCBear_CubSet('reviveScans', 0) and NCBear_CubSet('reviveMs', 0))")
+end
+
+function NCBear_CubView()
+    if B.IsSP and not B.IsSP() then
+        out("singleplayer only")
+        return
+    end
+    local view = B.View
+    local U = B.UI
+    if not view or type(view.cubs) ~= "table" then
+        out("no view yet")
+        return
+    end
+    local list = (U and U.WinBears) and U.WinBears() or {}
+    if #list == 0 then
+        out("my view has no bear of mine (fresh: " .. tostring(U and U.Fresh and U.Fresh()) .. ")")
+        return
+    end
+    local keys = { "id", "st", "mode", "pas", "ld", "hide", "sit", "cm", "busy", "ride", "u", "bd", "sz", "x", "y", "callWait",
+        "hp", "hpMax", "sta", "staMax", "day", "nst", "nxt", "carry", "dodge", "fgtB", "fish", "nose",
+        "xAgi", "xVit", "xCon", "xFgt", "xFsh", "xNos" }
+    for _, v in ipairs(list) do
+        local parts = {}
+        for i = 1, #keys do
+            local k = keys[i]
+            if v[k] ~= nil then parts[#parts + 1] = k .. "=" .. tostring(v[k]) end
+        end
+        out("view: " .. table.concat(parts, " "))
+    end
+end
+
+-- ---------------------------------------------------------------------------
 -- Rechtsklick: Eintraege im vorhandenen Untermenue "NC Bear" (NCBearTest.lua nimmt Funktionen aus NCBearMenu.extra an und
 -- ruft sie nur im Einzelspieler). Keine alte Datei wird geaendert.
 -- ---------------------------------------------------------------------------
@@ -986,6 +1076,8 @@ local function menuForget() NCBear_CubForget() end
 local function menuCallReset() NCBear_CubCallReset() end
 local function menuGrow() NCBear_CubGrow(5) end
 local function menuStats() NCBear_CubStats() end
+local function menuWin() NCBear_CubWin() end
+local function menuBodyGone() NCBear_CubBodyGone() end
 
 NCBearMenu = NCBearMenu or {}
 NCBearMenu.extra = NCBearMenu.extra or {}
@@ -1003,4 +1095,6 @@ table.insert(NCBearMenu.extra, function(sub, square, player)
     sub:addOption("Cub: reset call cooldown", square, menuCallReset)
     sub:addOption("Cub: grow 5 days", square, menuGrow)
     sub:addOption("Cub: stats", square, menuStats)
+    sub:addOption("Cub: bear window", square, menuWin)
+    sub:addOption("Cub: lose the body (C1)", square, menuBodyGone)
 end)

@@ -12,6 +12,8 @@
 -- B.BIG (grosses Modell, ab Halbstark bis 1,35). Die EINZIGE Art-Frage ist B.BodyKind (nie "bear", "bearstag", "ncbearcubalt");
 -- B.NoteBd haengt bd = "big" an Meldungen, deren Text je Koerper anders ist. Stellwerte fuer den Tausch, Tempo und Abstaende je
 -- Koerper, Schild-Faktor, Streichel-Haltung und die neue Markierung (OBERFLAECHE) stehen in B.CFG.
+-- F1 (PLAN_F1.md 0.3, 5.1, 6): vier Modi B.MODES (follow / stay / sit / roam), Stellwerte fuer Bleiben, Sitz, Frei herumlaufen,
+-- Komm her und die Rueckkehr eines Baeren ohne Koerper (C1) in B.CFG, neue Sandbox-Option BearRoamRadius (Vorgabe 12).
 --
 -- Laeuft ohne NPC Crew und ohne Bandits. Am Ende kopiert das Uebernahme-Skript diese Datei unveraendert nach NPC Crew.
 -- Deshalb: auf Dateiebene wird kein fremdes Modul eingefangen; jeder Griff nach BanditsNPC.X passiert zur Laufzeit und
@@ -146,7 +148,23 @@ B.CFG = B.CFG or {
     staRunCost = 0.4, staRegen = 2, staViewStep = 10,     -- Ausdauer: Punkte je Kachel Rennen / Punkte je s Erholung / Sicht ab
     hpEps = 0.005, hpCommit = 0.02,                       -- Leben: Abgleich-Schwelle (Anteil) / sofort festschreiben ab Verlust
     hpLossEps = 0.0001,                                   -- Leben: jeder Verlust darueber ist Schaden (Gleitkomma-Rest; Nachbesserung B1d B3)
+    -- F1 (PLAN_F1.md 6.1). Abstaende in Kacheln (Tier-Mitte zu Kachel-Mitte der Heimat), Zeiten in Echtzeit-ms.
+    stayNear = 1.5,                                       -- "an seiner Stelle" bis (Sitz: einmal nachruecken, wenn weiter weg)
+    stayBack = 3,                                         -- Bleiben/Sitz: weiter weg -> zurueck
+    backRunDist = 8,                                      -- zurueck gehend bis, sonst rennend
+    sitSettleMs = 800,                                    -- so lange ruhig an der Stelle, dann "sitzt"
+    standMs = 2300,                                       -- Aufstehen 1,3 s + 1 s Frist (Clip "StandUp", Animset buck/idle)
+    roamMinStep = 3,                                      -- Frei: neues Ziel mindestens so weit vom Tier
+    roamPauseMin = 8000, roamPauseMax = 20000,            -- Frei: Pause zwischen zwei Wegen (ms, Zufall)
+    comeNear = 3, comeMaxMs = 30000,                      -- Komm her: angekommen bis / aufgeben nach
+    reviveScans = 2, reviveFailLog = 3,                   -- C1: Wartefrist in Vermissten-Suchlaeufen / Fehlerzeile ab Versuch
+    -- Nachbesserung F1 B1: C1 erst nach so viel Echtzeit in geladener Gegend mit Besitzer (seit dem ersten passenden Suchlauf) / eine
+    -- groessere Luecke zwischen zwei passenden Suchlaeufen (Gegend entladen, Spiel angehalten) beginnt die Frist neu
+    reviveMs = 60000, reviveGapMs = 50000,
 }
+
+-- F1 (PLAN_F1.md 0.3, 6.1): die vier Modi eines gezaehmten Baeren. Jeder andere Wert (auch nil) gilt als "stay" (B.ModeOf).
+B.MODES = B.MODES or { follow = true, stay = true, sit = true, roam = true }
 
 -- Sandbox-Optionen BanditsNPC.<Name> (Plan 3.1): Vorgabe und Bereich. Die Datei sandbox-options.txt nennt dieselben Zahlen.
 B.OPTS = B.OPTS or {
@@ -179,6 +197,8 @@ B.OPTS = B.OPTS or {
     BearFightBonusMax = { def = 70, min = 0, max = 200 },        -- Mehr-Schaden in Prozent auf Kaempfen 10
     BearHealAwake = { def = 1.0, min = 0.0, max = 10.0 },
     BearHealSleep = { def = 15.0, min = 0.0, max = 100.0 },
+    -- F1 (PLAN_F1.md 6.2): so weit darf ein Baer auf "Frei herumlaufen" von der Stelle des Befehls weg (Kevin ENT:284 "Radius 12")
+    BearRoamRadius = { def = 12, min = 4, max = 30 },
     BearLog = { def = false },
 }
 

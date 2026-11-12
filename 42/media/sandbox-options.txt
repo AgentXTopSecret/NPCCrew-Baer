@@ -214,6 +214,14 @@ option BanditsNPC.BearHealSleep
 	translation = BanditsNPC_BearHealSleep,
 }
 
+/* Roam free: a tamed bear never strays further than this from the spot where it was given the order (F1; the KERN keeps 12 because the engine wanders up to 8 tiles per axis). */
+option BanditsNPC.BearRoamRadius
+{
+	type = integer, min = 4, max = 30, default = 12,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearRoamRadius,
+}
+
 /* Diagnosis lines [TC-BEAR] in the console; real errors are always written. */
 option BanditsNPC.BearLog
 {

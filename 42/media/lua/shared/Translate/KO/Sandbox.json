@@ -49,6 +49,8 @@
     "Sandbox_BanditsNPC_BearPetCooldownMinutes_tooltip": "같은 새끼 곰을 다시 쓰다듬을 수 있을 때까지의 게임 시간(분)입니다. 길들인 뒤에도 적용됩니다.",
     "Sandbox_BanditsNPC_BearRideDistance": "곰: 함께 타기 거리",
     "Sandbox_BanditsNPC_BearRideDistance_tooltip": "칸 단위입니다. 따라오던 새끼 곰은 이 거리 안에 있으면 주인과 함께 차량에 탑니다.",
+    "Sandbox_BanditsNPC_BearRoamRadius": "곰: 돌아다니기 반경 (칸)",
+    "Sandbox_BanditsNPC_BearRoamRadius_tooltip": "자유롭게 다니기 상태의 곰이 명령을 내린 자리에서 벗어날 수 있는 거리입니다.",
     "Sandbox_BanditsNPC_BearTameFavoriteBonus": "길들이기: 좋아하는 음식 보너스",
     "Sandbox_BanditsNPC_BearTameFavoriteBonus_tooltip": "꿀과 생선으로 추가로 얻는 신뢰의 퍼센트입니다.",
     "Sandbox_BanditsNPC_BearTameFeedPoints": "길들이기: 먹이 1회당 점수",
