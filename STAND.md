@@ -62,7 +62,7 @@
 > F2 B5a Kampf: Zombies greifen GEZAEHMTE Baeren an, der Baer kaempft mit; Faehigkeiten wirken (Agilitaet, Leben, Kondition, Kaempfen,
 >    Ausdauer/Verschnaufen, Heilen wach/Schlaf/von Hand); alte NCBear*-Dateien auf NPC-Crew-Namen.
 > F3 Beduerfnisse + Schlafen (Hunger, Muedigkeit; `begleiter/SCHLAF_PLAN.md` K1-K21: schlaeft selbst, wacht bei Zombies auf).
-> F4 Traglast/Inventar am Baeren. F5 Spuernase (abschaltbar) + Fischen (ab Halbstark). F6 Mehrspieler-Pruefung aller Teile.
+> F4 Traglast/Inventar am Baeren. F5 Spuernase (abschaltbar) + Fischen (ab Halbstark; Balance Kevin 12.11.: Ertrag = NPC-Angler gleicher Stufe x 0,5 halbstark .. 1,0 ausgewachsen, ENTSCHEIDUNGEN.md unten). F6 Mehrspieler-Pruefung aller Teile.
 > Kleinfragen unterwegs: empfohlenen Weg bauen, morgens als Liste zeigen. Kevins Wuensche: `begleiter/ENTSCHEIDUNGEN.md` + `PLAN.md` + UEBERGABE.md 4.
 > **Wecker 4533eb5c am 12.11. ~02:00 auf Kevins Wort GELOESCHT (kein Wecker mehr aktiv).** Frueher: Wecker NUR in dieser Sitzung: Cron `c5ad71b2` (einmal 20:03: Start, vier Laeufe) und `4533eb5c` (:04/:19/:34/:49 Verbrauch pruefen: 5 h >= 85 % anhalten,
 > <= 20 % fortsetzen, Woche >= 98 % alles stoppen + UEBERGABE_LIMIT.md). Morgens auf Kevins Stopp: CronDelete beider Wecker.

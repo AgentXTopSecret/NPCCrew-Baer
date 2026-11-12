@@ -420,3 +420,17 @@ im worklfow?'* -> nur teilweise: baer-gross hob ein 3-cm-Band an (Farbsprung 18,
   Tooltip nennt Stufe und ungefaehren Tag, ab dem es weitergeht (PLAN_F2.md 11.4).
 * Nachtrag ~06:30, woertlich: *'oder der balken ist ausgegraut also so dunkler das faend ichn och besser'* -> dann *'zusaetzlich'* -> **Fest:** am Alters-Deckel ist der
   Balken der Faehigkeit ausgegraut (dunkler, Stufe gedimmt) UND daneben steht klein "max for its age"; der Tooltip erklaert Stufe und ungefaehren Tag.
+
+## Fischen: Balance gegen den NPC-Angler (Kevin 12.11.2026 ~06:55)
+Vorher die Frage "wer fischt besser, Mensch oder mittelgrosser Baer?" (Antwort: halbstark schlechter, ausgewachsen am flachen Fluss besser). Woertlich:
+*'mach einfach sowie du meintest halbstark schlechter als ein npc und ausgewachsen besser als ein npc aber nicht viel besser weil sonst wird der die
+ganze base alleine versorgen das waere broken weil der ja keinen koeder/angel braucht ;D also mein vorschlag ich eher angeln 50% so stark wie ein npc
+und ausgewachsen fuer die balance genauso stark wie ein npc also wenn beide stufe 0 fischen haben und bei stufe 10 fischen sollen die auch gleich gut
+dann sein verstehst du?'*
+* **Fest (fuer F5):** Fang-Ertrag des Baeren = Ertrag eines NPC-Anglers von NPC Crew mit GLEICHER Fischen-Stufe x Groessen-Faktor. Faktor **0,5 bei
+  halbstark** (Tag ~15), steigt mit dem Wachsen auf **1,0 bei ausgewachsen** (Tag 100), nie darueber. Stufe 0 Baer (ausgewachsen) = NPC Stufe 0,
+  Stufe 10 Baer (ausgewachsen) = NPC Stufe 10. Junges fischt nicht.
+* Grund (Kevin): der Baer braucht keinen Koeder und keine Angel -- besser als der NPC waere "broken" (versorgt sonst die ganze Basis allein).
+* F5 liest die Ertrags-Rechnung des NPC-Anglers in NPC Crew nach (nur lesen: `42/media/lua/.../BanditsNPCFishing.lua`, `BanditsNPCFishNet*.lua`)
+  und rechnet mit DERSELBEN Formel x Faktor (keine zweite Wahrheit; fehlt NPC Crew in der Test-Mod: dieselben Zahlen als Kopie mit Fundstelle). Die
+  B1d-Platzhalter `fishBase 10 / fishMax 60` werden dadurch ersetzt. Offene F5-Fragen (von selbst/Befehl, Fische bringen, Zusehen) bleiben offen.
