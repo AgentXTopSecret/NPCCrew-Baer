@@ -377,3 +377,13 @@ verschwinden aus dem ui weil er dann unnoetig waere wenn das geht ;D'* -- *'also
 * **Fest (mit Lauf baer-f1b):** Schalter je Baer im Baeren-Fenster fuer die Zeile "Day 12 - half-grown in 3 day(s)" ueber dem Baeren (gespeichert
   wie der Namensschild-Schalter, nur auf dem eigenen Rechner; die Option in Optionen > Mods bleibt Hauptschalter). Ausgewachsen: Zeile ueber dem
   Baeren UND Schalter im Fenster verschwinden (heute stuende dort dauerhaft "Day N - full-grown").
+
+## "Show damage" und "Melee damage" im Baeren-Fenster (Kevin 12.11.2026 ~05:00)
+Woertlich: *'ich will auch noch im ui ein "show damage" button das ueber den kopf der zombies/banditen dann der dmg steht den der dmg austeilt wie
+bei der mod show damage die ich auch installiert habe und im ui haett ich gern noch bei COndition ein Meele damage reiter damit man sieht wie viel
+schaden er aktuell macht mit seiner aktuellen groesse eventuell auch mit dem skill zsm rechnen?'*
+* **Fest (mit F2, Nachtrag `../_arbeit/baer_zaehmen/PLAN_F2.md` Abschnitt 11):** Schalter "Show damage" im Fenster (je Spieler gespeichert, Vorgabe
+  an): Schadenszahl schwebt ueber dem Kopf jedes Zombies/Banditen, den der EIGENE Baer trifft, in derselben Einheit wie Kevins Mod CombatText
+  (Workshop 2286124931, nur gelesen, nichts kopiert). Zeigt CombatText die Baeren-Treffer schon selbst: Vorgabe aus, Frage an Kevin.
+* Zeile "Melee damage" unter Condition: Schaden je Treffer JETZT, aus Groesse UND Kaempfen-Stufe (und Sandbox-Prozent) -- dieselbe Rechnung wie im
+  Kampf (`B.MeleeDamage`), Tooltip mit allen freigeschalteten Angriffen; das Junge kaempft nicht ("--").
