@@ -1,5 +1,9 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **12.11. ~19:35: Kevin waehlt Fenster-Variante B** (*"B (breit)"*, Umbau mit F3). **F3-Forschung + Plan gestartet:** `wf_881b0108-ad0` (Task whr8tzmw4, 2 Agenten,
+> scriptPath `C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel/f3_plan_workflow.js`) -> `../_arbeit/baer_zaehmen/f3/` (FORSCHUNG_F3.md, PLAN_F3.md mit hoechstens 6 Kevin-Fragen).
+> F3-BAU erst nach baer-aussehen (gleiche Dateien).
+
 > **12.11. ~18:50 UI-ENTWURF (Kevin: *"kannst du mir zeigen wie das ui dann aussehn wird? weil da muss ja noch paar dinge dazu kommen"*):** Lauf **baer-ui-entwurf**
 > `wf_c13848bf-590` (Task w4htjlbmk, 2 Agenten): Prototyp-Kopie des Fenster-Codes + Aussehen/F3/F4/F5, gezeichnet mit der echten Mitschrift-Kette -> `../_arbeit/baer_zaehmen/ui_entwurf/`.
 > **FERTIG ~19:25** (Pruefer: bestanden): Bilder `ui_entwurf/KEVIN_fenster_entwurf_klar_1080.png` (A hoch, 640x762), `..._B_klar_1080.png` (B breit, 769x615, Empfehlung),

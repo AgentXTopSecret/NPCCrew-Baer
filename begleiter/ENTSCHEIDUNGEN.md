@@ -517,3 +517,6 @@ also baby und ganz gross?'*
   kann nicht sterben, Flucht-Schwelle, Schaden des Baeren %, Heil-Tempo %); alle anderen feste Werte (heutige Vorgaben), Zombies/Banditen greifen immer an.
   Umsetzung im Lauf baer-aussehen (CTX "SANDBOX-KUERZUNG"). Nachfrage Kevin: *"was soll denn nummer 12 sein schaden pro % ?"*
   Nach der Erklaerung (Schaden, den der Baer austeilt, 10-300 %, 100 = normal): *"ja okay den rest koennen wir so lassen"* -> die 12er-Liste ist FEST (inkl. Schaden %).
+* Kevin (12.11. ~19:30) zum UI-Entwurf (`../_arbeit/baer_zaehmen/ui_entwurf/`, A hoch / B breit): *"B (breit)"* -> **Fest: Baerenfenster Variante B** -- drei Karten
+  nebeneinander (Condition | Needs | Skills), Befehle in 5 Spalten (Reihe 1 Befehle, Reihe 2 Handgriffe Fish/Unstuck/Look/Inventory/Bandage, Reihe 3 Schalter).
+  Umbau mit F3 (bringt die Needs-Karte); Vorlage `ui_entwurf/proto/`. Der laufende Aussehen-Lauf baut seinen Knopf noch im heutigen Layout.
