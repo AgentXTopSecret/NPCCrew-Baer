@@ -495,3 +495,6 @@ also baby und ganz gross?'*
 * Kevin (12.11. ~10:50) zu den deutschen Begriffen: Ueberschrift **"Faehigkeiten"** (nicht Fertigkeiten), Balken **"Leben"** (nicht Gesundheit), Knopf
   Unstuck = **"Herholen"** (wie NPC Crew DE), mittlere Stufe **"stark"** (Junges -> halbstark -> stark -> ausgewachsen). Die Faehigkeit Vitality heisst "Zaehigkeit"
   (damit sie nicht wie der Balken "Leben" heisst). Eingesetzt in `../_arbeit/baer_de/werkzeug/de_texte.py`, Pruefer 0 Fehler.
+* Kevin (12.11. ~13:50) zum Blatt KEVIN_gen_gross_v2.png (Generator-Baer v2): *"variante nase schmaler sieht am besten aus"*. **Fest:** Nase wie die Spalte
+  "Variante: Nase schmaler" (= v2/out_vor_fix, ohne den Nasen-Umlauf O2-01). Plan: alle anderen Nachbesserungen behalten (Lippenlinie glatt, Augenring,
+  Fototon), nur O2-01 (wrap/unter) aus -> v2/out_schmal/; sieht es von vorn nicht wie seine Wahl aus, out_vor_fix nehmen.

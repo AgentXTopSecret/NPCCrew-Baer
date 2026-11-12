@@ -1,5 +1,9 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **12.11. ~13:55: Kevin waehlt die SCHMALE NASE** (*"variante nase schmaler sieht am besten aus"*) -> Lauf **baer-gen-gross-v2-schmal** `wf_b34e1baf-262` (Task wq0ceb7xu,
+> 2 Agenten, scriptPath `C:/Users/Kevin/.claude/projects/C--Users-Kevin-NPCCrew-Nebenprojekte-baer/d5933cc7-7f9d-46b2-a3a8-0929595b654b/workflows/scripts/baer-gen-gross-v2-schmal-wf_b34e1baf-262.js`):
+> alle Nachbesserungen ausser Nasen-Umlauf O2-01 -> `../_arbeit/baer_gen_gross/v2/out_schmal/`; Rueckfall out_vor_fix. Danach einbauen (ersetzt die grosse Nase in NCBearTest).
+
 > **12.11. 11:35 LIMIT-WARNUNG (5 h 96 %, Reset 13:40; Kevin ueber die Projekte-Sitzung: "workflows speichern und wieder fortfuehren ... ohne das die fortschritt
 > verlieren oder doppelte arbeit machen muessen").** Keine neuen Laeufe/Agenten. Laufende Laeufe NICHT abbrechen. Sitzung d5933cc7 (resumeFromRunId nur HIER).
 > Transkript-Ordner je Lauf = `C:/Users/Kevin/.claude/projects/C--Users-Kevin-NPCCrew-Nebenprojekte-baer/d5933cc7-7f9d-46b2-a3a8-0929595b654b/subagents/workflows/<Lauf-ID>/` (darin journal.jsonl).
