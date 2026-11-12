@@ -182,7 +182,7 @@ ${W}/schnittstelle_aenderungen.md ANHAENGEN (Abschnitt "F2 KERN"), vor dem Absch
 Jeder Engine-Aufruf mit Fundstelle im Kommentar (selbst nachgeprueft). Diagnose hinter dem bestehenden Schalter. Danach: vier Lua-Pruefer,
 Zeilenenden, alle bestehenden Attrappen bleiben gruen (nur gewollt anpassen, begruenden), neue Faelle unter ${W}/attrappe/f2_kern/.
 Ergebnis: ${W}/bau_f2_kern.md (Dateien, Aenderungen mit Datei:Zeile, Engine-Aufrufe mit Fundstelle, SP-/MP-Zweig, Pruefer-Ausgaben, offen).
-Rueckgabe: Kurzfassung.`, { label: 'bau:kern', phase: 'Bau' }),
+Rueckgabe: Kurzfassung. FORTSETZUNG nach Halt 03:58 (5-h-Limit): Zwischenstaende im Staging und in ${W} pruefen, nur Vollstaendiges weiterverwenden.`, { label: 'bau:kern', phase: 'Bau' }),
   () => agent(`${CTX}
 
 DEINE ROLLE: BAUER OBERFLAECHE (lua/client/ inkl. ISUI/, Bench NCBearBench*.lua, Translate in sieben Sprachen, Sandbox-Texte; Staging
@@ -191,7 +191,7 @@ ${W}/f1_entwurf/fenster_gebaut_*.png; Rechtsklick; Heilen-Aktion; Meldungen; Ben
 ANHAENGEN (Abschnitt "F2 OBERFLAECHE"), vor dem Abschluss lesen. shared/ und server/ gehoeren dem anderen Bauer: nur lesen. Texte natuerlich je
 Sprache, gleiche Platzhalter, JSON-Round-Trip (json.dumps(data, indent=4, ensure_ascii=False) + Zeilenende), sortiert, CN nur Vanilla-CN-Zeichen.
 Danach: vier Lua-Pruefer, Zeilenenden, alle bestehenden Attrappen gruen, neue Faelle unter ${W}/attrappe/f2_ober/; geaendertes Fenster als
-${W}/f1_entwurf/fenster_f2_1080.png neu zeichnen (PIL, Masse/Farben wie im Code). Ergebnis: ${W}/bau_f2_oberflaeche.md. Rueckgabe: Kurzfassung.`, { label: 'bau:oberflaeche', phase: 'Bau' }),
+${W}/f1_entwurf/fenster_f2_1080.png neu zeichnen (PIL, Masse/Farben wie im Code). Ergebnis: ${W}/bau_f2_oberflaeche.md. Rueckgabe: Kurzfassung. FORTSETZUNG nach Halt 03:58 (5-h-Limit): Zwischenstaende im Staging und in ${W} pruefen, nur Vollstaendiges weiterverwenden.`, { label: 'bau:oberflaeche', phase: 'Bau' }),
 ])
 if (!kern || !ober) { return { foA, foB, plan, kern, ober, abbruch: 'Bauer ohne Ergebnis' } }
 

@@ -98,8 +98,8 @@ Taste gelesen `BanditsNPC.Interact.KEYBIND` / `.FindTarget` (NC `client/BanditsN
 
 ## Erlaubte Fundstellen des Trockenlaufs (bis B5a absichtlich rot)
 
-Der Trockenlauf ohne `--vor-b5a` ist **absichtlich rot mit genau 26 Fehlern**: die 24 alten, noch nicht umbenannten Teile der Test-Mod
-und (B1e) die 2 Fundstellen der Art `ncbeargrown`, die am grossen Modell der Test-Mod haengen (`ALT_DEFS`, Zeilen 25-26 unten).
+Der Trockenlauf ohne `--vor-b5a` ist **absichtlich rot mit genau 29 Fehlern**: die 24 alten, noch nicht umbenannten Teile der Test-Mod
+und (B1e) die 2 Fundstellen der Art `ncbeargrown`, die am grossen Modell der Test-Mod haengen (`ALT_DEFS`, Zeilen 25-26 unten). Seit dem Generator-Vergleich (12.11. 01:03, nachgezaehlt 12.11. 04:10) dazu 3 Pfade des Vergleichs-Modells (`NCBearGen.glb`, `NCBearGen.png`, `NCBearGenFoto.png`, nie kopieren) = 29.
 Kevin: Umbenennen der alten Dateien `NCBear*` und der Art `bear` zu Beginn von B5a. Sie werden NIE kopiert; das Skript fuehrt sie in
 `ALT_EXPECTED`. Eine neue, nicht gelistete Altlast ist immer ein Fehler, auch mit `--vor-b5a`. `--echt` verbietet `--vor-b5a`: bis
 B5a ist die echte Uebernahme deshalb gesperrt.

@@ -1,5 +1,7 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **12.11. 03:58: F2 ANGEHALTEN (5 h 84 %, Reset 06:00):** TaskStop wx5kkcb7z mitten in bau:kern + bau:oberflaeche (liefen ab 03:40). Zusatz "FORTSETZUNG nach Halt 03:58" steht schon in `spiel/f2_workflow.js`; nach dem Reset nur Workflow({scriptPath: `C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel/f2_workflow.js`, resumeFromRunId: "wf_6651b1ca-2f2"}). baer-gross laeuft weiter (letzter Agent gegenpruefer seit 03:48), baer-junges-fuss weiter (nachbesserung seit 02:58, dann gegenpruefung). Kevins Spiel lief seit 03:03 (hatte B1e + Generator-Vergleich geladen). **04:04 F1 EINGEBAUT** (Spiel zu; einbau_f1.py: 67 Dateien, 7 neu, 32 ueberschrieben, 28 gleich, byte-gleich nachgezaehlt; Zips `NCBearTest_vor_f1_2026-11-12_040423.zip` / `_mit_f1_`; mod.info + 42/mod.info Beschreibung aus mod_info_vorschlag_f1.txt; Trockenlauf `--vor-b5a` 0 Fehler / 31 Warnungen, ohne Schalter 29 Fehler = NAEHTE.md nachgezogen). Kevins Test: `spiel/anleitung_f1.md`, Fragen `spiel/f1_gegen_bericht_f1.md`.
+
 > **11.11.2026 20:05: VIER LAEUFE PARALLEL (Nachtschicht)** -- alle in DIESER Sitzung; Fortsetzen nur hier: Workflow({scriptPath, resumeFromRunId}).
 > 1. baer-gross `wf_48fe2220-263` (Task wehxfh1d9) FORTGESETZT ab bau:netz (Zusatz "FORTSETZUNG nach Halt 18:10"); scriptPath `C:/Users/Kevin/.claude/projects/C--Users-Kevin-NPCCrew-Nebenprojekte-baer/8f80868b-c5cd-4de5-ade1-25f74fc113d4/workflows/scripts/baer-gross-wf_48fe2220-263.js`.
 > 2. baer-gen-gross `wf_f0c57dc2-1e2` (Task wlafzliv1) FORTGESETZT ab bau:rig (gleicher Zusatz); scriptPath `C:/Users/Kevin/.claude/projects/C--Users-Kevin-NPCCrew-Nebenprojekte-baer/8f80868b-c5cd-4de5-ade1-25f74fc113d4/workflows/scripts/baer-gen-gross-wf_f0c57dc2-1e2.js`.
@@ -26,6 +28,13 @@
 >    FORTGESETZT. Generator-Baer als Vergleich EINGEBAUT (NCBearTest 6e678fb, 6 neue Bench-Dateien, Zips `*_gen_vergleich_2026-11-12_*`),
 >    Test `spiel/anleitung_gen_vergleich.md`; Patch M2 ins Uebernahme-Skript eingespielt (Trockenlauf 0 Fehler / 34 Warnungen) -- das Skript
 >    und NAEHTE.md tragen auch die halben F1-Aenderungen: erst mit F1 committen (NAEHTE Zeile 84: 26 -> 29 Fehler + 3 NCBearGen-Pfade nachziehen).
+> **12.11. ~02:45: F1 FERTIG** (9/9, Gegenpruefer bereit, 0 Blocker, 13 Befunde zu, 5 begruendet offen, 9 Fragen fuer Kevin in
+>    `spiel/f1_gegen_bericht_f1.md`; Fenster-Bild `../_arbeit/baer_zaehmen/f1_entwurf/fenster_gebaut_*.png`). Schnappschuss fuer den Einbau:
+>    `../_arbeit/baer_zaehmen/mod_f1_fertig/` + `staging_dateien_f1.txt` + `mod_info_vorschlag_f1.txt` (67 Dateien, 0 Abweichungen) --
+>    EINBAU wartet, weil Kevins Spiel laeuft: Skript `einbau_f1.py` im Scratchpad (wie einbau_b1e.py, liest den Schnappschuss), dann mod.info
+>    aus mod_info_vorschlag_f1.txt, Trockenlauf mit `../_arbeit/baer_zaehmen/baer_uebernahme_f1.py`-Stand, Commit+Push Test-Mod.
+>    Unterlagen F1 committet (c1ae773). **F2 = B5a Kampf GESTARTET** `wf_6651b1ca-2f2` (Task wx5kkcb7z, 10 Agenten), scriptPath
+>    `C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel/f2_workflow.js`; baut im Staging `mod/` auf F1 auf. Wecker 4533eb5c auf Kevins Wort geloescht.
 > Verbrauch beim Start: 5 h 1 % (Reset 01:00), Woche 27 %. Der Block "18:10 ZWEI MODELL-LAEUFE ANGEHALTEN" darunter ist damit erledigt.
 
 > **NACHTSCHICHT 11./12.11.2026** (Kevin ~18:25: Freigaben 1-5 ja, Wecker "machst du das am besten selbst"; `begleiter/ENTSCHEIDUNGEN.md` unten).
