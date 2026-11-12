@@ -1,0 +1,22 @@
+module Base
+{
+    /* NUR TESTHILFE (NCBearBench*: wird nie nach NPC Crew kopiert, baer/tools/baer_uebernahme.py BENCH_ANY). Lauf baer-gen-junges-v2, 12.11.2026. */
+    /* Kevin 12.11.2026: "starte noch einen workflow fuer den anderen baby baeren mach da auch das gesicht besser und vorallem die beine". */
+    /* Neues Generator-Junges (Foto C: kurze Beine, Baerenfuesse, neuer Gang, groesseres Gesicht) als eigene Vergleichs-Art ncbearcubgen. */
+    /* 26 Knochen und 15 Clips mit denselben Namen wie das Junge (animset buck); interne Namen im GLB "NCBearCub" wie NCBearBenchCubAlt.glb. */
+    /* Form wie scripts/NCBearBenchVergleich.txt (NCBearBenchCubAlt) und scripts/nc_bear_cub.txt. Muss in module Base bleiben (bodyModel der */
+    /* Tierart ohne Punkt, shared/NCBearBenchCubGenDefs.lua). Textur kommt aus der Rasse (NCBearBenchCubGen). */
+    animationsMesh NCBearBenchCubGen
+    {
+        meshFile = Skinned/NCBearBenchCubGen.glb,
+        keepMeshAnimations = true,
+    }
+
+    model NCBearBenchCubGen_Body
+    {
+        mesh = Skinned/NCBearBenchCubGen.glb,
+        shader = animalEffect,
+        static = false,
+        animationsMesh = NCBearBenchCubGen,
+    }
+}
