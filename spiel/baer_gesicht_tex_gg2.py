@@ -14,10 +14,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import baer_gesicht_gg2 as GG  # noqa: E402
 
 R, GS = GG.R, GG.GS
+GA = GG.GA                     # NACHBESSERUNG: Ausgabe-Ordner (Vorgabe v2/nachbesserung/gesicht/, "nb=0" = v2/gesicht/ des BAUER GESICHT)
+NB = GG.NB
 sys.path.insert(0, R + "fix1/werkzeug")
 S = 1024
-KARTE = GS + "karten/_karten_gg2.npz"
-EBENE = GS + "ebene/gesicht_ebene.npz"
+KARTE = GA + "karten/_karten_gg2.npz"
+EBENE = GA + "ebene/gesicht_ebene.npz"
 
 
 def sst(a, b, v):
@@ -27,11 +29,11 @@ def sst(a, b, v):
 # ------------------------------------------------------------------------------------------------ Lage-Karte (PLAN 5.1)
 def karten():
     argv0 = sys.argv
-    sys.argv = [argv0[0], GS + "form/E_gg2_basis.npz"]          # uv_maske laedt beim Import argv[1] (nur lesen)
+    sys.argv = [argv0[0], GA + "form/E_gg2_basis.npz"]          # uv_maske laedt beim Import argv[1] (nur lesen)
     from uv_maske import raster
     sys.argv = argv0
-    B = np.load(GS + "form/E_gg2_basis.npz")
-    G = np.load(GS + "gewichte/E_gg2_gewichte.npz")
+    B = np.load(GA + "form/E_gg2_basis.npz")
+    G = np.load(GA + "gewichte/E_gg2_gewichte.npz")
     V, T, Tg, gp, UV = B["V"], B["T"], B["T_glb"], B["glb_punkt"], B["UV"]
     tp = B["teil_punkt"].astype(str)
     fn = np.cross(V[T[:, 1]] - V[T[:, 0]], V[T[:, 2]] - V[T[:, 0]])
@@ -54,7 +56,7 @@ def karten():
     t, h = GG.rahmen(np.nan_to_num(L.reshape(-1, 3), nan=0.0))
     KR = np.stack((t.reshape(S, S), h.reshape(S, S), L[..., 1]), -1)
     KR[np.isnan(L[..., 0])] = np.nan
-    os.makedirs(GS + "karten", exist_ok=True)
+    os.makedirs(GA + "karten", exist_ok=True)
     np.savez_compressed(KARTE, L=L, N=N, T=Tt, KR=KR, X=X)
     info = dict(belegt_prozent=round(float((~np.isnan(L[..., 0])).mean() * 100), 2), schluessel=dict(
         L="Ruhe-Lage tier-Meter des NEUEN V je Texel (nan = leer)", N="Normale (Aussenhaut, nach aussen)",
@@ -139,7 +141,18 @@ def abst_polylinie(Q, Pl):
 PE = dict(f_stirn=0.94, f_wange=0.84, f_seite=1.05, f_bruecke=1.16, f_kinn=0.88, f_ring=0.68, hue_braun=7.0, sat_braun=0.03,
           kinn_grau=0.20, kuppe_cx=1.140, kuppe_cz=0.632, kuppe_b=0.035, kuppe_a=0.0500, kuppe_p=3.0, kuppe_rand=0.0025,
           loch_y=0.025, loch_z=0.624, loch_a=0.0165, loch_b=0.0070, loch_dreh=25.0, rinne_b=0.0018,
-          aug_a=0.0130, aug_b=0.0072, iris_r=0.0058, ring_r=0.020, lippe_b=0.00175, lippe_rand=0.0013)
+          aug_a=0.0130, aug_b=0.0072, iris_r=0.0058, ring_r=0.020, lippe_b=0.00175, lippe_rand=0.0013,
+          # NACHBESSERUNG (v2/NACHBESSERUNG.md): alle Schalter 0 = Stand BAUER GESICHT ("nb=0")
+          wrap=0.0, wrap_d=0.050, wrap_zc=0.627, wrap_rz_o=0.024, wrap_rz_u=0.031, wrap_rz_o_vorn=0.012, wrap_p=2.5,  # O2-01
+          loch_seite=0.0, loch_seite_b=0.0032,                                          # O2-01/05 Nasenloch-Schlitz zur Seite offen
+          unter=0.0, unter_x0=1.085, unter_x1=1.118, unter_z0=0.597, unter_z1=0.611, f_unter=0.52, unter_grau=0.55,  # O2-01/02
+          kuppe_neu=0.0, kuppe_glatt_rand=0.006,                                        # O2-05 Kuppe mit Verlauf, Licht als Ellipse
+          ring_neu=0.0, ring_in=0.45, ring_glatt=0.0,                                   # O2-03 Augenring
+          glatt_schnauze=0.0, strich_kopf=0.5,                                          # O2-04 Schnauze glatter, Kopf-Straehnen
+          foto_hue=22.0, foto_hue_w=0.0)                                                # O2-07 Fototon-Schnauze nicht rosa
+if NB:
+    PE.update(wrap=1.0, loch_seite=1.0, unter=1.0, kuppe_neu=1.0, ring_neu=1.0, ring_r=0.028, f_ring=0.60, ring_glatt=0.45,
+              glatt_schnauze=0.5, foto_hue_w=0.6, wrap_rz_o=0.027, wrap_rz_u=0.032, wrap_d=0.055, f_unter=0.46)
 
 
 def ebene(kv):
@@ -147,7 +160,7 @@ def ebene(kv):
     P.update({k: float(v) for k, v in kv.items()})
     C = np.load(KARTE)
     L, N, Tt, KR, X = C["L"], C["N"], C["T"], C["KR"], C["X"]
-    B = np.load(GS + "form/E_gg2_basis.npz")
+    B = np.load(GA + "form/E_gg2_basis.npz")
     V = B["V"]
     belegt = ~np.isnan(L[..., 0])
     aussen = belegt & (np.abs(np.nan_to_num(Tt[..., 0]) - 1) < 0.5)
@@ -159,7 +172,7 @@ def ebene(kv):
     ay = np.abs(y)
     Pq = np.stack((x, y, z), -1)
     # Hoehe im Schnauzen-Querschnitt (neues V, Kopf-Punkte)
-    G = np.load(GS + "gewichte/E_gg2_gewichte.npz")
+    G = np.load(GA + "gewichte/E_gg2_gewichte.npz")
     kopf = GG.kopfmaske(G)
     tg, ob, un = GG.hoehen_profil(V, kopf)
     top, bot = np.interp(t, tg, ob), np.interp(t, tg, un)
@@ -177,14 +190,42 @@ def ebene(kv):
     bruecke = bruecke * (1 - kinn)
     wange = (1 - sst(0.05, 0.20, t)) * sst(0.06, 0.11, ay) * (1 - sst(0.5, 0.8, hn)) * kopfzone * (1 - kinn)
     d_aug = np.minimum(np.linalg.norm(Pq - GG.AUGEN[0], axis=-1), np.linalg.norm(Pq - GG.AUGEN[1], axis=-1))
-    ring = (1 - sst(P["ring_r"] * 0.45, P["ring_r"] * 1.35, d_aug)) * kopfzone
+    if P["ring_neu"] > 0:                                          # NACHBESSERUNG O2-03: groesserer, kraeftigerer Augenring mit Plateau
+        ring = (1 - sst(P["ring_r"] * P["ring_in"], P["ring_r"] * 1.25, d_aug)) * kopfzone
+    else:
+        ring = (1 - sst(P["ring_r"] * 0.45, P["ring_r"] * 1.35, d_aug)) * kopfzone
     # ---------------- Nasenkuppe: Superellipse in (y, Abstand in der x-z-Ebene zum Kuppen-Zentrum)
     rxz = np.hypot(x - P["kuppe_cx"], z - P["kuppe_cz"])
     se = (ay / P["kuppe_a"]) ** P["kuppe_p"] + (rxz / P["kuppe_b"]) ** P["kuppe_p"]
     rand_rel = P["kuppe_rand"] / P["kuppe_b"]
     kuppe = (1 - sst(1 - 2 * rand_rel, 1 + 2 * rand_rel, se)) * (x > 1.05) * aussen
-    # Lichtstreif oben auf der Kuppe (matt), ~4 x 1,5 cm
-    streif = kuppe * (1 - sst(0.012, 0.022, ay)) * sst(0.55, 0.75, nz + 0.2 * nx) * (1 - sst(0.006, 0.012, np.abs(z - 0.655)))
+    tip_x = float(V[kopf, 0].max())
+    dx = tip_x - x
+    kuppe_g = kuppe.copy()                                       # Maske fuer a_glatt (kein Strich): etwas weiter als die Kuppe
+    if P["wrap"] > 0:
+        # NACHBESSERUNG O2-01: der Nasenspiegel laeuft um die Spitze herum. Auf den Seiten (|y| > 3-4 cm, nicht Ober-/Unterseite) gerundete
+        # Form in (Tiefe hinter der Spitze, z): bis wrap_d tief, z von wrap_zc - wrap_rz_u bis wrap_zc + wrap_rz_o (Nasenfluegel unten breiter,
+        # oben flacher -- sonst stehen die Ecken aus Kevins Kamera als "Hoerner" ueber der Kuppe) -- von der Seite eine Knolle statt eines Randes.
+        # vorn an den oberen Ecken reicht die Kuppe so hoch wie die Vorder-Kuppe (sonst helle Kerbe zwischen Vorder- und Seitenteil)
+        rz_o = P["wrap_rz_o"] + P["wrap_rz_o_vorn"] * (1 - sst(0.012, 0.035, dx))
+        dz_ = np.where(z > P["wrap_zc"], (z - P["wrap_zc"]) / rz_o, (P["wrap_zc"] - z) / P["wrap_rz_u"])
+        ew = (np.clip(dx, 0, None) / P["wrap_d"]) ** P["wrap_p"] + dz_ ** P["wrap_p"]
+        rr = P["kuppe_rand"] / P["wrap_d"]
+        # Oberseite erst ab 2-3 cm hinter der Spitze ausnehmen (vorn gehoeren die oberen Ecken zur Kuppe, sonst Kerbe aus Kevins Kamera)
+        seitlich = sst(0.025, 0.040, ay) * (1 - sst(0.45, 0.75, nz) * sst(0.018, 0.030, dx)) * (1 - sst(0.55, 0.85, -nz)) * (x > 1.09) * aussen
+        wrap = (1 - sst(1 - 2 * rr, 1 + 2 * rr, ew)) * seitlich * P["wrap"]
+        kuppe = np.maximum(kuppe, wrap)
+        rg = P["kuppe_glatt_rand"]
+        kuppe_g = np.maximum((1 - sst(1, 1 + 2 * rg / P["kuppe_b"], se)) * (x > 1.05) * aussen,
+                             (1 - sst(1, 1 + 2 * rg / P["wrap_d"], ew)) * seitlich) * P["wrap"]
+        kuppe_g = np.maximum(kuppe_g, kuppe)
+    if P["kuppe_neu"] > 0:
+        # NACHBESSERUNG O2-05: Lichtstreif als weiche Ellipse oben auf der Kuppe (statt eckigem Feld)
+        el_ = (y / 0.020) ** 2 + ((z - 0.656) / 0.0060) ** 2
+        streif = kuppe * (1 - sst(0.35, 1.0, el_)) * sst(0.35, 0.70, nz + 0.3 * nx) * 0.85
+    else:
+        # Lichtstreif oben auf der Kuppe (matt), ~4 x 1,5 cm
+        streif = kuppe * (1 - sst(0.012, 0.022, ay)) * sst(0.55, 0.75, nz + 0.2 * nx) * (1 - sst(0.006, 0.012, np.abs(z - 0.655)))
     # Nasenloecher: Kommaform auf der Vorderflaeche (y-z-Ebene), aussen nach unten gebogen
     loch = np.zeros_like(x)
     dr = np.radians(P["loch_dreh"])
@@ -197,6 +238,39 @@ def ebene(kv):
         b_ = P["loch_b"] * (1 - 0.35 * np.clip(u_ / P["loch_a"], 0, 1))
         e_ = (u_ / P["loch_a"]) ** 2 + (v_k / b_) ** 2
         loch = np.maximum(loch, (1 - sst(0.75, 1.15, e_)) * sst(0.15, 0.45, nx) * (x > 1.10))
+    if P["loch_seite"] > 0:
+        # NACHBESSERUNG O2-01/05: Schlitz vom Nasenloch nach aussen um die Ecke und auf der Seite ein Stueck nach hinten-oben (Komma zur
+        # Seite offen, sieht man von der Seite). Kontrollpunkte auf die Haut gelegt (Texel-Lagen), Breite zur Spitze hin schmaler.
+        for s in (1, -1):
+            ziele = [("v", s * 0.026, 0.622), ("v", s * 0.040, 0.615), ("v", s * 0.053, 0.612), ("s", 1.136, 0.614), ("s", 1.127, 0.619), ("s", 1.119, 0.625)]
+            pts = []
+            for art, a_, b_ in ziele:
+                if art == "v":
+                    mm = aussen & (np.abs(y - a_) < 0.003) & (np.abs(z - b_) < 0.003) & (x > 1.09)
+                    k = np.argmax(np.where(mm, x, -9).ravel())
+                else:
+                    mm = aussen & (np.abs(x - a_) < 0.003) & (np.abs(z - b_) < 0.003) & (s * y > 0.03)
+                    k = np.argmax(np.where(mm, s * y, -9).ravel())
+                assert mm.any(), ("Nasenloch-Kontrollpunkt ohne Texel", art, a_, b_)
+                pts.append(Pq.reshape(-1, 3)[k])
+            pts = np.array(pts)
+            kand_l = aussen & (x > 1.09) & (s * y > 0.015) & (np.abs(z - 0.618) < 0.03)
+            ii_ = np.nonzero(kand_l)
+            Q = Pq[ii_]
+            best, tpar = np.full(len(Q), 9.0), np.zeros(len(Q))
+            seg_l = np.linalg.norm(np.diff(pts, axis=0), axis=1)
+            cum = np.r_[0, np.cumsum(seg_l)]
+            for j, (a, b) in enumerate(zip(pts[:-1], pts[1:])):
+                ab = b - a
+                tt_ = np.clip(((Q - a) @ ab) / max(ab @ ab, 1e-12), 0, 1)
+                d_ = np.linalg.norm(Q - (a + tt_[:, None] * ab), axis=1)
+                bes = d_ < best
+                best = np.where(bes, d_, best)
+                tpar = np.where(bes, (cum[j] + tt_ * seg_l[j]) / cum[-1], tpar)
+            b_l = P["loch_seite_b"] * (1.25 - 0.65 * tpar)                     # 4 mm am Loch -> 1,9 mm hinten (halbe Breite)
+            sl_ = np.zeros_like(x)
+            sl_[ii_] = 1 - sst(b_l, b_l + 0.0015, best)
+            loch = np.maximum(loch, sl_ * P["loch_seite"])
     loch *= aussen
     # Rinne (Philtrum): von der Kuppenmitte bis zur Oberlippe
     lo = B["lippe_ober"]
@@ -243,10 +317,15 @@ def ebene(kv):
     F = F + (P["f_bruecke"] - F) * bruecke
     F = F + (P["f_kinn"] - F) * kinn
     F = F + (P["f_ring"] - F) * ring * (1 - bruecke * 0.6)
+    # NACHBESSERUNG O2-01/02: Spitze unter der Kuppe (Oberlippe vorn, Kinnspitze, Unterseite) dunkles Graubraun statt Creme
+    unter = sst(P["unter_x0"], P["unter_x1"], x) * (1 - sst(P["unter_z0"], P["unter_z1"], z)) * kopfzone * aussen * P["unter"]
+    F = F + (P["f_unter"] - F) * unter
     a_ton = kopfzone * aussen
-    a_glatt = np.clip(np.maximum.reduce([kuppe, loch, auge, lippe, 0.5 * rinne]), 0, 1)
-    strich = 1 - 0.5 * kopfzone - 0.2 * schnauze
-    masken = ((kuppe > 0.5) * 1 + (loch > 0.5) * 2 + (auge > 0.5) * 4 + (lippe > 0.5) * 8 + (bruecke > 0.5) * 16).astype(np.uint8)
+    a_glatt = np.clip(np.maximum.reduce([kuppe_g, loch, auge, lippe, 0.5 * rinne, P["glatt_schnauze"] * schnauze * (1 - kuppe_g),
+                                          P["ring_glatt"] * ring * (1 - bruecke)]), 0, 1)
+    strich = 1 - (1 - P["strich_kopf"]) * kopfzone - (P["strich_kopf"] - 0.3) * schnauze
+    masken = ((kuppe > 0.5) * 1 + (loch > 0.5) * 2 + (auge > 0.5) * 4 + (lippe > 0.5) * 8 + (bruecke > 0.5) * 16
+              + (unter > 0.5) * 32).astype(np.uint8)
     rep = {"parameter": P, "z_lippe_mitte": round(z_lip, 4)}
     out = {}
     for var, pfad in (("braun", GS + "eingang/NCBearGen.png"), ("foto", GS + "eingang/NCBearGenFoto.png")):
@@ -260,22 +339,32 @@ def ebene(kv):
             wsch = np.clip(bruecke + 0.6 * schnauze * (1 - kinn), 0, 1)
             hsv[..., 0] = hsv[..., 0] + P["hue_braun"] * wsch
             hsv[..., 1] = np.clip(hsv[..., 1] + P["sat_braun"] * wsch, 0, 1)
-        hsv[..., 1] = hsv[..., 1] * (1 - P["kinn_grau"] * kinn)
+        elif P["foto_hue_w"] > 0:                             # NACHBESSERUNG O2-07: Fototon-Schnauze Richtung 22 Grad (beige statt rosa)
+            wsch = np.clip(bruecke + 0.6 * schnauze * (1 - kinn), 0, 1) * P["foto_hue_w"]
+            dh = (P["foto_hue"] - hsv[..., 0] + 180.0) % 360.0 - 180.0
+            hsv[..., 0] = hsv[..., 0] + dh * wsch
+        hsv[..., 1] = hsv[..., 1] * (1 - P["kinn_grau"] * kinn) * (1 - P["unter_grau"] * unter)
         ton = hsv2rgb(hsv)
         # Augenring dunkelbraun (Ton leicht waermer)
         # Lippenlinie L ~0,20
         lip_rgb = np.array((54, 45, 40)) if var == "braun" else np.array((52, 47, 47))
         ton = ton * (1 - lippe[..., None]) + lip_rgb * lippe[..., None]
         # Kuppe fast schwarz, blaugrau; Lichtstreif; Nasenloecher; Rinne
-        ton = ton * (1 - kuppe[..., None]) + np.array((24, 24, 29.0)) * kuppe[..., None]
-        ton = ton * (1 - streif[..., None]) + np.array((55, 55, 62.0)) * streif[..., None]
+        if P["kuppe_neu"] > 0:                                # NACHBESSERUNG O2-05: oben etwas heller (Leder), unten fast schwarz
+            k_rgb = np.array((21, 21, 26.0)) + np.array((10, 10, 12.0)) * (sst(0.615, 0.660, z) * sst(0.3, 0.7, nx + nz))[..., None]
+            ton = ton * (1 - kuppe[..., None]) + k_rgb * kuppe[..., None]
+            ton = ton * (1 - streif[..., None]) + np.array((62, 62, 70.0)) * streif[..., None]
+        else:
+            ton = ton * (1 - kuppe[..., None]) + np.array((24, 24, 29.0)) * kuppe[..., None]
+            ton = ton * (1 - streif[..., None]) + np.array((55, 55, 62.0)) * streif[..., None]
         ton = ton * (1 - loch[..., None]) + np.array((6, 6, 8.0)) * loch[..., None]
         rin = rinne * (1 - kuppe)
         ton = ton * (1 - rin[..., None]) + np.array((30, 28, 30.0)) * rin[..., None]
         # Augen: Lidrand/Pupille fast schwarz, Iris dunkelbraun
         aug_rgb = np.array((14, 11, 10.0))
         ton = ton * (1 - auge[..., None]) + aug_rgb * auge[..., None]
-        ton = ton * (1 - (iris * (1 - lid))[..., None]) + np.array((40, 26, 18.0)) * (iris * (1 - lid))[..., None]
+        iris_rgb = np.array((24, 16, 12.0)) if P["ring_neu"] > 0 else np.array((40, 26, 18.0))   # NACHBESSERUNG O2-03: Mandel dunkler
+        ton = ton * (1 - (iris * (1 - lid))[..., None]) + iris_rgb * (iris * (1 - lid))[..., None]
         ton = ton * (1 - pupille[..., None]) + np.array((10, 8, 8.0)) * pupille[..., None]
         ton[0:72, 0:548] = 0
         ton[12:32, 598:666] = 0
@@ -284,7 +373,7 @@ def ebene(kv):
     for arr in (a_ton, a_glatt, masken):                      # Schutzstreifen (PLAN 5.5): Maul-Flecken und Krallen nie anfassen
         arr[0:72, 0:548] = 0
         arr[12:32, 598:666] = 0
-    os.makedirs(GS + "ebene", exist_ok=True)
+    os.makedirs(GA + "ebene", exist_ok=True)
     np.savez_compressed(EBENE, ton_braun=out["ton_braun"], ton_foto=out["ton_foto"], a_ton=a_ton.astype(np.float32),
                         a_glatt=a_glatt.astype(np.float32), strich_laenge=strich.astype(np.float32), masken=masken)
     # Masse der gemalten Kuppe/Nasenloecher/Augen im 3D (Texel-Lagen)
@@ -301,6 +390,10 @@ def ebene(kv):
     rep["auge_links"] = ausdehnung((auge > 0.5) & (y > 0))
     rep["auge_rechts"] = ausdehnung((auge > 0.5) & (y < 0))
     rep["lippe_texel"] = int((lippe > 0.5).sum())
+    rep["kuppe_seitlich_texel"] = int(((kuppe > 0.5) & (np.abs(ny) > 0.6)).sum())
+    rep["kuppe_tiefe_hinter_spitze_cm"] = round(float(dx[kuppe > 0.5].max() * 100), 2) if (kuppe > 0.5).any() else None
+    rep["unter_texel"] = int((unter > 0.5).sum())
+
     rep["rinne_texel"] = int((rinne > 0.5).sum())
     json.dump(rep, open(EBENE + ".json", "w"), indent=1)
     # Vorschau der Ebene
@@ -312,7 +405,7 @@ def ebene(kv):
     col[..., 1] = np.maximum(bruecke, loch)
     col[..., 2] = np.maximum(auge, ring * 0.5)
     vis[:, 2 * S:] = col
-    Image.fromarray((np.clip(vis, 0, 1) * 255).astype(np.uint8)).resize((1536, 512)).save(GS + "ebene/gesicht_ebene_vorschau.png")
+    Image.fromarray((np.clip(vis, 0, 1) * 255).astype(np.uint8)).resize((1536, 512)).save(GA + "ebene/gesicht_ebene_vorschau.png")
     print(json.dumps({k: v for k, v in rep.items() if k != "parameter"}, indent=0))
 
 
@@ -327,7 +420,7 @@ def vorschau(kv):
     x, y, z = [np.nan_to_num(L[..., i], nan=-9) for i in range(3)]
     nz = np.nan_to_num(N[..., 2])
     nacken = kv.get("nacken", "1") == "1"
-    os.makedirs(GS + "tex_vorschau", exist_ok=True)
+    os.makedirs(GA + "tex_vorschau", exist_ok=True)
     rep = {}
     for name, key in (("NCBearGen.png", "ton_braun"), ("NCBearGenFoto.png", "ton_foto")):
         alt = np.asarray(Image.open(GS + "eingang/" + name).convert("RGB")).astype(float)
@@ -366,7 +459,7 @@ def vorschau(kv):
         out[0:72, 0:548] = alt[0:72, 0:548]                    # Maul-Flecken-Streifen (PLAN 5.5)
         out[12:32, 598:666] = alt[12:32, 598:666]              # Krallen-Streifen
         out = np.clip(np.round(out), 0, 255).astype(np.uint8)
-        Image.fromarray(out, "RGB").save(GS + "tex_vorschau/" + name)
+        Image.fromarray(out, "RGB").save(GA + "tex_vorschau/" + name)
         rep[name] = dict(geaendert_texel=int((np.abs(out.astype(int) - alt.astype(int)).max(-1) > 2).sum()))
     print(rep)
 

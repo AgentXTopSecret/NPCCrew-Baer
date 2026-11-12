@@ -1,5 +1,24 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **12.11. 11:35 LIMIT-WARNUNG (5 h 96 %, Reset 13:40; Kevin ueber die Projekte-Sitzung: "workflows speichern und wieder fortfuehren ... ohne das die fortschritt
+> verlieren oder doppelte arbeit machen muessen").** Keine neuen Laeufe/Agenten. Laufende Laeufe NICHT abbrechen. Sitzung d5933cc7 (resumeFromRunId nur HIER).
+> Transkript-Ordner je Lauf = `C:/Users/Kevin/.claude/projects/C--Users-Kevin-NPCCrew-Nebenprojekte-baer/d5933cc7-7f9d-46b2-a3a8-0929595b654b/subagents/workflows/<Lauf-ID>/` (darin journal.jsonl).
+> | Lauf | Lauf-ID / Task | scriptPath | fertig | laeuft / als Naechstes |
+> |---|---|---|---|---|
+> | baer-kopfnaht (Modell) | `wf_0956985e-5e7` / wxsgiqp0b | `C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel/kopfnaht_workflow.js` | forschung, plan | **bau** laeuft -> pruef, nachbesserung, gegenpruefer |
+> | baer-gen-gross-v2 (Modell) | `wf_1395b40d-69d` / wo8q8e17b | `C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel/gen_gross_v2_workflow.js` | plan, bau:gesicht, bau:fell, pruef:optik, pruef:technik | **nachbesserung** laeuft -> gegenpruefung |
+> | baer-gen-junges-v2 (Modell) | `wf_fccd15a2-a54` / w482c6j1o | `C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel/gen_junges_v2_workflow.js` | plan | **bau:beine** laeuft -> bau:gesicht, pruef:optik + pruef:technik + staging:bench, nachbesserung, gegenpruefung |
+> | baer-f2-fortsetzung (Funktion) | `wf_64557b7a-4a6` / wazscrq12 | `C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel/f2_fortsetzung.js` | bau:kern, bau:oberflaeche | **bau:zusammenbau** laeuft -> pruef:belege + pruef:logik, nachbesserung, gegenpruefung |
+> Moeglicherweise HALB geschrieben: `../_arbeit/baer_kopfnaht/` (Bau), `../_arbeit/baer_gen_gross/v2/out/` (Nachbesserung, Sicherung `v2/out_vor_fix/`),
+> `../_arbeit/baer_gen_junges/v2/beine/` + `spiel/baer_*_gj2.py`, `../_arbeit/baer_zaehmen/mod/` + `staging_dateien.txt` + **`tools/baer_uebernahme.py` und `NAEHTE.md`
+> (F2-Zusammenbau schreibt hier im Repo -- NICHT committen, bis F2 fertig ist)**. DE fertig vorbereitet (`../_arbeit/baer_de/`, nicht halb).
+> NACH DEM RESET (ab 13:40, Wecker alle 20 min): je Lauf: laeuft er noch -> warten. Haengt er -> TaskStop, dann Workflow({scriptPath, resumeFromRunId}) mit DERSELBEN ID.
+> journal.jsonl pruefen: Agent mit null/leer/Limit-Fehler = nicht gemacht, nur den nachholen (Auftrag leicht aendern + resumeFromRunId). Halbe Dateien fertig machen,
+> nicht neu bauen/loeschen. Nichts Halbes in die Test-Mod, nichts Halbes committen. Erst wenn ein Lauf vollstaendig ist, Neues.
+> **12.11. ~11:50: baer-gen-gross-v2 FERTIG (7/7)**: Gegenpruefer schoener_als_vorher JA, kevin_zeigen JA; Ergebnis ../_arbeit/baer_gen_gross/v2/out/ (NCBearGen.glb f58ea4c9, NCBearGen.png 4fb7c993, NCBearGenFoto.png f040a731), Blatt v2/bilder/KEVIN_gen_gross_v2.png, Bericht v2/GEGEN.md. 13:42 selbst angesehen (klar schoener als ALT: kein Wolfsgesicht, breite Schnauze, Unterarme nicht schwarz; Nase von vorn sehr gross) und EINGEBAUT (tools/einbau_gg2.py, 3 Dateien, Zips NCBearTest_vor_gg2_2026-11-12_134203.zip / _mit_; Test-Mod-Commit). Kevin waehlt die Nase: a so gross / b schmaler = v2/out_vor_fix / c Mittelweg (GEGEN.md G2-01).
+> 13:41 nach dem Reset: kopfnaht, gen-junges-v2 und F2 haben ihren am Limit abgebrochenen Agenten von selbst neu gestartet (journal 13:41, neue agent-*.jsonl) -> laufen, warten.
+> Wecker 033295dc (nur diese Sitzung): 12.11. 13:03-23:43 je :03/:23/:43, handelt erst nach 13:40; loescht sich, wenn alle vier Laeufe fertig oder wieder gestartet sind.
+
 > **12.11. ~10:15 DEUTSCH (Kevin: *"Ja, auch Deutsch"*):** Agent bereitet DE am F1b-Stand vor (`../_arbeit/baer_de/`: UI/IG_UI/Sandbox.json DE + LANGS-Vorschlag fuer
 > baer_uebernahme.py als Kopie -- das Original fasst gerade F2 an). Nach F2: DE fuer die neuen F2-Schluessel ergaenzen, LANGS auf acht, mit F2 zusammen einbauen.
 

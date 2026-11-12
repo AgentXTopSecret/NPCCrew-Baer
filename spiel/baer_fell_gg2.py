@@ -24,7 +24,11 @@ from PIL import Image
 R = "C:/Users/Kevin/NPCCrew-Nebenprojekte/_arbeit/baer_gen_gross/"
 V2 = R + "v2/"
 GS = V2 + "gesicht/"
-FE = V2 + "fell/"
+# NACHBESSERUNG (12.11.2026, v2/NACHBESSERUNG.md): Vorgabe ist der nachgebesserte Stand -- Gesichts-Daten aus v2/nachbesserung/gesicht/
+# (GA), Ausgaben unter v2/nachbesserung/fell/. "nb=0" auf der Befehlszeile = Stand BAUER FELL (v2/gesicht/, v2/fell/; nicht neu schreiben).
+NB = "nb=0" not in sys.argv
+GA = V2 + "nachbesserung/gesicht/" if NB else GS
+FE = V2 + "nachbesserung/fell/" if NB else V2 + "fell/"
 OUT = V2 + "out/"
 sys.path.insert(0, R + "fix1/werkzeug")
 S = 1024
@@ -36,6 +40,13 @@ UEBERGABE = {GS + "form/E_gg2_basis.npz": "56febeb105db21d0edb3eb948e0a1cec",
              GS + "ebene/gesicht_ebene.npz": "ebfc0cb8d8627494de953cad054e42fc",
              GS + "eingang/NCBearGen.png": "bd6a335e2a44f61fc4ac4c115dbf6a21",
              GS + "eingang/NCBearGenFoto.png": "da159718c058ee705f8cb242f3331a2b"}
+if NB:                                                   # Uebergabe NACHBESSERUNG (NACHBESSERUNG.md, Abschnitt Dateien)
+    UEBERGABE = {GA + "form/E_gg2_basis.npz": "dc092a5e140ee4bec6c947d542323dd7",
+                 GA + "gewichte/E_gg2_gewichte.npz": "9965d2baedd39245cdae01bc7ef7929e",
+                 GA + "karten/_karten_gg2.npz": "c0460b68cd9cca6ce1212a2dcd019d23",
+                 GA + "ebene/gesicht_ebene.npz": "00d356ea7a24249e6a265ad2e3e517c5",
+                 GS + "eingang/NCBearGen.png": "bd6a335e2a44f61fc4ac4c115dbf6a21",
+                 GS + "eingang/NCBearGenFoto.png": "da159718c058ee705f8cb242f3331a2b"}
 KARTE = FE + "karten/_karten_gg2.npz"
 ATTR = FE + "karten/_fell_attr.npz"
 GRUPPEN = [("unterarm", ("Bip01_L_Forearm", "Bip01_R_Forearm")), ("hand", ("Bip01_L_Hand", "Bip01_R_Hand")),
@@ -57,7 +68,7 @@ def md5(p):
 def pruef_uebergabe():
     for p, m in UEBERGABE.items():
         assert md5(p) == m, ("Uebergabe GESICHT geaendert", p)
-    assert md5(KARTE) == UEBERGABE[GS + "karten/_karten_gg2.npz"], "Karten-Kopie != GESICHT"
+    assert md5(KARTE) == UEBERGABE[GA + "karten/_karten_gg2.npz"], "Karten-Kopie != GESICHT"
 
 
 def sst(a, b, v):
@@ -90,8 +101,8 @@ def mblur(img, m, r=3):
 
 
 def lade_basis():
-    B = np.load(GS + "form/E_gg2_basis.npz")
-    G = np.load(GS + "gewichte/E_gg2_gewichte.npz")
+    B = np.load(GA + "form/E_gg2_basis.npz")
+    G = np.load(GA + "gewichte/E_gg2_gewichte.npz")
     assert np.array_equal(B["V"], G["V"])
     return B, G
 
@@ -108,10 +119,10 @@ def normalen(V, T):
 
 def raster_attr(attr):
     argv0 = sys.argv
-    sys.argv = [argv0[0], GS + "form/E_gg2_basis.npz"]           # uv_maske laedt beim Import argv[1] (nur lesen)
+    sys.argv = [argv0[0], GA + "form/E_gg2_basis.npz"]           # uv_maske laedt beim Import argv[1] (nur lesen)
     from uv_maske import raster
     sys.argv = argv0
-    B = np.load(GS + "form/E_gg2_basis.npz")
+    B = np.load(GA + "form/E_gg2_basis.npz")
     return raster(B["UV"], B["T_glb"], S, attr[B["glb_punkt"]])
 
 
@@ -132,6 +143,7 @@ def attr(kv):
     A = np.stack([sum(W[:, nm.index(b)] for b in bs) for _, bs in GRUPPEN], 1)
     t0 = time.time()
     Ar = raster_attr(A)
+    os.makedirs(os.path.dirname(ATTR), exist_ok=True)
     np.savez_compressed(ATTR, W=Ar.astype(np.float32), namen=np.array([g[0] for g in GRUPPEN]))
     print("attr", Ar.shape, round(time.time() - t0, 1), "s")
 
@@ -405,7 +417,7 @@ def feld(kv):
     P.update({k: float(v) for k, v in kv.items()})
     K = karte()
     A = np.load(ATTR)["W"]
-    Eb = np.load(GS + "ebene/gesicht_ebene.npz")
+    Eb = np.load(GA + "ebene/gesicht_ebene.npz")
     L, N, KR, Tt = K["L"], K["N"], K["KR"], K["T"]
     au = K["aussen"]
     x, y, z = [np.nan_to_num(L[..., i]) for i in range(3)]
@@ -496,6 +508,8 @@ def struktur(kv):
 
 # ------------------------------------------------------------------------------------------------ tex (PLAN 6.6)
 PT = dict(amp=0.153, rand=3)
+if NB:
+    PT["amp"] = 0.156                            # NACHBESSERUNG: Schnauze halb so stark (O2-04) senkt HP3 -> Gesamt-Amplitude +2 % (HP3 >= 11)
 
 
 def fuellen(out, belegt, alt):
@@ -533,7 +547,7 @@ def tex(kv):
     au, belegt = K["aussen"], K["belegt"]
     Tt = K["T"]
     sohle = np.clip(np.nan_to_num(Tt[..., 2]), 0, 1)
-    Eb = np.load(GS + "ebene/gesicht_ebene.npz")
+    Eb = np.load(GA + "ebene/gesicht_ebene.npz")
     a_ton, a_glatt = Eb["a_ton"].astype(float), Eb["a_glatt"].astype(float)
     Fd = np.load(FE + "struktur/feld.npz")
     Sx = np.load(FE + "struktur/S.npy").astype(float) * Fd["amp"].astype(float)
@@ -580,4 +594,5 @@ def liefern(kv):
 if __name__ == "__main__":
     cmd = sys.argv[1]
     kv = dict(a.split("=", 1) for a in sys.argv[2:])
+    kv.pop("nb", None)
     {"attr": attr, "grund": grund, "feld": feld, "struktur": struktur, "tex": tex, "liefern": liefern}[cmd](kv)

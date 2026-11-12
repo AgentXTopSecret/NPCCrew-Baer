@@ -20,6 +20,11 @@ R = "C:/Users/Kevin/NPCCrew-Nebenprojekte/_arbeit/baer_gen_gross/"
 V2 = R + "v2/"
 GS = V2 + "gesicht/"
 EIN = GS + "eingang/"
+# NACHBESSERUNG (12.11.2026, v2/NACHBESSERUNG.md, Mangel m1): Vorgabe ist der nachgebesserte Stand -- Form mit raeumlich geglaetteter
+# Verschiebung an Lippenlinie/Mundwinkel/Wange, Ausgaben unter v2/nachbesserung/gesicht/. "nb=0" auf der Befehlszeile = Stand des
+# BAUER GESICHT (raum_sigma 0, Ausgaben unter v2/gesicht/ -- dort NICHT neu schreiben, FELL prueft MD5).
+NB = "nb=0" not in sys.argv
+GA = V2 + "nachbesserung/gesicht/" if NB else GS             # Ausgabe-Ordner (form, gewichte, karten, ebene, mess, tex_vorschau)
 sys.path.insert(0, R + "fix1/werkzeug")
 M2U = 0.544
 
@@ -135,7 +140,10 @@ def feld(V, starr, fk, hp, P):
 
 P0 = dict(m0=0.75, m1=1.00, aug0=0.015, aug1=0.060, kuppe=0.014, kt0=0.78, kt1=0.98, kh0=0.30, kh1=0.85, runden=6, glatt=12, lam=0.5,
           soll95=0.066, f_ende=1.15, frei_t=0.03, soll10=0.119, soll20=0.107, soll30=0.096,
-          soll40=0.090)
+          soll40=0.090, raum_sigma=0.0, raum_lip0=0.020, raum_lip1=0.035)
+if NB:
+    P0["raum_sigma"] = 0.006                                            # NACHBESSERUNG m1 (nb=0: 0 = Stand BAUER GESICHT)
+    P0["soll30"] = 0.0965                                               # sonst t 0,3 genau am Rand des Bands (0,0960 gegen 0,100 -+ 0,004)
 
 
 def zwillings_gruppen(V):
@@ -164,13 +172,49 @@ def glaetten(V, Vf, T, frei, gruppen, schritte, lam):
     return V + D
 
 
-def feld_glatt(V, T, starr, fk, hp, P, gruppen):
+def raum_region(V, B, P):
+    """NACHBESSERUNG m1: Blend-Gewicht (Ruhe-Lage VOR dem Feld) fuer das raeumliche Glaetten -- Lippenlinie hinter der Spitze (x < 1,05),
+    Mundwinkel und Wange hinter dem Auge (Orte aus v2/pruef/technik/knick.json). Spitze/Nasenkuppe und Augen bleiben unberuehrt."""
+    Pl = V[B["lippe_ober"]]
+    d = np.sqrt(((V[:, None, :] - Pl[None, :, :]) ** 2).sum(-1)).min(1)
+    r = (1 - sst(P["raum_lip0"], P["raum_lip1"], d)) * (1 - sst(1.03, 1.06, V[:, 0]))
+    for s in (1, -1):
+        r = np.maximum(r, 1 - sst(0.02, 0.04, np.linalg.norm(V - np.array([0.94, s * 0.085, 0.684]), axis=1)))
+    return r
+
+
+def raum_glatt(V, Vg, frei, starr, tp, gruppen, rg, sig):
+    """NACHBESSERUNG m1: Verschiebung D = Vg - V im Gebiet rg raeumlich (Gauss sigma in der Ruhe-Lage) glaetten. Der Graph-Laplace allein
+    laesst fast deckungsgleiche Punkte an der Lippenlinie (Splitter-Dreiecke) mit verschiedenem D -> Knicke bis 84 Grad. Aussenhaut mittelt nur
+    Aussenhaut, Mundwand mittelt Aussenhaut + Wand (geht mit der Lippe mit); Zaehne/Zunge/Gaumen unveraendert; Zwillinge danach gemittelt."""
+    D = Vg - V
+    Dn = D.copy()
+    aussen = tp == "aussen"
+    wand = np.isin(tp, ["wand_o", "wand_u"])
+    quelle = starr > 0.5
+    for ziel_m, q_m in ((frei & aussen & (rg > 0), quelle & aussen), (frei & wand & (rg > 0), quelle & (aussen | wand))):
+        zi, qi = np.nonzero(ziel_m)[0], np.nonzero(q_m)[0]
+        for a in range(0, len(zi), 400):
+            z = zi[a:a + 400]
+            d2 = ((V[z][:, None, :] - V[qi][None, :, :]) ** 2).sum(-1)
+            w = np.exp(-d2 / (2 * sig * sig)) * (d2 < (3 * sig) ** 2)
+            Dn[z] = (w @ D[qi]) / w.sum(1)[:, None]
+    Dn = D + rg[:, None] * (Dn - D)
+    for g in gruppen:
+        Dn[g] = Dn[g].mean(0)
+    return V + Dn
+
+
+def feld_glatt(V, T, starr, fk, hp, P, gruppen, B=None):
     Vf, info = feld(V, starr, fk, hp, P)
     t, h = rahmen(V)
     frei = (starr > 0.5) & (t > P["frei_t"])
     for au in AUGEN:
         frei &= np.linalg.norm(V - au, axis=1) > 0.012
-    return glaetten(V, Vf, T, frei, gruppen, P["glatt"], P["lam"]), info
+    Vg = glaetten(V, Vf, T, frei, gruppen, P["glatt"], P["lam"])
+    if P.get("raum_sigma", 0) > 0:                                      # NACHBESSERUNG m1
+        Vg = raum_glatt(V, Vg, frei, starr, B["teil_punkt"].astype(str), gruppen, raum_region(V, B, P), P["raum_sigma"])
+    return Vg, info
 
 
 def form(kv):
@@ -191,7 +235,7 @@ def form(kv):
     gruppen = zwillings_gruppen(V)
     T = B["T"]
     for r in range(int(P["runden"])):
-        Vn, info = feld_glatt(V, T, starr, fk, hp, P, gruppen)
+        Vn, info = feld_glatt(V, T, starr, fk, hp, P, gruppen, B)
         pr = profil(Vn, kopf)
         fehler = pr[:, 0] - soll
         log.append(dict(runde=r, fk=fk.round(3).tolist(), halb=pr[:, 0].round(4).tolist(), fehler_mm=(fehler * 1000).round(1).tolist()))
@@ -200,7 +244,7 @@ def form(kv):
         fk[1:len(TT)] = 1 + (fk[1:len(TT)] - 1) * np.clip((soll[1:] - ist[1:, 0]) / np.maximum(pr[1:, 0] - ist[1:, 0], 1e-4), 0.5, 2.0)
         fk[-1] = fk[len(TT) - 1] * P["f_ende"]
         fk = np.clip(fk, 1.0, 3.0)
-    Vn, info = feld_glatt(V, T, starr, fk, hp, P, gruppen)
+    Vn, info = feld_glatt(V, T, starr, fk, hp, P, gruppen, B)
     pr = profil(Vn, kopf)
     bew = np.linalg.norm(Vn - V, axis=1)
     assert ((bew > 1e-9) & (starr < 0.5)).sum() == 0, "Punkte ausserhalb kopf_starr bewegt"
@@ -215,18 +259,18 @@ def form(kv):
     assert zw_max < 1e-12, zw_max
     Bn = dict(B)
     Bn["V"] = Vn
-    os.makedirs(GS + "form", exist_ok=True)
-    os.makedirs(GS + "gewichte", exist_ok=True)
-    np.savez_compressed(GS + "form/E_gg2_basis.npz", **Bn)
+    os.makedirs(GA + "form", exist_ok=True)
+    os.makedirs(GA + "gewichte", exist_ok=True)
+    np.savez_compressed(GA + "form/E_gg2_basis.npz", **Bn)
     Gn = dict(G)
     Gn["V"] = Vn
-    np.savez_compressed(GS + "gewichte/E_gg2_gewichte.npz", **Gn)
+    np.savez_compressed(GA + "gewichte/E_gg2_gewichte.npz", **Gn)
     ist_d = {"%.2f" % tt: dict(halb=round(float(a), 4), oben_halb=round(float(b), 4), hoehe=round(float(c), 4)) for tt, (a, b, c) in zip(TT, ist)}
     neu_d = {"%.2f" % tt: dict(halb=round(float(a), 4), oben_halb=round(float(b), 4), hoehe=round(float(c), 4)) for tt, (a, b, c) in zip(TT, pr)}
     js = dict(parameter=P, fk_t=np.r_[TT, 1.0].tolist(), fk=fk.round(4).tolist(), soll_halb=SOLL.tolist(), toleranz=TOL.tolist(),
               profil_vorher=ist_d, profil_nachher=neu_d, eichung=log, bewegt=int((bew > 1e-9).sum()), max_cm=round(float(bew.max() * 100), 2),
               zwillinge_max_m=zw_max, hoehen_profil=dict(t=hp[0].round(3).tolist(), oben=hp[1].round(4).tolist(), unten=hp[2].round(4).tolist()))
-    json.dump(js, open(GS + "form/E_gg2_basis.npz.json", "w"), indent=1)
+    json.dump(js, open(GA + "form/E_gg2_basis.npz.json", "w"), indent=1)
     print("bewegt", js["bewegt"], "max cm", js["max_cm"])
     for tt in TT:
         k = "%.2f" % tt
@@ -326,8 +370,8 @@ def dehnung(V, T, W, sk, RT, RN, kopf_d):
 
 def pruef(kv):
     from fx_lib import lade_dump, Skin
-    basis = kv.get("basis", GS + "form/E_gg2_basis.npz")
-    aus = kv.get("aus", GS + "mess/pruef_form.json")
+    basis = kv.get("basis", GA + "form/E_gg2_basis.npz")
+    aus = kv.get("aus", GA + "mess/pruef_form.json")
     schnell = kv.get("schnell", "0") == "1"
     B0, G0 = lade_ein()
     Bn = dict(np.load(basis))
@@ -535,7 +579,7 @@ def ton(kv):
     sys.path.insert(0, R + "gegen")
     from g_dump import Haut
     tag = kv.get("tag", "neu")
-    basis = kv.get("basis", GS + "form/E_gg2_basis.npz")
+    basis = kv.get("basis", GA + "form/E_gg2_basis.npz")
     D = lade_dump(R + "rig/dump_2c.txt")
     B0, G0 = lade_ein()
     Bn = np.load(basis)
@@ -601,9 +645,9 @@ def ton(kv):
             blatt.paste(i, (x, y))
             x += i.size[0]
         y += max(i.size[1] for i in z)
-    os.makedirs(GS + "mess", exist_ok=True)
-    blatt.save(GS + "mess/ton_%s.png" % tag)
-    print("ok", GS + "mess/ton_%s.png" % tag)
+    os.makedirs(GA + "mess", exist_ok=True)
+    blatt.save(GA + "mess/ton_%s.png" % tag)
+    print("ok", GA + "mess/ton_%s.png" % tag)
 
 
 if __name__ == "__main__":
