@@ -453,3 +453,22 @@ schonmal besser als vorher'*.
   einrechnen), aus Kevins Kamera UND von der Seite pruefen; dabei auch das Schweben beim Rennen ansehen. Die anderen Clips bleiben byte-gleich.
 * Nachtrag ~07:50: der grosse Baer liegt bei Dead/Death ebenso mit uebereinander gestapelten Beinen (Render `../_arbeit/baer_gross/fix1/render/end/p_dead_az50_tex.png`).
   Frage "das Liegen beim grossen Baeren gleich mit?" -> Kevin: *'Ja, beide Baeren'*. **Fest:** die Liegen-Aufgabe gilt fuer Junges UND grossen Baeren.
+
+## Schlaf-Pose nach Fotos, fuer alle Baeren (Kevin 12.11.2026 ~07:50)
+Kevin: *'lad dir mal schlafende baer fotos runter und zeig mir die dann welche du nehmen wuerdest zum bauen'* -> 12 freie Fotos auf Wikimedia Commons
+(Kategorie "Sleeping bears") nur IM BROWSER angesehen, 5 ausgewaehlt und Kevin gezeigt (*'zeig mir nur die bilder die du nehmen wuerdest'*). Dann
+woertlich: *'okay mer kdir das mal so fuer die uebergabe das er darauss eine schlafpose macht fuer unsere baeren geht das dann fuer alle baeren direkt?
+also baby und ganz gross?'*
+* **Fest:** Die Schlaf-Pose (SCHLAF_PLAN.md: Sphinx, Kopf ~20 Grad seitlich auf der Pranke, Pfoten frei, NICHT die Seitenlage der Tot-Pose) wird nach
+  diesen 5 Fotos gebaut, fuer ALLE Baeren: einmal am grossen Baeren (2c-Skelett) entworfen, dann wie beim Sitzen (Umrechner `spiel/baer_sitz_jfuss.py`
+  mit IK fuer die kuerzeren Arme) auf das Junge uebertragen -- je ein Clip-Satz im GLB des Jungen und im GLB des grossen Baeren; die Groessen dazwischen
+  (0,35 .. 1,35) nutzen denselben Clip.
+* **Download noch NICHT erlaubt** (Werkstatt-Regel: Name, Quelle, Groesse und Kevins Ja je Datei). Die naechste Sitzung fragt Kevin mit dieser Liste;
+  Ablage dann nur lokal `begleiter/ref_schlafen_<nr>.jpg` (in .gitignore eintragen), nur ansehen, nichts davon in die Mod.
+| Nr. | Rolle | Datei (Wikimedia Commons, Beschreibungsseite) | Groesse | Lizenz / Urheber |
+|---|---|---|---|---|
+| 6 | HAUPTVORLAGE: Bauch, Kopf seitlich auf der Pranke, Pfoten frei, schraeg von oben | https://commons.wikimedia.org/wiki/File:%D0%A1%D1%96%D1%94%D1%81%D1%82%D0%B0.jpg ("Сієста.jpg") | 2048x1536, 0,73 MB | CC BY-SA 4.0, Sirocco74 |
+| 3 | ganzer Koerper von der Seite, Kopf auf den Vorderpfoten (Masse) | https://commons.wikimedia.org/wiki/File:OURS_BRUN_0023.JPG | 3008x2000, 2,80 MB | CC BY 2.5, Jm.d (angenommen) |
+| 10 | eingerollt, von vorn-oben wie die Spielkamera (Pfoten-Lage) | https://commons.wikimedia.org/wiki/File:Ours_brun_(19612993101).jpg | 3427x2284, 7,04 MB | CC BY 2.0, Sebastien Faillon |
+| 4 | Sphinx, Kopf seitlich, Hinterbeine sauber nebeneinander | https://commons.wikimedia.org/wiki/File:Braunbaer_anholter_schweiz.JPG | 2816x2112, 3,13 MB | CC BY-SA 3.0, jpr65 |
+| 9 | Schlafgesicht nah, Augen zu | https://commons.wikimedia.org/wiki/File:Orso_bruno_(Ursus_arctos)_-_Brown_bear,_Valbrembo,_Italia,_08.2014_(2).jpg | 4608x3072, 11,12 MB | CC BY-SA 4.0, Chindea Ciprian Emil |

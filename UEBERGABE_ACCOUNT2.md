@@ -43,6 +43,11 @@ Sandbox-Prozent 25-1000 und an/aus, 11.5 Kill-Zaehler, 11.6 kein Schaden durch S
 11.7 Fliehen erst, wenn das Leben nur noch fuer 3 Treffer reicht (Kevin: "nur noch fliehen wenn er low hp ist sodas er nach 2-3 hits sterben
 wuerde"), Sandbox 1-10, Vorgabe 3; ersetzt die 20-%-Schwelle.
 
+## 3b. Schlaf-Pose (Kevin 07:50: "das er darauss eine schlafpose macht fuer unsere baeren ... baby und ganz gross")
+Nach 5 Wikimedia-Commons-Fotos (Liste mit Links, Groessen, Lizenzen: `baer/begleiter/ENTSCHEIDUNGEN.md` ganz unten), fuer Junges UND grossen Baeren
+(am grossen Baeren entwerfen, mit dem Sitz-Umrechner auf das Junge uebertragen). Gehoert zu F3 (Schlafen, `baer/begleiter/SCHLAF_PLAN.md`).
+Download erst nach Kevins Ja je Datei (noch nicht gegeben).
+
 ## 4. Spaeter (Funktionen-Liste, STAND.md "NACHTSCHICHT")
 F3 Beduerfnisse + Schlafen (`baer\SCHLAF_PLAN.md`), F4 Traglast/Inventar, F5 Spuernase + Fischen (Balance fest: Ertrag = NPC-Angler gleicher Stufe x
 0,5 halbstark .. 1,0 ausgewachsen, jedes Wasser; offene Fragen: von selbst/Befehl, Fische bringen, Zusehen), F6 Mehrspieler-Pruefung.

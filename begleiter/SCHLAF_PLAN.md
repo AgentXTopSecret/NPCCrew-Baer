@@ -712,3 +712,6 @@ rund 20 px nach rechts (voll sichtbar bis ~12 px, verblassend bis ~18-20 px, `zz
 - Inhalt der Tonkandidaten (nichts angehoert, nichts geladen).
 
 Statisch geprueft, nicht gespielt.
+
+## Nachtrag 12.11.2026: Foto-Vorlagen und alle Baeren
+Kevin hat 5 Fotos schlafender Braunbaeren ausgewaehlt gesehen (Liste in `ENTSCHEIDUNGEN.md` unten, Nr. 6 = Hauptvorlage). Die Schlaf-Pose gilt fuer Junges UND grossen Baeren (Kevin: "fuer unsere baeren ... baby und ganz gross"): Entwurf am grossen Baeren, Uebertrag auf das Junge wie beim Sitzen (baer_sitz_jfuss.py, IK). Pfoten liegen frei, nie ineinander (Kevin zur Tot-Pose 12.11.).
