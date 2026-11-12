@@ -88,6 +88,14 @@ Was es tut (erst wenn ALLES geprueft ist, wird geschrieben; sonst Abbruch ohne S
      (Vanilla liest sie selbst, client/OptionScreens/MainOptions.lua:2165/:2177). Neue Tier-Regel PlaceCub: B.PlaceCub( (neuer Koerper
      fuer einen bestehenden Eintrag) nur aus B.RideStep / B.HandleCall / B.BodySwap / B.ReviveMissing (C1). Das Fenster ist echte
      Spielmechanik (kein Wert-Setzen, keine Probe-Wege); die Bench (NCBearBench*) bleibt Bench.
+     F1B (PLAN_F1B.md 8.1; Kevin 12.11.2026: Baeren-Fenster auf E in der Naehe, Fern-Taste in den Mod-Optionen): keine Zeile mehr in
+     Vanillas keyBinding (die Ausnahmen KEY_V / Abschnitt / isKey(NAME) / Radial-Schliessen / "Esc oder eigene Taste" sind gestrichen),
+     dafuer die Vorgaben U.KEY_DEF (Keyboard.KEY_E / KEY_NONE, client/BanditsNPCBearOptions.lua), OnKeyStartPressed (Haltezeit und
+     Cursor beim Druecken) und die Interact-Frage isKey(KeybindId.INTERACT, key) in client/BanditsNPCBearKey.lua, "nur Esc" im Fenster.
+     TEXT_NS UI.json: nur noch UI_BN_Bear_* (die zwei Tasten-Schluessel UI_optionscreen_binding_* sind weg). mo_text_hits: der NAME
+     einer addKeyBind-Zeile darf genau getText("UI_BN_Bear_*") sein (Vanilla sucht die Zeile ueber ihren Beschriftungstext,
+     client/OptionScreens/MainOptions.lua:2985, :2992, :3804 -- ein roher Schluessel liefe ins Leere); der Schluessel darin muss wie
+     jeder benutzte Schluessel in EN/UI.json stehen. Jede andere Form bleibt ein Fund.
      Ausnahmen nur einzeln mit Grund (CHEAT_ALLOWED).
   7. (Probe/echt) schreiben, zuruecklesen, dann luacheck.py, scopecheck.py, localcount.py je kopierter Lua-Datei und luacheck_pz.py
      (W113 nur die einzeln erlaubten: die drei Aktionsklassen, die eine andere kopierte Datei setzt).
@@ -155,10 +163,9 @@ ANIM_VAR = "NCBearAct"                                             # B.ACT
 
 # Namensraum der Texte je Datei.
 TEXT_NS = {
-    # F1 (PLAN_F1.md 3.1, 11.3): die zwei Beschriftungen der Tasten-Zeile (Vanilla baut "UI_optionscreen_binding_" .. Name,
-    # client/OptionScreens/MainOptions.lua:2165/:2177) -- genau diese, kein Muster (NAEHTE.md Zeile 27)
-    "UI.json": (re.compile(r"^UI_BN_Bear_[A-Za-z0-9_]+$"),
-                {"UI_optionscreen_binding_NPC Crew Bear", "UI_optionscreen_binding_Bear window"}),
+    # F1 (PLAN_F1.md 3.1, 11.3) hatte hier die zwei Beschriftungen der Tasten-Zeile; F1B (PLAN_F1B.md 2.3, 8.1): keine Zeile mehr in
+    # Vanillas keyBinding -> keine Ausnahme mehr (NAEHTE.md Zeile 27)
+    "UI.json": (re.compile(r"^UI_BN_Bear_[A-Za-z0-9_]+$"), set()),
     "Sandbox.json": (re.compile(r"^Sandbox_BanditsNPC_Bear[A-Za-z0-9_]+$"), {"Sandbox_BanditsNPC"}),
     "IG_UI.json": (re.compile(r"^$"), {"IGUI_AnimalType_ncbearcub", "IGUI_Animal_Group_ncbear", "IGUI_Breed_brown",
                                        "IGUI_AnimalType_ncbeargrown"}),               # B1e: Tiername des grossen Koerpers
@@ -375,6 +382,8 @@ MO_TEXT_ARGS = {None: (1,), "addTitle": (0,), "addDescription": (0,), "addTickBo
 # hoechstens zwei Argumenten zaehlt deshalb das erste)
 MO_KEY = re.compile(r"^UI_BN_Bear_[A-Za-z0-9_]+$")
 MO_NAME = re.compile(r"^[A-Za-z_]\w*$")
+# F1B (PLAN_F1B.md 0 E2, 8.1): Name einer Tasten-Zeile schon uebersetzt -- genau diese Form, nur fuer addKeyBind Argument 1
+MO_KEYBIND_NAME = re.compile(r"^getText\(\s*\"UI_BN_Bear_[A-Za-z0-9_]+\"\s*\)$")
 
 
 def mo_text_hits(code_text):
@@ -397,6 +406,8 @@ def mo_text_hits(code_text):
             a = args[i].strip()
             if a in ("", "nil"):
                 continue
+            if m.group(1) == "addKeyBind" and i == 1 and MO_KEYBIND_NAME.match(a):
+                continue        # F1B: Name der Tasten-Zeile = getText("UI_BN_Bear_*") (Schluessel prueft die Text-Pruefung)
             lit = re.match(r"^([\"'])([^\"'\n]*)\1$", a)
             if lit:
                 if not MO_KEY.match(lit.group(2)):
@@ -417,39 +428,40 @@ CHEAT_ALLOWED = [
      "why": "Name des model-Skripts (scripts/nc_bear_cub.txt), kein Befehl (Plan 12.1 Punkt 5)"},
     {"file": "42/media/lua/shared/BanditsNPCBearDefs.lua", "rule": "befehl", "code": 'bodyModel = "NCBear_Body"',
      "why": "B1e: model-Skript des grossen Koerpers (scripts/nc_bear_tier.txt, Altlast bis B5a -- ALT_DEFS), kein Befehl"},
-    # F1 (PLAN_F1.md 11.3): Baeren-Fenster auf Kevins Wunsch (ENT:259 "eine richtige UI die aufgeht wenn ich V druecke (einstellbar in den
-    # keystings)"), Taste in Vanillas Belegung (Optionen -> Tastaturbelegung, Abschnitt "NPC Crew: Bear"). Genau diese drei Stellen.
-    {"file": "42/media/lua/client/BanditsNPCBearKey.lua", "rule": "taste", "code": "{ value = NAME, key = Keyboard.KEY_V }",
-     "why": "F1: Vorgabe-Taste V der Zeile 'Bear window' in Vanillas keyBinding (V:shared/keyBinding.lua:132), einstellbar"},
+    # F1 (PLAN_F1.md 11.3) / Nachbesserung F1 A1: Baeren-Fenster mit Taste. F1B (PLAN_F1B.md 8.1; Kevin 12.11.2026: "bei E das baeren ui
+    # zu oeffnen und wenn man es aus der ferne oeffnen will dann kann man ... den hotkey festelegen ... in sen mod settings"): zwei
+    # Tasten auf der eigenen Mod-Optionen-Seite (Nah-Taste E, Fern-Taste ohne Vorgabe), keine Zeile mehr in Vanillas keyBinding, kein
+    # Radial-Schliessen beim Druecken/Halten mehr (Tier-Radial ohne "Kill" jetzt als Huelle in client/BanditsNPCBearMenu.lua; nur wenn
+    # eine UNSERER Tasten selbst auf V liegt, geht das Radial am eigenen Baeren beim Loslassen mit zu -- Nachbesserung F1B B1), das
+    # Fenster verbraucht nur Esc. Genau diese Stellen, je mit Grund.
+    {"file": "42/media/lua/client/BanditsNPCBearOptions.lua", "rule": "taste",
+     "code": "U.KEY_DEF = { KeyNear = Keyboard.KEY_E, KeyFar = Keyboard.KEY_NONE }", "exact": True,
+     "why": "F1B, Kevin 12.11.: E am Baeren, Fern-Taste in den Mod-Optionen -- Vorgaben der zwei addKeyBind-Zeilen (V:shared/keyBinding.lua:33, :57)"},
+    {"file": "42/media/lua/client/BanditsNPCBearKey.lua", "rule": "taste", "code": "Events.OnKeyStartPressed.Add(onKeyStart)",
+     "why": "F1B, Kevin 12.11.: E am Baeren -- Haltezeit und Cursor beim Druecken merken (V:client/Farming/CFarming_Interact.lua:289)"},
     {"file": "42/media/lua/client/BanditsNPCBearKey.lua", "rule": "taste", "code": "Events.OnKeyPressed.Add(onKey)",
-     "why": "F1: oeffnet/schliesst das Baeren-Fenster auf der belegten Taste (V:client/ISUI/FPS.lua:20), mit Vorfahrt NPC/Fahrzeug/Tier"},
-    {"file": "42/media/lua/client/ISUI/BanditsNPCBearWindow.lua", "rule": "taste", "code": "return key == Keyboard.KEY_ESCAPE or",
-     "why": "F1: Esc oder die eigene Taste schliessen das Fenster (V:client/ISUI/Crafting/ISHandcraftWindow.lua:289-297)"},
-    # Nachbesserung F1 A1 (die Regel sieht seit dem auch Fenster-Tasten): genau diese Stellen, je mit Grund
-    {"file": "42/media/lua/client/BanditsNPCBearKey.lua", "rule": "taste", "code": "table.insert(keyBinding, { value = HEAD })",
-     "why": "F1: Abschnitt [NPC Crew Bear] in Vanillas keyBinding (V:shared/keyBinding.lua:6-14), nur einmal (Doppel-Riegel)"},
-    {"file": "42/media/lua/client/BanditsNPCBearKey.lua", "rule": "taste", "code": "if not getCore():isKey(NAME, key) then return end",
-     "why": "F1: nur die eigene Zeile 'Bear window' oeffnet das Fenster (V:client/ISUI/FPS.lua:9)"},
+     "why": "F1B, Kevin 12.11.: E am Baeren / Fern-Taste oeffnen und schliessen das Fenster (V:client/ISUI/FPS.lua:20)"},
+    {"file": "42/media/lua/client/BanditsNPCBearKey.lua", "rule": "taste", "code": "getCore():isKey(KeybindId.INTERACT, key)",
+     "why": "F1B, Kevin 12.11.: E am Baeren -- Tuer/Fahrzeug/Zielen/Kletter-Riegel und die stille Fern-Taste ohne Baeren "
+            "(Nachbesserung F1B B2/B3) nur, wenn die Taste gerade Vanillas Interact ist (V:client/Farming/CFarming_Interact.lua:28)"},
     {"file": "42/media/lua/client/BanditsNPCBearKey.lua", "rule": "taste", "code": "getCore():isKey(ia.KEYBIND, key) and ia.FindTarget(p)",
-     "why": "F1: Vorfahrt NPC-Gespraech -- NPC Crews Taste nur gelesen (NAEHTE.md 28)"},
+     "why": "F1B: Vorfahrt NPC-Gespraech auf derselben Taste -- NPC Crews Taste nur gelesen (NAEHTE.md 28)"},
     {"file": "42/media/lua/client/BanditsNPCBearKey.lua", "rule": "taste",
      "code": "getCore():isKey(KeybindId.VEHICLE_RADIAL_MENU, key) and ISVehicleMenu.getVehicleToInteractWith(p)",
-     "why": "F1: Vorfahrt Fahrzeug-Radial (V:client/ISUI/ISUIHandler.lua:36, :43)"},
+     "why": "F1B: Vorfahrt Fahrzeug-Radial, falls eine unserer Tasten darauf liegt (V:client/ISUI/ISUIHandler.lua:36, :43)"},
     {"file": "42/media/lua/client/BanditsNPCBearKey.lua", "rule": "taste", "code": "if getCore():isKey(KeybindId.ANIMAL_RADIAL_MENU, key) then",
-     "why": "F1: Vorfahrt Tier-Radial eines fremden Tiers (V:client/ISUI/ISUIHandler.lua:37, :44)"},
-    {"file": "42/media/lua/client/BanditsNPCBearKey.lua", "rule": "taste",
-     "code": "if not getCore():isKey(KeybindId.ANIMAL_RADIAL_MENU, key) then return end",
-     "why": "Nachbesserung F1 B9: schliesst Vanillas Tier-Radial an unserem Baeren (kein 'Kill'), nur die Radial-Taste"},
-    {"file": "42/media/lua/client/BanditsNPCBearKey.lua", "rule": "taste", "code": "Events.OnKeyStartPressed.Add(onRadialKey)",
-     "why": "Nachbesserung F1 B9: Radial schliessen beim Druecken (V:client/ISUI/ISUIHandler.lua:102)"},
-    {"file": "42/media/lua/client/BanditsNPCBearKey.lua", "rule": "taste", "code": "Events.OnKeyKeepPressed.Add(onRadialKey)",
-     "why": "Nachbesserung F1 B9: Radial schliessen, solange die Taste gehalten wird (V:client/Hotbar/ISHotbar.lua:890)"},
+     "why": "F1B: Vorfahrt Tier-Radial eines fremden Tiers, falls eine unserer Tasten darauf liegt (V:client/ISUI/ISUIHandler.lua:37, :44); "
+            "Nachbesserung F1B B1 (zweite Stelle, closeBearRadial): liegt sie darauf, geht Vanillas Radial am eigenen Baeren mit dem "
+            "Fenster zu (V:client/ISUI/ISUIHandler.lua:91-92, V:client/ISUI/Animal/ISAnimalContextMenu.lua:1164)"},
     {"file": "42/media/lua/client/ISUI/BanditsNPCBearWindow.lua", "rule": "taste", "code": "o:setWantKeyEvents(true)",
-     "why": "F1: das Fenster bekommt Tasten (Esc / eigene Taste schliessen; V:client/ISUI/Crafting/ISHandcraftWindow.lua:386)"},
+     "why": "F1: das Fenster bekommt Tasten (F1B: nur Esc schliesst; V:client/ISUI/Crafting/ISHandcraftWindow.lua:386)"},
     {"file": "42/media/lua/client/ISUI/BanditsNPCBearWindow.lua", "rule": "taste", "code": "function Win:isKeyConsumed(key)",
-     "why": "F1: Esc / eigene Taste gehoeren dem offenen Fenster (V:client/ISUI/Crafting/ISHandcraftWindow.lua:289-292)"},
+     "why": "F1B: nur Esc gehoert dem offenen Fenster (V:client/ISUI/Crafting/ISHandcraftWindow.lua:289-292)"},
     {"file": "42/media/lua/client/ISUI/BanditsNPCBearWindow.lua", "rule": "taste", "code": "function Win:onKeyRelease(key)",
-     "why": "F1: Esc / eigene Taste schliessen das Fenster (V:client/ISUI/Crafting/ISHandcraftWindow.lua:294-297)"},
+     "why": "F1B: Esc schliesst das Fenster (V:client/ISUI/Crafting/ISHandcraftWindow.lua:294-297)"},
+    {"file": "42/media/lua/client/ISUI/BanditsNPCBearWindow.lua", "rule": "taste", "code": "return key == Keyboard.KEY_ESCAPE",
+     "exact": True,
+     "why": "F1B: nur Esc schliesst (V:client/ISUI/Crafting/ISHandcraftWindow.lua:290); E / Fern-Taste schliessen ueber OnKeyPressed"},
 ]
 # luacheck_pz W113, die eine ANDERE kopierte Datei setzt (luacheck_pz liest je Datei, nicht ueber Dateien): (Datei, Name).
 PZ_ALLOWED = {
@@ -1397,7 +1409,9 @@ def cheat_check(plan, src, rep):
             return
         seen.add(key)
         for i, a in enumerate(CHEAT_ALLOWED):
-            if a["file"] == rel and a["rule"] == rid and a["code"] in code:
+            # F1B: "exact" -- die Ausnahme gilt nur fuer genau diese Zeile (Code-Teil ohne Rand), nie fuer eine verlaengerte
+            hit = (a["code"] == code.strip()) if a.get("exact") else (a["code"] in code)
+            if a["file"] == rel and a["rule"] == rid and hit:
                 used[i].append("%s:%s" % (rel, no) if no else rel)
                 return
         found.append("%s: %s [%s: %s]" % ("%s:%d" % (rel, no) if no else rel, why, rid, what))
@@ -1633,9 +1647,11 @@ def print_plan(plan, rep):
     rep.say("== Naehte (NAEHTE.md): keine Zeile in einer NPC-Crew-Lua-Datei. Laufzeit-Aufsaetze auf NPC Crew in OnGameBoot stehen in den "
             "kopierten Dateien (B1c: dazu ein Aufsatz auf VANILLAS Kartenklassen, Datei-Ende + OnGameStart, NAEHTE.md Zeile 18; B1d: "
             "keine neue Naht, NAEHTE.md Zeile 25; B1e: keine neue Naht, die Art ncbeargrown haengt bis B5a am grossen Modell der "
-            "Test-Mod, NAEHTE.md Zeilen 15 und 26; F1: Tasten-Zeile in Vanillas keyBinding, Vorfahrt vor NPC Crews 'Talk to NPC' nur "
-            "lesend, layout.ini-Name und Client-Datei BanditsNPCBear.ini, Beacon-Basisflaeche fuer 'Frei' nur dokumentiert, NAEHTE.md "
-            "Zeilen 27-30); geaendert werden nur NPC Crews Texte (zusammenfuehren) und sandbox-options.txt (anhaengen).")
+            "Test-Mod, NAEHTE.md Zeilen 15 und 26; F1/F1B: zwei Tasten auf der eigenen Mod-Optionen-Seite (keine Zeile in Vanillas "
+            "keyBinding mehr), Vorfahrt vor NPC Crews 'Talk to NPC' und NC-Stationen nur lesend, layout.ini-Name und Client-Datei "
+            "BanditsNPCBear.ini (tagoff/ageoff), Beacon-Basisflaeche fuer 'Frei' nur dokumentiert, Huelle um Vanillas "
+            "AnimalContextMenu.showRadialMenu (ohne Kill), NAEHTE.md Zeilen 27-32); geaendert werden nur NPC Crews Texte (zusammenfuehren) "
+            "und sandbox-options.txt (anhaengen).")
 
 
 def write_all(root, final, rep):

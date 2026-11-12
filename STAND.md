@@ -1,5 +1,35 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **12.11. 10:00: F1b FERTIG (5/5, Gegenpruefer "bereit fuer SP-Test", kein Blocker) und EINGEBAUT** (Spiel zu; `tools/einbau_f1b.py`: 65 Dateien, 16 ueberschrieben,
+> 49 gleich, NCBearCub.glb/.png absichtlich NICHT kopiert (Test-Mod neuer); Zips `NCBearTest_vor_f1b_2026-11-12_100009.zip` / `_mit_`; mod.info + 42/mod.info Beschreibung
+> aus mod_info_vorschlag_f1b.txt). Fenster jetzt mit **E nah am Baeren**, Fern-Taste waehlbar (Optionen > Mods > NPC Crew: Bear), V wieder Vanilla, Schalter Growth line.
+> Kevins Test: `spiel/anleitung_f1b.md` (16 Punkte), Bericht `spiel/f1b_gegen_bericht.md`. Zusammenfuehren ins F2-Staging ohne echte Kollision (`../_arbeit/baer_zaehmen/f1b_merge.md`).
+> **Offen R1:** Trockenlauf `--vor-b5a` jetzt 1 Fehler "NPC Crew hat Sprachen, die das Skript nicht kennt: DE" (NPC Crew hat seit 12.11. 09:26 shared/Translate/DE) --
+> kein F1b-Fehler; Kevin fragen, ob der Baer auch Deutsch bekommt (dann LANGS + DE-Texte), sonst DE nur als Warnung.
+
+> **12.11. ~08:45: VIERTER LAUF auf Kevins Wort** (*"starte noch einen workflow fuer den anderen baby baeren mach da auch das gesicht besser und vorallem die beine"*;
+> 5 h 18 %, Woche 8 %): **baer-gen-junges-v2** `wf_fccd15a2-a54` (Task w482c6j1o, 8 Agenten, scriptPath `C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel/gen_junges_v2_workflow.js`):
+> Generator-Junges (Foto C, 11.11. wegen "laeuft wie eine giraffe" entfernt) -- kurze Beine + Baerenfuesse + Gang neu, Maul groesser, Kopf nicht gesenkt;
+> Ergebnis `../_arbeit/baer_gen_junges/v2/out/` (Bench-Namen NCBearBenchCubGen.*), Bench-Staging `v2/mod/` (NCBear_CubGen()), Blatt `v2/bilder/KEVIN_gen_junges_v2.png`.
+
+> **12.11. ~08:30 NEUE AUFGABE (Kevin: *"ja fuer spieler als knopf"*):** Knopf "Aussehen" im Baerenfenster fuer gezaehmte Baeren (2c <-> Generator braun/Fototon,
+> Junges alt <-> neu), echte Spieler-Funktion ueber B.BodySwap; je Aussehen eine Tierart mit endgueltigem Namen. Funktionen-Spur nach F1b (vor/mit F2 -- Kevin kurz fragen).
+> Gegen Missbrauch (Kevin: *"koennte man das model weckseln abused? z.b als unstuck funktion ... wird er dabei geheilt"*): Leben (rec.hp) und Ausdauer
+> (s.sta, clearBodySession laesst sie) bleiben; Tausch nur ohne Zombie < 9 Kacheln, nicht beim Fahren/Fuettern/Streicheln, Kachel = eigene oder
+> Ring 1-2 (B.SwapSpot) -> kein Wegzaubern. Neu dazu: Abklingzeit GEMEINSAM mit Unstuck; F3-Beduerfnisse muessen im Register liegen (nicht am Koerper).
+
+> **12.11. ~08:15: DRITTER LAUF auf Kevins Wort** (*"ja mach den eignen model lauf wo du den verbesserst besonders sein gesicht (nase) die ist voll schmall"*):
+> **baer-gen-gross-v2** `wf_1395b40d-69d` (Task wo8q8e17b, 7 Agenten, scriptPath `C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel/gen_gross_v2_workflow.js`):
+> Generator-Baer Gesicht/Nase breiter, Unterarme nicht schwarz, Fellstriche; Ergebnis `../_arbeit/baer_gen_gross/v2/out/`, Blatt `v2/bilder/KEVIN_gen_gross_v2.png`.
+
+
+> **12.11. ~07:50 (neuer Account, Sitzung d5933cc7): ZWEI LAEUFE GESTARTET auf Kevins Wort** (*"lies die Uebergabe und macht weiter"*; Woche 3 %, 5 h 1 %):
+> Funktionen-Spur **F1b-Fortsetzung** `wf_d85efd40-ad5` (Task whok23v30, 5 Agenten, scriptPath `C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel/f1b_fortsetzung.js`);
+> Modell-Spur **baer-kopfnaht** `wf_0956985e-5e7` (Task wxsgiqp0b, 6 Agenten, scriptPath `C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel/kopfnaht_workflow.js`).
+> Abgebrochen -> in DIESER Sitzung resumeFromRunId; neue Sitzung -> Fortsetzungs-Skript nach Vorbild f2_fortsetzung.js. Danach: F1b einbauen (Spiel zu),
+> F2 fortsetzen (`spiel/f2_fortsetzung.js`), grossen Baeren mit Kopfnaht einbauen und Kevin zeigen, dann Liegen beider Baeren.
+
+
 > **12.11. 08:13: ALLES ANGEHALTEN -- WOCHE 97 % (Limit-Waechter, Kevin: "ab 98% wochenlimit bitte alles abspeichern").** F1b (`wf_217a0733-3d7`, Task wa7f9ef3m) in pruef:belege + pruef:logik gestoppt; Forschung, Plan, Bau fertig. Fortsetzung ohne Lauf-Cache: `spiel/f1b_fortsetzung.js` (5 Agenten); in dieser Sitzung auch Workflow({scriptPath: spiel/f1b_workflow.js, resumeFromRunId: "wf_217a0733-3d7"}) (Zusatz drin). **Uebergabe fuer Kevins anderen Account: `UEBERGABE_ACCOUNT2.md`** (Abschnitt 5 = Abschluss-Stand). Waechter c13433de geloescht. Keine Laeufe mehr bis zum Wochen-Reset So 15.11. 23:00 (oder mit dem anderen Account).
 
 > **12.11. ~07:40: Junges -- Kevin zum neuen Modell "besser als vorher", aber liegend/tot "die beine stecken ineinander (die fuesse)"** (Blatt `../_arbeit/baer_junges_fuss/bilder/KEVIN_junges_liegen.png`). Neue Modell-Aufgabe NACH dem Wochen-Reset (Woche 94 %): Dead/Death von Junges UND grossem Baeren (Kevin ~07:50 "Ja, beide Baeren") ohne ineinander/uebereinander steckende Pfoten + liegt auf (Variante liegen_gesenkt); `begleiter/ENTSCHEIDUNGEN.md` unten. Reihenfolge danach: F2, baer-kopfnaht, Junges-Liegen (Kevin fragen).

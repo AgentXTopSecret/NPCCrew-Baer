@@ -480,3 +480,11 @@ also baby und ganz gross?'*
   auch noch'*. Das steigende z Z z ist im SCHLAF_PLAN.md Abschnitt 2 schon geplant (dort noch fast weiss wie die NPC-Crew-Namen). **Fest:** eine Farbe,
   die nach Schlaf aussieht -- Vorschlag sanftes Hellblau (etwa 0,70 / 0,85 / 1,00) mit dunklem Schatten, damit es sich klar vom weissen Namensschild
   abhebt; im F3-Plan als Bild zeigen, Kevin waehlt.
+* Kevin (12.11. ~08:15) zum Generator-Baeren (zweites grosses Modell): *"ja mach den eignen model lauf wo du den verbesserst besonders sein gesicht (nase) die ist voll schmall und so"* -> Lauf baer-gen-gross-v2 (7 Agenten).
+* Kevin (12.11. ~08:30) auf die Frage, ob man das Modell eines gezaehmten Baeren im Spiel wechseln kann: *"ja fuer spieler als knopf aber was ist der haken den versteh ich nicht"*.
+  **Fest:** echte Spieler-Funktion (kein Bench), Knopf "Aussehen" im Baerenfenster; grosser Baer 2c <-> Generator-Baer (braun/Fototon), Junges alt <-> neu.
+  Weg: derselbe Koerpertausch wie beim Wachsen (B.BodySwap -- neuer Koerper, Eintrag/Name/Zaehmung/Werte bleiben). Jedes Aussehen = eigene Tierart mit
+  ENDGUELTIGEM Namen (steht im Spielstand). Einplanen in der Funktionen-Spur NACH F1b (F1b baut am Baerenfenster).
+* Kevin (12.11. ~08:40): *"okay gut dann starte noch einen workflow fuer den anderen baby baeren mach da auch das gesicht besser und vorallem die beine"* -- *"laeuft das
+  andere baby anders als das was jz standard ist?"* -> Lauf baer-gen-junges-v2 (8 Agenten) am Generator-Jungen (Foto C): Beine/Gang zuerst, dann Gesicht/Maul; kommt als
+  Vergleich per NCBear_CubGen() zurueck (Bench), spaeter waehlbar ueber den Aussehen-Knopf.
