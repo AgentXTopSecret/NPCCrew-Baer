@@ -502,3 +502,8 @@ also baby und ganz gross?'*
   vllt bilder an wie nen baeren maul aussieht wenn er das maul offen hat"* -> Lauf **baer-maul** fuer 2c UND Generator-Baer: erst Forschung + Plan
   (`spiel/maul_plan_workflow.js`), Bau als eigener Lauf, sobald kopfnaht und gen-gross-schmal fertig sind (dieselben Modelle). Vorlage weiter
   kevin_bruellen_vorlage.webp (nur ansehen) + Netzbilder nur ansehen; freie Fotos nur mit Kevins Ja je Datei.
+* Kevin (12.11. ~15:00) zu den Maul-Fragen (PLAN_MAUL.md 7): **K2 Mundwinkel weiter nach hinten bis unters Auge: Ja.** **K4 dunkle Lippenlinie auch bei
+  geschlossenem Maul: Ja.** **K1 Generator-Baer bekommt das neue Aufrichten/Bruellen: *"erstmal so lassen und angucken"*** (nicht im Maul-Lauf). **K5 Downloads:
+  alle drei Ja** -> `begleiter/ref_maul/ref_maul_1.jpg` (Kodiak_brown_bears_FWS_18395.jpg, 1.919.838 B, gemeinfrei Lisa Hupp/USFWS), `ref_maul_2.jpg`
+  (Two_bears_fight,_mouths_open_(51101357447).jpg, 12.029.986 B, gemeinfrei Peter Pearsall/USFWS), `ref_maul_3.jpg` (Brown_bear_(Ursus_arctos_arctos)_smiling.jpg,
+  9.966.880 B, CC BY-SA Malene Thyssen) -- alle von commons.wikimedia.org, nur ansehen, in .gitignore, nie in Modell/Textur, nie hochladen.

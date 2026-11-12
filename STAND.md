@@ -1,5 +1,9 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **12.11. ~15:00 MAUL-PLAN FERTIG** (`../_arbeit/baer_maul/FORSCHUNG.md`, `PLAN_MAUL.md`: Maul = ins Fell geschnittenes Rechteck ohne Lippe; Bau 8 Agenten W -> G||T -> PT||PO ->
+> N -> GP -> I). Kevins Antworten K1/K2/K4/K5 in ENTSCHEIDUNGEN.md, drei Commons-Fotos in `begleiter/ref_maul/`. **Bau-Skript `spiel/maul_bau_workflow.js` liegt bereit -- START,
+> sobald baer-kopfnaht (wf_0956985e-5e7) fertig ist** (Eingang = baer_kopfnaht/mod + gen v2/out_schmal).
+
 > **12.11. ~14:00 MAUL (Kevin: *"bei beiden baeren sieht der mund schonn scheisse aus das muss besser werden"*):** Lauf **baer-maul-plan** `wf_81bda0df-b12`
 > (Task wtedw53gt, 2 Agenten, scriptPath `C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel/maul_plan_workflow.js`): Forschung + Plan nach `../_arbeit/baer_maul/`.
 > BAU erst, wenn kopfnaht (wf_0956985e-5e7) und gen-gross-v2-schmal (wf_b34e1baf-262) fertig sind; Bau-Skript nach PLAN_MAUL.md (Vorbild f2_fortsetzung.js).
