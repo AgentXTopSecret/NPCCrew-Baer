@@ -1,5 +1,8 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **12.11. ~18:50 UI-ENTWURF (Kevin: *"kannst du mir zeigen wie das ui dann aussehn wird? weil da muss ja noch paar dinge dazu kommen"*):** Lauf **baer-ui-entwurf**
+> `wf_c13848bf-590` (Task w4htjlbmk, 2 Agenten): Prototyp-Kopie des Fenster-Codes + Aussehen/F3/F4/F5, gezeichnet mit der echten Mitschrift-Kette -> `../_arbeit/baer_zaehmen/ui_entwurf/`.
+
 > **12.11. 18:42: ZWEI LAEUFE GESTARTET (5 h 0 %, Woche 58 %; Wecker 6df67d34/84aebc74 geloescht):**
 > Funktionen-Spur **baer-aussehen** `wf_34a802e5-6f8` (Task wbvwbx4bx, 8 Agenten, scriptPath `C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel/aussehen_workflow.js`;
 > Aussehen-Knopf + Sandbox 39 -> 12, Staging `../_arbeit/baer_zaehmen/mod_look/`, Berichte `../_arbeit/baer_zaehmen/aussehen/`).
