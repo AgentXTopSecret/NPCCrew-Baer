@@ -1,5 +1,11 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **12.11. 21:25: AUSSEHEN-KNOPF + SANDBOX 39 -> 12 FERTIG (8/8) UND EINGEBAUT** (Spiel zu; `tools/einbau_look.py`: 143 Dateien -- 4 neu, 55 ueberschrieben, 84 gleich,
+> Modell-Dateien nie aus dem Staging; Zips `NCBearTest_vor_look_2026-11-12_212527.zip` / `_mit_`; mod.info aus mod_info_vorschlag_look.txt; Trockenlauf 0 Fehler).
+> Gegenpruefer: bereit fuer SP-Test, kein Blocker. Test `spiel/anleitung_aussehen.md`, Bericht `spiel/aussehen_gegen_bericht.md`. Neue Arten ncbeargrowngen /
+> ncbeargrowngenfoto / ncbearcubgen2 (endgueltig), Modell-Skript scripts/nc_bear_look.txt, NCBearCubGen.glb/.png (Kopie der Werkbank). Kevin-Fragen K1-K8 in
+> `../_arbeit/baer_zaehmen/aussehen/FORSCHUNG.md` bzw. PLAN_AUSSEHEN.md (Namen der Aussehen, Generator-Junges waehlbar?, Werkbank-Datei NCBearBenchGen.txt loeschen?).
+
 > **12.11. ~20:30: F3-PLAN FERTIG** (`../_arbeit/baer_zaehmen/f3/FORSCHUNG_F3.md`, `PLAN_F3.md`, 691 Zeilen): Beduerfnisse im Register, Kevins Tabelle (E:14-19)
 > als Rechnung, Schlaf ueber den Pose-Treiber (nicht idleAction), Heilen im Schlaf 15 %/h, Fenster B, 1 neuer Regler BearNeedsPercent (12 -> 13). Bau: baer-f3
 > (7 Agenten, nach Aussehen-Einbau, Staging mod_f3) + baer-schlaf-pose (8 Agenten, nach Maul). **6 Fragen an Kevin** in PLAN_F3.md Ende ("Ja, alle so" nimmt jede

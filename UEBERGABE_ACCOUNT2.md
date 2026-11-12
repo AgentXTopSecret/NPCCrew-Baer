@@ -29,7 +29,7 @@ Transkripte: `C:\Users\Kevin\.claude\projects\C--Users-Kevin-NPCCrew-Nebenprojek
 (eine Zeile `{"type":"result",...}` je FERTIGEM Agenten).
 | Lauf | Lauf-ID / Task | Skript | fertig (20:13) | danach |
 |---|---|---|---|---|
-| **baer-aussehen** (Funktion: Aussehen-Knopf + Sandbox 39 -> 12) | `wf_34a802e5-6f8` / wbvwbx4bx | `baer\spiel\aussehen_workflow.js` | forschung, plan, bau:kern, bau:oberflaeche, pruef:logik | pruef:belege, nachbesserung, gegenpruefung |
+| **baer-aussehen** (Funktion: Aussehen-Knopf + Sandbox 39 -> 12) | `wf_34a802e5-6f8` / wbvwbx4bx | `baer\spiel\aussehen_workflow.js` | **FERTIG + EINGEBAUT 21:25** (alle 8) | Kevins Test `baer\spiel\anleitung_aussehen.md`, Fragen K1-K8 in `_arbeit\baer_zaehmen\aussehen\` |
 | **baer-maul-bau** (Modell: Maul beider grosser Baeren) | `wf_a876c805-e76` / w8qe5etel | `baer\spiel\maul_bau_workflow.js` | W:rahmen, T:textur | G:gebiss, PT+PO, N, GP, I |
 | **baer-f3-plan** (Funktion: F3 Forschung + Plan, nur lesen) | `wf_881b0108-ad0` / whr8tzmw4 | `baer\spiel\f3_plan_workflow.js` | **FERTIG 20:30** (forschung, plan) | Kevins 6 Fragen (`_arbeit\baer_zaehmen\f3\PLAN_F3.md` Ende), dann Bau baer-f3 (7 Agenten) nach Aussehen-Einbau |
 
@@ -43,9 +43,7 @@ pruefen, nur Vollstaendiges weiterverwenden". Welche Rollen fertig sind: journal
 Die Stand-Zeile oben in `baer\STAND.md` sagt, ob ein Lauf inzwischen fertig/eingebaut ist (die alte Sitzung zieht sie nach).
 
 ## 3. Was nach den Laeufen zu tun ist (Reihenfolge; NEUE Laeufe nur auf Kevins Wort)
-1. **Aussehen einbauen** (Spiel zu oder NCBearTest nicht im geladenen Spielstand): Liste `_arbeit\baer_zaehmen\aussehen\staging_dateien_look.txt`
-   (Modell-Dateien, die die Test-Mod neuer hat = "NICHT KOPIEREN"), Werkzeug-Vorlage `baer\tools\einbau_f2.py` (kennt neu/ueberschreibt/gleich/NICHT KOPIEREN/
-   bedingt), mod.info aus `mod_info_vorschlag_look.txt`, Trockenlauf `python baer\tools\baer_uebernahme.py` (0 Fehler erwartet), sichern, Commit, Push.
+1. ~~Aussehen einbauen~~ **ERLEDIGT 21:25** (Test-Mod, Commit siehe STAND.md).
 2. **Maul einbauen**, wenn der Gegenpruefer je Baer empfiehlt (`_arbeit\baer_maul\bau\GEGEN.md`): 2c 5 Dateien aus bau\out_c2, Gen 3 aus bau\out_gen
    (Vorlage `baer\tools\einbau_gross.py` / `einbau_gg2s.py`); Kevin das Blatt `_arbeit\baer_maul\bilder\KEVIN_maul.png` zeigen.
 3. **F3-Fragen** (PLAN_F3.md, Ende) Kevin stellen; danach F3-Bau (Fenster-Variante B, Kevin 12.11. "B (breit)", Vorlage `_arbeit\baer_zaehmen\ui_entwurf\proto\`).

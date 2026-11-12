@@ -16,7 +16,8 @@ F2 (PLAN_F2.md 7.3, Lauf baer-f2 = B5a, Zusammenbau 12.11.2026): die Altlasten s
     sound/NCBear_{Roar,Growl1,Growl2,Growl3,Huff,Pain}.wav. Jeder Ton-Name der Rasse (BanditsNPCBearDefs.lua name = "NCBear_*") hat seinen
     sound-Block in einem kopierten Skript, jede Ton-Datei liegt in der Uebernahme.
   * Werkbank-Dateien, nie kopiert (WERKBANK_ASSET, je mit Grund): NCBearDeer.glb, WorldItems/NCBear.fbx, Item_NCBear.png,
-    WorldItems/NCBear.png, scripts/nc_bear.txt und (Frage F-G13, bis Kevins Wahl) der Generator-Baer NCBearGen.glb/.png/Foto.png.
+    WorldItems/NCBear.png, scripts/nc_bear.txt (der Generator-Baer NCBearGen.glb/.png/Foto.png ist seit dem Lauf baer-aussehen ein Aussehen
+    und wird kopiert, siehe unten).
     Werkbank-Texte (BENCH_TEXT_KEYS): IGUI_AnimalType_ncbear / _bear / _bearstag, IGUI_Animal_Group_bear -- werden aus den Texten genommen.
   * Animations-Knoten: + die sechs Kampf-Knoten NCBear_(Bite|Maul|Rear|Slam|SwipeL|SwipeR).xml (Clip im GLB des grossen Baeren; Fressen und
     Sitzen in BEIDEN GLBs); jeder Angriff aus B.ATTACKS (shared/BanditsNPCBearFightRules.lua) braucht einen kopierten Knoten; ein unbekannter
@@ -33,6 +34,25 @@ F2 (PLAN_F2.md 7.3, Lauf baer-f2 = B5a, Zusammenbau 12.11.2026): die Altlasten s
     .. "%9") in B.T (shared/BanditsNPCBear.lua, Kevin 12.11. ~04:25 "Ja, wie NPC Crew", begleiter/ENTSCHEIDUNGEN.md). Nachbesserung F2:
     nur Kommentare/Texte hier (Fundstellen, Naht-Spanne 33-39).
     PZ_ALLOWED + die zwei neuen Aktionsklassen (Verband, Aufhelfen). --vor-b5a aendert seit F2 nichts mehr (keine Altlast).
+
+Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 12.1, Kevin 12.11.2026 "ja fuer spieler als knopf"; Sandbox "ja du hast komplett
+uebertrieben da muss so einiges rausfliegen"):
+  * Drei neue ENDGUELTIGE Arten ncbeargrowngen / ncbeargrowngenfoto / ncbearcubgen2 (shared/BanditsNPCBearDefs.lua). Neue Kopier-Klasse
+    LOOK_ASSET: models_X/Skinned/NCBearGen.glb, NCBearCubGen.glb, textures/Body/NCBearGen.png, NCBearGenFoto.png, NCBearCubGen.png,
+    scripts/nc_bear_look.txt (model-Skripte NCBearGen_Body / NCBearCubGen_Body). Die drei Generator-Eintraege sind aus WERKBANK_ASSET raus
+    (F-G13 durch Kevins "Aussehen" erledigt). NCBear.* / NCBearGen.* teilen ihre Namen mit dem Maul-Lauf (NAEHTE.md "Aussehen-Modelle").
+  * Form: NCBearGen.glb wie NCBear.glb, NCBearCubGen.glb wie NCBearCub.glb -- 1 Netz / 1 Haut, gleiche Knochen-Namen wie die Standard-GLB
+    DESSELBEN Koerpers; Fressen/Sitzen-Clips in allen vier GLBs, Kampf-Clips in beiden grossen.
+  * Cheat-Ausnahmen +2 (bodyModel "NCBearGen_Body" / "NCBearCubGen_Body", Regel befehl), IG_UI.json + drei Tiernamen.
+  * Neue Tier-Regel BodySwap: B.BodySwap( nur aus B.GrowLive (Wachsen) und B.HandleLook (Aussehen-Knopf, server/BanditsNPCBearLook.lua).
+  * Neue Pruefung "Optionsname": jedes Literal "Bear..." als erstes Argument von Opt( / opt( / optNum( in kopiertem Lua ist ein Schluessel
+    von B.OPTS -- faengt eine vergessene Lesestelle der Sandbox-Kuerzung (39 -> 12 Optionen; die anderen sind feste Werte in B.CFG).
+  * Nachbesserung (PRUEF_A.md A3/A4, 12.11. abends): JEDES String-Literal im Code-Teil, das einer der 29 entfernten Optionsnamen ist (auch
+    "BanditsNPC.<Name>" / "..._<Name>"), ist ein Fehler (faengt auch local f = B.Opt; f("<alt>")); neue Tier-Regel SandboxVars: das Wort
+    SandboxVars nur in B.Opt (shared/BanditsNPCBear.lua). Neue Pruefung "Aussehen-Arten": jede art = "..." in B.LOOKS steht als Literal in
+    der kopierten shared/BanditsNPCBearDefs.lua, ist in keiner NCBearBench*Defs-Datei definiert und hat ihren Tiernamen
+    IGUI_AnimalType_<art> in den kopierten IG_UI-Texten. Tier-Regel callAt: + B.CallStamp / B.CallUnstamp (Nachbesserung B1: die Uhr
+    startet beim Aussehen-Knopf vor dem neuen Koerper und wird bei einem Fehlversuch zurueckgenommen).
 
 Grundregel (Werkstatt-CLAUDE.md Abschnitt 0, Kevin 08.11.2026): alles wird FUER NPC Crew gebaut und soll am Ende "einfach copy paste"
 hinueber; keine Cheat- oder Testmenues kommen mit. Plan: _arbeit/baer_zaehmen/PLAN_ZAEHMEN.md Abschnitt 12 (B1b: PLAN_B1B.md 7),
@@ -194,6 +214,11 @@ CUB_GLB = "42/media/models_X/Skinned/NCBearCub.glb"
 BIG_ASSET = re.compile(r"^42/media/(models_X/Skinned/NCBear\.glb|textures/Body/NCBear\.png|scripts/nc_bear_tier\.txt"
                        r"|scripts/nc_bear_sounds\.txt|sound/NCBear_(Roar|Growl1|Growl2|Growl3|Huff|Pain)\.wav)$")
 BIG_GLB = "42/media/models_X/Skinned/NCBear.glb"
+# Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 12.1 Nr. 1): Modelle, Texturen und model-Skript der drei neuen Arten. Werden kopiert.
+LOOK_ASSET = re.compile(r"^42/media/(models_X/Skinned/(NCBearGen|NCBearCubGen)\.glb|textures/Body/(NCBearGen|NCBearGenFoto|NCBearCubGen)\.png"
+                        r"|scripts/nc_bear_look\.txt)$")
+GEN_GLB = "42/media/models_X/Skinned/NCBearGen.glb"               # Generator-Baer gross (Koerper big, wie BIG_GLB)
+CUBGEN_GLB = "42/media/models_X/Skinned/NCBearCubGen.glb"         # Generator-Junges v2 (Koerper cub, wie CUB_GLB)
 # F2 (PLAN_F2.md 0.3, 7.3): eigener Zombie-Biss-Knoten (Vanilla-Clip; Name ewig stabil). Kopiert; Form-Pruefung in form_check.
 ZOMBIE_ANIM = re.compile(r"^42/media/AnimSets/zombie/bumped/BanditsNPCBear[A-Za-z0-9]*\.xml$")
 VANILLA_ZOMBIE_ANIMS = os.path.join(r"C:\Program Files (x86)\Steam\steamapps\common\ProjectZomboid\media", "anims_X", "Zombie")
@@ -204,9 +229,7 @@ WERKBANK_ASSET = collections.OrderedDict([
     ("42/media/textures/Item_NCBear.png", "Icon des Test-Gegenstands"),
     ("42/media/textures/WorldItems/NCBear.png", "Textur des Test-Gegenstands"),
     ("42/media/scripts/nc_bear.txt", "module NCBear mit dem Test-Gegenstand BearStatic ('Test Bear (model)')"),
-    ("42/media/models_X/Skinned/NCBearGen.glb", "Vergleichs-Modell Generator-Baer E (NCBear_GenLive) bis Kevins Wahl (F-G13)"),
-    ("42/media/textures/Body/NCBearGen.png", "Textur braun des Vergleichs-Modells NCBearGen bis Kevins Wahl (F-G13)"),
-    ("42/media/textures/Body/NCBearGenFoto.png", "Textur Fototon des Vergleichs-Modells NCBearGen bis Kevins Wahl (F-G13)"),
+    # Aussehen (PLAN_AUSSEHEN.md 12.1 Nr. 2): NCBearGen.glb / NCBearGen.png / NCBearGenFoto.png sind jetzt Aussehen (LOOK_ASSET) -- F-G13 erledigt
 ])
 GIT_ROOT_FILES = (".git", ".gitattributes", ".gitignore")
 ANIM_VAR = "NCBearAct"                                             # B.ACT
@@ -218,7 +241,10 @@ TEXT_NS = {
     "UI.json": (re.compile(r"^UI_BN_Bear_[A-Za-z0-9_]+$"), set()),
     "Sandbox.json": (re.compile(r"^Sandbox_BanditsNPC_Bear[A-Za-z0-9_]+$"), {"Sandbox_BanditsNPC"}),
     "IG_UI.json": (re.compile(r"^$"), {"IGUI_AnimalType_ncbearcub", "IGUI_Animal_Group_ncbear", "IGUI_Breed_brown",
-                                       "IGUI_AnimalType_ncbeargrown"}),               # B1e: Tiername des grossen Koerpers
+                                       "IGUI_AnimalType_ncbeargrown",                 # B1e: Tiername des grossen Koerpers
+                                       # Aussehen (PLAN_AUSSEHEN.md 12.1 Nr. 5): Tiernamen der drei neuen Arten
+                                       "IGUI_AnimalType_ncbeargrowngen", "IGUI_AnimalType_ncbeargrowngenfoto",
+                                       "IGUI_AnimalType_ncbearcubgen2"}),
 }
 
 # ---------------------------------------------------------------------------------------------------------------------------------
@@ -357,10 +383,13 @@ TIER_RULES = [
     ("pathToLocation", re.compile(r"(?i)\bpathToLocation\b"), {("42/media/lua/server/BanditsNPCBearWorld.lua", "B.MoveTo")},
      "pathToLocation (jede Form) nur in B.MoveTo"),
     # B1c: die Abklingzeit von "Call to me" lebt nur in Ride.lua (Dateiebene, B.CallLeft, callMark); sie zuruecksetzen kann nur die
-    # Werkbank (NCBear_CubCallReset)
+    # Werkbank (NCBear_CubCallReset). Nachbesserung Aussehen B1: + B.CallStamp (gibt den Stempel davor zurueck) und B.CallUnstamp (nimmt
+    # einen Stempel zurueck, nur nach einem Aussehen-Tausch ohne neuen Koerper) -- beide in Ride.lua
     ("callAt", re.compile(r"\bB\._callAt\b"), {("42/media/lua/server/BanditsNPCBearRide.lua", None),
                                               ("42/media/lua/server/BanditsNPCBearRide.lua", "B.CallLeft"),
-                                              ("42/media/lua/server/BanditsNPCBearRide.lua", "callMark")},
+                                              ("42/media/lua/server/BanditsNPCBearRide.lua", "callMark"),
+                                              ("42/media/lua/server/BanditsNPCBearRide.lua", "B.CallStamp"),
+                                              ("42/media/lua/server/BanditsNPCBearRide.lua", "B.CallUnstamp")},
      "Abklingzeit von Call to me (B._callAt) nur in server/BanditsNPCBearRide.lua"),
     # B1d (PLAN_B1D.md 10, 7.1 Nr. 18): Groesse und Leben am Tier je an EINER Stelle -- jedes Vorkommen des Namens im Code-Teil (auch als
     # String oder Tabellenfeld), wie die B1c-Regeln animalRunning/pathToLocation. Belege der Aufrufe stehen dort im Kommentar
@@ -405,6 +434,21 @@ TIER_RULES = [
                                                        ("42/media/lua/server/BanditsNPCBearGrow.lua", "B.BodySwap"),
                                                        ("42/media/lua/server/BanditsNPCBearOrder.lua", "B.ReviveMissing")},
      "neuer Koerper fuer einen bestehenden Eintrag (B.PlaceCub) nur aus Aussteigen, Call to me, Koerper-Tausch und C1"),
+    # Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 12.1 Nr. 6): der Koerper-Tausch (neuer Koerper, dann der alte weg) nur aus dem Wachsen
+    # (B.GrowLive) und dem Aussehen-Knopf (B.HandleLook, prueft Besitz, Uhr, Kampf, Zombies selbst) -- ein weiterer Aufrufer waere ein
+    # Herhol- oder Heil-Weg ohne diese Pruefungen
+    ("BodySwap", re.compile(r"\bB\.BodySwap\s*\("), {("42/media/lua/server/BanditsNPCBearGrow.lua", "B.GrowLive"),
+                                                       ("42/media/lua/server/BanditsNPCBearLook.lua", "B.HandleLook")},
+     "Koerper-Tausch (B.BodySwap) nur aus dem Wachsen und dem Aussehen-Knopf"),
+    # Nachbesserung Aussehen A3 (PRUEF_A.md; PLAN_AUSSEHEN.md 9.4 "SandboxVars liest nur B.Opt"): jedes Vorkommen des Wortes SandboxVars im
+    # Code-Teil nur in B.Opt -- jede Option geht ueber B.OPTS (Vorgabe, Bereich), eine entfernte Option wird nie gelesen
+    ("SandboxVars", re.compile(r"\bSandboxVars\b"), {("42/media/lua/shared/BanditsNPCBear.lua", "B.Opt")},
+     "Sandbox lesen (SandboxVars) nur in B.Opt"),
+    # Nachbesserung Aussehen B1: B.CallUnstamp nimmt die gemeinsame Uhr (Unstuck/Aussehen) zurueck -- nur im Koerper-Tausch selbst, wenn
+    # KEIN neuer Koerper entstand (B.BodySwap, server/BanditsNPCBearGrow.lua). Ein weiterer Aufrufer waere ein Weg an der Abklingzeit
+    # vorbei (im Einzelspieler teilen Client und Schreiber dieselben Lua-Tabellen). Die Definition zaehlt nicht (TIER_DEF).
+    ("CallUnstamp", re.compile(r"\bCallUnstamp\b"), {("42/media/lua/server/BanditsNPCBearGrow.lua", "B.BodySwap")},
+     "Abklingzeit zuruecknehmen (B.CallUnstamp) nur in B.BodySwap nach einem Fehlversuch ohne neuen Koerper"),
 ]
 # B1c (PLAN_B1C.md 6.8): die Seite unter Optionen -> Mods bekommt nur Textschluessel (Vanilla ruft getText,
 # client/OptionScreens/MainOptions.lua:2801-2812). Methode -> Stellen der Text-Argumente (0 = erstes Argument).
@@ -455,14 +499,20 @@ def mo_text_hits(code_text):
     return hits
 
 
-TIER_DEF = re.compile(r"^function\s+B\.(CreateCub|AppearFor|RemoveCub|GrowSetG|GrowSetHp|SkillSet|PlaceCub|FightForce)\s*\(")   # B1d: + die
-# drei Probe-Wege; F1: + PlaceCub; F2: + FightForce
+TIER_DEF = re.compile(r"^function\s+B\.(CreateCub|AppearFor|RemoveCub|GrowSetG|GrowSetHp|SkillSet|PlaceCub|FightForce|BodySwap"
+                      r"|CallUnstamp)\s*\(")   # B1d:
+# + die drei Probe-Wege; F1: + PlaceCub; F2: + FightForce; Aussehen: + BodySwap; Nachbesserung Aussehen B1: + CallUnstamp
 # Ausnahmen einzeln mit Grund: Datei, Regel, ein Text im Code-Teil der Zeile. Greift eine nicht mehr, warnt das Skript.
 CHEAT_ALLOWED = [
     {"file": "42/media/lua/shared/BanditsNPCBearDefs.lua", "rule": "befehl", "code": 'bodyModel = "NCBearCub_Body"',
      "why": "Name des model-Skripts (scripts/nc_bear_cub.txt), kein Befehl (Plan 12.1 Punkt 5)"},
     {"file": "42/media/lua/shared/BanditsNPCBearDefs.lua", "rule": "befehl", "code": 'bodyModel = "NCBear_Body"',
      "why": "B1e: model-Skript des grossen Koerpers (scripts/nc_bear_tier.txt, seit F2 kopiert, ohne Hirsch-Rueckfall), kein Befehl"},
+    # Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 12.1 Nr. 4): model-Skripte der neuen Arten (scripts/nc_bear_look.txt), kein Befehl
+    {"file": "42/media/lua/shared/BanditsNPCBearDefs.lua", "rule": "befehl", "code": 'bodyModel = "NCBearGen_Body"',
+     "why": "Aussehen: model-Skript des Generator-Baeren (ncbeargrowngen / ncbeargrowngenfoto, scripts/nc_bear_look.txt), kein Befehl"},
+    {"file": "42/media/lua/shared/BanditsNPCBearDefs.lua", "rule": "befehl", "code": 'bodyModel = "NCBearCubGen_Body"',
+     "why": "Aussehen: model-Skript des Generator-Jungen (ncbearcubgen2, scripts/nc_bear_look.txt), kein Befehl"},
     # F2 (PLAN_F2.md 1.1, 7.3): Stimmen der Rasse von ncbeargrown -- Namen der Ton-Skripte (scripts/nc_bear_sounds.txt, sound-Bloecke), kein
     # Befehl; gespielt ueber animal:playBreedSound(Schluessel) (V:shared/TimedActions/Animals/ISKillAnimalInInventory.lua:19, :41)
     {"file": "42/media/lua/shared/BanditsNPCBearDefs.lua", "rule": "befehl", "code": 'name = "NCBear_Pain"',
@@ -678,7 +728,8 @@ def collect_source(src, rep):
         elif rel == SANDBOX:
             sandbox = rel
         elif (CUB_ASSET.match(rel) or ANIMSET_OK.match(rel) or UI_ASSET.match(rel) or BIG_ASSET.match(rel)
-              or ZOMBIE_ANIM.match(rel)):                   # F2: + grosses Modell/Toene (BIG_ASSET), Zombie-Biss-Knoten (ZOMBIE_ANIM)
+              or ZOMBIE_ANIM.match(rel) or LOOK_ASSET.match(rel)):   # F2: + grosses Modell/Toene (BIG_ASSET), Zombie-Biss-Knoten
+                                                                  # (ZOMBIE_ANIM); Aussehen: + LOOK_ASSET
             copy_asset.append(rel)
         elif rel in WERKBANK_ASSET:                         # F2: Werkbank-Dateien ohne NCBearBench-Namen (je mit Grund)
             skipped.append((rel, "Werkbank, wird nie kopiert: " + WERKBANK_ASSET[rel]))
@@ -871,6 +922,38 @@ def form_check(final, copy_lua, copy_asset, rep):
                 rep.err("%s: erwartet genau ein Netz und eine Haut (Werkstatt-CLAUDE.md 8)" % BIG_GLB)
     elif any(BIG_ASSET.match(r) for r in copy_asset):
         rep.err("%s fehlt, aber Teile des grossen Modells werden kopiert" % BIG_GLB)
+    # Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 12.1 Nr. 3): NCBearCubGen.glb wie NCBearCub.glb, NCBearGen.glb wie NCBear.glb -- 1 Netz,
+    # 1 Haut, dieselben Knochen-Namen wie die Standard-GLB DESSELBEN Koerpers (ein Animations-Knoten spielt fuer jede Art mit Animset buck
+    # denselben Clip-Namen). Clips: unten (Fressen/Sitzen in allen vier GLBs, Kampf in beiden grossen).
+    def glb_bones(jj):
+        if not jj or not jj.get("skins"):
+            return []
+        nodes = jj.get("nodes", [])
+        return sorted(str(nodes[i].get("name")) if 0 <= i < len(nodes) else "?" for i in jj["skins"][0].get("joints", []))
+    look_clips = {}
+    for look_rel, std_rel in ((CUBGEN_GLB, CUB_GLB), (GEN_GLB, BIG_GLB)):
+        ldata = final.get(look_rel)
+        if ldata is None:
+            if any(LOOK_ASSET.match(r) for r in copy_asset):
+                rep.err("%s fehlt, aber Teile der Aussehen werden kopiert (LOOK_ASSET)" % look_rel)
+            continue
+        lj = glb_json(ldata, look_rel, rep)
+        if lj is None:
+            continue
+        sdata = final.get(std_rel)
+        sj = glb_json(sdata, std_rel, Report()) if sdata is not None else None      # Fehler der Standard-GLB meldet ihr eigener Block
+        clips = set(x.get("name") for x in lj.get("animations", []))
+        look_clips[look_rel] = clips
+        nm, ns = len(lj.get("meshes", [])), len(lj.get("skins", []))
+        lb, sb = glb_bones(lj), glb_bones(sj)
+        rep.say("  %s: MD5 %s, %d KB, %d Netz(e), %d Haut, %d Knochen, %d Clips; Knochen-Namen wie %s: %s" % (
+            look_rel, md5(ldata), len(ldata) // 1024, nm, ns, len(lb), len(clips), os.path.basename(std_rel),
+            "ja" if (sb and lb == sb) else "NEIN"))
+        if nm != 1 or ns != 1:
+            rep.err("%s: erwartet genau ein Netz und eine Haut (Werkstatt-CLAUDE.md 8)" % look_rel)
+        if not sb or lb != sb:
+            rep.err("%s: Knochen-Namen weichen von %s ab (gleicher Koerper, gleiche Animations-Knoten) -- %d gegen %d" % (
+                look_rel, std_rel, len(lb), len(sb)))
     used_values = set()
     for rel in copy_asset:
         if ZOMBIE_ANIM.match(rel):
@@ -901,11 +984,18 @@ def form_check(final, copy_lua, copy_asset, rep):
                     rep.err("%s: Clip '%s' fehlt im GLB des Jungen -- ein Name ohne Clip friert das Tier ein" % (rel, a))
                 if big_clips and a not in big_clips:
                     rep.err("%s: Clip '%s' fehlt im GLB des grossen Baeren -- ein Name ohne Clip friert das Tier ein" % (rel, a))
+                for lr in sorted(look_clips):            # Aussehen: Fressen/Sitzen in allen vier GLBs
+                    if a not in look_clips[lr]:
+                        rep.err("%s: Clip '%s' fehlt im GLB des Aussehens %s -- ein Name ohne Clip friert das Tier ein" % (rel, a, lr))
             else:
                 if not big_clips or a not in big_clips:
                     rep.err("%s: Clip '%s' fehlt im GLB des grossen Baeren (%s) -- Kampf-Knoten ohne Clip" % (rel, a, BIG_GLB))
                 if cub_clips and a not in cub_clips:
                     rep.warn("%s: Clip '%s' nicht im GLB des Jungen (das Junge kaempft nie; nur Hinweis)" % (rel, a))
+                if GEN_GLB in look_clips and a not in look_clips[GEN_GLB]:          # Aussehen: Kampf in beiden grossen GLBs
+                    rep.err("%s: Clip '%s' fehlt im GLB des Aussehens %s -- Kampf-Knoten ohne Clip" % (rel, a, GEN_GLB))
+                if CUBGEN_GLB in look_clips and a not in look_clips[CUBGEN_GLB]:
+                    rep.warn("%s: Clip '%s' nicht im GLB des Aussehens %s (das Junge kaempft nie; nur Hinweis)" % (rel, a, CUBGEN_GLB))
         conds = list(root.iter("m_Conditions"))
         mine = [c for c in conds if (c.findtext("m_Name") or "").strip() == ANIM_VAR]
         if len(conds) != 1 or len(mine) != 1:
@@ -1764,6 +1854,132 @@ def cheat_check(plan, src, rep):
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
+# 6b. Optionsnamen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 12.1 Nr. 7; Sandbox-Kuerzung Kevin 12.11.2026: 39 -> 12)
+# ---------------------------------------------------------------------------------------------------------------------------------
+OPT_CALL = re.compile(r"\b(?:Opt|opt|optNum)\s*\(\s*\"(Bear\w+)\"")
+# Nachbesserung Aussehen A3 (PRUEF_A.md): die 29 Optionen, die die Sandbox-Kuerzung (Kevin 12.11.2026) zu festen Werten in B.CFG gemacht
+# hat (Test-Mod 99e0368, 42/media/sandbox-options.txt: 39 Optionen; es bleiben 10 + 2 neue). Ihr Name darf im Code-Teil der kopierten Lua
+# nie mehr als String stehen -- auch nicht ueber einen Umweg (local f = B.Opt; f("BearRoamRadius")) oder als "BanditsNPC.<Name>" /
+# "..._<Name>" (Sandbox-Textschluessel). Kommentare zaehlen nicht.
+REMOVED_OPTS = (
+    "BearCubMinDistance", "BearCubMaxDistance", "BearCubWorldCap", "BearBaitNights", "BearBaitFirstChance", "BearTameFeedPoints",
+    "BearTamePetPoints", "BearTameMixBonus", "BearTameFavoriteBonus", "BearTameMinFeedings", "BearFeedCooldownMinutes",
+    "BearPetCooldownMinutes", "BearCubVanishHours", "BearDeathLockDays", "BearFollowMaxDistance", "BearRideDistance",
+    "BearCallCooldownMinutes", "BearDodgeMax", "BearFightBonusMax", "BearHealAwake", "BearHealSleep", "BearRoamRadius",
+    "BearZombiesAttack", "BearZombieDamage", "BearBanditDamage", "BearBandageHeal", "BearBandageHours", "BearDownedHours", "BearLog",
+)
+REMOVED_LIT = re.compile(r"(?:^|[._])(%s)$" % "|".join(REMOVED_OPTS))
+
+
+def opt_name_check(plan, rep):
+    """Jedes Literal "Bear..." als erstes Argument von Opt( / opt( / optNum( im Code-Teil einer kopierten Lua-Datei muss ein Schluessel von
+    B.OPTS sein (shared/BanditsNPCBear.lua, opts_of_lua). Eine Option, die die Sandbox-Kuerzung zu einem festen Wert in B.CFG gemacht hat,
+    liefert ueber B.Opt nur noch nil (plus Fehlerzeile) -- eine vergessene Lesestelle rechnete dann falsch. Kommentare zaehlen nicht.
+    Nachbesserung Aussehen A3: dazu JEDES String-Literal im Code-Teil, das einer der 29 entfernten Optionsnamen ist (REMOVED_LIT) --
+    gleich, wie es gelesen wuerde (Umweg ueber einen Namen, SandboxVars-Feld, Textschluessel). SandboxVars selbst: Tier-Regel."""
+    rep.say("")
+    rep.say("== Optionsnamen (Sandbox-Kuerzung: jede Lesestelle nennt eine Option aus B.OPTS; kein entfernter Name als String)")
+    final = plan["final"]
+    known = opts_of_lua(final)
+    if not known:
+        rep.err("B.OPTS nicht gefunden (shared/BanditsNPCBear.lua) -- Optionsnamen nicht pruefbar")
+        return 0
+    both = sorted(set(REMOVED_OPTS) & set(known))
+    if both:
+        rep.err("REMOVED_OPTS und B.OPTS ueberschneiden sich: %s -- Liste nachziehen" % ", ".join(both))
+    n, bad, n_lit = 0, 0, 0
+    for rel in plan["copy_lua"]:
+        parts = lua_split_lines(final[rel].decode("latin-1"))
+        for no, (code, _com) in enumerate(parts, 1):
+            for m in OPT_CALL.finditer(code):
+                n += 1
+                if m.group(1) not in known:
+                    bad += 1
+                    rep.err("%s:%d: Option %s steht nicht in B.OPTS (shared/BanditsNPCBear.lua) -- vergessene Lesestelle einer festen "
+                            "Option? Den Wert aus B.CFG lesen" % (rel, no, m.group(1)))
+            for s in _strings_of(code):
+                mm = REMOVED_LIT.search(s)
+                if mm:
+                    n_lit += 1
+                    bad += 1
+                    rep.err("%s:%d: der Code nennt die entfernte Sandbox-Option %s (\"%s\") -- seit der Sandbox-Kuerzung ein fester Wert "
+                            "in B.CFG" % (rel, no, mm.group(1), s[:60]))
+    rep.say("  %d Lesestellen mit Optionsnamen; B.OPTS %d Optionen (%s); unbekannt: %d; entfernte Namen als String: %d (Liste %d)" % (
+        n, len(known), ", ".join(sorted(known)), bad - n_lit, n_lit, len(REMOVED_OPTS)))
+    return bad
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------
+# 6c. Aussehen-Arten (Nachbesserung Aussehen A4, PRUEF_A.md): B.LOOKS nennt nur echte, kopierte Arten
+# ---------------------------------------------------------------------------------------------------------------------------------
+LOOKS_HEAD = re.compile(r"\bB\.LOOKS\s*=\s*B\.LOOKS\s+or\s*\{")
+ART_LIT = re.compile(r"\bart\s*=\s*\"([^\"]+)\"")
+BENCH_ART = re.compile(r"\banimals\s*\[\s*\"(\w+)\"\s*\]\s*=(?!=)|\bname\s*=\s*\"(\w+)\"")
+BENCH_DEFS = re.compile(r"^NCBearBench\w*Defs\.lua$", re.I)
+
+
+def looks_check(plan, src, rep):
+    """Jede Art in B.LOOKS (shared/BanditsNPCBear.lua, Code-Teil) muss (1) als String-Literal im Code-Teil der kopierten
+    shared/BanditsNPCBearDefs.lua stehen (dort wird sie definiert), (2) darf in keiner Werkbank-Datei NCBearBench*Defs.lua definiert sein
+    (animals["<art>"] = ... / name = "<art>") und (3) braucht ihren Tiernamen IGUI_AnimalType_<art> in den kopierten IG_UI-Texten (EN).
+    Sonst gaebe es in NPC Crew ein Aussehen ohne Definition (Knopf grau / Why_LookMissing), und in der Test-Mod zaehlte eine Werkbank-Art
+    als unser Baer (B.TYPE_BODY wird aus B.LOOKS gebaut). Rueckgabe: Zahl der Fehler."""
+    rep.say("")
+    rep.say("== Aussehen-Arten (B.LOOKS: nur echte, kopierte Arten, nie eine Werkbank-Art)")
+    final = plan["final"]
+    main = final.get("42/media/lua/shared/BanditsNPCBear.lua")
+    defs = final.get("42/media/lua/shared/BanditsNPCBearDefs.lua")
+    if main is None or defs is None:
+        rep.err("Aussehen-Arten: shared/BanditsNPCBear.lua oder shared/BanditsNPCBearDefs.lua wird nicht kopiert")
+        return 1
+    code = "\n".join(c for c, _ in lua_split_lines(main.decode("latin-1")))
+    m = LOOKS_HEAD.search(code)
+    if not m:
+        rep.err("B.LOOKS nicht gefunden (shared/BanditsNPCBear.lua) -- Aussehen-Arten nicht pruefbar")
+        return 1
+    depth, i = 1, m.end()
+    while i < len(code) and depth > 0:
+        if code[i] == "{":
+            depth += 1
+        elif code[i] == "}":
+            depth -= 1
+        i += 1
+    arts = ART_LIT.findall(code[m.end():i])
+    if not arts:
+        rep.err("B.LOOKS ohne art = \"...\" -- Aussehen-Arten nicht pruefbar")
+        return 1
+    def_lits = set()
+    for c, _ in lua_split_lines(defs.decode("latin-1")):
+        def_lits.update(_strings_of(c))
+    bench = {}
+    for rel, _why in plan["skipped"]:
+        if not (rel.endswith(".lua") and BENCH_DEFS.match(os.path.basename(rel))):
+            continue
+        for c, _ in lua_split_lines(rd(src[rel]).decode("latin-1")):
+            for bm in BENCH_ART.finditer(c):
+                nm = bm.group(1) or bm.group(2)
+                if re.match(r"^[a-z][a-z0-9]*$", nm):          # Artnamen sind klein (Ton-Namen wie NCBear_Pain zaehlen nicht)
+                    bench.setdefault(nm, os.path.basename(rel))
+    ig_en = plan["by_file"].get("IG_UI.json", {}).get("EN", {})
+    bad = 0
+    for art in arts:
+        if art not in def_lits:
+            bad += 1
+            rep.err("B.LOOKS nennt die Art %s, aber die kopierte shared/BanditsNPCBearDefs.lua definiert sie nicht (Werkbank-Art? In NPC "
+                    "Crew gaebe es dieses Aussehen nie)" % art)
+        if art in bench:
+            bad += 1
+            rep.err("B.LOOKS nennt die Art %s, die die Werkbank-Datei %s definiert -- ein Aussehen braucht eine eigene, kopierte Art"
+                    % (art, bench[art]))
+        if ("IGUI_AnimalType_" + art) not in ig_en:
+            bad += 1
+            rep.err("B.LOOKS nennt die Art %s, aber IG_UI.json (EN) hat keinen Tiernamen IGUI_AnimalType_%s" % (art, art))
+    rep.say("  B.LOOKS: %d Arten (%s); in der kopierten Defs-Datei: %d; Werkbank-Arten (nie in B.LOOKS): %s; Fehler: %d" % (
+        len(arts), ", ".join(arts), sum(1 for a in arts if a in def_lits), ", ".join(sorted(bench)) or "-", bad))
+    return bad
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------
 # 7. Pruefer
 # ---------------------------------------------------------------------------------------------------------------------------------
 def run_tool(args):
@@ -1883,8 +2099,9 @@ def print_plan(plan, rep):
             "BanditsNPCBear.ini (tagoff/ageoff), Beacon-Basisflaeche fuer 'Frei' nur dokumentiert, Huelle um Vanillas "
             "AnimalContextMenu.showRadialMenu (ohne Kill), NAEHTE.md Zeilen 27-32; F2 = B5a: eigener Zombie-Biss-Knoten, Bandits-Aufgabe "
             "ZombieActions.BNBearSmack in OnGameBoot hinter Riegel, Schutz setIsInvincible am zahmen Baeren, neuer Server->Client-Befehl Fx, "
-            "Naht 1 nur noch ncbear, Turret <-> Baer und NPC-Heiler nur dokumentiert, NAEHTE.md Zeilen 1, 9, 13, 21, 23, 33-39); geaendert "
-            "werden nur NPC Crews Texte (zusammenfuehren) und sandbox-options.txt (anhaengen).")
+            "Naht 1 nur noch ncbear, Turret <-> Baer und NPC-Heiler nur dokumentiert, NAEHTE.md Zeilen 1, 9, 13, 21, 23, 33-39; Aussehen: "
+            "keine neue Naht -- drei neue Arten, eine neue Lua-Datei und Modelle nur im eigenen Namensraum, Sandbox 39 -> 12, NAEHTE.md Kopf); "
+            "geaendert werden nur NPC Crews Texte (zusammenfuehren) und sandbox-options.txt (anhaengen).")
 
 
 def write_all(root, final, rep):
@@ -2037,6 +2254,8 @@ def main(argv):
     alt_report(plan["alt"], plan["text_alt"], rep)
     collisions(tgt, plan["final"], plan["copy_lua"], plan["copy_asset"], rep)
     cheat_check(plan, src, rep)
+    opt_name_check(plan, rep)                     # Aussehen: Sandbox-Kuerzung (PLAN_AUSSEHEN.md 12.1 Nr. 7)
+    looks_check(plan, src, rep)                   # Nachbesserung Aussehen A4: B.LOOKS nur mit echten, kopierten Arten
 
     if rep.errors:
         rep.say("")
