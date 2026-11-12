@@ -32,7 +32,7 @@ WICHTIG: `resumeFromRunId` gilt NUR in der alten Sitzung. Eine neue Sitzung setz
 | F1b (E-Taste, Fern-Taste, Wachstums-Schalter) | lief 07:20 beim Bauer (von 8 Agenten: forschung, plan fertig) | Staging `baer_zaehmen\mod_f1b\`, Plan `baer_zaehmen\PLAN_F1B.md`; letzte Rolle fuehrt in das F2-Staging zusammen (`f1b_merge.md`). Siehe Abschnitt 5. |
 | F2 (Kampf B5a + Nachtraege) | ANGEHALTEN 03:58 im Bau | Forschung + Plan fertig (`baer_zaehmen\forschung_f2_*.md`, `PLAN_F2.md` mit Abschnitt 11). Fortsetzen mit **`baer\spiel\f2_fortsetzung.js`** (7 Agenten, ab Bau), ERST wenn F1b in der Test-Mod ist und `f1b_merge.md` keine Kollision meldet. |
 
-Dazu Modell-Aufgabe **Junges liegend/tot** (Kevin 07:40: "die beine stecken ineinander (die fuesse)"): Dead/Death neu, Pfoten frei, liegt auf
+Dazu Modell-Aufgabe **Junges UND grosser Baer liegend/tot** (Kevin 07:50 "Ja, beide Baeren") (Kevin 07:40: "die beine stecken ineinander (die fuesse)"): Dead/Death neu, Pfoten frei, liegt auf
 (Variante liegen_gesenkt 7005099d in `baer_junges_fuss`), Blatt `baer_junges_fuss/bilder/KEVIN_junges_liegen.png`; eigener kleiner Modell-Lauf.
 
 ## 3. F2-Inhalt (Kevins Wuensche 12.11., alle in `PLAN_F2.md` Abschnitt 11)

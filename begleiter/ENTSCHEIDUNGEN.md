@@ -451,3 +451,5 @@ schonmal besser als vorher'*.
 * **Fest (naechster Modell-Lauf am Jungen, nach dem Wochen-Reset):** Clips Dead/Death des Jungen so aendern, dass die Pfoten/Fuesse beim Liegen NICHT
   ineinander oder uebereinander stecken (Beine natuerlich gestaffelt, jede Pfote sichtbar und frei), Koerper liegt auf (Variante liegen_gesenkt
   einrechnen), aus Kevins Kamera UND von der Seite pruefen; dabei auch das Schweben beim Rennen ansehen. Die anderen Clips bleiben byte-gleich.
+* Nachtrag ~07:50: der grosse Baer liegt bei Dead/Death ebenso mit uebereinander gestapelten Beinen (Render `../_arbeit/baer_gross/fix1/render/end/p_dead_az50_tex.png`).
+  Frage "das Liegen beim grossen Baeren gleich mit?" -> Kevin: *'Ja, beide Baeren'*. **Fest:** die Liegen-Aufgabe gilt fuer Junges UND grossen Baeren.
