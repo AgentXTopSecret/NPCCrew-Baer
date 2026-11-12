@@ -1,9 +1,9 @@
 export const meta = {
   name: 'baer-f1b',
-  description: 'Baer F1b: Baeren-Fenster mit E in der Naehe (wie NPC Crews V bei NPCs) + eigene Taste aus der Ferne, beide in Optionen > Mods einstellbar; V gehoert wieder NPC Crew/Vanilla -- 8 Agenten; nichts in die Test-Mod',
+  description: 'Baer F1b: Baeren-Fenster mit E in der Naehe (wie NPC Crews V bei NPCs) + eigene Taste aus der Ferne, beide in Optionen > Mods einstellbar; V gehoert wieder NPC Crew/Vanilla; Schalter fuer die Wachstums-Zeile je Baer (ausgewachsen: weg) -- 8 Agenten; nichts in die Test-Mod',
   phases: [
     { title: 'Forschung', detail: 'E/V in Vanilla und NPC Crew, ModOptions-Tasten, Naehe wie NPC Crew' },
-    { title: 'Plan', detail: 'PLAN_F1B.md: Tastenweg, Abstand, Optionen-Seite, Texte, Tests' },
+    { title: 'Plan', detail: 'PLAN_F1B.md: Tastenweg, Abstand, Optionen-Seite, Wachstums-Schalter, Texte, Tests' },
     { title: 'Bau', detail: 'ein Bauer, nur Client-Dateien + Texte im Staging mod_f1b' },
     { title: 'Pruefung', detail: 'Pruefer A Belege/Regeln/Texte, Pruefer B Logik/Kollisionen/SP-MP' },
     { title: 'Nachbesserung', detail: 'bestaetigte Befunde beheben, alles neu pruefen' },
@@ -52,6 +52,15 @@ Kevin" mit dem gewaehlten Weg in den Bericht):
    darf nichts davon gestoert werden (nur lesen: ${NC}/42/media/lua/client/BanditsNPCInteract.lua um :7462-7480).
 4. Kleiner Hinweis im Fenster (unten, klein, 7 Sprachen), welche Tasten gelten ("E near your bear", Fern-Taste falls gesetzt) -- nur wenn es das
    ruhige Aussehen nicht stoert (Kevin mag das Fenster so, wie es ist: "ui anzeige passt ... das ist top").
+5. WACHSTUMS-ZEILE JE BAER (Kevin 12.11. ~04:50 woertlich: "ich will auch im ui einen schalter haben das die anzeige aus geht wann der
+   waechst und wenn er bei 100% ist soll der knopf ganz verschwinden aus dem ui weil er dann unnoetig waere wenn das geht ;D also ueber den baeren
+   die anzeige"): im Baeren-Fenster ein Schalter "Growth line" (Name nach Plan, 7 Sprachen) je Baer, der die Alter-/Wachstums-Zeile UEBER dem
+   Baeren ("Day 12 - half-grown in 3 day(s)", ${S}/42/media/lua/client/ISUI/BanditsNPCBearHud.lua um :343-353) an/aus schaltet -- gespeichert wie
+   der Namensschild-Schalter je Baer in der Client-Datei (BanditsNPCBearTags.lua, "tagoff <u>"; eigenes Praefix, gleicher Deckel). Die globale
+   Option TagAge (Optionen > Mods) bleibt Hauptschalter. Ist der Baer AUSGEWACHSEN (keine naechste Stufe, c.nst == nil): die Wachstums-Zeile ueber
+   dem Baeren entfaellt von selbst (heute steht dort dauerhaft "Day N - full-grown", UI_BN_Bear_Tag_AgeDone) UND der Schalter verschwindet ganz
+   aus dem Fenster (Platz schliesst sich ruhig, nichts springt unschoen). Wird er wieder klein (Testbefehl NCBear_CubGrow(-100)), kommt beides
+   wieder (gespeicherter Schalter gilt dann weiter).
 NICHT in F1B: alles aus F2 (Kampf), Modelle, server/ und shared/ (nur lesen; braucht der Weg dort etwas, als Befund melden statt bauen),
 NPC-Crew-Dateien.
 
@@ -150,8 +159,9 @@ Schreibe ${W}/PLAN_F1B.md:
    (Masse/Farbe/Schrift wie WinParts; nur wenn er ruhig bleibt).
 4. Dateiliste (nur client/ und Translate/; jede Aenderung mit Datei:Zeile), Texte, die wegfallen (alte "Bear window"-Belegungstexte nur
    entfernen, wenn sicher -- sonst stehen lassen und begruenden).
-5. Testfaelle fuer die Attrappen (E nah/fern/Etage/Fahrzeug/Chat; Fern-Taste gesetzt/nicht gesetzt; V oeffnet nichts mehr; NPC Crew V
-   unberuehrt) und Kevins Testschritte.
+5. Wachstums-Zeile je Baer (Auftrag 5): Schalter im Fenster (Lage, Text, Speicherung), Verhalten bei ausgewachsen und zurueck.
+6. Testfaelle fuer die Attrappen (E nah/fern/Etage/Fahrzeug/Chat; Fern-Taste gesetzt/nicht gesetzt; V oeffnet nichts mehr; NPC Crew V
+   unberuehrt; Wachstums-Schalter an/aus, ausgewachsen = Zeile und Schalter weg, zurueck = wieder da) und Kevins Testschritte.
 Rueckgabe: Kurzfassung des Plans mit Dateiliste.`, { label: 'plan', phase: 'Plan' })
 if (!plan) { return { fo, abbruch: 'Plan ohne Ergebnis' } }
 
@@ -186,7 +196,7 @@ DEINE ROLLE: PRUEFER B -- Logik, Tasten-Kollisionen, SP/MP, rote Linien. Du aend
 unter ${W}/attrappe/pruef_f1b/. Verfolge jeden Tastendruck: E nah am eigenen Baeren / nah an fremdem Baeren / nah an Tuer + Baer / im Fahrzeug /
 beim Tippen im Chat / bei offenem anderem Fenster / Baer auf anderer Etage / Baer vermisst oder nicht geladen; Fern-Taste nicht gesetzt (darf
 nie ausloesen, auch nicht bei Tastencode 0) und gesetzt (auch auf E oder V -- was dann?); V neben NPC und Baer (nur noch NPC Crew bzw.
-Vanilla); Tier-Radial am eigenen Baeren (kein Kill). Kann ein Druck den Baeren verlieren, verdoppeln, fremde Baeren steuern, NPC Crew
+Vanilla); Tier-Radial am eigenen Baeren (kein Kill); Wachstums-Schalter je Baer (zwei Baeren, ausgewachsen, zurueck, Deckel der Datei). Kann ein Druck den Baeren verlieren, verdoppeln, fremde Baeren steuern, NPC Crew
 stoeren oder Vanilla-E kaputtmachen? Kosten je Druck. Drei eigene Attrappen-Faelle fuer die riskantesten Stellen. Ergebnis ${W}/pruef_f1b_b.md.
 Rueckgabe strukturiert (id B1...).`, { label: 'pruef:logik', phase: 'Pruefung', schema: FIND }),
 ])
@@ -217,7 +227,8 @@ Bericht der Nachbesserung: ${W}/nachbesserung_f1b.md.
    ausser NCBearBench* nie).
 3. Zwei eigene Stichproben (z. B. E neben Tuer und Baer Zeile fuer Zeile; Fern-Taste "keine" bei Tastencode 0).
 4. Urteil: bereit fuer Kevins naechsten Einzelspieler-Test (laedt ohne rote Fehler; E nah oeffnet, fern nicht; Fern-Taste einstellbar; V
-   oeffnet das Baeren-Fenster nicht mehr; NPC Crews V unberuehrt; F1 sonst unveraendert)? Blocker nur, was diesen Test verhindert oder eine rote
+   oeffnet das Baeren-Fenster nicht mehr; NPC Crews V unberuehrt; Wachstums-Schalter wirkt, ausgewachsen ist er samt Zeile weg; F1 sonst
+   unveraendert)? Blocker nur, was diesen Test verhindert oder eine rote
    Linie reisst.
 Ergebnis ${W}/gegen_bericht_f1b.md und Testanleitung ${W}/anleitung_f1b_entwurf.md (Deutsch, kurz, Schritt fuer Schritt fuer Kevin; Spiel mit
 -debug neu starten; nur NCBearTest noetig, fuer den V-Test zusaetzlich NPC Crew; wo die Tasten eingestellt werden). Rueckgabe: das Urteil

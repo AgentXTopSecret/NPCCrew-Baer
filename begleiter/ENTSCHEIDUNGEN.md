@@ -370,3 +370,10 @@ settings zum aendern eintragen falls jemand nicht E nutzen will sondern einen an
   der Rechtsklick "Bear window" bleibt. Ohne Baer in der Naehe tut E nichts Eigenes (bleibt Vanillas Interact).
 * Gewaehlter Weg bei Kleinfragen (Lauf entscheidet mit Beleg, Kevin sieht die Liste danach): E oeffnet nicht im Fahrzeug, beim Tippen im Chat
   oder bei anderem Fenster im Fokus; Vanillas Tier-Radial am eigenen Baeren wieder offen, aber ohne "Kill" (falls belegt moeglich).
+
+## Wachstums-Zeile ueber dem Baeren: Schalter im Fenster, ausgewachsen weg (Kevin 12.11.2026 ~04:50)
+Woertlich: *'ich will auch im ui einen schalter haben das die anzeige aus geht wann der waechst und wenn er bei 100% ist soll der knopf ganz
+verschwinden aus dem ui weil er dann unnoetig waere wenn das geht ;D'* -- *'also ueber den baeren die anzeige'*.
+* **Fest (mit Lauf baer-f1b):** Schalter je Baer im Baeren-Fenster fuer die Zeile "Day 12 - half-grown in 3 day(s)" ueber dem Baeren (gespeichert
+  wie der Namensschild-Schalter, nur auf dem eigenen Rechner; die Option in Optionen > Mods bleibt Hauptschalter). Ausgewachsen: Zeile ueber dem
+  Baeren UND Schalter im Fenster verschwinden (heute stuende dort dauerhaft "Day N - full-grown").
