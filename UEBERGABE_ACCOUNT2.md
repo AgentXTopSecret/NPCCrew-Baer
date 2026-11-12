@@ -37,6 +37,8 @@ Kampf: Zombies und feindliche Banditen greifen den gezaehmten Baeren an, er kaem
 Verband. Dazu: 11.1 Schalter "Show damage" (Zahlen ueber Zombies wie Kevins Mod CombatText, nur gelesen), 11.2 Zeile "Melee damage" unter Condition
 (Groesse + Kaempfen, `B.MeleeDamage`), 11.4 Lerntempo 2 statt 6 XP/min, Alters-Deckel 3/6/8/10 (Balken ausgegraut UND "max for its age"),
 Sandbox-Prozent 25-1000 und an/aus, 11.5 Kill-Zaehler, 11.6 kein Schaden durch Spieler/Autos/Turrets/NPCs + Bench-Meldung "%1$s" reparieren.
+11.7 Fliehen erst, wenn das Leben nur noch fuer 3 Treffer reicht (Kevin: "nur noch fliehen wenn er low hp ist sodas er nach 2-3 hits sterben
+wuerde"), Sandbox 1-10, Vorgabe 3; ersetzt die 20-%-Schwelle.
 
 ## 4. Spaeter (Funktionen-Liste, STAND.md "NACHTSCHICHT")
 F3 Beduerfnisse + Schlafen (`baer\SCHLAF_PLAN.md`), F4 Traglast/Inventar, F5 Spuernase + Fischen (Balance fest: Ertrag = NPC-Angler gleicher Stufe x
