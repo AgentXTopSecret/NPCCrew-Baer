@@ -387,3 +387,12 @@ schaden er aktuell macht mit seiner aktuellen groesse eventuell auch mit dem ski
   (Workshop 2286124931, nur gelesen, nichts kopiert). Zeigt CombatText die Baeren-Treffer schon selbst: Vorgabe aus, Frage an Kevin.
 * Zeile "Melee damage" unter Condition: Schaden je Treffer JETZT, aus Groesse UND Kaempfen-Stufe (und Sandbox-Prozent) -- dieselbe Rechnung wie im
   Kampf (`B.MeleeDamage`), Tooltip mit allen freigeschalteten Angriffen; das Junge kaempft nicht ("--").
+
+## Lerntempo der Faehigkeiten langsamer + Sandbox, Kill-Zaehler (Kevin 12.11.2026 ~05:10)
+Woertlich: *'und wie haste die level erfahrung berechnet? wie lange es dauert bis der baer lvl 10er skills bekommt , das soll schon etwas dauern
+also nicht zu schnell gehen der soll nicht schon alles auf max level haben bevor er ueberhuaot voll ausgewachsen ist am besten mit sandbox
+einstellung die das verschnellert und ich brauch noch im baeren ui einen kill counter'* -- dazu sein Befund: *'ich hab schon 24 von 100 punkte ibs
+lvl 1 bei endurance dabei bin ich mit dem baeren vllt maximal 5 min rumgelaufen'* (passt zum heutigen Deckel 6 XP/min: 5 min -> hoechstens 30).
+* **Fest (mit F2, `../_arbeit/baer_zaehmen/PLAN_F2.md` 11.4/11.5):** Deckel 6 -> 2 XP je Faehigkeit und Minute (Stufe 10 >= ~18 Echtzeit-Stunden
+  Dauer-Einsatz); Alters-Deckel Junges 3 / halbstark 6 / kraeftig 8 / ausgewachsen 10; Sandbox "Bear: skill learning speed (%)" 25-1000, Vorgabe 100,
+  und "Bear: skills limited by age" an/aus, Vorgabe an. Kill-Zaehler je Baer (Zombies, Banditen) im Fenster.
