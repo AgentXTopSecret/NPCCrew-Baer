@@ -418,5 +418,5 @@ im worklfow?'* -> nur teilweise: baer-gross hob ein 3-cm-Band an (Farbsprung 18,
 * Nachtrag ~06:25: Kevin zu den Zahlen (Stufe 1 >= 50 min, Stufe 10 >= 18 h reine Aktivitaet, realistisch Tag 100-200): *'okay das klingt gut steht das
   dann auch im ui dasss das level nicht hoeher werden kann wegen dem baeren wachstum?'* -> ja: Hinweis "max for its age" sichtbar an der Faehigkeit,
   Tooltip nennt Stufe und ungefaehren Tag, ab dem es weitergeht (PLAN_F2.md 11.4).
-* Nachtrag ~06:30, woertlich: *'oder der balken ist ausgegraut also so dunkler das faend ichn och besser'* -> **Fest:** am Alters-Deckel ist der Balken
-  der Faehigkeit ausgegraut (dunkler, Stufe gedimmt), kein Zusatztext am Balken; der Tooltip erklaert Stufe und ungefaehren Tag.
+* Nachtrag ~06:30, woertlich: *'oder der balken ist ausgegraut also so dunkler das faend ichn och besser'* -> dann *'zusaetzlich'* -> **Fest:** am Alters-Deckel ist der
+  Balken der Faehigkeit ausgegraut (dunkler, Stufe gedimmt) UND daneben steht klein "max for its age"; der Tooltip erklaert Stufe und ungefaehren Tag.
