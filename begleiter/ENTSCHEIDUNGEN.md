@@ -722,3 +722,4 @@ Kevin ~00:20 (Bild Fenster: Nahkampfschaden "70 je Treffer", Durst 100 %, Toolti
    Muedigkeit senkt den Schaden heute NICHT (B.NeedK: ab 70 nur Ausdauer-Erholung halb, ab 90 kein Kampf) -- an Kevin gefragt, ob sie es soll.
    Nachtrag Kevin ~00:22, woertlich: *"mit info dann im screen"* -> der Tooltip sagt beim roten Wert genau, WARUM und wie viel: normaler Schaden, jetziger Schaden,
    Grund mit Stand (z. B. "Durst 100 %: 70 % des normalen Schadens (normal 100, jetzt 70)"); Prankenhieb/Biss/Zerfleischen je mit normal -> jetzt.
+   Kevin ~00:25 (Auswahl "Soll Muedigkeit auch den Schaden senken?"): *"Nein, so lassen"* -> Schaden sinkt nur durch Hunger/Durst wie heute.
