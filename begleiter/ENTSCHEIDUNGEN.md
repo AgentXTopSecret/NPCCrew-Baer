@@ -769,3 +769,8 @@ Kevin ~01:55 (Netzsuche Futter, `begleiter/bedarf_echte_baeren.md`): *"da nehmen
    umgerechnet ueber den Menschen (Annahme ~2 kg Essen je Tag) -> Junges ~1,5 x, halbstark ~4 x, ausgewachsen ~12,5 x der Vanilla-Hungerpunkte, die ein SPIELER je
    Spieltag verbraucht (Zahl im Lauf aus Vanilla belegen: Hunger-Anstieg je Stunde des Spielers). Jedes Futter sattigt nach seinem Vanilla-Hungerwert (HungerChange,
    z. B. Steak 40, Wild 80, Honig 20, Apfel 16), wie heute (B.MealsOf). Heute: mealsAt {1,2,4} x 20 Punkte = 20 / 40 / 80 Punkte je Tag. Dazwischen gleitend mit der Groesse.
+Kevin ~02:00, woertlich: *"trinken ist ja noch leicht achja waer cool du konntest noch einbauen das der baer in wassernaehe automatisch zum wasser laeuft wenn man ka 10-20 kacheln entfernt ist und er selbst staendig dann eine trink animation abspielt mit sound wenns geht und dann sich komplett voll trinkt aber nicht blitzschnell das soll schon bisschen dauern ;D"*
+-> **Neues Paket "Wasser in der Welt" (zusammen mit den Troegen, B-Liste):** durstig (ab 50 %, wie das Selbst-Trinken) und offenes Wasser (Fluss/See) bzw. Wassertrog in
+   ~10-20 Kacheln -> er geht SELBST hin (nicht im Kampf, nicht in Bleiben/Sitz? -- im Plan klaeren), spielt eine TRINK-ANIMATION (neuer Clip -> Modell-Lauf; erst pruefen, ob
+   Vanillas Tier-AnimSets einen Trink-Knoten haben) mit Ton (Vanilla-Tier-Trinkton belegen), trinkt sich bis 0 % voll, LANGSAM (Vorschlag: ~1 Spielstunde fuer einen
+   ausgewachsenen Baeren von 50 auf 0), dann zurueck zum Befehl. Wasser-Kacheln/Trog-Erkennung nur mit Vanilla-Beleg (Angeln/Troege). Gefahr -> bricht ab und kaempft.
