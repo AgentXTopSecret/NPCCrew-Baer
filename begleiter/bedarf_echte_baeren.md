@@ -21,3 +21,13 @@ Grobe Ableitung (Claude, ungeprueft): ~11 l bei ~270 kg = ~4 % des Koerpergewich
 | Halbstark | ~80 kg | ~3 l | 1 l (2 Schalen) |
 | Ausgewachsen | ~250 kg | ~10 l | 1,5 l (3 Schalen) |
 Futter: noch nicht gesucht (naechster Schritt; Hinweis aus der Suche: Fressphase bis ~20.000 kcal je Tag, UALR Public Radio, ungeprueft).
+
+## Kevins Google-Ergebnis (14.11. ~01:35, woertlich eingefuegt)
+*"Ja, grosse Braunbaeren trinken insgesamt deutlich mehr als kleine Braunbaeren. Ein ausgewachsener Braunbaer benoetigt zur Deckung seines Grundbedarfs grob geschaetzt rund 0,08 bis 0,1 Liter Wasser pro Kilogramm Koerpergewicht am Tag"*
+(Google-Zusammenfassung, Primaerquelle nicht genannt) = 8-10 % des Koerpergewichts -- doppelt so viel wie Claudes Ableitung aus dem Schwarzbaeren (~4 %).
+Zum Vergleich (Claude, ungeprueft): Rinder trinken grob 8-12 %, Hunde 4-7 % des Koerpergewichts.
+| Groesse | Gewicht (angenommen) | 4 % (Schwarzbaer-Zahl) | 8-10 % (Kevins Google) | heute |
+|---|---|---|---|---|
+| Junges | ~25 kg | ~1 l | 2-2,5 l | 0,5 l |
+| Halbstark | ~80 kg | ~3 l | 6,4-8 l | 1 l |
+| Ausgewachsen | ~250 kg | ~10 l | 20-25 l | 1,5 l |
