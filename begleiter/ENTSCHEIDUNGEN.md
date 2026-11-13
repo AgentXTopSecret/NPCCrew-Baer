@@ -779,3 +779,7 @@ Kevin ~02:05, woertlich: *"wie viel muss er nach saettigung fressen? schon heute
    Spieler-Tagesbedarf in Hungerpunkten: Konstante gefunden (V `shared/defines.lua:14` HungerIncrease = 0.0000032 * 3, Schlaf :17), Umrechnung je Spieltag noch NICHT
    gemacht (braucht den Jar-Weg Stats/GameTime) -> im Lauf belegen, dann Tabelle "je Tag: x Steaks / y Wild / z Honig" je Groesse.
    **Vorschlag (an Kevin):** im Baeren-Inventar und im Futter-Tooltip zusaetzlich "satt fuer ~x % seines Tagesbedarfs" je Stueck; NPC Crews Kasten nicht kopieren.
+Kevin ~02:10, woertlich: *"bei trog mehr range da darf er die ganze base nutzen und ja soll da stehn mit prozent"*
+-> (1) Paket "Wasser in der Welt"/Troege: Troege (Futter UND Wasser) in der GANZEN BASIS darf er nutzen, nicht nur 10-20 Kacheln (die gelten fuer Fluss/See). "Basis" im Plan
+   klaeren: NPC Crews Basis-Bereich (Existenz-Riegel, Naht) bzw. ohne NPC Crew Vanillas Safehouse; Deckel fuer die Suche. (2) Futter-Tooltip (Baeren-Inventar und Fuettern):
+   Zeile "satt fuer ~x % seines Tagesbedarfs" je Stueck -- fest, kommt mit dem Hunger-Umbau nach Groesse.
