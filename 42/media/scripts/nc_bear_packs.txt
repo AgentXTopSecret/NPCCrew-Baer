@@ -9,7 +9,9 @@
    Rezept in module Base nach Vanilla SewClothSatchel (VS:generated/recipes/recipes_tailoring.txt:85-116): Zeitaktion SewingCloth, Kategorie
    Tailoring, Schere (scharf) und Naehnadel bleiben (mode:keep), Zutaten-Liste in der Vanilla-Form [A;B] und tags[base:thread]; Lederstreifen /
    Seil wie VS:generated/recipes/recipes_tailoring.txt:267 bzw. recipes.txt:16. Immer bekannt (kein NeedToBeLearn), Schneidern 3.
-   Das Ergebnis NPCCrew.BearPacks steht in DIESER Datei (NC-Lehre: ein Rezept mit unbekannter Ausgabe frisst die Zutaten). */
+   Das Ergebnis NPCCrew.BearPacks steht in DIESER Datei (NC-Lehre: ein Rezept mit unbekannter Ausgabe frisst die Zutaten).
+   Rezept-Fix 13.11. 23:00 (Kevin: Spiel lud nicht, console.txt "unknown recipe param: Base.LeatherStrips" InputScript.Load): Eingaben immer in [ ]
+   wie Vanilla recipes_tailoring.txt:929 "item 1 [Base.Rope]". */
 
 module NPCCrew
 {
@@ -41,8 +43,8 @@ module Base
             item 1 tags[base:scissors] mode:keep flags[SharpnessCheck;IsNotDull],
             item 1 tags[base:sewingneedle] mode:keep,
             item 4 [Base.BurlapPiece;Base.FabricRoll_Cotton;Base.FabricRoll_DenimBlack;Base.FabricRoll_DenimBlue;Base.FabricRoll_DenimDarkBlue],
-            item 4 Base.LeatherStrips,
-            item 2 Base.Rope,
+            item 4 [Base.LeatherStrips],
+            item 2 [Base.Rope],
             item 4 tags[base:thread],
         }
         outputs
