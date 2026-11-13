@@ -784,3 +784,11 @@ Kevin ~02:10, woertlich: *"bei trog mehr range da darf er die ganze base nutzen 
    klaeren: NPC Crews Basis-Bereich (Existenz-Riegel, Naht) bzw. ohne NPC Crew Vanillas Safehouse; Deckel fuer die Suche. (2) Futter-Tooltip (Baeren-Inventar und Fuettern):
    Zeile "satt fuer ~x % seines Tagesbedarfs" je Stueck -- fest, kommt mit dem Hunger-Umbau nach Groesse.
 Kevin ~02:12, woertlich: *"beim essen darf er auch die ganze base nutzen als range"* -> bestaetigt: auch FRESSEN aus Futtertroegen in der ganzen Basis (wie Wasser); weiterhin nicht aus Kisten (00:35).
+Kevin ~02:15, woertlich: *"gut und das trinken und essen was wir ausgerechnet haben soll dann dynamisch steigen pro groesse (tag)  ab tag 100 voll ausgewchsen = maximal essen und trinken und em das essen und trinken soll ca fuer einen tag ingame verbraucht werden jz ist die frage wie lange schlaeft der baer ca? weil da steigen die werte ja nicht"*
+-> Fest: Tagesmenge Futter/Wasser waechst Tag fuer Tag mit der Groesse (gleitend wie carryAt), ab Tag 100 (ausgewachsen) das Maximum (25 kg Futter-Saettigung / 15 l).
+   Die Tagesmenge soll in ~1 Spieltag verbraucht sein.
+   Schlaf heute (T `server/BanditsNPCBearSleep.lua` Kopf, F3): allein erst bei Muedigkeit 100 % (ausgewachsen nach ~62 Wachstunden, Junges ~42, mit viel Rennen/Kaempfen frueher),
+   dann ~9,5 h bis 0 % (tirSleepGround 10,5/h); mit dem Besitzer (ab Korrektur-Lauf IMMER, 01:10): so lange wie der Spieler schlaeft (meist ~6-9 h je Nacht).
+   **Claudes Vorschlag (an Kevin):** Tagesmenge auf ~16 WACH-Stunden verteilen (8 h Schlaf je Nacht angenommen): 0 -> 50 % in ~16 Wachstunden, dann frisst/trinkt er die
+   ganze Tagesmenge (50 -> 0 %); 100 % nach ~2 Tagen ohne Futter. Durst dabei wie Hunger 50 % je Tag (heute 75 % -- Aenderung). Schlaeft der Spieler nie, braucht der
+   Baer etwas mehr (~1,25 Tagesmengen je Tag, er schlaeft dann nur alle 2-3 Tage ~9,5 h).
