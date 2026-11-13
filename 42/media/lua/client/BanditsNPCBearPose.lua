@@ -39,6 +39,10 @@
 --     Ende melden U.ZzPoke). U.PoseTick ruft je Takt U.SleepReport (ebenfalls in client/ISUI/BanditsNPCBearZz.lua, Existenz-Riegel):
 --     meldet dem Schreiber, wenn der Besitzer schlaeft bzw. aufwacht (Bitte "Sleep") -- dann legt sich ein folgender Baer neben ihn
 --     (Kevin 6d).
+-- F4 (Lauf baer-f4, PLAN_F4.md 11; Kevin 13.11.2026 abends Antwort 6: er frisst selbst aus seinem Inventar): traegt die Sicht eat (der
+-- Schreiber setzt es fuer ALLE, solange er aus dem Inventar frisst, B.CFG.invEatShowMs), spielt dieser Client den vorhandenen Clip "eat"
+-- (derselbe wie beim Fuettern) EINMAL je Fress-Fenster ueber U.PoseAct -- nach der Uhr wieder weg, danach wie bisher (sitzt er, setzt er
+-- sich wieder hin). Nie im Kampf / Rueckzug, versteckt, mitfahrend, am Boden oder schlafend; beschaeftigt geht vor. Kein neuer Clip.
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -70,6 +74,8 @@ local P = {}
 -- Tiere, die DIESES Spiel gerade selbst fuettert: { obj, t }. Nur diese Sitzung, Deckel HANDS_MAX.
 local H = {}
 local at = 0
+-- F4: Kennungen, deren Fress-Fenster (Sicht eat) schon ein "eat" bekommen hat. Deckel: nur Kennungen der Sicht (U.PoseOnView raeumt).
+local EAT = {}
 
 local function act()
     return B.ACT or "NCBearAct"
@@ -199,6 +205,15 @@ local function drive(id, v, now)
     if v.busy == true or inHands(obj, now) then
         if e ~= nil then e.busy = true end                      -- die Zeitaktion laeuft: nichts schreiben, Zustand behalten
         return
+    end
+    -- F4 (PLAN_F4.md 11): frisst er aus dem Inventar (Sicht eat), einmal den Clip "eat" je Fress-Fenster
+    if v.eat == true then
+        if EAT[id] == nil and calm(v) and v.dn ~= true and v.slp ~= true then
+            EAT[id] = true
+            if U.PoseAct(id, "eat") then return end
+        end
+    else
+        EAT[id] = nil
     end
     -- F2 (PLAN_F2.md 4.6): sitzen bei Befehl Sitz ODER am Boden (dn), nie im Kampf (fst), versteckt oder mitfahrend.
     -- F3 (PLAN_F3.md 6.7): schlafen (Sicht slp) nach "am Boden", vor Sitzen. Ohne Schlaf-Clips sieht Schlafen aus wie Sitzen (dieselbe
@@ -348,6 +363,18 @@ function U.PoseOnView()
     if gone then
         for i = 1, #gone do P[gone[i]] = nil end
     end
+    -- F4: Fress-Marken nur fuer Kennungen der Sicht (erst sammeln, dann loeschen)
+    local old = nil
+    for id, _ in pairs(EAT) do
+        local v = cubs[id]
+        if v == nil or v.eat ~= true then
+            old = old or {}
+            old[#old + 1] = id
+        end
+    end
+    if old then
+        for i = 1, #old do EAT[old[i]] = nil end
+    end
 end
 
 -- F2 (PLAN_F2.md 4.4, 4.6): einen Kampf-Clip (oder einen anderen Clip der Tabelle, z. B. "eat") an der lebenden Kopie
@@ -391,6 +418,7 @@ end
 local function onGameStart()
     P = {}
     H = {}
+    EAT = {}
     at = 0
 end
 

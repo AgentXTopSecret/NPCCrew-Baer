@@ -4,6 +4,8 @@
     "Sandbox_BanditsNPC_BearBaitEnabled_tooltip": "Lets players lay out honey or fish as bear bait in or right next to a forest. After one or more nights a cub may come.",
     "Sandbox_BanditsNPC_BearCannotDie": "Bear: cannot die",
     "Sandbox_BanditsNPC_BearCannotDie_tooltip": "Instead of dying, a tamed bear goes down. Help it up, or it gets up on its own after a while.",
+    "Sandbox_BanditsNPC_BearCarryPercent": "Bear: carrying capacity (percent)",
+    "Sandbox_BanditsNPC_BearCarryPercent_tooltip": "How much a tamed bear can carry. 100 = normal: a cub 10 kg, half-grown 40 kg, full-grown 100 kg. 50 = half, 250 = two and a half times. Bear packs always add 150 kg from half-grown; this setting does not change that. At most 400 kg in all.",
     "Sandbox_BanditsNPC_BearCubForestRate": "Bear cub: how often in the forest",
     "Sandbox_BanditsNPC_BearCubForestRate_option1": "Off",
     "Sandbox_BanditsNPC_BearCubForestRate_option2": "Rare",

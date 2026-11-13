@@ -4,6 +4,8 @@
     "Sandbox_BanditsNPC_BearBaitEnabled_tooltip": "允许在森林里或森林旁边放置蜂蜜或鱼作为熊诱饵。过一个或几个晚上后，可能会有小熊来。",
     "Sandbox_BanditsNPC_BearCannotDie": "熊: 不会死",
     "Sandbox_BanditsNPC_BearCannotDie_tooltip": "驯服的熊不会死，而是倒地。把它拉起来，或者过一段时间它会自己站起来。",
+    "Sandbox_BanditsNPC_BearCarryPercent": "熊: 负重能力 (百分比)",
+    "Sandbox_BanditsNPC_BearCarryPercent_tooltip": "驯服的熊能背多少东西。100 = 正常: 小熊10 千克，半大40 千克，成年100 千克。50 = 一半，250 = 两倍半。熊用鞍袋在熊半大以后总是另加150 千克，这个设置不影响它。总共最多400 千克。",
     "Sandbox_BanditsNPC_BearCubForestRate": "小熊: 森林中出现的频率",
     "Sandbox_BanditsNPC_BearCubForestRate_option1": "关闭",
     "Sandbox_BanditsNPC_BearCubForestRate_option2": "少见",

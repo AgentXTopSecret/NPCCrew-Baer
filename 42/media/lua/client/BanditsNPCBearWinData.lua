@@ -41,6 +41,12 @@
 -- aus tir / tru und den Schwellen des Kerns (B.CFG tirVery / trRefuse). Die spaeteren Knoepfe Fish (F5), Inventory (F4) und der Schalter
 -- Nose alerts (F5) stehen schon an ihrem Platz, grau mit "Comes with a later version." -- kein Klick, keine Bitte, nichts wandert spaeter.
 -- Alle Zahlen der Texte (Schwellen, Bonus, Untergrenze des Lebens) liest das Fenster aus B.CFG (cfgNum mit Rueckfall), keine eigene Wahrheit.
+-- F4 (Lauf baer-f4, PLAN_F4.md 8.1; Kevin 13.11.2026 abends, f4/KEVIN_ANTWORTEN.md): die Zeile "Can carry up to 62" wird "Load 18.5 / 62 kg"
+-- (Sicht ivW / ivC des Schreibers, nur fuer den Besitzer; ueber der Grenze ivX: Wert in Warnfarbe; alte Sicht ohne ivW: "--"). Tooltip: was er
+-- jetzt traegt, wie viel er je Groesse tragen kann (B.CFG.carryAt x Sandbox BearCarryPercent), Packtaschen an / aus (Sicht bag, +bagAdd ab
+-- halbstark), Zahl der Dinge (ivK von invMaxItems = 1000) und ggf. "zu schwer". Die Felder heissen weiter d.carry / s.tCarry (das Fenster legt die
+-- Zeile unveraendert). Der Knopf "Inventory" ist scharf: ansehen geht immer -- auch von weitem (Kevin Antwort 2); grau nur, wenn das
+-- Inventar-Fenster fehlt (U.InvOpen, client/ISUI/BanditsNPCBearInvWindow.lua). Geben / Nehmen prueft erst das Inventar-Fenster.
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -57,7 +63,7 @@ local TIP_HEAD = " <RGB:1,0.7,0.3> "
 local TIP_BODY = " <LINE> <RGB:1,1,1> "
 local TIP_LINE = " <LINE> "
 
-local CMDS = { "follow", "stay", "sit", "roam", "come", "unstuck", "fish", "inv" }     -- F3: + fish, inv (grau bis F5 / F4)
+local CMDS = { "follow", "stay", "sit", "roam", "come", "unstuck", "fish", "inv" }     -- F3: + fish (grau bis F5), inv (F4 scharf)
 U.WIN_CMDS = CMDS
 
 -- Faehigkeiten in der Reihenfolge von B.SKILLS (S:shared/BanditsNPCBearStats.lua:110). Jeder Schluessel ausgeschrieben.
@@ -109,7 +115,7 @@ local DIR_KEY = { N = "UI_BN_Bear_Dir_N", NE = "UI_BN_Bear_Dir_NE", E = "UI_BN_B
     S = "UI_BN_Bear_Dir_S", SW = "UI_BN_Bear_Dir_SW", W = "UI_BN_Bear_Dir_W", NW = "UI_BN_Bear_Dir_NW" }
 local BTN_KEY = { follow = "UI_BN_Bear_Win_Follow", stay = "UI_BN_Bear_Win_Stay", sit = "UI_BN_Bear_Win_Sit",
     roam = "UI_BN_Bear_Win_Roam", come = "UI_BN_Bear_Win_Come", unstuck = "UI_BN_Bear_Win_Unstuck",
-    fish = "UI_BN_Bear_Win_Fish", inv = "UI_BN_Bear_Win_Inv" }                         -- F3: Platzhalter bis F5 / F4
+    fish = "UI_BN_Bear_Win_Fish", inv = "UI_BN_Bear_Win_Inv" }                         -- F3: Fish Platzhalter bis F5; F4: Inventory scharf
 
 local ST = nil      -- feste Texte dieser Sitzung (einmal ueber U.T geholt)
 
@@ -138,10 +144,14 @@ local function statics()
     s.none = U.T("UI_BN_Bear_Win_None")
     s.rename = U.T("UI_BN_Bear_Win_Rename")
     s.tCond, s.tSkills, s.tOrders = U.T("UI_BN_Bear_Win_Cond"), U.T("UI_BN_Bear_Win_Skills"), U.T("UI_BN_Bear_Win_Orders")
-    s.tHealth, s.tStamina, s.tCarry = U.T("UI_BN_Bear_Win_Health"), U.T("UI_BN_Bear_Win_Stamina"), U.T("UI_BN_Bear_Win_Carry")
+    s.tHealth, s.tStamina, s.tCarry = U.T("UI_BN_Bear_Win_Health"), U.T("UI_BN_Bear_Win_Stamina"), U.T("UI_BN_Bear_Win_Load")   -- F4: Load
     s.tipHealth = TIP_HEAD .. s.tHealth .. TIP_BODY .. U.T("UI_BN_Bear_Win_HealthTip")
     s.tipStamina = TIP_HEAD .. s.tStamina .. TIP_BODY .. U.T("UI_BN_Bear_Win_StaminaTip")
-    s.tipCarry = TIP_HEAD .. s.tCarry .. TIP_BODY .. U.T("UI_BN_Bear_Win_CarryTip")
+    -- F4 (PLAN_F4.md 8.1): Teile des Load-Tooltips; die Zahlen (Traglast je Groesse x Sandbox-Prozent) setzt loadTip je Modell ein
+    s.packsOn = U.T("UI_BN_Bear_Win_LoadPacks", math.floor(cfgNum("bagAdd", 150) + 0.5))       -- Rueckfall 150 (Kevin 13.11., Nachbesserung P11)
+    s.packsOff = U.T("UI_BN_Bear_Win_LoadNoPacks")
+    s.packsTip = U.T("UI_BN_Bear_Win_LoadPacksTip", math.floor(cfgNum("bagAdd", 150) + 0.5))
+    s.loadOver, s.tipInv = U.T("UI_BN_Bear_Win_LoadOver"), U.T("UI_BN_Bear_Win_InvTip")
     s.state = {}
     for i = 1, #STATE_ORDER do
         local k = STATE_ORDER[i]
@@ -210,7 +220,7 @@ local function statics()
     s.widePctNeed = U.T("UI_BN_Bear_Win_Pct", 100)
     -- Breiteste Texte fuer das Legen des Fensters (Breite waechst nur, wenn ein Text nicht passt, PLAN_F1.md 1.1)
     s.wideVal = U.T("UI_BN_Bear_Win_Count", 888, 888)
-    s.wideCarry = U.T("UI_BN_Bear_Win_CarryVal", 888)
+    s.wideCarry = U.T("UI_BN_Bear_Win_LoadVal", "888.8", 888)             -- F4: "Load 888.8 / 888 kg"
     s.wideLv = U.T("UI_BN_Bear_Win_Lv", 10)
     s.widePct = U.T("UI_BN_Bear_Win_Pct", 100)
     s.wideUnstuck = U.T("UI_BN_Bear_Win_UnstuckWait", "9:59")
@@ -563,6 +573,43 @@ local function valueRow(label, pct, most, kind, s)
     return e
 end
 
+-- F4 (PLAN_F4.md 8.1): Zeile "Load 18.5 / 62 kg" aus der Sicht des Schreibers (ivW Last, ivC Kapazitaet -- nur fuer den Besitzer).
+-- Ueber der Grenze (ivX) steht der Wert in Warnfarbe (e.col, client/ISUI/BanditsNPCBearWinParts.lua drawVal); fehlt ein Wert (alte Sicht):
+-- "--". Nie nachgerechnet. kg mit einer Nachkommastelle (U.Kg, client/BanditsNPCBearInvClient.lua; Rueckfall string.format wie dort).
+local function loadRow(v, s)
+    local e = { label = s.tCarry, val = s.none }
+    if isNum(v.ivW) and isNum(v.ivC) then
+        local kg = U.Kg and U.Kg(v.ivW) or string.format("%.1f", v.ivW)
+        e.val = U.T("UI_BN_Bear_Win_LoadVal", kg, math.floor(v.ivC + 0.5))
+        if v.ivX == true then e.col = "warn" end
+    end
+    return e
+end
+
+-- F4: Tooltip der Load-Zeile -- Erklaerung mit der Traglast je Groesse (B.CFG.carryAt des Kerns, 10 / 40 / 100, mal Sandbox
+-- BearCarryPercent), Packtaschen an / aus (Sicht bag), Zahl der Dinge (ivK von B.CFG.invMaxItems), "zu schwer" (ivX), Sandbox-Prozent.
+local function loadTip(v, s)
+    local pct = optNum("BearCarryPercent", 100)
+    local at = B.CFG and B.CFG.carryAt
+    local a, b, c = 10, 40, 100
+    if type(at) == "table" then a, b, c = tonumber(at[1]) or a, tonumber(at[2]) or b, tonumber(at[3]) or c end
+    local k = pct / 100
+    -- U.TB: Junges "your cub", grosser Koerper "your bear" (Nachbesserung F4, Befund P10)
+    local t = TIP_HEAD .. s.tCarry .. TIP_BODY .. U.TB("UI_BN_Bear_Win_LoadTip", v.bd, math.floor(a * k + 0.5), math.floor(b * k + 0.5),
+        math.floor(c * k + 0.5))
+    if v.bag == true then
+        t = t .. TIP_LINE .. s.packsOn
+    else
+        t = t .. TIP_LINE .. s.packsOff .. TIP_LINE .. s.packsTip
+    end
+    if isNum(v.ivK) then
+        t = t .. TIP_LINE .. U.T("UI_BN_Bear_Inv_Things", math.floor(v.ivK), math.floor(cfgNum("invMaxItems", 1000)))
+    end
+    if v.ivX == true then t = t .. TIP_LINE .. s.loadOver end
+    if math.floor(pct + 0.5) ~= 100 then t = t .. TIP_LINE .. U.T("UI_BN_Bear_Win_LoadPct", math.floor(pct + 0.5)) end
+    return t
+end
+
 -- F3 (PLAN_F3.md 10.3): Stufe eines Werts (0..100) fuer das Wort im Tooltip -- 1 = gut. Hunger und Durst teilen ihre Schwellen
 -- (needPeckish 25 / needHungry 50 / needStarve 80), Muedigkeit tirTired 40 / tirHeavy 70 / tirVery 90 (ab da zu muede zum Kaempfen,
 -- Kevin Antwort 3), Vertrauen feste Fuenftel (PLAN_F3.md 4.2). Die Regel gehoert dem Kern: B.NeedWord(kind, v) -> 1..4 bzw.
@@ -831,8 +878,7 @@ function U.WinModel(v, player, nowMs)
     -- Werte
     d.hp = valueRow(s.tHealth, v.hp, v.hpMax, "hp", s)
     d.sta = valueRow(s.tStamina, v.sta, v.staMax, "sta", s)
-    d.carry = { label = s.tCarry, val = s.none }
-    if isNum(v.carry) then d.carry.val = U.T("UI_BN_Bear_Win_CarryVal", math.floor(v.carry + 0.5)) end
+    d.carry = loadRow(v, s)                                     -- F4 (PLAN_F4.md 8.1): "Load 18.5 / 62 kg"
     -- F2: Leben mit Verband (Zeichen am Wert + Tooltip) und Flucht-Schwelle (nur der grosse Koerper kaempft); Melee damage, Kills
     local hpTip = s.tipHealth
     if isNum(v.bnd) and v.bnd > 0 then
@@ -862,7 +908,7 @@ function U.WinModel(v, player, nowMs)
     if isNum(v.meal) and v.meal > 0 then mealLine = U.T("UI_BN_Bear_Win_MealLine", fmt100(v.meal)) end
     if isNum(v.bowl) and v.bowl > 0 then bowlLine = U.T("UI_BN_Bear_Win_BowlLine", fmt100(v.bowl)) end
     if needsOff then offLine = s.needsOff end
-    d.tips = { hp = hpTip, sta = s.tipStamina, carry = s.tipCarry, melee = d.melee.tip, kills = d.kills.tip,
+    d.tips = { hp = hpTip, sta = s.tipStamina, carry = loadTip(v, s), melee = d.melee.tip, kills = d.kills.tip,
         hun = needTip(s.tHunger, d.hun, s.bodyHunger, firstOf(offLine, mealLine), needEffect(d.hun, s)),
         thr = needTip(s.tThirst, d.thr, s.bodyThirst, firstOf(offLine, bowlLine), needEffect(d.thr, s)),
         tir = needTip(s.tTired, d.tir, s.bodyTired, offLine, nof == "tired" and s.hintTired or nil),
@@ -904,9 +950,10 @@ function U.WinModel(v, player, nowMs)
     local uTip = U.TB("UI_BN_Bear_Menu_CallTip", bd, cool)
     if d.look then uTip = uTip .. TIP_LINE .. U.T("UI_BN_Bear_Win_UnstuckShared", cool) end
     b.unstuck = cmdBtn(uLabel, false, firstOf(whyRide, whyCar, whyWait), uTip)
-    -- F3 (PLAN_F3.md 10.2): Fish (F5) und Inventory (F4) stehen schon an ihrem Platz -- grau mit Grund, kein Klick, keine Bitte
+    -- F3 (PLAN_F3.md 10.2): Fish (F5) steht schon an seinem Platz -- grau mit Grund, kein Klick, keine Bitte
     b.fish = cmdBtn(s.btn.fish, false, s.whyLater, nil)
-    b.inv = cmdBtn(s.btn.inv, false, s.whyLater, nil)
+    -- F4 (PLAN_F4.md 7, 8.1; Kevin Antwort 2): Inventory scharf -- ansehen geht immer; grau nur ohne das Inventar-Fenster (Datei fehlt)
+    b.inv = cmdBtn(s.btn.inv, false, (not U.InvOpen) and s.whyLater or nil, s.tipInv)
     d.buttons = b
     d.care = careBtn(v, player, s, whyRide, whyAway)                -- F2: "Bandage" / am Boden "Help up"
     d.ordersInfo = ""

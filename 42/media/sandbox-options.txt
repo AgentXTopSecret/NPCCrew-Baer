@@ -5,6 +5,7 @@ VERSION = 1,
  * Every value is read by BanditsNPC.Bear.Opt with a fallback to the default below; in multiplayer the server's values count.
  * Kevin 12.11.2026: from 39 options exactly twelve stay; all others are fixed values in BanditsNPC.Bear.CFG (same numbers as the old defaults).
  * F3 (Kevin 13.11.2026): plus one, BearNeedsPercent -- thirteen.
+ * F4 (Kevin 13.11.2026 evening): plus one, BearCarryPercent -- fourteen.
  * A save with values set for removed options still loads: those values are never read.
  */
 
@@ -55,6 +56,14 @@ option BanditsNPC.BearGrowDays
 	type = integer, min = 10, max = 365, default = 100,
 	page = BanditsNPC,
 	translation = BanditsNPC_BearGrowDays,
+}
+
+/* Carrying capacity of a tamed bear in percent (Kevin 13.11.2026: 50 to 250, default 100). Multiplies what it carries by its size (cub 10, half-grown 40, full-grown 100 kg); bear packs always add 150 kg from half-grown and are not multiplied (at most 250 + 150 = 400 kg). */
+option BanditsNPC.BearCarryPercent
+{
+	type = integer, min = 50, max = 250, default = 100,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearCarryPercent,
 }
 
 /* Off (default): a tamed bear can die. On: it goes down instead; helped up with 45 percent, alone after 12 in-game hours with 15 percent (Kevin 08.11.2026). */

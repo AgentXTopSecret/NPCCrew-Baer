@@ -476,6 +476,11 @@ function B.Handle(player, command, args)
         if B.HandleWake then B.HandleWake(player, args) end
         return
     end
+    -- F4 (PLAN_F4.md 4.4, 16): "InvList" { id } -- Liste des eigenen Baeren-Inventars, nur an den Besitzer (server/BanditsNPCBearInv.lua)
+    if command == "InvList" then
+        if B.HandleInvList then B.HandleInvList(player, args) end
+        return
+    end
 end
 
 -- Events.OnClientCommand.Add(function(module, command, player, args)): Vanilla server/ClientCommands.lua:1357; Filter auf das
@@ -1166,6 +1171,9 @@ local function brainTickBody(ms)
             end
         end
     end
+    -- 8 (F4, PLAN_F4.md 2.4, 4.4, 10): Inventar -- Abgleich mit der Spieler-Kopie je Spieler-Objekt, gedrosselte Listen, Ende des Fress-Bilds,
+    -- Abwurf-Liste (server/BanditsNPCBearInv.lua). Als LETZTER Schritt: ein Fehler dort reisst den Takt nicht mit.
+    if B.InvBrain then B.InvBrain(ms, players) end
 end
 
 -- force ueberspringt nur die Echtzeit-Drossel. getTimestampMs: Vanilla server/Foraging/forageServer.lua:456.

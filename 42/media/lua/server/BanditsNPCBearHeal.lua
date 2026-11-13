@@ -336,6 +336,9 @@ function B.Restore(o, mark, players)
     if st == "tame" and B.GrowFromMark then B.GrowFromMark(rec, mark, "restore") end
     B.InsertRec(rec, o)
     B.Err("heal: entry " .. tostring(id) .. " (" .. st .. ", owner " .. tostring(owner) .. ") restored from the mark on the animal")
+    -- F4 (PLAN_F4.md 2.4, 10 "Registerverlust"): der Spiegel traegt KEIN Inventar (faelschbar) -- der Inhalt kommt aus der Kopie beim Besitzer
+    -- (gleiches Kennzeichen u; server/BanditsNPCBearInv.lua)
+    if st == "tame" and B.InvHealRec then B.InvHealRec(rec, nil) end
     local key = owner or bond
     if key ~= nil then
         local p = B.PlayerByKey(key, players)
@@ -460,6 +463,8 @@ function B.TakeNewerMark(rec, mark)
     B.Err("heal: entry " .. id .. " updated from a newer mark on the animal (" .. tostring(was) .. " -> " .. st .. ")")
     -- B1d (PLAN_B1D.md 2.4 "newer"): g und Erfahrung = das Groessere, Fuetter-Bonus aus dem Spiegel (Grow.lua)
     if st == "tame" and B.GrowFromMark then B.GrowFromMark(rec, mark, "newer") end
+    -- F4 (PLAN_F4.md 2.4): das Inventar folgt nie dem Spiegel, nur der Kopie beim Besitzer (server/BanditsNPCBearInv.lua)
+    if st == "tame" and B.InvHealRec then B.InvHealRec(rec, nil) end
     B.Touch(rec)
     return true
 end

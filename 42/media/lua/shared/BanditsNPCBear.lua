@@ -20,6 +20,9 @@
 -- F3 (PLAN_F3.md 2-7, 12; Kevins Antworten 13.11.2026, f3/KEVIN_ANTWORTEN.md): Stellwerte fuer Hunger, Durst, Muedigkeit, Vertrauen und
 -- Schlaf in B.CFG (Block "F3"), EIN neuer Sandbox-Regler BearNeedsPercent (Beduerfnis-Tempo in Prozent, 0 = aus) -> 13 Optionen. Keine
 -- Uhrzeiten (Kevin 6c): Schlaf nur nach Muedigkeit. Formeln: shared/BanditsNPCBearNeedRules.lua.
+-- F4 (PLAN_F4.md 3, 12; Kevins Antworten 13.11.2026 abends, f4/KEVIN_ANTWORTEN.md): Stellwerte des eigenen Inventars in B.CFG (Block "F4"), EIN
+-- neuer Sandbox-Regler BearCarryPercent (Traglast in Prozent, 50-250) -> 14 Optionen. Regeln: shared/BanditsNPCBearInvRules.lua, Schreiber:
+-- server/BanditsNPCBearInv.lua.
 --
 -- Laeuft ohne NPC Crew und ohne Bandits. Am Ende kopiert das Uebernahme-Skript diese Datei unveraendert nach NPC Crew.
 -- Deshalb: auf Dateiebene wird kein fremdes Modul eingefangen; jeder Griff nach BanditsNPC.X passiert zur Laufzeit und
@@ -290,6 +293,23 @@ B.CFG = B.CFG or {
     -- sleepCol (Kevin 5: Hellblau), tagSleepK, zzHeadE, curlAfterMs liest die OBERFLAECHE (z Z z, Schild, Pose-Treiber)
     sleepClips = false, sleepCol = { 0.70, 0.85, 1.00 }, tagSleepK = 0.65, zzHeadE = 0.30, curlAfterMs = 90000,
     drinkTime = 150, drinkMinL = 0.05,                    -- Dauer der Traenk-Aktion / kleinste Menge (Vanillas Schritt, ISGiveWaterToAnimal.lua:34)
+    -- F4 (PLAN_F4.md 3, 4, 12; Kevins Antworten 13.11.2026 abends): eigenes Inventar. Packtaschen-Gegenstand, +kg ab halbstark (nicht x Prozent),
+    -- hoechstens 1000 Stueck (Kevin: "1000 wie die NPCs"), Liste je Seite / Stueck je Take-Aktion, Dauer der Zeitaktionen (Spiel-Ticks), Drosseln
+    -- und Fenster-Uhren (Echtzeit-ms), Fressen aus dem Inventar (Spielminuten / ms), Deckel. invCopyMP: liest der Abgleich die Spieler-Kopie auch im
+    -- Mehrspieler? (Pruef-Tor G1, f4/GATES.md). invRotK: Verderb-Tempo je SandboxVars.FoodRotSpeed 1..5 (Pruef-Tor G3; Food.getFoodRotSpeed).
+    -- bagAdd: Kevin 13.11. abends waehrend des Laufs (f4/KEVIN_ANTWORTEN.md unten): "+150 das der baer am ende dann bei 250kg ist" (statt +50)
+    bagType = "NPCCrew.BearPacks", bagAdd = 150, invMaxItems = 1000, invPageMax = 100, invTakeMax = 50,
+    invPutTime = 40, invPutPerKg = 8, invPutMax = 150, bagOnTime = 300, bagOffTime = 200,
+    invListMs = 500, invWatchMs = 60000, invKeepMs = 30000, invEatGapMin = 10, invEatShowMs = 4000,
+    invMdMax = 2048, invWaifMax = 8, invDropMax = 16, invLostMax = 8,
+    -- Pruef-Tor G1 NICHT bestanden (f4/GATES.md): im MP Kopie weder schreiben noch lesen. G6: Spieler-Puffer SP hoechstens 2 MB -> alle Kopien
+    -- eines Spielers zusammen hoechstens invCopyBytes; G5: eine Listen-Seite hoechstens invPageBytes (Paket-Puffer 1.000.000 Bytes).
+    invCopyMP = false, invCopyBytes = 524288, invPageBytes = 200000,
+    invRotK = { 1.7, 1.4, 1.0, 0.7, 0.4 },
+    -- Nachbesserung F4 (Befund C4): Farbton (Jar A10 getHue/setHue) am dedizierten Server? NPC Crew hat Kevins Wort dafuer nur fuer Einzelspieler und
+    -- MP-Client (NPC Crew CLAUDE.md:444-447). false = im Mehrspieler lehnt der Baer Stuecke mit Aussehen (Kleidung, Taschen) mit Grund ab; true erst
+    -- nach Kevins Wort "auch am Server" (Frage fuer Kevin, f4/NACHBESSERUNG.md).
+    invHueMP = false,
 }
 
 -- F1 (PLAN_F1.md 0.3, 6.1): die vier Modi eines gezaehmten Baeren. Jeder andere Wert (auch nil) gilt als "stay" (B.ModeOf).
@@ -327,6 +347,10 @@ B.OPTS = B.OPTS or {
     -- Wachsen und Faehigkeiten
     BearSkillXpPercent = { def = 100, min = 25, max = 1000 },
     BearSkillAgeCap = { def = true },
+    -- F4 (Kevin 13.11.2026 abends, Antwort 5: "Traglast %" 50-250, Vorgabe 100; Packtaschen +150 laut Kevins Aenderung waehrend des Laufs) --
+    -- Wachsen und Faehigkeiten. Multipliziert NUR die Groessen-Traglast (10 / 40 / 100, B.CFG.carryAt); die Packtaschen bleiben +bagAdd (150)
+    -- -> hoechstens 250 + 150 = 400 kg. -> VIERZEHN Optionen.
+    BearCarryPercent = { def = 100, min = 50, max = 250 },
 }
 
 -- Waldzonen (Vanilla shared/Foraging/forageZones.lua:3,27,72,79,91,98,110,122,129,140).

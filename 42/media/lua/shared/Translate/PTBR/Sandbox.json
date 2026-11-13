@@ -4,6 +4,8 @@
     "Sandbox_BanditsNPC_BearBaitEnabled_tooltip": "Permite colocar mel ou peixe como isca para urso dentro de uma floresta ou bem ao lado dela. Depois de uma ou mais noites, um filhote pode vir.",
     "Sandbox_BanditsNPC_BearCannotDie": "Urso: não pode morrer",
     "Sandbox_BanditsNPC_BearCannotDie_tooltip": "Em vez de morrer, um urso domesticado cai. Ajude-o a levantar, ou ele se levanta sozinho depois de um tempo.",
+    "Sandbox_BanditsNPC_BearCarryPercent": "Urso: capacidade de carga (porcentagem)",
+    "Sandbox_BanditsNPC_BearCarryPercent_tooltip": "Quanto um urso domesticado consegue carregar. 100 = normal: um filhote 10 kg, meio crescido 40 kg, totalmente crescido 100 kg. 50 = metade, 250 = duas vezes e meia. Alforjes de urso sempre somam 150 kg a partir de meio crescido; esta opção não muda isso. No máximo 400 kg no total.",
     "Sandbox_BanditsNPC_BearCubForestRate": "Filhote de urso: frequência na floresta",
     "Sandbox_BanditsNPC_BearCubForestRate_option1": "Desligado",
     "Sandbox_BanditsNPC_BearCubForestRate_option2": "Raro",

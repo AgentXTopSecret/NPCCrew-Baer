@@ -4,6 +4,8 @@
     "Sandbox_BanditsNPC_BearBaitEnabled_tooltip": "Spieler können Honig oder Fisch als Bärenköder im Wald oder direkt daneben auslegen. Nach einer oder mehreren Nächten kommt vielleicht ein Junges.",
     "Sandbox_BanditsNPC_BearCannotDie": "Bär: unsterblich",
     "Sandbox_BanditsNPC_BearCannotDie_tooltip": "Statt zu sterben, geht ein gezähmter Bär zu Boden. Hilf ihm auf, sonst steht er nach einer Weile von selbst auf.",
+    "Sandbox_BanditsNPC_BearCarryPercent": "Bär: Traglast (Prozent)",
+    "Sandbox_BanditsNPC_BearCarryPercent_tooltip": "Wie viel ein gezähmter Bär tragen kann. 100 = normal: ein Junges 10 kg, halbstark 40 kg, ausgewachsen 100 kg. 50 = die Hälfte, 250 = das Zweieinhalbfache. Bären-Packtaschen geben ab halbstark immer 150 kg dazu; dieser Regler ändert das nicht. Zusammen höchstens 400 kg.",
     "Sandbox_BanditsNPC_BearCubForestRate": "Bärenjunges: wie oft im Wald",
     "Sandbox_BanditsNPC_BearCubForestRate_option1": "Aus",
     "Sandbox_BanditsNPC_BearCubForestRate_option2": "Selten",

@@ -129,6 +129,8 @@ function B.InitRegistry()
     end
     for i = 1, #bad do
         B.Err("registry: dropped unreadable entry " .. tostring(bad[i]))
+        -- F4 (PLAN_F4.md 4.1): der Inhalt eines unlesbaren Eintrags wird aufbewahrt (reg.invLost), nie still geloescht (server/BanditsNPCBearInv.lua)
+        if B.InvLostAdd then B.InvLostAdd(r, bad[i], r.cubs[bad[i]]) end
         r.cubs[bad[i]] = nil
     end
     -- B1b (PLAN_B1B.md 5.2): Folgen-Zustand und Name pruefen. Unbrauchbar -> nil (Vorgabe "stay" / Vorgabe-Name), je Feld eine Zeile.
@@ -220,6 +222,10 @@ function B.InitRegistry()
     if B.NeedsFix then
         local now = B.Now()
         for _, rec in pairs(r.cubs) do B.NeedsFix(rec, now) end
+    end
+    -- F4 (PLAN_F4.md 4.1): Inventar und Packtaschen pruefen (server/BanditsNPCBearInv.lua); ein kaputter Satz kommt nach reg.invLost, nie weg
+    if B.InvFix then
+        for _, rec in pairs(r.cubs) do B.InvFix(rec, r) end
     end
     bad = {}
     for bid, bait in pairs(r.baits) do
@@ -533,6 +539,9 @@ function B.Close(rec, how)
     local id = rec.id
     if reg.cubs[id] ~= rec then return end
     local wasTame = (rec.st == "tame" or rec.st == "missing") and rec.owner ~= nil
+    -- F4 (PLAN_F4.md 10, Kevin 13.11. Antwort 3): JEDER Ausgang -- alles, was er traegt, faellt an der Stelle auf den Boden (auch die Packtaschen),
+    -- BEVOR Eintrag und Sitzung (Lage des Tiers) gehen (server/BanditsNPCBearInv.lua)
+    if B.InvDrop then B.InvDrop(rec, how) end
     -- F2 (PLAN_F2.md 4.1): Kampf und laufende Gegner-Angriffe weg, BEVOR die Sitzung geht (server/BanditsNPCBearFight*.lua)
     if B.FightDrop then B.FightDrop(id, how) end
     if B.FoeDrop then B.FoeDrop(id) end
@@ -679,6 +688,8 @@ local function viewEntry(rec, pkey, ms)
         -- wka (server/BanditsNPCBearSleep.lua) -- flach, fuer eigene UND fremde Baeren
         if B.NeedsView then B.NeedsView(rec, t) end
         if B.SleepView then B.SleepView(rec, t, ms) end
+        -- F4 (PLAN_F4.md 4.3): ivW ivC ivN ivK ivR ivX bag nur fuer den Besitzer, eat fuer alle (server/BanditsNPCBearInv.lua)
+        if B.InvView then B.InvView(rec, t, pkey, ms) end
     end
     return t
 end

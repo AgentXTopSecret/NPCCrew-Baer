@@ -4,6 +4,8 @@
     "Sandbox_BanditsNPC_BearBaitEnabled_tooltip": "Позволяет разложить мёд или рыбу как приманку в лесу или прямо рядом с ним. Через одну или несколько ночей может прийти медвежонок.",
     "Sandbox_BanditsNPC_BearCannotDie": "Медведь: не может погибнуть",
     "Sandbox_BanditsNPC_BearCannotDie_tooltip": "Вместо смерти прирученный медведь падает. Помогите ему встать, или через какое-то время он поднимется сам.",
+    "Sandbox_BanditsNPC_BearCarryPercent": "Медведь: грузоподъёмность (проценты)",
+    "Sandbox_BanditsNPC_BearCarryPercent_tooltip": "Сколько может нести прирученный медведь. 100 = обычно: медвежонок 10 кг, полувзрослый 40 кг, взрослый 100 кг. 50 = половина, 250 = в два с половиной раза больше. Вьючные сумки для медведя всегда добавляют 150 кг начиная с полувзрослого; эта настройка на них не влияет. Всего не больше 400 кг.",
     "Sandbox_BanditsNPC_BearCubForestRate": "Медвежонок: как часто в лесу",
     "Sandbox_BanditsNPC_BearCubForestRate_option1": "Выкл.",
     "Sandbox_BanditsNPC_BearCubForestRate_option2": "Редко",

@@ -4,6 +4,8 @@
     "Sandbox_BanditsNPC_BearBaitEnabled_tooltip": "숲 안이나 숲 바로 옆에 꿀이나 생선을 곰 미끼로 놓을 수 있습니다. 하룻밤 이상 지나면 새끼 곰이 올 수 있습니다.",
     "Sandbox_BanditsNPC_BearCannotDie": "곰: 죽지 않음",
     "Sandbox_BanditsNPC_BearCannotDie_tooltip": "길들인 곰이 죽는 대신 쓰러집니다. 일으켜 세우거나, 시간이 지나면 혼자 일어납니다.",
+    "Sandbox_BanditsNPC_BearCarryPercent": "곰: 운반 능력 (퍼센트)",
+    "Sandbox_BanditsNPC_BearCarryPercent_tooltip": "길들인 곰이 질 수 있는 무게입니다. 100 = 보통: 새끼 곰 10 kg, 반쯤 자란 곰 40 kg, 다 자란 곰 100 kg. 50 = 절반, 250 = 두 배 반. 곰용 짐 가방은 반쯤 자란 뒤부터 항상 150 kg을 더해 주며, 이 설정의 영향을 받지 않습니다. 모두 합쳐 최대 400 kg.",
     "Sandbox_BanditsNPC_BearCubForestRate": "새끼 곰: 숲에서 나타나는 빈도",
     "Sandbox_BanditsNPC_BearCubForestRate_option1": "끔",
     "Sandbox_BanditsNPC_BearCubForestRate_option2": "드묾",

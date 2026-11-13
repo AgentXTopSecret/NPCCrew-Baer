@@ -37,6 +37,11 @@
 -- Abklingzeit faellt dort weg, "satt" lehnt ab -- B.CheckFeed des Kerns); der Tooltip nennt Hunger bzw. Vertrauen von jetzt.
 -- Schlaeft der Baer (Sicht slp), schickt der Klick auf Fuettern / Traenken vorher die Bitte "Wake" { id } (sanft wecken, Kevin 6e); die
 -- Zeitaktionen warten ueber U.WakeWait hoechstens 5 s darauf. Streicheln weckt nicht. Kein Schlaf- oder Weck-Punkt im Menue.
+-- F4 (Lauf baer-f4, PLAN_F4.md 7; Kevin 13.11.2026 abends, f4/KEVIN_ANTWORTEN.md): am eigenen gezaehmten Baeren "Open its inventory"
+-- (Inventar-Fenster, client/ISUI/BanditsNPCBearInvWindow.lua -- ansehen geht immer) und, solange er keine Packtaschen traegt und du welche
+-- dabei hast (B.CFG.bagType "NPCCrew.BearPacks"), "Put packs on the cub/bear": hingehen + Zeitaktion BanditsNPCBearPutAction mit mode "bag"
+-- (U.InvPacksOn, client/BanditsNPCBearInvClient.lua). Grau mit Grund (Junges zu klein, faehrt mit, nicht geladen); ob es gilt, entscheidet
+-- der Schreiber in complete() (B.InvPutComplete).
 --
 -- Das Menue BIETET nur AN. Es stellt Zeitaktionen an (Fuettern, Streicheln, Koeder) bzw. schickt eine Bitte (Koederplatz
 -- aufgeben); ob etwas gilt, entscheidet der Schreiber in complete() bzw. in B.Handle (Einzelspieler: dasselbe Programm,
@@ -511,6 +516,32 @@ local function addWindow(menu, playerObj, v)
     setTip(opt, nil, U.T("UI_BN_Bear_Menu_WindowTip"))
 end
 
+-- F4 (PLAN_F4.md 7): "Open its inventory" (U.InvOpen) und "Put packs on the cub/bear" (U.InvPacksOn mit Hingehen). Existenz-Riegel: ohne
+-- Inventar-Fenster bzw. Put-Aktion kein Punkt. "Put packs on" nur mit Packtaschen im Inventar und ohne angelegte Taschen (Sicht bag).
+local function onInvOpen(playerObj, id)
+    if U.InvOpen then U.InvOpen(playerObj, id) end
+end
+
+local function onPacksOn(playerObj, v)
+    if U.InvPacksOn then U.InvPacksOn(playerObj, v, true) end
+end
+
+local function addInv(menu, playerObj, v)
+    if U.InvOpen then
+        local opt = menu:addOption(U.T("UI_BN_Bear_Menu_Inv"), playerObj, onInvOpen, v.id)    -- Form wie addWindow / ISAnimalContextMenu.lua:287
+        setTip(opt, nil, U.T("UI_BN_Bear_Win_InvTip"))
+    end
+    if not U.InvPacksOn or not U.InvPacksItem or BanditsNPCBearPutAction == nil then return end
+    if v.bag == true or U.InvPacksItem(playerObj) == nil then return end
+    local opt = menu:addOption(U.TB("UI_BN_Bear_Menu_PacksOn", v.bd), playerObj, onPacksOn, v)
+    local why = U.InvPacksWhy(playerObj, v, true, true)
+    if why then
+        setGray(opt, why)
+        return
+    end
+    setTip(opt, nil, U.T("UI_BN_Bear_Inv_PutOnTip", math.floor(tonumber(B.CFG and B.CFG.bagAdd) or 150)))     -- Rueckfall 150 (P11)
+end
+
 -- F2 (PLAN_F2.md 2.5, 3.2, 4.6): Klick -> U.MendAsk / U.HelpAsk (hingehen, Zeitaktion). Der Sicht-Eintrag wird beim Klick frisch geholt.
 local function onMend(playerObj, v)
     if U.MendAsk then U.MendAsk(playerObj, v) end
@@ -596,6 +627,8 @@ local function cubMenu(context, playerObj, animal, name, nth)
         addCall(menu, playerObj, v)
         -- F1: "Bear window" (PLAN_F1.md 3.3)
         addWindow(menu, playerObj, v)
+        -- F4: "Open its inventory", "Put packs on" (PLAN_F4.md 7)
+        addInv(menu, playerObj, v)
         -- F2: "Help up" (am Boden) und "Bandage" (PLAN_F2.md 2.5, 3.2)
         addCare(menu, playerObj, v)
     end

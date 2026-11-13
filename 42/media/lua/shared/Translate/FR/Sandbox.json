@@ -4,6 +4,8 @@
     "Sandbox_BanditsNPC_BearBaitEnabled_tooltip": "Permet de déposer du miel ou du poisson comme appât à ours dans une forêt ou juste à côté. Après une ou plusieurs nuits, un ourson peut venir.",
     "Sandbox_BanditsNPC_BearCannotDie": "Ours : ne peut pas mourir",
     "Sandbox_BanditsNPC_BearCannotDie_tooltip": "Au lieu de mourir, un ours apprivoisé tombe à terre. Aidez-le à se relever, sinon il se relève seul au bout d'un moment.",
+    "Sandbox_BanditsNPC_BearCarryPercent": "Ours : capacité de charge (pourcentage)",
+    "Sandbox_BanditsNPC_BearCarryPercent_tooltip": "Ce qu'un ours apprivoisé peut porter. 100 = normal : un ourson 10 kg, à moitié grand 40 kg, adulte 100 kg. 50 = la moitié, 250 = deux fois et demie. Les sacoches pour ours ajoutent toujours 150 kg dès qu'il est à moitié grand ; ce réglage n'y change rien. Au maximum 400 kg en tout.",
     "Sandbox_BanditsNPC_BearCubForestRate": "Ourson : fréquence en forêt",
     "Sandbox_BanditsNPC_BearCubForestRate_option1": "Désactivé",
     "Sandbox_BanditsNPC_BearCubForestRate_option2": "Rare",

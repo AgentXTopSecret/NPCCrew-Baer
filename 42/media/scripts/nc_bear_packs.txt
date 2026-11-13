@@ -1,0 +1,53 @@
+/* NPC Crew -- Baer, Packtaschen (F4, PLAN_F4.md 21; Kevin 13.11.2026 abends, Antwort 4: eigener Gegenstand "Bear Packs" / "Baeren-Packtaschen",
+   selbst naehen mit Schneidern 3 -- Jute oder Stoff, Lederstreifen, Seil, Faden; Nadel und Schere bleiben -- anlegen ab halbstark; Kevins Aenderung waehrend des Laufs: +150 kg statt +50, f4/KEVIN_ANTWORTEN.md unten).
+   KEIN Behaelter (sonst Inhalt im Inhalt): die +150 sind eine Zahl im Register des Baeren (rec.bag, server/BanditsNPCBearInv.lua).
+   Gegenstand in module NPCCrew (wie der Crew Backpack, NCCrewBackpackTest scripts/tc_crewpack.txt:25-40); der Name NPCCrew.BearPacks steht im
+   Spielstand und bleibt fuer IMMER. DisplayName = Rueckfall, der Name kommt aus ItemName.json (Translate/<L>/ItemName.json).
+   Symbol und Bodenmodell bis zum Modell-Lauf baer-packtaschen nur als VERWEIS auf Vanilla (nichts kopiert): Icon Satchel_Crafted_Burlap,
+   WorldStaticModel Satchel_Fishing_Ground (VS:generated/items/container.txt:5228, :5242). Felder nach Vanilla Animal_BowtieGold
+   (VS:generated/items/normal.txt:19-33: DisplayCategory, ItemType base:normal, Weight, Icon, WorldStaticModel, Tags) -- nichts erfunden.
+   Rezept in module Base nach Vanilla SewClothSatchel (VS:generated/recipes/recipes_tailoring.txt:85-116): Zeitaktion SewingCloth, Kategorie
+   Tailoring, Schere (scharf) und Naehnadel bleiben (mode:keep), Zutaten-Liste in der Vanilla-Form [A;B] und tags[base:thread]; Lederstreifen /
+   Seil wie VS:generated/recipes/recipes_tailoring.txt:267 bzw. recipes.txt:16. Immer bekannt (kein NeedToBeLearn), Schneidern 3.
+   Das Ergebnis NPCCrew.BearPacks steht in DIESER Datei (NC-Lehre: ein Rezept mit unbekannter Ausgabe frisst die Zutaten). */
+
+module NPCCrew
+{
+    item BearPacks
+    {
+        DisplayCategory = Bag,
+        ItemType = base:normal,
+        DisplayName = Bear Packs,
+        Weight = 2.0,
+        Icon = Satchel_Crafted_Burlap,
+        WorldStaticModel = Satchel_Fishing_Ground,
+        Tags = base:isfirefuel;base:isfiretinder,
+    }
+}
+
+module Base
+{
+    craftRecipe SewBearPacks
+    {
+        timedAction = SewingCloth,
+        time = 400,
+        xpAward = Tailoring:20,
+        AllowBatchCraft = false,
+        Tags = AnySurfaceCraft,
+        category = Tailoring,
+        SkillRequired = Tailoring:3,
+        inputs
+        {
+            item 1 tags[base:scissors] mode:keep flags[SharpnessCheck;IsNotDull],
+            item 1 tags[base:sewingneedle] mode:keep,
+            item 4 [Base.BurlapPiece;Base.FabricRoll_Cotton;Base.FabricRoll_DenimBlack;Base.FabricRoll_DenimBlue;Base.FabricRoll_DenimDarkBlue],
+            item 4 Base.LeatherStrips,
+            item 2 Base.Rope,
+            item 4 tags[base:thread],
+        }
+        outputs
+        {
+            item 1 NPCCrew.BearPacks,
+        }
+    }
+}

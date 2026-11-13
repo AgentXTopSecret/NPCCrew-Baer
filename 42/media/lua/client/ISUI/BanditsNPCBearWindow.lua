@@ -45,6 +45,9 @@
 -- grauen Platzhalter sind gewoehnliche graue Knoepfe / ein grauer Schalter mit Grund im Tooltip: kein Klick, keine Bitte -- F4 / F5
 -- schalten sie nur scharf, nichts wandert spaeter. Kein Schlaf-Knopf (Kevin 6e): jeder Befehl weckt. Die Fusszeile zeigt in Warnfarbe,
 -- wenn der Baer nicht kaempft (zu muede / kein Vertrauen, client/BanditsNPCBearWinData.lua d.footerCol).
+-- F4 (Lauf baer-f4, PLAN_F4.md 7, 8.1): der Knopf "Inventory" (Reihe 2, Zelle 4) ist scharf und oeffnet das Inventar-Fenster dieses Baeren
+-- (U.InvOpen, client/ISUI/BanditsNPCBearInvWindow.lua) -- auch von weitem (Kevin Antwort 2: ansehen ueberall). Die Zeile "Can carry" heisst
+-- jetzt "Load" (Inhalt aus client/BanditsNPCBearWinData.lua; Lage und Masse unveraendert).
 -- Jeder Engine-Aufruf hat eine Vanilla-Fundstelle (Kommentar daneben). Statisch geprueft, nicht gespielt.
 --
 
@@ -66,7 +69,7 @@ local FIT = 0.92                                -- passt das Fenster nicht in 92
 local ICON_FILE = "media/ui/BanditsNPCBearCub_marker288.png"
 local DISC_FILE = "media/ui/BanditsNPCBearMarker_disc.png"
 local CLOSE_FILE = "media/ui/inventoryPanes/Button_Close.png"
-local CMDS = { "follow", "stay", "sit", "roam", "come", "unstuck", "fish", "inv" }     -- F3: + fish, inv (grau bis F5 / F4)
+local CMDS = { "follow", "stay", "sit", "roam", "come", "unstuck", "fish", "inv" }     -- F3: + fish (grau bis F5), inv (F4 scharf)
 local NEEDS = { "hun", "thr", "tir", "tru" }                                            -- F3: Balken-Zeilen der Karte "Needs"
 -- F3 (PLAN_F3.md 10.2): Reihe 1 und die ersten vier Zellen von Reihe 2 der Befehle (Zelle 3 von Reihe 2 = Knopf "Look", Zelle 5 = Pflege)
 local ROW1 = { "follow", "stay", "sit", "roam", "come" }
@@ -645,9 +648,13 @@ function Win:onCmd(button)
     elseif cmd == "look" then
         -- Aussehen: grau kam oben schon zurueck (state "off"); hier nur das Menue -- die Bitte schickt erst die Wahl
         lookMenu(self, button, v)
+    elseif cmd == "inv" then
+        -- F4 (PLAN_F4.md 7, 8.1): Inventar-Fenster dieses Baeren (client/ISUI/BanditsNPCBearInvWindow.lua) -- ansehen geht immer, Geben /
+        -- Nehmen prueft dort die Vorpruefung, entscheiden tut der Schreiber in complete()
+        if U.InvOpen then U.InvOpen(player, v.id) end
     end
-    -- F3: "fish", "inv", "nose" haben bis F4 / F5 bewusst keinen Zweig -- sie sind grau (state "off", oben schon zurueck) und schicken nie
-    -- eine Bitte; kein Schlaf-Befehl (Kevin 6e).
+    -- F3: "fish", "nose" haben bis F5 bewusst keinen Zweig -- sie sind grau (state "off", oben schon zurueck) und schicken nie eine Bitte;
+    -- kein Schlaf-Befehl (Kevin 6e).
 end
 
 function Win:onClose()

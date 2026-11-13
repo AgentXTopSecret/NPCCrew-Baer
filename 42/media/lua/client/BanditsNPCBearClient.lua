@@ -10,6 +10,9 @@
 -- PLAN_AUSSEHEN.md 10): 27 Texte des Aussehen-Knopfs (Namen, Knopf, Tooltips, Meldung, Ablehnungen des Schreibers mit Big-Fassung);
 -- F3 (Lauf baer-f3, PLAN_F3.md 11; Kevin 13.11.2026): 91 Texte fuer Beduerfnisse, Vertrauen, Schlafen, Traenken und das Fenster
 -- Variante B (2 geaendert, 2 entfernt), dazu U.SleepColor -- die EINE Schlaf-Farbe fuer z Z z, Chip und Schild-Zeile.
+-- F4 (Lauf baer-f4, PLAN_F4.md 13; Kevin 13.11.2026 abends): Texte fuer Traglast, Inventar-Fenster, Packtaschen, Ablehnungen und Meldungen des
+-- Kerns (f4/schnittstelle.md K6 / K7; "Can carry" faellt weg); neuer Befehl "Inv" Schreiber -> Client (eine Seite der Inventar-Liste, weiter an
+-- B.OnInv, client/BanditsNPCBearInvClient.lua) und Meldungs-Typ "item" (v = voller Typ, w / x = Anzahl; Name ueber U.ItemName).
 --
 -- Laeuft im Einzelspieler und auf jedem MP-Client (der dedizierte Server laedt client/ nicht). Diese Datei entscheidet NICHTS:
 -- sie nimmt die Sicht ("Sync") und die Meldungen ("Note") des Schreibers an, zeigt Meldungen ueber der Figur und bittet beim
@@ -236,8 +239,6 @@ U.EN = {
     UI_BN_Bear_Win_Orders = "Orders",
     UI_BN_Bear_Win_Health = "Health",
     UI_BN_Bear_Win_Stamina = "Stamina",
-    UI_BN_Bear_Win_Carry = "Can carry",
-    UI_BN_Bear_Win_CarryVal = "up to %1",
     UI_BN_Bear_Win_None = "--",
     UI_BN_Bear_Win_Hunger = "Hunger",
     UI_BN_Bear_Win_Thirst = "Thirst",
@@ -245,7 +246,6 @@ U.EN = {
     UI_BN_Bear_Win_Trust = "Trust",
     UI_BN_Bear_Win_HealthTip = "Grows every day as your bear grows, and with Toughness. Heals slowly on its own, faster with a bandage.",
     UI_BN_Bear_Win_StaminaTip = "Drops while your bear runs and fights, and comes back while it rests. Empty: it backs off to catch its breath. More with Endurance.",
-    UI_BN_Bear_Win_CarryTip = "How much your bear could carry. Its own inventory and bags come later.",
     UI_BN_Bear_Win_Sk_Agi = "Agility",
     UI_BN_Bear_Win_Sk_Vit = "Toughness",
     UI_BN_Bear_Win_Sk_Con = "Endurance",
@@ -529,6 +529,96 @@ U.EN = {
     UI_BN_Bear_Win_BowlLine = "Half a litre of water lowers it by about %1%% at its size.",
     UI_BN_Bear_Win_MeleeWeak = "Weakened by hunger or thirst: %1%% of its normal damage.",
     UI_BN_Bear_Win_NeedsOff = "Hunger, thirst and tiredness are switched off in the sandbox settings.",
+    -- F4 (Lauf baer-f4, PLAN_F4.md 13; Kevin 13.11.2026 abends): Traglast, Inventar-Fenster, Packtaschen, Gruende und Meldungen -- wortgleich
+    -- mit Translate/EN/UI.json (Quelle _arbeit/baer_zaehmen/f4/werkzeug_ober/texte_f4_daten.py). Entfernt: Win_Carry, Win_CarryVal, Win_CarryTip.
+    UI_BN_Bear_Win_Load = "Load",
+    UI_BN_Bear_Win_LoadVal = "%1 / %2 kg",
+    UI_BN_Bear_Win_LoadTip = "What your cub carries now, of how much it can carry. The more it grows, the more it carries: about %1 kg as a cub, %2 kg half-grown, %3 kg full-grown.",
+    UI_BN_Bear_Win_LoadTipBig = "What your bear carries now, of how much it can carry. The more it grows, the more it carries: about %1 kg as a cub, %2 kg half-grown, %3 kg full-grown.",
+    UI_BN_Bear_Win_LoadPacks = "Packs: on (+%1 kg)",
+    UI_BN_Bear_Win_LoadNoPacks = "No packs",
+    UI_BN_Bear_Win_LoadPacksTip = "Bear packs add %1 kg from half-grown. Sew them yourself (Tailoring 3) and put them on with a right-click on your bear.",
+    UI_BN_Bear_Win_LoadOver = "Too heavy - it takes nothing new until it carries less.",
+    UI_BN_Bear_Win_LoadPct = "Carrying capacity in the sandbox settings: %1%%.",
+    UI_BN_Bear_Win_InvTip = "Look into its inventory - from anywhere. Put things in or take them out when you stand next to it.",
+    UI_BN_Bear_Inv_Title = "Inventory: %1",
+    UI_BN_Bear_Inv_Bear = "Your cub carries",
+    UI_BN_Bear_Inv_BearBig = "Your bear carries",
+    UI_BN_Bear_Inv_You = "You carry",
+    UI_BN_Bear_Inv_Give = "Give",
+    UI_BN_Bear_Inv_Take = "Take",
+    UI_BN_Bear_Inv_All = "All",
+    UI_BN_Bear_Inv_GiveTip = "Puts one into its inventory.",
+    UI_BN_Bear_Inv_TakeTip = "Takes one out into your inventory.",
+    UI_BN_Bear_Inv_Things = "%1 / %2 things",
+    UI_BN_Bear_Inv_Kg = "%1 kg",
+    UI_BN_Bear_Inv_Many = "%1 (%2)",
+    UI_BN_Bear_Inv_PutOn = "Put on",
+    UI_BN_Bear_Inv_TakeOff = "Take off",
+    UI_BN_Bear_Inv_PutOnTip = "Takes a while. From half-grown your bear carries %1 kg more with them.",
+    UI_BN_Bear_Inv_TakeOffTip = "The packs go into your inventory. Only works if everything still fits without them.",
+    UI_BN_Bear_Inv_Empty = "Nothing in here yet.",
+    UI_BN_Bear_Inv_YouEmpty = "Your inventory is empty.",
+    UI_BN_Bear_Inv_Wait = "Waiting for your bear...",
+    UI_BN_Bear_Inv_NoAnswer = "No answer - trying again in a moment.",
+    UI_BN_Bear_Inv_Unknown = "Unknown item",
+    UI_BN_Bear_Inv_Hint = "Give puts one in, All a whole stack (up to 50 at a time).",
+    UI_BN_Bear_Inv_AllTake = "Take all %1.",
+    UI_BN_Bear_Inv_AllTakeTip = "Big stacks come out 50 at a time.",
+    UI_BN_Bear_Inv_AllGive = "Give %1 of them.",
+    UI_BN_Bear_Inv_AllGiveTip = "As many as fit. Favorites and things you hold or wear stay with you.",
+    UI_BN_Bear_Inv_TipEach = "%1 kg each, %2 kg in all",
+    UI_BN_Bear_Inv_TipCond = "Condition: %1%%",
+    UI_BN_Bear_Inv_TipFresh = "Fresh",
+    UI_BN_Bear_Inv_TipStale = "Stale",
+    UI_BN_Bear_Inv_TipRotten = "Rotten",
+    UI_BN_Bear_Inv_TipCooked = "Cooked",
+    UI_BN_Bear_Inv_TipBurnt = "Burnt",
+    UI_BN_Bear_Inv_TipFrozen = "Frozen",
+    UI_BN_Bear_Inv_TipFluid = "Holds %1 l of %2",
+    UI_BN_Bear_Inv_TipUses = "%1%% left",
+    UI_BN_Bear_Inv_TipFav = "Favorite",
+    UI_BN_Bear_Inv_TipFood = "Your cub eats this by itself when it gets hungry.",
+    UI_BN_Bear_Inv_TipFoodBig = "Your bear eats this by itself when it gets hungry.",
+    UI_BN_Bear_Inv_MineMore = "Only %1 kinds of your things are listed here.",
+    UI_BN_Bear_Menu_Inv = "Open its inventory",
+    UI_BN_Bear_Menu_PacksOn = "Put packs on the cub",
+    UI_BN_Bear_Menu_PacksOnBig = "Put packs on the bear",
+    UI_BN_Bear_Why_InvLossy = "Your cub cannot carry this without losing something about it.",
+    UI_BN_Bear_Why_InvLossyBig = "Your bear cannot carry this without losing something about it.",
+    UI_BN_Bear_Why_InvMain = "Only the first player can put things in or take them out.",
+    UI_BN_Bear_Why_InvBagFirst = "Empty it first.",
+    UI_BN_Bear_Why_InvFull = "Too heavy for your cub: %1 kg left.",
+    UI_BN_Bear_Why_InvFullBig = "Too heavy for your bear: %1 kg left.",
+    UI_BN_Bear_Why_InvCap = "Your cub already carries %1 things.",
+    UI_BN_Bear_Why_InvCapBig = "Your bear already carries %1 things.",
+    UI_BN_Bear_Why_InvWorn = "Take it off first.",
+    UI_BN_Bear_Why_InvFar = "Walk to your cub to put things in or take them out.",
+    UI_BN_Bear_Why_InvFarBig = "Walk to your bear to put things in or take them out.",
+    UI_BN_Bear_Why_InvFight = "Not while your cub fights.",
+    UI_BN_Bear_Why_InvFightBig = "Not while your bear fights.",
+    UI_BN_Bear_Why_InvRoom = "Your inventory is full.",
+    UI_BN_Bear_Why_InvCub = "A cub is too small for packs.",
+    UI_BN_Bear_Why_InvPacks = "Take some things out first - without the packs it cannot carry it all.",
+    UI_BN_Bear_Why_InvPacksBig = "Take some things out first - without the packs your bear cannot carry it all.",
+    UI_BN_Bear_Why_InvHasPacks = "Your cub already wears packs.",
+    UI_BN_Bear_Why_InvHasPacksBig = "Your bear already wears packs.",
+    UI_BN_Bear_Why_InvGone = "That is no longer there.",
+    UI_BN_Bear_Why_InvUnknown = "This item no longer exists in this world.",
+    UI_BN_Bear_Why_InvData = "Your cub cannot keep track of that many different things. Take something out first.",
+    UI_BN_Bear_Why_InvDataBig = "Your bear cannot keep track of that many different things. Take something out first.",
+    UI_BN_Bear_Why_InvNoPacks = "You have no bear packs. Sew them first: Tailoring 3.",
+    UI_BN_Bear_Note_InvPut = "Packed: %1.",
+    UI_BN_Bear_Note_InvTook = "You took %1 (%2).",
+    UI_BN_Bear_Note_InvTookSome = "You took %2 of %3 %1 - your inventory is full.",
+    UI_BN_Bear_Note_InvAte = "Your cub ate %1 it was carrying.",
+    UI_BN_Bear_Note_InvAteBig = "Your bear ate %1 it was carrying.",
+    UI_BN_Bear_Note_InvDrop = "Your cub's things lie where it died.",
+    UI_BN_Bear_Note_InvDropBig = "Your bear's things lie where it died.",
+    UI_BN_Bear_Note_PacksOn = "Your cub wears its packs now.",
+    UI_BN_Bear_Note_PacksOnBig = "Your bear wears its packs now.",
+    UI_BN_Bear_Note_PacksOff = "You took the packs off your cub.",
+    UI_BN_Bear_Note_PacksOffBig = "You took the packs off your bear.",
 }
 
 local KEY_HEAD = "UI_BN_Bear_"
@@ -627,6 +717,15 @@ function U.NoteText(note)
         local skName = "?"
         if sk ~= nil then skName = U.T(sk) end
         return U.T(key, skName, math.floor(tonumber(note.w) or 0))
+    elseif t == "item" then
+        -- F4 (f4/schnittstelle.md K7): v = voller Typ, nm = eigener Name (wahlfrei), w = Anzahl, x = gewollte Anzahl. Name des Typs ueber
+        -- U.ItemName (client/BanditsNPCBearInvClient.lua; getItemNameFromFullType) -- nie ein Text, den der Schreiber zusammengesetzt hat.
+        local name = note.nm
+        if type(name) ~= "string" or name == "" then
+            name = "?"
+            if type(v) == "string" and U.ItemName then name = U.ItemName(v) end
+        end
+        return U.T(key, name, math.floor(tonumber(note.w) or 1), math.floor(tonumber(note.x) or 0))
     end
     return U.T(key)
 end
@@ -773,6 +872,9 @@ local function onServerCommand(module, command, args)
         if B.ApplySync then B.ApplySync(args) end
     elseif command == "Note" then
         B.ShowNote(getPlayer(), args)               -- getPlayer(): client/ServerCommands.lua:204
+    elseif command == "Inv" then
+        -- F4 (f4/schnittstelle.md K4): eine Seite der Inventar-Liste NUR an den Besitzer; B.OnInv sammelt die Seiten (nur Anzeige)
+        if B.OnInv then B.OnInv(args) end
     elseif command == "Fx" then
         -- F2 (PLAN_F2.md 4.4): ein Kampf-Ereignis { k = Art, ... } vom Server. B.OnFx (KERN) macht die Zombie-Seite (nur beim Zombie-Rechner)
         -- und ruft danach U.FightFx (client/BanditsNPCBearFx.lua). Nur Anzeige: dieser Client entscheidet und meldet nichts zurueck.

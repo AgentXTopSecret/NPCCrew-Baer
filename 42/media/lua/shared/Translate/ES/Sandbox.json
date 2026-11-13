@@ -4,6 +4,8 @@
     "Sandbox_BanditsNPC_BearBaitEnabled_tooltip": "Permite dejar miel o pescado como cebo para osos dentro de un bosque o justo al lado. Tras una o más noches puede venir una cría.",
     "Sandbox_BanditsNPC_BearCannotDie": "Oso: no puede morir",
     "Sandbox_BanditsNPC_BearCannotDie_tooltip": "En vez de morir, un oso domado cae. Ayúdalo a levantarse o se levantará solo al cabo de un rato.",
+    "Sandbox_BanditsNPC_BearCarryPercent": "Oso: capacidad de carga (porcentaje)",
+    "Sandbox_BanditsNPC_BearCarryPercent_tooltip": "Cuánto puede cargar un oso domado. 100 = normal: una cría 10 kg, a medio crecer 40 kg, crecido del todo 100 kg. 50 = la mitad, 250 = dos veces y media. Las alforjas para oso siempre añaden 150 kg en cuanto está a medio crecer; este ajuste no cambia eso. Como máximo 400 kg en total.",
     "Sandbox_BanditsNPC_BearCubForestRate": "Cría de oso: frecuencia en el bosque",
     "Sandbox_BanditsNPC_BearCubForestRate_option1": "Desactivado",
     "Sandbox_BanditsNPC_BearCubForestRate_option2": "Rara vez",

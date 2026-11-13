@@ -508,6 +508,9 @@ function B.NeedsSlow(rec, dt, online, now, players)
     end
     s.gDirty = true                 -- der naechste Wachstums-Commit (B.GrowSlow, hoechstens je growCommitH) schreibt den Spiegel
     if stepped then B.Commit(rec) end
+    -- F4 (Kevin 13.11. Antwort 6, PLAN_F4.md 11): hungrig (ab needHungry) frisst er selbst aus seinem Inventar -- nur Baerenfutter, nie
+    -- Verdorbenes, Lieblingsfutter zuerst, ein Stueck je invEatGapMin (server/BanditsNPCBearInv.lua)
+    if on and B.InvEatStep then B.InvEatStep(rec, now, players) end
 end
 
 -- ---------------------------------------------------------------------------

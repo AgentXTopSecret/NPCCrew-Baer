@@ -30,6 +30,8 @@
 -- und "trust" (Vertrauen fuellt sich mit dem Guten, honig -> gold). Die vier Beduerfnis-Balken zeichnet der vorhandene drawBar. Der
 -- Schalter U.WinTick kennt jetzt state "off" (grau, kein Klick: Platzhalter "Nose alerts" bis F5). Die Zeilenart "later" (Raster
 -- "Coming later") ist weg -- die Beduerfnisse sind echte Zeilen.
+-- F4 (Lauf baer-f4, PLAN_F4.md 8.1): eine Wert-Zeile kann ihren Wert in einer Farbe der Tabelle zeigen (e.col, z. B. "warn" fuer "Load" ueber
+-- der Grenze); die Bausteine benutzt auch das Inventar-Fenster (client/ISUI/BanditsNPCBearInvWindow.lua).
 -- Kein Engine-Aufruf ohne Vanilla-Fundstelle. Statisch geprueft, nicht gespielt.
 --
 
@@ -70,6 +72,8 @@ local COL = {
     pipCapEmpty = { 0.15, 0.14, 0.13, 1 },
     -- F3: Chip "Sleeping" (Rueckfall; unten aus der EINEN Schlaf-Farbe des Kerns gesetzt) und Warnfarbe der Fusszeile
     stSleep = { 0.70, 0.85, 1.00, 1 }, warn = { 1.00, 0.58, 0.28, 1 },
+    -- F4 Nachbesserung (Befund P2): ueber der Traglast -- kraeftiger als die Warnfarbe (der schlimmere Zustand darf nicht harmloser aussehen)
+    over = { 0.92, 0.27, 0.20, 1 },
 }
 U.WIN_COL = COL
 -- F3 (PLAN_F3.md 8, 10.1): die Schlaf-Farbe steht an EINER Stelle (B.CFG.sleepCol des Kerns, gelesen ueber U.SleepColor). Einmal beim
@@ -94,6 +98,8 @@ local RAMP = {
     -- F3: ein Beduerfnis fuellt sich mit dem Druck (0 = satt / ausgeruht gruen, 0,5 gelb, ab 0,8 rot); Vertrauen honig, voll = gold
     need = { { 0, 0.45, 0.76, 0.32 }, { 0.5, 0.95, 0.66, 0.20 }, { 0.8, 0.82, 0.26, 0.20 }, { 1, 0.82, 0.26, 0.20 } },
     trust = { { 0, 0.62, 0.42, 0.20 }, { 1, 1.00, 0.78, 0.30 } },
+    -- F4 Nachbesserung (Befund P2): Traglast gruen bis 0,6, gelb bei 0,85, voll orange (= warn); UEBER der Grenze zeichnet das Fenster "over" (rot)
+    load = { { 0, 0.45, 0.76, 0.32 }, { 0.6, 0.45, 0.76, 0.32 }, { 0.85, 0.95, 0.66, 0.20 }, { 1, 1.00, 0.58, 0.28 } },
 }
 
 function U.WinRamp(kind, v)
@@ -251,7 +257,9 @@ end
 local function drawVal(self, m, e)
     local tc = COL.text
     self:drawText(e.label or "", m.ox, m.oy, tc[1], tc[2], tc[3], tc[4], m.fBody)
-    self:drawTextRight(e.val or "", self.width - m.ox, m.oy, tc[1], tc[2], tc[3], tc[4], m.fBody)
+    local vc = tc
+    if e.col and COL[e.col] then vc = COL[e.col] end            -- F4: "Load" ueber der Grenze in Warnfarbe (e.col = "warn")
+    self:drawTextRight(e.val or "", self.width - m.ox, m.oy, vc[1], vc[2], vc[3], vc[4], m.fBody)
 end
 
 
