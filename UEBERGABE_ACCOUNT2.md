@@ -1,5 +1,9 @@
 # Baer -- Uebergabe fuer Kevins anderen Claude-Account (FINAL 13.11.2026 ~01:00, Sitzung d5933cc7: alle Laeufe fertig, nichts laeuft mehr)
 
+> **NACHTRAG 13.11. ~15:20:** Kevin hat im ERSTEN Account weitergemacht (Sitzung cccbd9d6). Seine Antworten (F3, Maul, Reihenfolge, Herz) und die zwei
+> laufenden Laeufe baer-f3 und baer-liegen stehen im obersten Block von `STAND.md`. Der Block KURZ unten ist bei "ENTSCHEIDET" und "ALS NAECHSTES" damit ueberholt;
+> Kevins Testliste (F1b, F2, grosser Baer, Aussehen, Vergleiche) gilt weiter -- alles noch ungespielt.
+
 Kevin (12.11. ~20:10): *"so keinen neuen workflow mehr starten merk dir den stand schonmal und mach alels fuer die uebergabe an eine nanderen clausde
 ascocunt berreit und wenn die workflows durch sind nochmal alles speichern, stell dir einen waechter ab 95% wochen limit stoppst du alles und machst es
 berreit fuer die uebergabe und mach ein 5h std waechter an falls er beendet wird deswegen"*. **Statisch geprueft, nicht gespielt**, ausser wo "gespielt" steht.

@@ -54,6 +54,36 @@ uebertrieben da muss so einiges rausfliegen"):
     IGUI_AnimalType_<art> in den kopierten IG_UI-Texten. Tier-Regel callAt: + B.CallStamp / B.CallUnstamp (Nachbesserung B1: die Uhr
     startet beim Aussehen-Knopf vor dem neuen Koerper und wird bei einem Fehlversuch zurueckgenommen).
 
+F3 (Lauf baer-f3, PLAN_F3.md 17.1; Kevins Antworten 13.11.2026, _arbeit/baer_zaehmen/f3/KEVIN_ANTWORTEN.md): Beduerfnisse (Hunger, Durst,
+Muedigkeit), Vertrauen, Traenken, Schlafen (ohne neue Clips: Ersatzbild Sitzen), z Z z, Kopf-Balken, Fenster Variante B, Herz.
+  * Neue Dateien deckt LUA_BEAR von selbst: shared/BanditsNPCBearNeedRules.lua, server/BanditsNPCBearNeeds.lua, server/BanditsNPCBearSleep.lua,
+    shared/TimedActions/BanditsNPCBearDrinkAction.lua, client/ISUI/BanditsNPCBearZz.lua; die Werkbank client/NCBearBenchNeeds.lua wird nie
+    kopiert (BENCH_ANY). Das Herz (42/media/ui/BanditsNPCBearHeart*.png, eigene Zeichnung) deckt UI_ASSET.
+  * Sandbox: EIN neuer Regler BearNeedsPercent (13 Optionen); plan_sandbox prueft ihn wie die anderen gegen B.OPTS und Sandbox.json, die
+    Pruefung "Optionsname" deckt die Lesestellen.
+  * Tier-Regel probeweg + NeedsSet (die vier Werte von Hand setzen -- nur die Werkbank), TIER_DEF + NeedsSet / BodyHurt.
+  * Neue Tier-Regel BodyHurt: B.BodyHurt( nur aus B.BearHurt (Treffer) und B.NeedsSlow (Hunger / Durst 100) -- haelt Kevins "Schaden nur von
+    Zombies, Banditen, Hunger, Durst" fest (begleiter/ENTSCHEIDUNGEN.md).
+  * Neue Tier-Regeln removeFluid / sendSyncEntity: Wasser nehmen (jedes Vorkommen des Namens im Code-Teil) nur in B.DrinkComplete
+    (server/BanditsNPCBearNeeds.lua) -- eine zweite Stelle (z. B. in der Zeitaktion) naehme Wasser doppelt (rote Linie "kein Gegenstand
+    verloren").
+  * Neue Tier-Regel getHour: nirgends (Kevin 13.11. Antwort 6c: KEINE Uhrzeiten -- kein Nachtfenster, kein Mittagsschlaf; geschlafen wird
+    nur nach der Muedigkeit und neben dem schlafenden Besitzer).
+  * Schlaf-Clips (F3b): die acht Werte liedown / sleep / wakeup / wakealarm / curlin / sleepcurl / curlout / wakecurl (SLEEP_KEYS) darf der
+    Pose-Treiber nennen, OHNE dass es ihre Knoten gibt -- solange B.CFG.sleepClips = false in der kopierten shared/BanditsNPCBear.lua steht
+    (dann setzt sie niemand). Steht dort true, braucht JEDER der acht Werte einen kopierten Knoten (sonst Fehler): Knoten, Clips in allen
+    GLBs und der Schalter kommen zusammen mit F3b. Die Knoten selbst nimmt F3b in ANIMSET_OK / ANIMSET_BOTH auf.
+  * Staging als volle Kopie der Test-Mod (mod_f3): eine mod.info im Staging, die BYTE-GLEICH mit der der Test-Mod ist, ist kein Fehler
+    (wird wie die der Test-Mod nie kopiert); eine geaenderte bleibt ein Fehler (Vorschlag als eigene Datei).
+  * Keine Naht in eine NPC-Crew-Datei, keine Laufzeit-Naht zu NPC Crew (kein Nachtfenster mehr); neu beruehrt wird nur Vanilla
+    (Fluessigkeits-Behaelter wie ISGiveWaterToAnimal). NAEHTE.md: Kopf, Zeile 41 (gebaut), neu 44 (Traenken), 45 (Schlaf), "Sandbox-Seiten".
+  * Nachbesserung F3 (13.11.2026 abends, _arbeit/baer_zaehmen/f3/NACHBESSERUNG.md, Befunde C1 und C5): PZ_ALLOWED + die neue
+    Aktionsklasse BanditsNPCBearDrinkAction (ohne sie war die Probe rot: luacheck_pz W113 in client/BanditsNPCBearMenu.lua -- der
+    Trockenlauf merkt das nicht, der Pruefer laeuft erst nach dem Schreiben; deshalb nach JEDER neuen Aktionsklasse --probe laufen lassen).
+    Neue Tier-Regel getForwardDirection: Kevins VIERTE Jar-Ausnahme (13.11., Antwort 5 "Hellblau, ueber dem Kopf": Blickrichtung des
+    Tiers fuer das z Z z) nur in aim (client/ISUI/BanditsNPCBearZz.lua); am Zombie (Lua-Beleg Bandits) nur in knock
+    (shared/BanditsNPCBearFoe.lua). Eine zweite Stelle am Tier waere ein Fehler.
+
 Grundregel (Werkstatt-CLAUDE.md Abschnitt 0, Kevin 08.11.2026): alles wird FUER NPC Crew gebaut und soll am Ende "einfach copy paste"
 hinueber; keine Cheat- oder Testmenues kommen mit. Plan: _arbeit/baer_zaehmen/PLAN_ZAEHMEN.md Abschnitt 12 (B1b: PLAN_B1B.md 7),
 Naehte: baer/NAEHTE.md.
@@ -233,6 +263,10 @@ WERKBANK_ASSET = collections.OrderedDict([
 ])
 GIT_ROOT_FILES = (".git", ".gitattributes", ".gitignore")
 ANIM_VAR = "NCBearAct"                                             # B.ACT
+# F3 (PLAN_F3.md 14.3, 17.1): die acht Schlaf-Werte. Ihre Knoten und Clips bringt erst F3b; bis dahin (B.CFG.sleepClips = false) darf der
+# Pose-Treiber sie nennen, ohne dass es einen kopierten Knoten gibt (form_check).
+SLEEP_KEYS = ("liedown", "sleep", "wakeup", "wakealarm", "curlin", "sleepcurl", "curlout", "wakecurl")
+SLEEP_SWITCH = re.compile(r"\bsleepClips\s*=\s*(true|false)\b")
 
 # Namensraum der Texte je Datei.
 TEXT_NS = {
@@ -410,8 +444,31 @@ TIER_RULES = [
     # B1d: Vorspulen / Leben / Erfahrung von Hand setzen -- im kopierten Code gibt es keinen erlaubten Aufrufer (leere Menge); die
     # Definitionen zaehlen nicht (TIER_DEF). Ein Aufrufer waere ein Spieler-Weg ohne Spielmechanik (Cheat-Pfad).
     # F2 (PLAN_F2.md 4.3, 7.3): + B.FightForce (der naechste Angriff von Hand, NCBear_FightNext) -- ebenfalls nur die Werkbank
-    ("probeweg", re.compile(r"\bGrowSetG\b|\bGrowSetHp\b|\bSkillSet\b|\bFightForce\b"), set(),
-     "B.GrowSetG / B.GrowSetHp / B.SkillSet / B.FightForce nur aus der Werkbank (im kopierten Code nur die Definition)"),
+    # F3 (PLAN_F3.md 13, 17.1): + B.NeedsSet (Hunger / Durst / Muedigkeit / Vertrauen von Hand setzen) -- ebenfalls nur die Werkbank
+    ("probeweg", re.compile(r"\bGrowSetG\b|\bGrowSetHp\b|\bSkillSet\b|\bFightForce\b|\bNeedsSet\b"), set(),
+     "B.GrowSetG / B.GrowSetHp / B.SkillSet / B.FightForce / B.NeedsSet nur aus der Werkbank (im kopierten Code nur die Definition)"),
+    # F3 (PLAN_F3.md 3.1, 17.1; Kevin ENT "Schaden nur von Zombies, Banditen, Hunger, Durst"): das Register-Leben senkt nur B.BodyHurt, und
+    # das rufen nur der Treffer (B.BearHurt) und der Langsam-Takt der Beduerfnisse (B.NeedsSlow: Hunger / Durst 100, bis 1 %, nie Tod)
+    ("BodyHurt", re.compile(r"\bB\.BodyHurt\s*\("), {("42/media/lua/server/BanditsNPCBearHurt.lua", "B.BearHurt"),
+                                                       ("42/media/lua/server/BanditsNPCBearNeeds.lua", "B.NeedsSlow")},
+     "Register-Leben sinkt (B.BodyHurt) nur durch Treffer (B.BearHurt) und Hunger / Durst (B.NeedsSlow)"),
+    # F3 (PLAN_F3.md 5.2; rote Linie "kein Gegenstand verloren oder verdoppelt"): Wasser nehmen an EINER Stelle -- jedes Vorkommen der
+    # zwei Namen im Code-Teil (auch als String), nur in B.DrinkComplete (Vanilla shared/TimedActions/Animals/ISGiveWaterToAnimal.lua:34/:86-87)
+    ("removeFluid", re.compile(r"(?i)\bremoveFluid\b"), {("42/media/lua/server/BanditsNPCBearNeeds.lua", "B.DrinkComplete")},
+     "Wasser nehmen (removeFluid) nur in B.DrinkComplete"),
+    ("sendSyncEntity", re.compile(r"(?i)\bsendSyncEntity\b"), {("42/media/lua/server/BanditsNPCBearNeeds.lua", "B.DrinkComplete")},
+     "Behaelter abgleichen (sendSyncEntity) nur in B.DrinkComplete"),
+    # F3-Nachbesserung C5 (Kevins Wort 13.11.2026, Antwort 5: "Hellblau, ueber dem Kopf" -- der Code darf das Spiel fragen, wohin der Baer
+    # schaut): animal:getForwardDirection() am TIER ist nur im Jar belegt (zombie.characters.IsoGameCharacter.getForwardDirection(),
+    # javap -c 42.22 Offset 0 aload_0 / 1 getfield forwardDirection / 4 areturn; IsoAnimal ueberschreibt sie nicht) -- genau EINE Stelle:
+    # aim in client/ISUI/BanditsNPCBearZz.lua (z Z z). Die zweite erlaubte Stelle ist alt (F2) und am ZOMBIE mit Lua-Beleg
+    # (B:shared/ZombieActions/ZAPush.lua:36-37): knock in shared/BanditsNPCBearFoe.lua. Jedes Vorkommen des Namens im Code-Teil zaehlt.
+    ("getForwardDirection", re.compile(r"(?i)\bgetForwardDirection\b"),
+     {("42/media/lua/client/ISUI/BanditsNPCBearZz.lua", "aim"), ("42/media/lua/shared/BanditsNPCBearFoe.lua", "knock")},
+     "Blickrichtung (getForwardDirection) nur in aim (z Z z, Kevins Jar-Ausnahme 13.11.) und knock (am Zombie)"),
+    # F3 (Kevin 13.11.2026, Antwort 6c: KEINE Uhrzeiten -- kein Nachtfenster, kein Mittagsschlaf): die Tagesstunde fragt niemand
+    ("getHour", re.compile(r"\bgetHour\b"), set(),
+     "Uhrzeit (getHour) nirgends -- geschlafen wird nur nach der Muedigkeit und neben dem schlafenden Besitzer (Kevin 13.11.)"),
     # F2 (PLAN_F2.md 0.4, 5.1 Nr. 26; Kevin baer/STAND.md "Fragen fuer Kevin" B1d Nr. 9 + begleiter/ENTSCHEIDUNGEN.md "Kein Schaden am eigenen Baeren", 11.6): der gezaehmte Koerper ist fuer die
     # Engine unverwundbar -- den Schutz
     # setzen/loesen nur diese drei Stellen (jedes Vorkommen des Namens im Code-Teil). Die Cheat-Regel "engine" meldet den Namen ausserdem;
@@ -500,8 +557,9 @@ def mo_text_hits(code_text):
 
 
 TIER_DEF = re.compile(r"^function\s+B\.(CreateCub|AppearFor|RemoveCub|GrowSetG|GrowSetHp|SkillSet|PlaceCub|FightForce|BodySwap"
-                      r"|CallUnstamp)\s*\(")   # B1d:
-# + die drei Probe-Wege; F1: + PlaceCub; F2: + FightForce; Aussehen: + BodySwap; Nachbesserung Aussehen B1: + CallUnstamp
+                      r"|CallUnstamp|NeedsSet|BodyHurt)\s*\(")   # B1d:
+# + die drei Probe-Wege; F1: + PlaceCub; F2: + FightForce; Aussehen: + BodySwap; Nachbesserung Aussehen B1: + CallUnstamp;
+# F3: + NeedsSet, BodyHurt
 # Ausnahmen einzeln mit Grund: Datei, Regel, ein Text im Code-Teil der Zeile. Greift eine nicht mehr, warnt das Skript.
 CHEAT_ALLOWED = [
     {"file": "42/media/lua/shared/BanditsNPCBearDefs.lua", "rule": "befehl", "code": 'bodyModel = "NCBearCub_Body"',
@@ -578,6 +636,7 @@ PZ_ALLOWED = {
     ("BanditsNPCBearMenu.lua", "BanditsNPCBearBaitAction"),
     ("BanditsNPCBearMenu.lua", "BanditsNPCBearMendAction"),         # F2: Verband (shared/TimedActions/BanditsNPCBearMendAction.lua)
     ("BanditsNPCBearMenu.lua", "BanditsNPCBearHelpAction"),         # F2: Aufhelfen (shared/TimedActions/BanditsNPCBearHelpAction.lua)
+    ("BanditsNPCBearMenu.lua", "BanditsNPCBearDrinkAction"),        # F3: Traenken (shared/TimedActions/BanditsNPCBearDrinkAction.lua)
 }
 
 ARGS = {"erneut": False, "vor_b5a": False, "echt": False}
@@ -693,7 +752,13 @@ def source_map(base, staging, rep):
                 full = os.path.join(dirpath, fn)
                 rel = rel_of(root, full)
                 if tag == "staging" and rel in ("mod.info", "42/mod.info"):
-                    rep.err("Staging enthaelt %s -- mod.info gehoert nicht ins Staging (Vorschlag als eigene Datei)" % rel)
+                    # F3: ein Staging als volle Kopie der Test-Mod (mod_f3) traegt deren mod.info byte-gleich mit -- kein Fehler
+                    # (kopiert wird mod.info ohnehin nie); eine GEAENDERTE mod.info bleibt ein Fehler
+                    twin = os.path.join(base, rel.replace("/", os.sep)) if base else None
+                    if twin and os.path.isfile(twin) and rd(twin) == rd(full):
+                        continue
+                    rep.err("Staging enthaelt %s (anders als die der Test-Mod) -- mod.info gehoert nicht ins Staging (Vorschlag als "
+                            "eigene Datei)" % rel)
                     continue
                 files[rel] = full
     return files, skipped
@@ -1017,12 +1082,42 @@ def form_check(final, copy_lua, copy_asset, rep):
                 rep.err("%s: setzt %s = '%s', dafuer gibt es keinen kopierten Animations-Knoten" % (rel, ANIM_VAR, m.group(1)))
             else:
                 rep.say("  %s = '%s' (%s) hat seinen Knoten" % (ANIM_VAR, m.group(1), os.path.basename(rel)))
+    # F3 (PLAN_F3.md 6.7, 14.6, 17.1): der Schalter B.CFG.sleepClips in der kopierten shared/BanditsNPCBear.lua. false (F3, Ersatzbild
+    # Sitzen): die acht Schlaf-Werte setzt niemand -> sie brauchen noch keinen Knoten. true (ab F3b): JEDER der acht braucht einen
+    # kopierten Knoten (Knoten, Clips in allen GLBs und der Schalter kommen zusammen).
+    sleep_on = None
+    core = final.get("42/media/lua/shared/BanditsNPCBear.lua")
+    if core is not None:
+        ccode = "\n".join(c for c, _ in lua_split_lines(core.decode("latin-1")))
+        sw = SLEEP_SWITCH.findall(ccode)
+        if len(sw) == 1:
+            sleep_on = sw[0] == "true"
+        elif len(sw) > 1:
+            rep.err("shared/BanditsNPCBear.lua: sleepClips steht %d-mal im Code -- genau EINE Stelle (B.CFG) erwartet" % len(sw))
+    if sleep_on is True:
+        missing = [k for k in SLEEP_KEYS if k not in used_values]
+        if missing:
+            rep.err("B.CFG.sleepClips = true, aber fuer %s gibt es keinen kopierten Animations-Knoten -- der Baer erstarrte stehend "
+                    "(Knoten, Clips in allen GLBs und der Schalter kommen zusammen, F3b)" % ", ".join(missing))
+        else:
+            rep.say("  B.CFG.sleepClips = true: alle acht Schlaf-Werte haben ihren Knoten")
+    elif sleep_on is False:
+        early = [k for k in SLEEP_KEYS if k in used_values]
+        if early:
+            rep.warn("Schlaf-Knoten fuer %s werden kopiert, aber B.CFG.sleepClips = false -- sie spielen noch nicht (F3b schaltet um)"
+                     % ", ".join(early))
+        else:
+            rep.say("  B.CFG.sleepClips = false: Ersatzbild Sitzen, die acht Schlaf-Werte brauchen noch keinen Knoten (F3b)")
     # F1 (PLAN_F1.md 5.6): der Sitz-Treiber setzt B.ACT ueber phase(e, obj, "<wert>", now) (client/BanditsNPCBearPose.lua)
     for rel in copy_lua:
         code = "\n".join(c for c, _ in lua_split_lines(final[rel].decode("latin-1")))
         for val in sorted(set(re.findall(r"\bphase\(\s*\w+\s*,\s*\w+\s*,\s*\"(\w+)\"", code))):
             if val not in used_values:
-                rep.err("%s: Sitz-Treiber setzt %s = '%s', dafuer gibt es keinen kopierten Animations-Knoten" % (rel, ANIM_VAR, val))
+                if val in SLEEP_KEYS and sleep_on is False:
+                    rep.say("  %s = '%s' (%s, Pose-Treiber) wartet auf F3b (sleepClips = false, kein Knoten noetig)"
+                            % (ANIM_VAR, val, os.path.basename(rel)))
+                else:
+                    rep.err("%s: Sitz-Treiber setzt %s = '%s', dafuer gibt es keinen kopierten Animations-Knoten" % (rel, ANIM_VAR, val))
             else:
                 rep.say("  %s = '%s' (%s, Sitz-Treiber) hat seinen Knoten" % (ANIM_VAR, val, os.path.basename(rel)))
     # F2 (PLAN_F2.md 0.6, 4.4): die Kampf-Clips setzt U.PoseAct(id, act) mit einer Variablen -- jeder Angriff aus B.ATTACKS

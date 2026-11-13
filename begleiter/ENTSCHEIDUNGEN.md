@@ -523,3 +523,32 @@ also baby und ganz gross?'*
 * Kevin (12.11. ~20:10): *"so keinen neuen workflow mehr starten merk dir den stand schonmal und mach alels fuer die uebergabe an eine nanderen clausde ascocunt
   berreit und wenn die workflows durch sind nochmal alles speichern, stell dir einen waechter ab 95% wochen limit stoppst du alles und machst es berreit fuer die
   uebergabe und mach ein 5h std waechter an falls er beendet wird deswegen"* -> UEBERGABE_ACCOUNT2.md neu, Waechter 3c536c47.
+
+## 13.11.2026 (anderer Account, Sitzung cccbd9d6): Kevins Antworten zu F3, Maul, Modell-Reihenfolge
+Kevin: *"so les dir durch wo es weiter geht und dann mach weiter :D"*. Antworten per Auswahl-Dialog, Freitext woertlich:
+* **Maul:** Lippenlinie darf 1,3-1,8 cm nach innen ruecken (*"Ja, darf"*) -> Maul-Nachbesserung als Modell-Lauf NACH Liegen/Tot.
+* **Modell-Reihenfolge:** zuerst **Liegen/Tot beider Baeren (Pfoten frei)**, dann Maul-Nachbesserung, dann Schlafpose.
+* **F3 Frage 1 (Schlafhaltung):** *"Beide"* (Sphinx + eingerollt, 8 Clips).
+* **F3 Frage 2 (vom Zombie geweckt):** *"Ersr weg dann kaempfen wie Recommeded nur halt das er nach 5 sec schlaftrunken wieder kaempft aber den rest sowie das steht"*
+  -> schlaftrunken wegrennen **5 s** (nicht 20), dann kaempfen wie immer; sehr muede -> rennt weiter weg; Passiv/Junges wie heute.
+* **F3 Frage 3 (Muedigkeit beim Folgen):** *"wie recommended nur ich will das er ab 90% sagt das er zu muede ist zum kaempfen und erst bei 100% von selbst einschlaeft"*
+  -> Muedigkeit steigt auch beim Folgen; **ab 90 % kaempft er nicht mehr und SAGT es** (Meldung "zu muede zum Kaempfen"); **erst bei 100 % schlaeft er von selbst ein**.
+* **F3 Frage 4 (Vertrauen):** *"wie recommended nur mit dem unterschied wenn sein vertrauen zu negativ wird weigert er sich zu kaempfen und das steht dann da auch , ausserdem bei niedrigen vertrauen erhoehen sich seine beduerfnisse im gegenzug"*
+  -> Balken + Wort; viel Vertrauen: Hunger/Durst/Muedigkeit bis 20 % langsamer; **wenig Vertrauen: Beduerfnisse steigen schneller** (Gegenstueck); **sehr wenig
+  Vertrauen: er weigert sich zu kaempfen, und das steht sichtbar da** (Fenster + Meldung). Andere Befehle gehorcht er weiter. Schwellen/Zahlen im Bau vorschlagen.
+* **F3 Frage 5 (z Z z):** *"Hellblau, ueber dem Kopf"* -> Kevins Ja, dass der Code das Spiel fragt, wohin der Baer schaut (Blickrichtung des Tiers; falls nur im Jar
+  belegt: das ist Kevins Wort fuer genau diesen Aufruf, Fundstelle/Offset im Kommentar). Buchstabe wechselt weich z -> Z -> z.
+* **F3 Frage 6 (a):** *"bei leben und trinken geht sein leben auf 1% runter aber er stirbt nie daran"* -> Hunger/Durst leer: Leben sinkt bis **1 %** (nicht 10), nie Tod.
+* **(b):** ein neuer Sandbox-Regler Beduerfnis-Tempo % (0 = aus) -> 13 Regler.
+* **(c):** *"schlafen und aufstehen nach seinen mueidgkeitswert wie bei den npc crew's steigt es auf 100% schlaeft er solange bis er auf 0% runter ist ansonsten kann man ihn per folgen wieder aufwecken mitten drinne"*
+  -> **KEINE Uhrzeiten** (kein Nachtschlaf 22-7, kein fester Mittagsschlaf des Jungen): Schlaf nur nach Muedigkeit wie die NPC-Crew-Figuren -- bei 100 % schlaeft er,
+  bis er bei 0 % ist; mittendrin weckt ihn "Folgen" (bzw. jeder Befehl, siehe e). Lesart Claude: der Mittagsschlaf 13-15 Uhr entfaellt damit (Kevin gesagt, nicht widersprochen = offen bis zum Test).
+* **(d):** Ja -- er legt sich neben den Spieler, wenn der schlaeft (das ist die eine Ausnahme vom 100-%-Schlaf).
+* **(e):** Kein Schlaf-Knopf; jeder Befehl weckt ihn, Streicheln laesst ihn liegen, Fuettern/Traenken weckt kurz.
+* **(f):** Schlafton, Baerenbett, selbst trinken am Wasser: alles spaeter.
+* **(g):** Prozent im Balken, Wort im Tooltip.
+* **Kevin 13.11. (waehrend des F3-Starts): Herz bei maximalem Vertrauen** (woertlich: *"wenn man bei maximalen vertrauen ist beim baeren soll ein Herz ueber den baeren namen erscheinen das auch abschaltbar wird das herz muessen wir davor noch selbst erstellen damit es huebsch aussieht ;D"*)
+  -> **Fest (in F3):** bei maximalem Vertrauen erscheint ein Herz UEBER dem Namensschild des Baeren; je Spieler abschaltbar (Optionen > Mods, wie die Kopf-Balken,
+  Vorgabe an). Das Herz ist ein EIGENES, selbst gezeichnetes Bild (nichts kopiert, kein Download), mehrere Entwuerfe auf einem Blatt fuer Kevin, der huebscheste ist eingebaut.
+  - Nachtrag gleich danach, woertlich: *"oder das herz wird nur angezeigt wenn die namens anzeige vom baeren an ist eins von beiden"* -> **Gebaut wird diese
+    zweite Fassung:** das Herz haengt am Namensschild -- es ist nur zu sehen, wenn die Namensanzeige des Baeren an ist; KEIN eigener Schalter (weniger Optionen).

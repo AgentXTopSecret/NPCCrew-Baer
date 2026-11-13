@@ -1,5 +1,26 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **13.11. 18:10: F3 FERTIG (7/7) UND EINGEBAUT** (Spiel zu; `tools/einbau_f3.py`: 126 Dateien -- 14 neu, 40 ueberschrieben (inkl. beider mod.info), 72 gleich,
+> 33 Modell-Dateien nie aus dem Staging; Zips `NCBearTest_vor_f3_2026-11-13_180949.zip` / `_mit_`; Trockenlauf Uebernahme 0 Fehler, 2 Warnungen). Gegenpruefer:
+> bereit fuer SP-Test, kein Blocker (`spiel/f3_gegen_bericht.md`). Test `spiel/anleitung_f3.md` (vom Gegenpruefer berichtigt). Bilder aus dem echten Code:
+> `../_arbeit/baer_zaehmen/f3/bilder/` (KEVIN_fenster_f3_*.png, KEVIN_zzz.png, KEVIN_herz.png = 5 Herz-Entwuerfe, eingebaut D "Goldrand"; Wechsel
+> `python f3/herz/herz_zeichne.py --einbau <A-E>`). Jar-Ausnahme NEU (Kevins Wort Antwort 5): `animal:getForwardDirection()` nur in `client/ISUI/BanditsNPCBearZz.lua`.
+> Rhythmus: wach bis 100 % Junges ~42 / halbstark ~50 / ausgewachsen ~62 Spielstunden, Schlaf 100 -> 0 % 9,5 h. **17 Kleinfragen an Kevin** in
+> `spiel/f3_gegen_bericht.md` (Herz D/A, Rhythmus, frueher hinlegen in Bleiben/Sitz, Schwelle 15, Herz ab 100/95, geweckt weiterschlafen, Rosa statt Gelb ...).
+> Modell-Lauf **baer-liegen** laeuft weiter (wf_c0a986cb-3dd).
+
+> **13.11. ~15:20 WEITER IM ERSTEN ACCOUNT (Sitzung cccbd9d6, Kevin: *"les dir durch wo es weiter geht und dann mach weiter"*; Woche 2 %, Reset 20.11.):**
+> Kevins Antworten zu F3 (alle 6 Fragen einzeln, mit Aenderungen: 5 s schlaftrunken, zu muede zum Kaempfen ab 90 %, Schlaf bei 100 % bis 0 % OHNE Uhrzeiten,
+> Vertrauen wirkt in beide Richtungen + Kampf-Weigerung, Leben bis 1 %, Herz bei maximalem Vertrauen ueber dem Namensschild), Maul (Lippenlinie darf rein) und
+> Modell-Reihenfolge (Liegen/Tot -> Maul-Nachbesserung -> Schlafpose) stehen in ENTSCHEIDUNGEN.md ganz unten und in `../_arbeit/baer_zaehmen/f3/KEVIN_ANTWORTEN.md`.
+> **ZWEI LAEUFE GESTARTET (resumeFromRunId gilt nur in Sitzung cccbd9d6):**
+> Funktionen-Spur **baer-f3** `wf_36e98ba8-469` (Task wtncc09d6, 7 Agenten, scriptPath `C:/Users/Kevin/NPCCrew-Nebenprojekte/baer/spiel/f3_workflow.js`; Staging
+> `../_arbeit/baer_zaehmen/mod_f3/` = Test-Mod fda41e8, Berichte `../_arbeit/baer_zaehmen/f3/`: BAU_KERN, BAU_OBER, BAU_TEXTE, PRUEF_CODE, PRUEF_BILD, NACHBESSERUNG, GEGEN).
+> Modell-Spur **baer-liegen** `wf_c0a986cb-3dd` (Task wg0wjeudl, 7-9 Agenten, scriptPath `.../baer/spiel/liegen_workflow.js`; Death/Dead aller vier Koerper + Zwilling,
+> Ergebnis `../_arbeit/baer_liegen/out/`, Blatt `../_arbeit/baer_liegen/bilder/KEVIN_liegen.png`). Transkripte
+> `C:/Users/Kevin/.claude/projects/C--Users-Kevin-NPCCrew-Nebenprojekte-baer/cccbd9d6-dd89-4eba-8fad-b3beed093bcb/subagents/workflows/<Lauf-ID>/journal.jsonl`.
+> Danach: selbst pruefen, einbauen (Spiel zu bzw. NCBearTest nicht geladen), sichern.py, Commit + Push; dann Maul-Nachbesserung (Modell) und F4 Inventar (Funktion).
+
 > **13.11. ~01:00 ALLES FERTIG, NICHTS LAEUFT MEHR.** baer-maul-bau (wf_a876c805-e76) fertig: Gegenpruefer empfiehlt KEINEN Baeren -> nichts eingebaut
 > (Kasten statt U bleibt, weil die Lippenlinie bit-gleich bleiben sollte; Kevin-Frage: Lippenlinie 1,3-1,8 cm nach innen? Blatt `../_arbeit/baer_maul/bilder/KEVIN_maul.png`,
 > Bericht `../_arbeit/baer_maul/bau/GEGEN.md`). Waechter 3c536c47 geloescht. Uebergabe `UEBERGABE_ACCOUNT2.md` FINAL. Woche 87 %. Test-Mod fda41e8.
