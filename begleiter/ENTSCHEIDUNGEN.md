@@ -797,3 +797,8 @@ Kevin ~02:20, woertlich: *"ich will aber das seine werte nach 16std von 0 auf 10
    Die volle Leiste (0 -> 100 %) = die ganze Tagesmenge der Groesse (ausgewachsen 25-kg-Saettigung bzw. 15 l). Folgen (Claude, an Kevin gesagt): selbst fressen/trinken ab 50 %
    -> etwa alle 8 Wachstunden eine halbe Tagesmenge; ohne Futter nach ~14,5 Wachstunden 90 % (-5 Vertrauen), nach 16 Wachstunden 100 % (Leben sinkt bis 1 %, dann -10).
    Ersetzt needHunDay 50 / needThrDay 75 je 24 h und Claudes 16-h-Vorschlag mit 50 %.
+Kevin ~02:25, woertlich: *"aber der muss eine futter und trinken einstellung bekommen was erlaubt ist sonst frisst er den huehnern alles weg oder trinkt die milch weg haha"*
+-> **Fest: Einstellung "was er darf"** (Paket Troege/Wasser + Selbst-Fressen). Claudes Vorschlag (an Kevin): (1) TROEGE: er nutzt NUR Troege, die du per Rechtsklick
+   "Fuer den Baeren" markierst (Futter und/oder Wasser), alle anderen (Huehner, Kuehe) nie; (2) FUTTER-LISTE im Baerenfenster wie NPC Crews Essensliste "Isst / Nie"
+   (NC `UI_BN_Food_Eats` / `UI_BN_Food_AllowAll`, nur Vorbild, nichts kopieren) -- je Futterart erlaubt / nie, gilt fuer Inventar und Troege; (3) TRINKEN: nur Wasser
+   (sauber/ungekocht), Milch und alles andere nie -- steht schon (00:45).
