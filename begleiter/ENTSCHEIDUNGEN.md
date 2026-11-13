@@ -711,3 +711,8 @@ Kevin ~00:00, woertlich: *"ja ausser das trinken/essen bei 90% direkt - 5 machen
      Leben faellt durch Hunger/Durst auf 1 % (needHpFloor, T `server/BanditsNPCBearNeeds.lua:479-494`) -> -10, hoechstens 1x je Spieltag.
      Kevins Begruendung stimmt mit dem Code: der Hunger-Abzug stoppt bei 1 % und laeuft nie, solange er am Boden ist (rec.down == nil, :485); am Boden kommt nur aus Treffern.
    Bleibt: Bedarf bis 20 % langsamer/schneller je Vertrauen, Kampf-Verweigerung unter -70, Herz bei +100, Balken gruen/rot mit Zahl.
+Kevin ~00:10 (Bild: .357 Magnum Patrone (94), Knoepfe Geben / Alle), woertlich: *"das musst du auch noch fixxen ich kann nur einen schuss geben oder alles ich will bei geben eine auswahl bkeommen wo ich eine zahl eintippe"*
+-> **Korrektur-Lauf:** "Geben" oeffnet bei einem Stapel (mehr als 1 Stueck) ein kleines Zahlenfeld (wie viele?), vorbelegt mit dem ganzen Stapel bzw. dem, was noch passt
+   (Traglast, 1000); OK/Abbrechen; bei 1 Stueck sofort geben wie heute. "Alle" bleibt. Beleg Vanilla-Zahlenfeld: `ISTextBox:new(0, 0, 280, 180, text, wert, nil, onClick, playerNum, ...)`
+   V:`client/ISUI/Animal/ISAnimalContextMenu.lua:791` (Wolle-Menge), `setOnlyNumbers(true)` V:`client/Entity/ISUI/BuildRecipe/ISWidgetBuildControl.lua`. Ob auch "Nehmen" ein Zahlenfeld bekommt: an Kevin gefragt.
+Kevin ~00:15 (Auswahl): *"Ja, auch Nehmen"* -> auch "Nehmen" oeffnet bei einem Stapel das Zahlenfeld (vorbelegt: ganzer Satz bzw. was in deine Tasche passt); 1 Stueck sofort wie heute; "Alle" bleibt.
