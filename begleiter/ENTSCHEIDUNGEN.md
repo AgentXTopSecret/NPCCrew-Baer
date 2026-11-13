@@ -783,3 +783,4 @@ Kevin ~02:10, woertlich: *"bei trog mehr range da darf er die ganze base nutzen 
 -> (1) Paket "Wasser in der Welt"/Troege: Troege (Futter UND Wasser) in der GANZEN BASIS darf er nutzen, nicht nur 10-20 Kacheln (die gelten fuer Fluss/See). "Basis" im Plan
    klaeren: NPC Crews Basis-Bereich (Existenz-Riegel, Naht) bzw. ohne NPC Crew Vanillas Safehouse; Deckel fuer die Suche. (2) Futter-Tooltip (Baeren-Inventar und Fuettern):
    Zeile "satt fuer ~x % seines Tagesbedarfs" je Stueck -- fest, kommt mit dem Hunger-Umbau nach Groesse.
+Kevin ~02:12, woertlich: *"beim essen darf er auch die ganze base nutzen als range"* -> bestaetigt: auch FRESSEN aus Futtertroegen in der ganzen Basis (wie Wasser); weiterhin nicht aus Kisten (00:35).
