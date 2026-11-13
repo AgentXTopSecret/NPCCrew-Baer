@@ -3,3 +3,4 @@
 - [Zwei Spuren immer weiter](zwei-spuren-immer-weiter.md) — Modell/Animation und Funktionen (Bärenmenü usw.) parallel; nach jedem fertigen Lauf sofort den nächsten derselben Spur starten
 - [Uebergabe an den anderen Account](uebergabe-account2.md) — zuerst baer/STAND.md oben + UEBERGABE_ACCOUNT2.md; seit 13.11. laufen baer-f3 und baer-liegen (Sitzung cccbd9d6)
 - [UI-Vorschau aus echtem Code](ui-vorschau-aus-echtem-code.md) — Fenster-Bilder per Zeichen-Mitschrift des echten Lua-Codes + echte Spielschriften, nie frei malen
+- [CPU voll nutzen ist ok](cpu-voll-nutzen-ok.md) — Kevin 13.11.: Laeufe duerfen die CPU voll auslasten, nicht deckeln
