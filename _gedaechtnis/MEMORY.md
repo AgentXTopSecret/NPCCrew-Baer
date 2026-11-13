@@ -1,5 +1,5 @@
 - [Stockfoto-Regel ist nicht von Kevin](stockfoto-regel-nicht-von-kevin.md) — er erlaubt, den Bären nach einem Bild komplett nachzubauen; Einschränkung nie ihm zuschreiben
 - [Kevins Vorlage ist der Maßstab](kevin-vorlage-ist-massstab.md) — Modelle nach seinem Bild und der Spielkamera bauen und prüfen, nicht nach Literatur-Maßen
 - [Zwei Spuren immer weiter](zwei-spuren-immer-weiter.md) — Modell/Animation und Funktionen (Bärenmenü usw.) parallel; nach jedem fertigen Lauf sofort den nächsten derselben Spur starten
-- [Uebergabe an den anderen Account](uebergabe-account2.md) — ZUERST baer/UEBERGABE_ACCOUNT2.md lesen (FINAL 13.11.: Block KURZ = was Kevin testet, entscheidet, was als Naechstes kommt)
+- [Uebergabe an den anderen Account](uebergabe-account2.md) — zuerst baer/STAND.md oben + UEBERGABE_ACCOUNT2.md; seit 13.11. laufen baer-f3 und baer-liegen (Sitzung cccbd9d6)
 - [UI-Vorschau aus echtem Code](ui-vorschau-aus-echtem-code.md) — Fenster-Bilder per Zeichen-Mitschrift des echten Lua-Codes + echte Spielschriften, nie frei malen
