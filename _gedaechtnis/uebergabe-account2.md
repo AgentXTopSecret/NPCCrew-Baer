@@ -1,6 +1,6 @@
 ---
 name: uebergabe-account2
-description: Kontowechsel Baer -- ZUERST baer/UEBERGABE_ACCOUNT2.md lesen (Stand 12.11. 20:15, wird bei Lauf-Ende/Halt nachgezogen); Fortsetzungs-Skripte statt resumeFromRunId
+description: Kontowechsel Baer -- ZUERST baer/UEBERGABE_ACCOUNT2.md lesen (FINAL 13.11., oben Block KURZ mit Testliste, Kevin-Fragen und Naechstem); nichts laeuft
 metadata:
   type: project
 ---
