@@ -774,3 +774,8 @@ Kevin ~02:00, woertlich: *"trinken ist ja noch leicht achja waer cool du konntes
    ~10-20 Kacheln -> er geht SELBST hin (nicht im Kampf, nicht in Bleiben/Sitz? -- im Plan klaeren), spielt eine TRINK-ANIMATION (neuer Clip -> Modell-Lauf; erst pruefen, ob
    Vanillas Tier-AnimSets einen Trink-Knoten haben) mit Ton (Vanilla-Tier-Trinkton belegen), trinkt sich bis 0 % voll, LANGSAM (Vorschlag: ~1 Spielstunde fuer einen
    ausgewachsenen Baeren von 50 auf 0), dann zurueck zum Befehl. Wasser-Kacheln/Trog-Erkennung nur mit Vanilla-Beleg (Angeln/Troege). Gefahr -> bricht ab und kaempft.
+Kevin ~02:05, woertlich: *"wie viel muss er nach saettigung fressen? schon heute zeigt die npc crew mod die essenswerte an also fuer jeden sichtbar ;D"*
+   Stand: NPC Crew zeigt unter jedem Lebensmittel-Tooltip einen Kasten mit Hunger (z. B. -40), Kalorien usw. fuer alle (NC `client/ISUI/BanditsNPCFoodStats.lua:8`, `:267`).
+   Spieler-Tagesbedarf in Hungerpunkten: Konstante gefunden (V `shared/defines.lua:14` HungerIncrease = 0.0000032 * 3, Schlaf :17), Umrechnung je Spieltag noch NICHT
+   gemacht (braucht den Jar-Weg Stats/GameTime) -> im Lauf belegen, dann Tabelle "je Tag: x Steaks / y Wild / z Honig" je Groesse.
+   **Vorschlag (an Kevin):** im Baeren-Inventar und im Futter-Tooltip zusaetzlich "satt fuer ~x % seines Tagesbedarfs" je Stueck; NPC Crews Kasten nicht kopieren.
