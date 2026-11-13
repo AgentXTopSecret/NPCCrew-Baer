@@ -728,3 +728,7 @@ Kevin ~00:30 (Frage "ab wie viel % essen/trinken ... aus dem inventar?"; Auswahl
    hoechstens je invEatGapMin 10 Spielminuten): ab Durst 50 % trinkt er aus Behaeltern mit Wasser (Satz-Feld fl, nur "w"/"tw" -- anderes nimmt das Inventar gar nicht an),
    eine Schale (bowlL 0,5 l) je Schluck, bis Durst unter 25 %; die Flasche bleibt (leer) im Inventar -- nichts verloren, nichts doppelt. Wie beim Traenken aus der Hand (B.DrinkNeedL).
    Vorschlag: sauberes Wasser zuerst, dann ungekochtes (Baeren trinken aus Fluessen). Zaehlt NICHT als "satt getraenkt" fuer das Vertrauen (das gibt es nur beim Traenken aus der Hand).
+Kevin ~00:35, woertlich: *"kann der baer auch spaeter auf kisten zugreifen und essen holen und trinken?"* -> gleich danach: *"okay nur wie die tiere das macht mehr sinn haha"*
+-> **Spaeter (B-Liste, nicht im Korrektur-Lauf):** der Baer frisst und trinkt selbst WIE VANILLAS NUTZTIERE -- aus Futtertroegen und Wassertroegen (B42-Tiere gehen selbst
+   hin), in der Wildnis aus Fluss/See; NICHT aus Kisten. Erst Forschung: wie Vanilla-Tiere Troege finden und nutzen (IsoAnimal, Trog-Objekte; Belege Vanilla-Lua/Jar),
+   ob das am Baeren (AnimSet buck, eigene Beduerfnisse statt Vanilla-Werte) mitlaeuft oder nachgebaut werden muss; MP und "nichts verloren/doppelt" am Trog. Passt zu F5 (Fischen/Nase).
