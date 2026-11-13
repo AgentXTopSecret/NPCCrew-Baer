@@ -1,5 +1,18 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **14.11. ~02:35 NACHT-STAND (Kevin geht schlafen; PAUSE gilt weiter bis sein Startwort):** F4 laeuft im Spiel (nach Rezept-Fix 6996693 laedt es).
+> Kevin hat abends getestet und entschieden -- ALLES woertlich in `begleiter/ENTSCHEIDUNGEN.md` ganz unten (13.11. ~23:45 bis 14.11. ~02:31), Netzsuche in `begleiter/bedarf_echte_baeren.md`.
+> **Korrektur-Lauf (zuerst, gleiche Dateien wie F4):** Vertrauen -100..+100 Start 0 mit NEUER Regel (+0,5 je Streicheln / satt gefuettert / satt getraenkt, je 1x am Tag;
+> -5 sofort bei Hunger oder Durst 90 %; -10 am Boden; -10 bei 1 % Leben durch Hunger/Durst) | Inventar: bis 1000 auf einmal, Geben UND Nehmen mit Zahlenfeld | Schaden
+> im Fenster rot + Grund im Tooltip | selbst fressen UND trinken aus dem Inventar ab 50 % bis 0 % (nur Wasser, auch ungekochtes) | Beduerfnisse frieren: Schlaf (Baer ODER
+> Besitzer), offline, nicht geladen, > ~70 Kacheln | schlaeft immer mit dem Besitzer, auch beim Vorspulen, Gegner weckt | plus die Punkte von 21:40-23:15 (Lebensbalken-Knopf,
+> "Heilen", Look-Sperre, AnimTest, Namensschild beim Aufrichten).
+> **Hunger/Durst-Umbau nach Groesse (eigener Schritt, Zahlen fest):** 0 -> 100 % in 16 Wachstunden = eine Tagesmenge; Wasser 6 % Koerpergewicht (1,5 / 4,8 / 15 l),
+> Futter ~10 % (3 / 8 / 25 kg) nach Saettigung (1,5 / 4 / 12,5 x Spieler-Tagesbedarf -- Spieler-Wert aus V `shared/defines.lua:14` im Lauf umrechnen); gleitend bis Tag 100;
+> Futter-Tooltip "satt fuer ~x % seines Tagesbedarfs".
+> **Spaeter (B-Liste, mit F5):** Troege (nur markierte, mehrere, ganze Basis) + Futterliste frisst/nie + geht selbst zu Fluss/See (10-20 Kacheln) mit Trink-Clip und Ton.
+> Danach wie geplant: Kampf-Lauf, Modell-Laeufe (Generator-Bruellen, Bauch-Fell, Prankenhieb neu, Retter-Move, Maul, Schlafpose).
+
 > **13.11. 22:46: F4 EINGEBAUT** (Spiel zu; `tools/einbau_f4.py`: 150 Dateien -- 24 neu, 30 ueberschrieben inkl. mod.info, 96 gleich, Modelle nie aus dem Staging;
 > Zips `NCBearTest_vor_f4_2026-11-13_224631.zip` / `_mit_`; Liegen-GLBs bleiben; Trockenlauf 0 Fehler; Test `spiel/anleitung_f4.md`, Bericht `spiel/f4_gegen_bericht.md`).
 > (frueherer Stand:) **13.11. ~22:40: F4 FERTIG (8/8)** -- Gegenpruefer: bereit fuer SP-Test, kein Blocker (27 Befunde, alle major fuer SP zu; offen nur MP C5/C4).
