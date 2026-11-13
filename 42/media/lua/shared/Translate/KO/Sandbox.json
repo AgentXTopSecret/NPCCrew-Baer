@@ -23,6 +23,8 @@
     "Sandbox_BanditsNPC_BearHealPercent_tooltip": "길들인 곰이 스스로 회복하는 속도입니다. 100 = 보통 (게임 내 1시간마다 체력 약 1퍼센트), 0 = 스스로 회복하지 않음. 붕대에는 영향이 없습니다.",
     "Sandbox_BanditsNPC_BearMaxPerPlayer": "플레이어당 곰 수",
     "Sandbox_BanditsNPC_BearMaxPerPlayer_tooltip": "한 플레이어가 가질 수 있는 길들인 곰의 수입니다.",
+    "Sandbox_BanditsNPC_BearNeedsPercent": "곰: 욕구 속도 (퍼센트)",
+    "Sandbox_BanditsNPC_BearNeedsPercent_tooltip": "길들인 곰이 배고파지고 목말라지고 피곤해지는 속도입니다. 100 = 보통, 200 = 두 배 빠름. 0 = 끔: 배고픔, 목마름, 피로가 전혀 쌓이지 않고, 잠든 주인 곁에서만 잡니다. 신뢰는 계속 작동합니다.",
     "Sandbox_BanditsNPC_BearSkillAgeCap": "곰: 나이에 따른 기술 한계",
     "Sandbox_BanditsNPC_BearSkillAgeCap_tooltip": "새끼 곰은 3레벨, 반쯤 자란 곰은 6레벨, 튼튼한 곰은 8레벨까지 배우고, 다 자란 곰만 10레벨에 이릅니다. 이미 쌓은 경험치는 그대로입니다. 끄면: 한계 없음.",
     "Sandbox_BanditsNPC_BearSkillXpPercent": "곰: 기술 배우는 속도 (퍼센트)",

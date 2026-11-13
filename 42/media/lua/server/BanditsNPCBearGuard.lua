@@ -101,6 +101,9 @@ function B.CalmAnswer(rec, a, w, ms, why)
     -- F2 (PLAN_F2.md 2.2.5): im Kampf / am Boden antwortet der Kampf selbst (server/BanditsNPCBearFight.lua B.FightCalm: halten bzw. den
     -- Kampf-Laufbefehl neu) -- kein Ersatzweg, keine Ruhefrist
     if B.FightCalm and B.FightCalm(rec, a, ms) then return true end
+    -- F3 (PLAN_F3.md 6.3): Laerm weckt einen schlafenden Baeren (Aufschrecken, server/BanditsNPCBearSleep.lua); danach der Ersatzweg wie
+    -- immer -- ein Halt allein reicht gegen die Engine-Flucht nicht (Kopf dieser Datei)
+    if B.SleepStop then B.SleepStop(rec, "noise", ms) end
     local cfg = B.CFG
     local keep = {}
     local hits = w.hits or {}

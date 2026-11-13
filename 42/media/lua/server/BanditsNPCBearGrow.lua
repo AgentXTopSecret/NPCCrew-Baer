@@ -22,6 +22,10 @@ if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: la
 -- Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 3, 5.3): Register-Feld look (Familie des Wunsches, nil = "std", nur tame/missing; B.GrowFix
 -- klemmt es), B.BodySwap / B.BodySwapReady nehmen wahlfrei das Aussehen (nur der Aussehen-Knopf, server/BanditsNPCBearLook.lua) -- ohne
 -- es wie bisher (B.GrowLive: das Wachsen behaelt die Familie ueber B.PlaceCub). Kondition rechnet mit dem Tempo des Aussehens.
+-- F3 (PLAN_F3.md 3.1, 3.2, 6.4): Hunger / Durst / Muedigkeit wirken hier an je EINER Stelle ueber B.NeedK (shared/
+-- BanditsNPCBearNeedRules.lua): Ausdauer-Erholung (stamina), Wachsen und Selbstheilung (B.GrowSlow; im Schlaf B.HealRate(true)).
+-- Verbrauchte Ausdauer zaehlt als Anstrengung in die Sitzung (s.tirAcc -> Muedigkeit, server/BanditsNPCBearNeeds.lua). Das Wachsen
+-- tauscht den Koerper nicht, waehrend er liegt (B.BodySwapReady "sleep").
 --
 -- Takte (alle aus vorhandenen Takten, keine neuen Ereignisse; je eine EIGENE Schleife nach den B1a-B1c-Schritten, Nachbesserung B1d B2):
 --   Langsam-Takt (10 Spielminuten, server/BanditsNPCBearServer.lua slowTickBody) -> B.GrowSlow: g waechst, Leben abgleichen und heilen,
@@ -465,6 +469,18 @@ local function outOfBreath(rec, s, ms)
     end
 end
 
+-- F3 (PLAN_F3.md 3.2): Anstrengung -> Muedigkeit. Verbrauchte Ausdauer-Punkte (Rennen, Angriffe) sammeln sich in der Sitzung
+-- (s.tirAcc); B.NeedsSlow (server/BanditsNPCBearNeeds.lua) macht daraus tirPerBar Punkte Muedigkeit je verbrauchte Leiste und leert den
+-- Zaehler. Deckel tirAccBars Leisten: ein Baer, dessen Beduerfnisse gerade nicht zaehlen, sammelt nicht endlos.
+local function tire(s, pts, staMax)
+    local p = num(pts) or 0
+    if p <= 0 then return end
+    local acc = (num(s.tirAcc) or 0) + p
+    local cap = (num(staMax) or 1) * cfg("tirAccBars", 10)
+    if acc > cap then acc = cap end
+    s.tirAcc = acc
+end
+
 -- F2 (PLAN_F2.md 2.2.3, 2.3): ein Angriff kostet Ausdauer (pts Punkte, staAttackCost 3) -- aus dem Kampf-Takt (server/BanditsNPCBearFight.lua).
 -- Leer -> ausser Puste. Rueckgabe: Ausdauer danach (Anteil 0..1).
 function B.StaUse(rec, pts, ms)
@@ -473,6 +489,7 @@ function B.StaUse(rec, pts, ms)
     local s = B.Ses(rec.id)
     local staMax = B.StatsOf(rec).staMax
     if staMax <= 0 then staMax = 1 end
+    tire(s, pts, staMax)                               -- F3: ein Angriff macht auch ein wenig muede
     local sta = (num(s.sta) or 1) - (num(pts) or 0) / staMax
     if sta <= 0 then
         sta = 0
@@ -509,6 +526,7 @@ local function stamina(rec, s, cx, cy, ms)
     if run then
         if way > 0 then
             sta = sta - way * cfg("staRunCost", 0.4) / staMax
+            tire(s, way * cfg("staRunCost", 0.4), staMax)      -- F3: Rennen macht auch ein wenig muede (gemuetliches Gehen nicht)
             local per = cfg("conTilesPerXp", 5)
             if per <= 0 then per = 5 end
             local acc = (num(s.kAcc) or 0) + way
@@ -518,7 +536,11 @@ local function stamina(rec, s, cx, cy, ms)
         end
     elseif type(s.fight) ~= "table" then
         -- F2 (PLAN_F2.md 2.3): im Kampf keine Erholung (sonst glichen 2 Punkte/s die Angriffe aus und er waere nie ausser Puste)
-        sta = sta + cfg("staRegen", 2) * dts * (1 + cfg("conPerLv", 0.05) * st.lv.con) / staMax
+        -- F3 (PLAN_F3.md 3.1; Kevin ENT:21 "erst langsamer"): hungrig / durstig (ab 50) oder sehr muede (ab tirHeavy) erholt er sich halb
+        -- so schnell (B.NeedK, shared/BanditsNPCBearNeedRules.lua); ohne jene Datei wie vor F3
+        local needK = 1
+        if B.NeedK then needK = num(B.NeedK(rec).sta) or 1 end
+        sta = sta + cfg("staRegen", 2) * dts * (1 + cfg("conPerLv", 0.05) * st.lv.con) * needK / staMax
     end
     if sta <= 0 then
         sta = 0
@@ -566,6 +588,9 @@ function B.BodySwapReady(rec, s, ms, body, look)
     -- F2 (PLAN_F2.md 2.2.8, 4.3): nie waehrend eines Kampfs (s.fight) und nie am Boden (rec.down)
     if type(s.fight) == "table" then return false, "fight" end
     if rec.down ~= nil then return false, "down" end
+    -- F3 (PLAN_F3.md 6.8): das WACHSEN (weder body noch look gegeben) tauscht den Koerper nicht, waehrend er liegt -- er stuende mitten im
+    -- Schlaf auf; nach dem Aufwachen kommt der Tausch von selbst. Der Aussehen-Knopf ist ein Befehl und weckt ihn (B.PlaceCub).
+    if body == nil and look == nil and B.IsLying ~= nil and B.IsLying(rec) then return false, "sleep" end
     if within(s.swapAt, ms, cfg("swapMinMs", 60000)) then return false, "cool" end
     if within(s.swapTryAt, ms, cfg("swapRetryMs", 10000)) then return false, "retry" end
     if pending(s.calmUntil, ms, cfg("calmMs", 2500)) then return false, "calm" end
@@ -736,6 +761,8 @@ end
 -- slowTickBody): nur gezaehmt, Besitzer im Spiel. g waechst um dt / (D x 24); Leben abgleichen und mit BearHealAwake heilen (Koerper
 -- nur, wenn geladen; Fahrt/entladen: nur das Register); Commit hoechstens je growCommitH, sofort bei Stufenwechsel (mit Meldung) oder
 -- einem Verlust ab hpCommit. Kein Schlaf in B1d -> immer B.HealRate(false). F2: am Boden ohne Selbstheilung, + Verband (B.MendRateOf).
+-- F3 (PLAN_F3.md 3.1, 6.4): Wachsen x B.NeedK.grow (Hunger/Durst ab 50 halb, ab 80 gar nicht), Selbstheilung im Schlaf mit
+-- B.HealRate(true) (15 %/h x Heil-Tempo) und x B.NeedK.heal (ab 80 keine); der Verband wirkt immer.
 -- ---------------------------------------------------------------------------
 function B.GrowSlow(rec, dt, online, now, players)
     if type(rec) ~= "table" or rec.st ~= "tame" or rec.owner == nil or not statsOk() then return end
@@ -750,15 +777,28 @@ function B.GrowSlow(rec, dt, online, now, players)
     local g0 = rec.g
     local rank0 = rankOf(g0)
     if fresh then s.gDirty = true end
-    if dt > 0 and g0 < 1 and not fresh then
-        rec.g = clamp(g0 + dt / (B.GrowDays() * 24), 0, 1)
+    -- F3 (PLAN_F3.md 3.1; Kevin ENT:12 "Hunger bremst", ENT:21 "waechst nicht, heilt nicht"): Faktoren aus Hunger / Durst (B.NeedK,
+    -- shared/BanditsNPCBearNeedRules.lua); ohne jene Datei alle 1 (wie vor F3)
+    local needK = nil
+    if B.NeedK then needK = B.NeedK(rec) end
+    local growK = needK and num(needK.grow) or 1
+    if dt > 0 and g0 < 1 and not fresh and growK > 0 then
+        rec.g = clamp(g0 + dt * growK / (B.GrowDays() * 24), 0, 1)
         s.gDirty = true
     end
     local hp0 = rec.hp
     -- F2 (PLAN_F2.md 2.4, 2.5): am Boden keine Selbstheilung, nur ein Verband; ein Verband heilt zusaetzlich (B.MendRateOf,
     -- server/BanditsNPCBearMend.lua, %/h). Abgelaufen -> Felder weg (festgeschrieben mit dem naechsten Wachstums-Commit).
     local rate = 0
-    if rec.down == nil then rate = B.HealRate(false) end
+    if rec.down == nil then
+        -- F3 (PLAN_F3.md 6.4; Kevin ENT:272 "im Schlaf ~15 %"): schlaeft er (B.IsAsleep, server/BanditsNPCBearSleep.lua), heilt er mit dem
+        -- Schlaf-Wert; ausgehungert / ausgetrocknet (ab 80) heilt er nicht von selbst
+        -- Nachbesserung C4: der Schlaf-Wert gilt nur mit Koerper in der Welt -- die Sitzung (s.slp) ueberlebt das Entladen, waehrend
+        -- Hunger, Durst und Muedigkeit ohne Koerper eingefroren sind (server/BanditsNPCBearNeeds.lua counts); sonst heilte ein
+        -- "schlafender", entladener Baer 15-mal so schnell wie wach und wachte nie auf
+        local asleep = B.IsAsleep ~= nil and B.IsAsleep(rec) and B.FindAnimal(rec) ~= nil
+        rate = B.HealRate(asleep) * (needK and num(needK.heal) or 1)
+    end
     if B.MendRateOf then
         local mend = B.MendRateOf(rec, now)
         rate = rate + mend

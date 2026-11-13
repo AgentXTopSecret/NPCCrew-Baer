@@ -308,13 +308,29 @@ function B.FightStep(rec, a, env, ms, players)
         or (type(f) == "table" and ms - (num(f.hitLast) or f.startAt) >= cfg("fightMaxMs", 90000))
     local o = env and env.owner or nil
     local carNear = o ~= nil and o.car == true and (num(o.dist) or 999) <= cfg("rideDist", 15)
+    -- F3 (Kevins Antworten 13.11.2026, 2 / 3 / 4): schlaftrunken nach dem Aufschrecken (s.wokeUntil, server/BanditsNPCBearSleep.lua), ohne
+    -- Vertrauen (unter trRefuse) oder zu muede (Muedigkeit ab tirVery) kaempft er nicht (B.NoFight, shared/BanditsNPCBearNeedRules.lua)
+    local wu = num(s.wokeUntil)
+    local woke = wu ~= nil and wu - ms > 0 and wu - ms <= (num(s.wokeSpan) or 10000)
+    local noFight = nil
+    if B.NoFight then noFight = B.NoFight(rec) end
     local d = B.FightDecide({
         st = rec.st, body = B.BodyKind(a) or rec.body, s = st.s, passive = rec.passive == true, down = rec.down ~= nil,
         ride = rec.ride ~= nil, hpPts = hpPts, fleeHp = fleeHp, fleeHys = hys, fleeOn = s.fleeOn == true, sta = num(s.sta) or 1,
         resting = s.resting == true, restOver = restOver, longOver = longOver, foe = type(foes) == "table" and #foes > 0,
         ownerCarNear = carNear, follow = B.ModeOf(rec) == "follow", capFull = type(f) ~= "table" and countFights() >= cfg("fightMax", 4),
+        woke = woke, noTrust = noFight == "trust", tired = noFight == "tired",
     })
     if d.why == "hurt" then s.fleeOn = true end
+    -- F3: Grund des Rueckzugs fuer die Sicht (fsy) und die Meldung an den Besitzer (Kevin: "sagt das er zu muede ist" / "weigert er sich
+    -- zu kaempfen und das steht dann da auch") -- gedrosselt in B.NeedRefuseSay (server/BanditsNPCBearNeeds.lua)
+    local fsy = nil
+    if d.act == "retreat" and (d.why == "woke" or d.why == "trust" or d.why == "tired") then fsy = d.why end
+    if s.fsy ~= fsy then
+        s.fsy = fsy
+        B.Touch(rec)
+    end
+    if (fsy == "tired" or fsy == "trust") and B.NeedRefuseSay then B.NeedRefuseSay(rec, fsy, ms, players) end
     if d.why == "breath" then
         if s.resting ~= true then s.resting, s.restAt = true, ms end
     else
@@ -766,13 +782,21 @@ function B.FightTick()
     if not ok then B.ErrEvery("fight", 60000, "fight tick: " .. tostring(err)) end
 end
 
+-- F3: + fsy (Grund des Rueckzugs), mdmgK (Schaden-Faktor durch Hunger / Durst).
 -- Sicht (4.7, 11.2, 11.5, 11.7) -- aus viewEntry, nur gezaehmt/vermisst: fst (Kampfzustand), mdmg / mdmgB / mdmgM / mdmgS / mdmgF (Schaden
 -- je Treffer, Groessen-Anteil, Kaempfen-Bonus %), kZ / kB (Kills), fleeP (Flucht-Schwelle in Lebenspunkten, aufgerundet; fehlt = nie).
 function B.FightView(rec, t, ms)
     if type(rec) ~= "table" or type(t) ~= "table" then return end
     if rec.st == "tame" then t.fst = B.FightState(rec) end
+    -- F3: fsy = Grund des Rueckzugs ("tired" zu muede / "trust" weigert sich / "woke" schlaftrunken), nur neben fst "retreat"
+    if t.fst == "retreat" then
+        local s = B._s and B._s[rec.id] or nil
+        if type(s) == "table" then t.fsy = s.fsy end
+    end
     local md = B.MeleeDamage(rec)
     if md ~= nil then
+        -- F3: mdmgK = Schaden-Faktor durch Hunger / Durst (nur wenn unter 1; in mdmg* schon eingerechnet)
+        if (num(md.need) or 1) < 1 then t.mdmgK = r2(md.need) end
         t.mdmg = r2(md.swipe)
         if md.bite ~= nil then t.mdmgB = r2(md.bite) end
         if md.maul ~= nil then t.mdmgM = r2(md.maul) end

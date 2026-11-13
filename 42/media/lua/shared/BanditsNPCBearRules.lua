@@ -166,9 +166,33 @@ function B.CheckFeed(rec, pkey, slots, now)
         local isLocked, days = locked(slots, now)
         if isLocked then return false, "UI_BN_Bear_Why_Locked", days end
     end
+    -- F3 (PLAN_F3.md 5.1): am GEZAEHMTEN Baeren keine Abklingzeit mehr -- er frisst, solange er Hunger hat (ein ausgehungerter
+    -- Erwachsener braucht 8 Mahlzeiten); unter needFull (5 %) ist er satt und lehnt ab (Vanilla bietet "Feed" auch nur bei Hunger an,
+    -- client/ISUI/Animal/ISAnimalContextMenu.lua:30). Hunger aus dem Register (nH) oder der Sicht (hun), B.NeedOf. Ohne Wert (alte
+    -- Sicht) oder mit BearNeedsPercent 0 (Hunger aus -- sonst waere er immer satt) gilt die bisherige Abklingzeit.
+    if isTame(rec.st) and B.NeedOf ~= nil and B.NeedsOn ~= nil and B.NeedsOn() then
+        local hun = B.NeedOf(rec, "hun")
+        if hun ~= nil then
+            if hun < fixed("needFull", 5) then return false, "UI_BN_Bear_Why_NotHungry", nil end
+            return true, nil, nil
+        end
+    end
     local left = B.WaitLeft(rec, "feed", now)
     if left > 0 then return false, "UI_BN_Bear_Why_FeedWait", left end
     return true, nil, nil
+end
+
+-- F3 (PLAN_F3.md 5.2): darf dieser Spieler diesen Baeren traenken? Rein (Register- ODER Sicht-Eintrag; das Menue graut damit aus). Den
+-- Behaelter und den Abstand prueft der Schreiber (B.DrinkComplete, server/BanditsNPCBearNeeds.lua). Rueckgabe ok, whyKey.
+function B.CheckDrink(rec, pkey)
+    if not rec then return false, "UI_BN_Bear_Why_Gone" end
+    if rec.st ~= "tame" or rec.owner == nil or rec.owner ~= pkey then return false, "UI_BN_Bear_Why_NotOwner" end
+    if rec.ride ~= nil and rec.ride ~= false then return false, "UI_BN_Bear_Why_Riding" end
+    if (rec.down ~= nil and rec.down ~= false) or rec.dn == true then return false, "UI_BN_Bear_Why_Down" end
+    local thr = nil
+    if B.NeedOf ~= nil then thr = B.NeedOf(rec, "thr") end
+    if thr == nil or thr < fixed("needFull", 5) then return false, "UI_BN_Bear_Why_NotThirsty" end
+    return true, nil
 end
 
 function B.CheckPet(rec, pkey, slots, now)

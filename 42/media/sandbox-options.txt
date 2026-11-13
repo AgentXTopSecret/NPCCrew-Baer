@@ -4,6 +4,7 @@ VERSION = 1,
  * NPC Crew -- bear cubs (B1a: find and tame a cub). Page BanditsNPC ("NPC Crew").
  * Every value is read by BanditsNPC.Bear.Opt with a fallback to the default below; in multiplayer the server's values count.
  * Kevin 12.11.2026: from 39 options exactly twelve stay; all others are fixed values in BanditsNPC.Bear.CFG (same numbers as the old defaults).
+ * F3 (Kevin 13.11.2026): plus one, BearNeedsPercent -- thirteen.
  * A save with values set for removed options still loads: those values are never read.
  */
 
@@ -86,6 +87,14 @@ option BanditsNPC.BearHealPercent
 	type = integer, min = 0, max = 1000, default = 100,
 	page = BanditsNPC,
 	translation = BanditsNPC_BearHealPercent,
+}
+
+/* Needs speed in percent (Kevin 13.11.2026: one slider): how fast a tamed bear gets hungry, thirsty and tired (100 = normal). 0 = off: all three stay at zero, no sleeping from tiredness. Sleep recovery and trust do not scale. */
+option BanditsNPC.BearNeedsPercent
+{
+	type = integer, min = 0, max = 1000, default = 100,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearNeedsPercent,
 }
 
 /* Skill learning speed in percent; scales every credit and the per-minute cap (Kevin 12.11.2026: slower by default, faster by sandbox). */

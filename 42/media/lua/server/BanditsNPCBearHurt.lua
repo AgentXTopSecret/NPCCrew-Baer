@@ -76,6 +76,8 @@ function B.BearHurt(rec, a, pts, src, foe)
     local reg = B.Reg and B.Reg() or nil
     if not reg or reg.cubs[rec.id] ~= rec then return nil end
     local ms = getTimestampMs()
+    -- F3 (PLAN_F3.md 6.3): ein Treffer weckt sofort (Aufschrecken; server/BanditsNPCBearSleep.lua) -- auch wenn er ausweicht
+    if B.SleepStop then B.SleepStop(rec, "alarm", ms) end
     local st = B.StatsOf(rec)
     local s = B.Ses(rec.id)
     local bx, by = a:getX(), a:getY()
@@ -149,6 +151,9 @@ function B.BearDown(rec, a, why, players)
     if type(s.g) == "table" then s.g.on = nil end
     s.fleeSaid = nil
     s.fstNow, s.fstSent = nil, nil              -- Nachbesserung F2 B5: Sicht fst weg (dn hat Vorrang, Sitz-Pose am Boden)
+    -- F3 (PLAN_F3.md 4.1, 6.3): am Boden gibt es keinen Schlaf (ohne Bild), und ein Mal am Boden kostet Vertrauen (trDown, -5)
+    if B.SleepStop then B.SleepStop(rec, "gone", ms, players) end
+    if B.TrustAdd then B.TrustAdd(rec, "down", nil, nil, players) end
     B.Commit(rec)
     local bx, by = rec.x, rec.y
     if a ~= nil then

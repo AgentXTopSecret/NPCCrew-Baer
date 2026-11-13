@@ -16,6 +16,9 @@
 -- 3 Nebenziele.
 -- NACHTRAG Kevin 12.11. (PLAN_F2.md 11): B.MeleeDamage (11.2, Schaden je Treffer fuer Fenster UND Kampf), B.SkillCapLv (11.4, Alters-Deckel
 -- der Faehigkeiten), B.FleeHp (11.7, Fliehen "noch N Treffer vom Tod" statt Prozent).
+-- F3 (PLAN_F3.md 3.1, 6.3, 14.3; Kevins Antworten 13.11.2026): B.CLIPS + die acht Schlaf-Schluessel (Knoten und Clips kommen erst mit F3b --
+-- benutzt nur, wenn B.CFG.sleepClips == true); B.MeleeDamage x Hunger/Durst-Faktor (B.NeedK, shared/BanditsNPCBearNeedRules.lua);
+-- B.FightDecide kennt c.woke (schlaftrunken), c.noTrust (weigert sich), c.tired (zu muede) -> Rueckzug mit Grund.
 -- Ladefolge: nach ...Bear / ...Crew / ...Defs (alphabetisch, ...FightRules < ...Foe < ...Food); nichts Fremdes auf Dateiebene.
 -- Statisch geprueft, nicht gespielt.
 --
@@ -69,6 +72,16 @@ B.CLIPS = B.CLIPS or {
     eat = { dur = 3.20, loop = true },
     zbite = { dur = 1.60, hitPc = 0.30 },
     smack = { dur = 1.10, hitPc = 0.45 },
+    -- F3 (PLAN_F3.md 14.3; Kevin 13.11. Antwort 1 "Beide": Sphinx + eingerollt): geplante Dauern der acht Schlaf-Clips. Die Knoten-XML und
+    -- die Clips in allen GLBs bringt erst F3b -- bis dahin (B.CFG.sleepClips ~= true) setzt niemand diese Schluessel (B.SleepClip).
+    liedown = { dur = 2.40 },
+    sleep = { dur = 12.00, loop = true },
+    wakeup = { dur = 2.20 },
+    wakealarm = { dur = 1.10 },
+    curlin = { dur = 2.00 },
+    sleepcurl = { dur = 12.00, loop = true },
+    curlout = { dur = 2.00 },
+    wakecurl = { dur = 1.40 },
 }
 
 -- Angriffe des Baeren (nur diese waehlt B.FightChoose bzw. nimmt B.FightForce an).
@@ -311,7 +324,8 @@ end
 -- Schaden JE TREFFER, den der Baer JETZT machen wuerde (PLAN_F2.md 11.2): dieselbe Rechnung wie der Kampf (B.FightDamage mit B.StatsOf) --
 -- der Kampf (server/BanditsNPCBearFight.lua) holt seine Zahlen genau hier, Anzeige und Kampf laufen so nie auseinander. st wahlfrei
 -- (sonst B.StatsOf(rec)). Junges (kaempft nie) -> nil. Rueckgabe { swipe, swipeSide, bite, maul, slam, slamSide (nur freigeschaltete),
--- size (Anteil aus der Groesse), fgt (Kaempfen-Bonus in Prozent), pct (BearDamagePercent) } -- Einheit Zombie-Leben (wie Fx "hit" dmg).
+-- size (Anteil aus der Groesse), fgt (Kaempfen-Bonus in Prozent), pct (BearDamagePercent), need (F3: Faktor Hunger/Durst, schon
+-- eingerechnet) } -- Einheit Zombie-Leben (wie Fx "hit" dmg).
 -- ---------------------------------------------------------------------------
 function B.MeleeDamage(rec, st)
     if type(st) ~= "table" then
@@ -323,17 +337,21 @@ function B.MeleeDamage(rec, st)
     local allow = B.FightStageOf(st)
     if not allow.swipe then return nil end
     local fgt = num(st.fightBonus) or 0
+    -- F3 (PLAN_F3.md 3.1; Kevin ENT:21 "erst langsamer und schwaecher"): Hunger/Durst ab 50 x 0,85, ab 80 x 0,7 (B.NeedK, shared/
+    -- BanditsNPCBearNeedRules.lua) -- in JEDER Zahl, also im Kampf UND im Fenster. Fehlt jene Datei oder rec: 1 (wie vor F3).
+    local k = 1
+    if B.NeedK ~= nil and type(rec) == "table" then k = num(B.NeedK(rec).dmg) or 1 end
     local r = {
-        swipe = B.FightDamage("swipeL", true, st), swipeSide = B.FightDamage("swipeL", false, st),
-        size = (num(st.dmg) or 0) / (1 + fgt / 100), fgt = fgt, pct = opt("BearDamagePercent", 100),
+        swipe = B.FightDamage("swipeL", true, st) * k, swipeSide = B.FightDamage("swipeL", false, st) * k,
+        size = (num(st.dmg) or 0) / (1 + fgt / 100), fgt = fgt, pct = opt("BearDamagePercent", 100), need = k,
     }
     if allow.bite then
-        r.bite = B.FightDamage("bite", true, st)
-        r.maul = B.FightDamage("maul", true, st)
+        r.bite = B.FightDamage("bite", true, st) * k
+        r.maul = B.FightDamage("maul", true, st) * k
     end
     if allow.slam then
-        r.slam = B.FightDamage("slam", true, st)
-        r.slamSide = B.FightDamage("slam", false, st)
+        r.slam = B.FightDamage("slam", true, st) * k
+        r.slamSide = B.FightDamage("slam", false, st) * k
     end
     return r
 end
@@ -363,7 +381,7 @@ end
 
 -- ---------------------------------------------------------------------------
 -- Kampf-Entscheid je Hirn-Takt (2.2.1, R1-R10). c = { st, body, s, passive, down, ride, hpPts, fleeHp, fleeHys, fleeOn, sta, resting,
--- restOver, longOver, foe, ownerCarNear, follow, capFull }. R6 (PLAN_F2.md 11.7): hpPts = Leben in Punkten, fleeHp / fleeHys aus B.FleeHp
+-- restOver, longOver, foe, ownerCarNear, follow, capFull; F3: woke, noTrust, tired }. R6 (PLAN_F2.md 11.7): hpPts = Leben in Punkten, fleeHp / fleeHys aus B.FleeHp
 -- (0 = flieht nie), fleeOn = zieht sich schon wegen Leben zurueck (dann erst ab fleeHp + fleeHys wieder kampfbereit). sta Anteil 0..1.
 -- Rueckgabe { act = "none" / "fight" / "retreat" / "rest", why }.
 -- ---------------------------------------------------------------------------
@@ -374,6 +392,11 @@ function B.FightDecide(c)
     if c.foe ~= true then return { act = "none", why = "nofoe" } end
     if c.follow == true and c.ownerCarNear == true then return { act = "none", why = "car" } end
     if c.passive == true then return { act = "retreat", why = "passive" } end
+    -- F3 (Kevins Antworten 13.11.2026): 2 -- vom Zombie geweckt rennt er wokeFleeMs (5 s) schlaftrunken weg; 4 -- bei sehr wenig Vertrauen
+    -- weigert er sich zu kaempfen; 3 -- ab tirVery (90) ist er zu muede zum Kaempfen. Alle drei: Rueckzug wie Passiv (B.GuardStep).
+    if c.woke == true then return { act = "retreat", why = "woke" } end
+    if c.noTrust == true then return { act = "retreat", why = "trust" } end
+    if c.tired == true then return { act = "retreat", why = "tired" } end
     local flee = num(c.fleeHp) or 0
     if flee > 0 then
         local edge = flee

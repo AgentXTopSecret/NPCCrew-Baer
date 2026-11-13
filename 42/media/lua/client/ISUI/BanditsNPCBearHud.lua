@@ -36,6 +36,23 @@
 -- Listen, auch wenn gerade kein Schild steht.
 -- Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 8.2): die Hoehe des Schilds nimmt den Faktor tagK des Aussehens (Sicht lk, B.LookNum des
 -- Kerns), wenn es einen hat; sonst wie bisher. Die Groessen-Probe vergleicht weiter nur den Koerper (erster Wert von B.BodyKind).
+-- F3 (Lauf baer-f3, PLAN_F3.md 8, 9; Kevin 13.11.2026, f3/KEVIN_ANTWORTEN.md):
+--   * Vier neue Werte-Zeilen Hunger / Durst / Muedigkeit / Vertrauen (Sicht hun thr tir tru, 0..100), jede einzeln Aus (Vorgabe) / Balken /
+--     Zahl ueber "TagHunger" / "TagThirst" / "TagTired" / "TagTrust" (Optionen -> Mods). Der Block waechst von unten: Ausdauer -> Leben ->
+--     Hunger -> Durst -> Muedigkeit -> Vertrauen -> Alter -> Zustand -> Name. Die Balken fuellen sich mit dem Druck (Vertrauen mit dem
+--     Guten). Fehlt ein Wert in der Sicht, faellt seine Zeile weg.
+--   * Zeile 2 des EIGENEN Baeren: "sleeping" in der EINEN Schlaf-Farbe (U.SleepColor) mit Vorrang am Boden > Kampf > Schlaf > Modus; ein
+--     Rueckzug mit Grund (Sicht fsy) heisst "too tired - backing off" bzw. "won't fight - backing off" (Kevin Antworten 3 und 4).
+--   * HERZ (Kevin Antwort 7: "bei maximalen vertrauen ... ein Herz ueber den baeren namen", Nachtrag "oder das herz wird nur angezeigt wenn
+--     die namens anzeige vom baeren an ist"): meldet die Sicht maximales Vertrauen (trM, sonst tru >= B.CFG.trHeart, Rueckfall 100), steht
+--     ein eigenes Bild media/ui/BanditsNPCBearHeart<NN>.png mittig UEBER dem Namen. Es haengt am Namensschild -- KEIN eigener Schalter:
+--     ohne Name-Zeile (TagShow aus oder "Name tag" dieses Baeren aus) kein Herz. Gezeichnet 1:1 (scharf): je Groessenstufe die groesste
+--     Datei, die nicht hoeher ist als die Namens-Schrift; ein Aufruf drawTextureScaled je Herz.
+--   * U.TagTop(id) = Hoehe des ganzen Schild-Stapels ueber seinem Anker (Pixel, 0 ohne Schild) -- darueber beginnt das z Z z
+--     (client/ISUI/BanditsNPCBearZz.lua, gerufen aus prerender nach U.FloatDraw, hinter Existenz-Riegel).
+--   * Deckel: je Schild jetzt hoechstens 25 Zeichenaufrufe (12 wie B1d + 4 Werte je hoechstens 3 + 1 Herz), bei hudMax 6 also 150 je Bild.
+--   * Mit Schlaf-Clips (B.CFG.sleepClips, erst F3b) sitzt der Anker eines schlafenden Baeren um B.CFG.tagSleepK (0,65) tiefer; mit dem
+--     Ersatzbild (Sitzen) bleibt er oben.
 --
 -- Reine Anzeige: liest nur B.View (die Sicht, die der Schreiber diesem Spieler geschickt hat) und fragt nie den Server.
 -- Einzelspieler und Mehrspieler laufen gleich; im Mehrspieler stammen alle Zahlen vom Server. Der dedizierte Server laedt client/ nicht.
@@ -89,6 +106,26 @@ local ZK_MAX = 5            -- B1d: Deckel fuer den Anker-Faktor sz / tagBase (g
 local TAG_BIG_K = 1.06      -- B1e: Rueckfall fuer B.CFG.tagBigK (grosser Koerper; Tag 100: 1,35 / 0,35 x 1,06 = 4,09 < ZK_MAX)
 -- B1d: Anzeige-Arten der Werte (U.Opt "TagHealth" / "TagStamina", Index der Auswahl, V:client/PZAPI/ModOptions.lua:137)
 local SHOW_OFF, SHOW_BAR, SHOW_NUM = 1, 2, 3
+-- F3 (PLAN_F3.md 9): die vier Beduerfnis-Zeilen von unten nach oben. Je Zeile: Options-Id (U.Opt), Sicht-Feld, Schluessel der Zahl-Form,
+-- Farbe des Balkens, Farbe des Zahl-Texts. Feste Tabelle (nie je Bild oder je Liste neu).
+local NEED_ROWS = {
+    { opt = "TagHunger", f = "hun", key = "UI_BN_Bear_Tag_Hunger", r = 0.90, g = 0.55, b = 0.20, tr = 0.98, tg = 0.78, tb = 0.55 },
+    { opt = "TagThirst", f = "thr", key = "UI_BN_Bear_Tag_Thirst", r = 0.35, g = 0.60, b = 0.95, tr = 0.66, tg = 0.80, tb = 0.98 },
+    { opt = "TagTired", f = "tir", key = "UI_BN_Bear_Tag_Tired", r = 0.65, g = 0.55, b = 0.90, tr = 0.82, tg = 0.76, tb = 0.96 },
+    { opt = "TagTrust", f = "tru", key = "UI_BN_Bear_Tag_Trust", r = 1.00, g = 0.78, b = 0.30, tr = 1.00, tg = 0.88, tb = 0.58 },
+}
+-- F3 (Kevin Antwort 7): das Herz ueber dem Namen. Eigene Bilder (Quelle _arbeit/baer_zaehmen/f3/herz/herz_zeichne.py), je Kantenlaenge
+-- eine Datei media/ui/BanditsNPCBearHeart<NN>.png -- gezeichnet wird 1:1 mit der groessten, die nicht hoeher ist als die Namens-Schrift.
+local HEART_SIZES = { 16, 20, 24, 28, 32, 40, 48, 64 }
+local HEART_FILES = {
+    [16] = "media/ui/BanditsNPCBearHeart16.png", [20] = "media/ui/BanditsNPCBearHeart20.png",
+    [24] = "media/ui/BanditsNPCBearHeart24.png", [28] = "media/ui/BanditsNPCBearHeart28.png",
+    [32] = "media/ui/BanditsNPCBearHeart32.png", [40] = "media/ui/BanditsNPCBearHeart40.png",
+    [48] = "media/ui/BanditsNPCBearHeart48.png", [64] = "media/ui/BanditsNPCBearHeart64.png",
+}
+local HEART_GAP = 1         -- Pixel zwischen Herz und Oberkante der Namens-Zeile
+local TR_HEART = 100        -- Rueckfall fuer B.CFG.trHeart (ab diesem Vertrauen gilt "maximal", wenn die Sicht kein trM traegt)
+local TAG_SLEEP_K = 0.65    -- Rueckfall fuer B.CFG.tagSleepK (Anker eines liegenden Baeren, nur mit Schlaf-Clips)
 
 local panel = nil
 local fontH = nil           -- Hoehe UIFont.Small (Zeile 1, Balken-Texte)
@@ -117,8 +154,11 @@ local S = {
     flash = {},     -- id -> ms, bis wann "Gezaehmt!" steht
     ldPrev = {},    -- F1B: id -> war der Eintrag in der letzten Sicht geladen (ld)? Gedeckelt wie prev (forget bei neuer Sicht)
     tier = nil,     -- B1c: Groessenstufe der aktuellen Liste (tiers[1..3]); nil = noch keine Liste
-    -- B1d: Anzeige-Optionen der aktuellen Liste (einmal je Liste gelesen; EINE Tabelle, nie neu angelegt)
-    md = { tags = true, hp = SHOW_BAR, sta = SHOW_OFF, age = true },
+    -- B1d: Anzeige-Optionen der aktuellen Liste (einmal je Liste gelesen; EINE Tabelle, nie neu angelegt). F3: nd[i] = Anzeige-Art der
+    -- i-ten Zeile aus NEED_ROWS (Vorgabe Aus)
+    md = { tags = true, hp = SHOW_BAR, sta = SHOW_OFF, age = true, nd = { SHOW_OFF, SHOW_OFF, SHOW_OFF, SHOW_OFF } },
+    heart = {},     -- F3: Kantenlaenge -> Bild des Herzens (false = fehlt); gedeckelt durch HEART_SIZES
+    heartErr = false,
 }
 
 local function reset()
@@ -134,6 +174,8 @@ local function reset()
     S.flash = {}
     S.ldPrev = {}
     S.tier = nil
+    S.heart = {}
+    S.heartErr = false
 end
 
 -- Stufe k (1..3) mit Schriften und Massen. Stufe 1 braucht fontH/font2/fontH2 (in prerender einmal geholt).
@@ -164,8 +206,33 @@ local function tierOf(k)
         barW = math.floor(BAR_W * ratio + 0.5), barH = math.floor(BAR_H * ratio + 0.5),
         gap = math.floor(4 * ratio + 0.5), gap2 = math.floor(2 * ratio + 0.5),
     }
+    -- F3: Kantenlaenge des Herzens fuer diese Stufe = groesste Bildgroesse, die nicht hoeher ist als die Namens-Schrift (1:1, scharf)
+    t.heart = HEART_SIZES[1]
+    for i = 1, #HEART_SIZES do
+        if HEART_SIZES[i] <= h1 then t.heart = HEART_SIZES[i] end
+    end
     tiers[k] = t
     return t
+end
+
+-- F3: Bild des Herzens in der Kantenlaenge size, einmal je Spielstart geholt (S.heart). getTexture("media/ui/<datei>.png"):
+-- V:client/Chat/ISChat.lua:921 (wie S:client/ISUI/BanditsNPCBearMarker.lua). Fehlt die Datei: EINE Fehlerzeile, kein Herz.
+local function heartTex(size)
+    local tex = S.heart[size]
+    if tex == nil then
+        local file = HEART_FILES[size]
+        if file then tex = getTexture(file) end
+        if not tex then
+            tex = false
+            if not S.heartErr then
+                S.heartErr = true
+                B.Err("hud: heart image " .. tostring(file) .. " is missing -- no heart above name tags")
+            end
+        end
+        S.heart[size] = tex
+    end
+    if tex == false then return nil end
+    return tex
 end
 
 -- Gewaehlte Stufe aus der Anzeige-Option (fehlt client/BanditsNPCBearOptions.lua: Vorgabe 100 = Stufe 1).
@@ -248,7 +315,22 @@ local function tameShown(c, md)
     if md.hp ~= SHOW_OFF and hasHp(c) then return true end
     if md.sta ~= SHOW_OFF and hasSta(c) then return true end
     if md.age and growShown(c) then return true end
+    -- F3: eine der vier Beduerfnis-Zeilen ist an und die Sicht traegt ihren Wert
+    for i = 1, #NEED_ROWS do
+        if md.nd[i] ~= SHOW_OFF and isNum(c[NEED_ROWS[i].f]) then return true end
+    end
     return false
+end
+
+-- F3 (Kevin Antwort 7): meldet die Sicht maximales Vertrauen? Wahrheit ist das Sicht-Feld trM des Schreibers: ein Kern mit F3 (erkennbar
+-- an B.TrustK, shared/BanditsNPCBearNeedRules.lua) meldet es selbst -- fehlt trM dann, ist es nicht maximal (kein Nachrechnen aus der
+-- gerundeten Sicht-Zahl). Nur ohne einen solchen Kern gilt tru >= B.CFG.trHeart (Rueckfall 100). Beim Listenbau (hoechstens 1 x je
+-- Sekunde), nie je Bild.
+local function trustMax(c)
+    if c.trM ~= nil then return c.trM == true end
+    if B.TrustK ~= nil then return false end
+    local need = tonumber(B.CFG.trHeart) or TR_HEART
+    return isNum(c.tru) and c.tru >= need
 end
 
 -- ---------------------------------------------------------------------------
@@ -322,6 +404,14 @@ local MODE_TAG = { follow = "UI_BN_Bear_Tag_Follow", stay = "UI_BN_Bear_Tag_Stay
 -- F2 (PLAN_F2.md 3.2): Zeile 2 im Kampf (Sicht fst) und am Boden (dn) mit eigener Farbe { Schluessel, r, g, b }. Schluessel ausgeschrieben.
 local FIGHT_TAG = { fight = { "UI_BN_Bear_Tag_Fight", 1.00, 0.55, 0.25 }, retreat = { "UI_BN_Bear_Tag_Retreat", 0.95, 0.78, 0.40 },
     rest = { "UI_BN_Bear_Tag_Rest", 0.95, 0.78, 0.40 }, down = { "UI_BN_Bear_Tag_Down", 0.95, 0.40, 0.35 } }
+-- F3 (PLAN_F3.md 9; Kevin Antworten 3 und 4): Rueckzug MIT Grund (Sicht fsy "tired" / "trust") und "sleeping" in der EINEN Schlaf-Farbe
+-- (U.SleepColor, client/BanditsNPCBearClient.lua -- einmal beim Laden dieser Datei; fehlt der Helfer: derselbe Wert).
+local BACK_TAG = { tired = { "UI_BN_Bear_Tag_TiredBack", 0.95, 0.78, 0.40 }, trust = { "UI_BN_Bear_Tag_TrustBack", 0.95, 0.78, 0.40 } }
+local SLEEP_TAG = { "UI_BN_Bear_Tag_Sleep", 0.70, 0.85, 1.00 }
+if U.SleepColor then
+    local sr, sg, sb = U.SleepColor()
+    SLEEP_TAG[2], SLEEP_TAG[3], SLEEP_TAG[4] = sr, sg, sb
+end
 
 -- Namensschild (Plan 2.1): Zeile 1 der Name (U.CubName), Zeile 2 beim eigenen Jungen der Zustand, beim fremden der Besitzer.
 -- Gerade gezaehmt: Zeile 2 blinkt FLASH_MS lang gruen "Tamed!", danach der Zustand. Eigen ist ein Junges, wenn der Besitzer mein
@@ -340,6 +430,9 @@ local function describeTag(e, meKey)
         -- F2: am Boden vor Kampf vor Modus (feste Tabelle, keine neue je Liste)
         local ft = nil
         if c.dn == true then ft = FIGHT_TAG.down elseif c.fst ~= nil then ft = FIGHT_TAG[c.fst] end
+        -- F3: ein Rueckzug nennt seinen Grund (zu muede / weigert sich); schlafend steht "sleeping" (nach Boden und Kampf, vor dem Modus)
+        if c.dn ~= true and c.fst == "retreat" and c.fsy ~= nil and BACK_TAG[c.fsy] then ft = BACK_TAG[c.fsy] end
+        if ft == nil and c.slp == true then ft = SLEEP_TAG end
         if ft then
             e.line2 = U.T(ft[1])
             e.l2 = ft
@@ -403,11 +496,51 @@ local function describeValues(e, c, md, t)
         e.yHp = up + t.h2
         up = up + t.h2 + 1
     end
+    -- F3 (PLAN_F3.md 9): Hunger, Durst, Muedigkeit, Vertrauen ueber Leben -- je Zeile { Zeilen-Daten, Fuellbreite ODER Text, Oberkante }.
+    -- Die Liste entsteht je Eintrag beim Listenbau (hoechstens 1 x je Sekunde), nie je Bild; ohne Zeile bleibt e.ndN = 0.
+    local n = 0
+    for i = 1, #NEED_ROWS do
+        local row = NEED_ROWS[i]
+        local mode = md.nd[i]
+        local val = c[row.f]
+        if mode ~= SHOW_OFF and isNum(val) then
+            local pct = math.floor(val + 0.5)
+            if pct < 0 then pct = 0 end
+            if pct > 100 then pct = 100 end
+            n = n + 1
+            e.nd = e.nd or {}
+            local line = { row = row }
+            if mode == SHOW_BAR then
+                line.fill = math.floor(t.barW * pct / 100)
+                line.y = up + t.barH
+                up = up + t.barH + t.gap2
+            else
+                line.text = U.T(row.key, pct)
+                line.y = up + t.h2
+                up = up + t.h2 + 1
+            end
+            e.nd[n] = line
+        end
+    end
+    e.ndN = n
     if e.ageLine then
         e.yAge = up + t.h2
         up = up + t.h2 + 1
     end
     e.yState = up + t.h2
+    -- F3 (Kevin Antwort 7): Herz ueber dem Namen -- nur MIT Name-Zeile (kein eigener Schalter) und nur bei maximalem Vertrauen
+    e.heart, e.heartS = nil, 0
+    e.top = up
+    if e.showName then
+        e.top = e.yState + 1 + t.h1
+        if trustMax(c) then
+            e.heart = heartTex(t.heart)
+            if e.heart then
+                e.heartS = t.heart
+                e.top = e.top + HEART_GAP + t.heart
+            end
+        end
+    end
 end
 
 -- B1d: Anker waechst mit der gezeigten Groesse (PLAN_B1D.md 1.2 Punkt 2); fehlt sz (Kern ohne B1d): 1. B1e (PLAN_B1E.md 1.2.5): der
@@ -438,6 +571,12 @@ local function zkOf(c)
         zk = zk * k
     end
     if zk > ZK_MAX then zk = ZK_MAX end
+    -- F3 (PLAN_F3.md 9): ein LIEGENDER Baer ist niedriger -- nur mit den Schlaf-Clips (B.CFG.sleepClips, erst F3b); mit dem Ersatzbild
+    -- (Sitzen) bleibt der Anker oben.
+    if c.slp == true and B.CFG.sleepClips == true then
+        local k = tonumber(B.CFG.tagSleepK) or TAG_SLEEP_K
+        if k > 0 and k <= 1 then zk = zk * k end
+    end
     return zk
 end
 
@@ -597,6 +736,7 @@ local function rebuild(now)
     md.hp = showMode("TagHealth", SHOW_BAR)
     md.sta = showMode("TagStamina", SHOW_OFF)
     md.age = ageWanted()
+    for i = 1, #NEED_ROWS do md.nd[i] = showMode(NEED_ROWS[i].opt, SHOW_OFF) end      -- F3: Hunger, Durst, Muedigkeit, Vertrauen
     local cfg = B.CFG
     local reach = cfg.hudDist or 20
     local max = cfg.hudMax or 6
@@ -662,6 +802,12 @@ end
 local function drawTag(self, e, sx, sy, now, t)
     if e.showName then
         local y2 = sy - e.yState
+        -- F3: das Herz mittig ueber dem Namen, 1:1 (Kantenlaenge = Bildgroesse, gerade Zahl -> ganze Pixel). drawTextureScaled(tex, x, y,
+        -- w, h, a, r, g, b): V:client/Chat/ISChat.lua:418 (wie S:client/ISUI/BanditsNPCBearMarker.lua)
+        if e.heart then
+            local hs = e.heartS
+            self:drawTextureScaled(e.heart, sx - hs / 2, y2 - 1 - t.h1 - HEART_GAP - hs, hs, hs, 1, 1, 1, 1)
+        end
         text(self, e.line1, sx, y2 - 1 - t.h1, e.r, e.g, e.b, 0.95, t.f1)
         if now < e.till then
             if (now % 700) < 450 then
@@ -675,6 +821,16 @@ local function drawTag(self, e, sx, sy, now, t)
     end
     if e.ageLine then
         text(self, e.ageLine, sx, sy - e.yAge, 0.78, 0.78, 0.74, 0.80, t.f2)
+    end
+    -- F3: Vertrauen, Muedigkeit, Durst, Hunger (von oben nach unten; die Liste steht von unten nach oben)
+    for i = e.ndN or 0, 1, -1 do
+        local line = e.nd[i]
+        local row = line.row
+        if line.fill then
+            valueBar(self, sx, sy - line.y, line.fill, t, row.r, row.g, row.b)
+        else
+            text(self, line.text, sx, sy - line.y, row.tr, row.tg, row.tb, 0.90, t.f2)
+        end
     end
     if e.hpFill then
         valueBar(self, sx, sy - e.yHp, e.hpFill, t, 0.85, 0.20, 0.20)
@@ -785,6 +941,20 @@ function Hud:prerender()
     end
     -- F2 (PLAN_F2.md 3.2, Nachtrag 11.1): "DODGE" / "down" und Schadenszahlen (client/BanditsNPCBearFx.lua), nur aus fertigen Listen
     if U.FloatDraw then U.FloatDraw(self, now) end
+    -- F3 (PLAN_F3.md 8): z Z z ueber schlafenden Baeren (client/ISUI/BanditsNPCBearZz.lua), nur aus seiner fertigen Liste
+    if U.ZzDraw then U.ZzDraw(self, now) end
+end
+
+-- F3 (PLAN_F3.md 8): Hoehe des ganzen Schild-Stapels eines Baeren ueber seinem Anker in Pixeln (Werte-Zeilen, Zustand, Name, Herz) --
+-- 0, wenn er gerade kein Schild hat. Fuer das z Z z, das darueber beginnt. Nur aus der fertigen Liste (hoechstens hudMax Eintraege);
+-- gerufen vom 1-s-Sammler des z Z z, nie je Bild.
+function U.TagTop(id)
+    if id == nil then return 0 end
+    for i = 1, S.n do
+        local e = S.list[i]
+        if e.tag and e.c and e.c.id == id then return e.top or 0 end
+    end
+    return 0
 end
 
 -- ---------------------------------------------------------------------------

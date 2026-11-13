@@ -23,6 +23,8 @@
     "Sandbox_BanditsNPC_BearHealPercent_tooltip": "La vitesse à laquelle un ours apprivoisé guérit tout seul. 100 = normal (environ 1 pour cent de sa santé par heure de jeu), 0 = jamais tout seul. Les bandages ne changent pas.",
     "Sandbox_BanditsNPC_BearMaxPerPlayer": "Ours par joueur",
     "Sandbox_BanditsNPC_BearMaxPerPlayer_tooltip": "Nombre d'ours apprivoisés qu'un joueur peut avoir.",
+    "Sandbox_BanditsNPC_BearNeedsPercent": "Ours : vitesse des besoins (pourcentage)",
+    "Sandbox_BanditsNPC_BearNeedsPercent_tooltip": "La vitesse à laquelle un ours apprivoisé a faim, a soif et se fatigue. 100 = normal, 200 = deux fois plus vite. 0 = désactivé : la faim, la soif et la fatigue restent à zéro, et il ne dort plus qu'à côté de la personne à qui il appartient, quand elle dort. La confiance continue de fonctionner.",
     "Sandbox_BanditsNPC_BearSkillAgeCap": "Ours : compétences limitées par l'âge",
     "Sandbox_BanditsNPC_BearSkillAgeCap_tooltip": "Un ourson apprend jusqu'au niveau 3, un ours à moitié grand jusqu'à 6, un ours fort jusqu'à 8 ; seul un ours adulte atteint 10. L'expérience déjà acquise reste. Désactivé : aucune limite.",
     "Sandbox_BanditsNPC_BearSkillXpPercent": "Ours : vitesse d'apprentissage des compétences (pourcentage)",

@@ -23,6 +23,13 @@
 -- (gelb); am Leben-Balken ein kleines Verband-Zeichen (gruenes Kreuz aus zwei Rechtecken) vor dem Wert, solange ein Verband wirkt; eine
 -- Faehigkeit am Alters-Deckel ist AUSGEGRAUT (Segmente dunkler und entsaettigt, Stufe gedimmt) und rechts steht klein "max for its age"
 -- (Kevin 12.11.2026 ~06:30: "oder der balken ist ausgegraut ... zusaetzlich"). Weiter nur Rechtecke und fertige Texte je Bild.
+-- F3 (Lauf baer-f3, PLAN_F3.md 10.1; Kevin 13.11.2026: Fenster Variante B, "Hellblau"): Chip-Farbe stSleep = die EINE Schlaf-Farbe des
+-- Kerns (B.CFG.sleepCol ueber U.SleepColor, client/BanditsNPCBearClient.lua -- dieselbe faerbt das z Z z und die Schild-Zeile
+-- "sleeping"); Farbe warn (Fusszeile "zu muede zum Kaempfen" / "weigert sich zu kaempfen"); Verlaeufe "need" (Hunger / Durst / Muedigkeit
+-- FUELLEN SICH MIT DEM DRUCK: leer = gruen, halb = gelb, ab 0,8 rot -- Lehre NPC Crew NC:client/ISUI/BanditsNPCDialogWindow.lua:6496-6497)
+-- und "trust" (Vertrauen fuellt sich mit dem Guten, honig -> gold). Die vier Beduerfnis-Balken zeichnet der vorhandene drawBar. Der
+-- Schalter U.WinTick kennt jetzt state "off" (grau, kein Klick: Platzhalter "Nose alerts" bis F5). Die Zeilenart "later" (Raster
+-- "Coming later") ist weg -- die Beduerfnisse sind echte Zeilen.
 -- Kein Engine-Aufruf ohne Vanilla-Fundstelle. Statisch geprueft, nicht gespielt.
 --
 
@@ -61,8 +68,16 @@ local COL = {
     -- F2: Verband-Zeichen am Leben-Wert; Faehigkeit am Alters-Deckel (11.4) -- Segmente ausgegraut
     bandage = { 0.55, 0.85, 0.55, 1 }, pipCapGold = { 0.46, 0.43, 0.36, 1 }, pipCapNow = { 0.42, 0.36, 0.28, 1 },
     pipCapEmpty = { 0.15, 0.14, 0.13, 1 },
+    -- F3: Chip "Sleeping" (Rueckfall; unten aus der EINEN Schlaf-Farbe des Kerns gesetzt) und Warnfarbe der Fusszeile
+    stSleep = { 0.70, 0.85, 1.00, 1 }, warn = { 1.00, 0.58, 0.28, 1 },
 }
 U.WIN_COL = COL
+-- F3 (PLAN_F3.md 8, 10.1): die Schlaf-Farbe steht an EINER Stelle (B.CFG.sleepCol des Kerns, gelesen ueber U.SleepColor). Einmal beim
+-- Laden dieser Datei (shared und client/BanditsNPCBearClient.lua laden vorher); fehlt der Helfer, bleibt der Rueckfall oben.
+if U.SleepColor then
+    local sr, sg, sb = U.SleepColor()
+    COL.stSleep = { sr, sg, sb, 1 }
+end
 
 -- Farbe nach Name: r, g, b, a. Unbekannter Name -> weiss (nie nil, damit kein Zeichenaufruf mit nil laeuft).
 function U.WinColor(key)
@@ -76,6 +91,9 @@ end
 local RAMP = {
     hp = { { 0, 0.82, 0.26, 0.20 }, { 0.3, 0.95, 0.66, 0.20 }, { 0.6, 0.45, 0.76, 0.32 }, { 1, 0.45, 0.76, 0.32 } },
     sta = { { 0, 0.90, 0.50, 0.20 }, { 0.35, 0.38, 0.64, 0.92 }, { 1, 0.38, 0.64, 0.92 } },
+    -- F3: ein Beduerfnis fuellt sich mit dem Druck (0 = satt / ausgeruht gruen, 0,5 gelb, ab 0,8 rot); Vertrauen honig, voll = gold
+    need = { { 0, 0.45, 0.76, 0.32 }, { 0.5, 0.95, 0.66, 0.20 }, { 0.8, 0.82, 0.26, 0.20 }, { 1, 0.82, 0.26, 0.20 } },
+    trust = { { 0, 0.62, 0.42, 0.20 }, { 1, 1.00, 0.78, 0.30 } },
 }
 
 function U.WinRamp(kind, v)
@@ -196,8 +214,8 @@ function Btn:render()
 end
 
 -- ---------------------------------------------------------------------------
--- Zeile mit Tooltip (PLAN_F1.md 1.1 Karten, 1.5). Felder: win, kind ("bar" / "val" / "later" / "skill"), key ("hp" / "sta" bzw.
--- Faehigkeit 1..6). Inhalt aus dem Modell des Fensters (win.model), Masse aus win.m. Innenrand ox = 8 x f, oy = 3 x f (die Zeile
+-- Zeile mit Tooltip (PLAN_F1.md 1.1 Karten, 1.5). Felder: win, kind ("bar" / "val" / "skill"), key ("hp" / "sta" / F3: "hun" / "thr" /
+-- "tir" / "tru" bzw. Faehigkeit 1..6). Inhalt aus dem Modell des Fensters (win.model), Masse aus win.m. Innenrand ox = 8 x f, oy = 3 x f (die Zeile
 -- liegt 4 x f im Kartenrand und 3 x f ueber dem Text, so passt die Hervorhebung beim Ueberfahren).
 -- ---------------------------------------------------------------------------
 local Row = ISButton:derive("BanditsNPCBearWinRow")
@@ -236,23 +254,6 @@ local function drawVal(self, m, e)
     self:drawTextRight(e.val or "", self.width - m.ox, m.oy, tc[1], tc[2], tc[3], tc[4], m.fBody)
 end
 
--- "Kommt spaeter": Etikett und 2 x 2 Raster, nur in dim, KEIN Balken (PLAN_F1.md 1.5).
-local function drawLater(self, m, d)
-    local c = COL.dim
-    self:drawText(d.tLater or "", m.ox, m.oy, c[1], c[2], c[3], c[4], m.fSmall)
-    local words = d.needs
-    if type(words) ~= "table" then return end
-    local half = math.floor((self.width - 2 * m.ox) / 2)
-    local y0 = m.oy + m.ls + m.R6
-    for i = 1, 4 do
-        local gx = m.ox + ((i - 1) % 2) * half
-        local gy = y0 + math.floor((i - 1) / 2) * (m.ls + m.R6)
-        if m.disc then
-            self:drawTextureScaled(m.disc, gx, gy + math.floor((m.ls - m.R6) / 2), m.R6, m.R6, 1, c[1], c[2], c[3])
-        end
-        self:drawText(words[i] or "", gx + m.R12, gy, c[1], c[2], c[3], c[4], m.fSmall)
-    end
-end
 
 -- Faehigkeit: Name links, rechts "Lv n" und Prozent, darunter 10 Segmente (Gold = erreicht, Honig = laufende Stufe anteilig, Rest
 -- dunkel mit Rand). Vorbild Vanillas Faehigkeiten-Leiste (V:client/XpSystem/ISUI/ISSkillProgressBar.lua:128-210, Gold :13-16).
@@ -304,8 +305,6 @@ function Row:prerender()
         elseif kind == "val" then
             local e = d[self.key]
             if e then drawVal(self, m, e) end
-        elseif kind == "later" then
-            drawLater(self, m, d)
         elseif kind == "skill" then
             local s = d.skills and d.skills[self.key]
             if s then drawSkill(self, m, s) end
@@ -320,6 +319,8 @@ end
 
 -- ---------------------------------------------------------------------------
 -- Schalter (PLAN_F1.md 1.3 "Schalter-Kaestchen" 16 x 16, an: Innenquadrat accent). Felder: win, label, on, cmd.
+-- F3 (PLAN_F3.md 10.2): state "off" = grauer Platzhalter mit Grund im Tooltip (wie ein grauer Knopf; kein Klick, weil das Fenster
+-- enable = false setzt, V:client/ISUI/ISButton.lua:45) -- "Nose alerts" steht so schon an seinem Platz, F5 schaltet es nur scharf.
 -- ---------------------------------------------------------------------------
 local Tick = ISButton:derive("BanditsNPCBearWinTick")
 U.WinTick = Tick
@@ -328,18 +329,23 @@ function Tick:prerender()
     local m = self.win and self.win.m
     if m then
         local w, h = self.width, self.height
-        local bd = COL.btnBorder
-        if self.mouseOver then bd = COL.btnHoverBorder end
+        local off = (self.state == "off")
+        local bg, bd, edge = COL.btnBg, COL.btnBorder, COL.checkEdge
+        if off then
+            bg, bd, edge = COL.btnOffBg, COL.btnOffBorder, COL.btnOffBorder
+        elseif self.mouseOver then
+            bd = COL.btnHoverBorder
+        end
         local mul = 1
-        if self.pressed then mul = 0.8 end
-        rect(self, 0, 0, w, h, COL.btnBg, mul)
+        if self.pressed and not off then mul = 0.8 end
+        rect(self, 0, 0, w, h, bg, mul)
         frame(self, 0, 0, w, h, m.t, bd)
         local box = m.R16
         local bx = m.R10
         local by = math.floor((h - box) / 2)
         rect(self, bx, by, box, box, COL.checkBg)
-        frame(self, bx, by, box, box, m.t, COL.checkEdge)
-        if self.on then
+        frame(self, bx, by, box, box, m.t, edge)
+        if self.on and not off then
             rect(self, bx + m.R3, by + m.R3, box - 2 * m.R3, box - 2 * m.R3, COL.accent)
         end
     end
@@ -350,6 +356,10 @@ function Tick:render()
     local m = self.win and self.win.m
     if not m then return end
     local c = COL.text2
-    if self.on then c = COL.text end
+    if self.state == "off" then
+        c = COL.btnOffText
+    elseif self.on then
+        c = COL.text
+    end
     self:drawText(self.label or "", m.R10 + m.R16 + m.R10, math.floor((self.height - m.lb) / 2), c[1], c[2], c[3], c[4], m.fBody)
 end

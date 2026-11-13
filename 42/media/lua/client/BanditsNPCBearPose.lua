@@ -22,6 +22,23 @@
 -- Uhr des Schreibers, nicht am Bild). Danach wie bisher: will er laut Sicht sitzen, setzt er sich hin. Sitzen will er bei sit ODER am Boden
 -- (dn -- "Am Boden" sieht vorerst aus wie Sitzen, Frage F-G7), nie waehrend eines Kampfs (fst), versteckt, mitfahrend oder beschaeftigt.
 -- Hinsetzen / Aufstehen dauern B.ClipMs("sitdown"/"standup", 0,1, bd) (Rueckfall 1700 / 1400 ms, wenn die Tabelle fehlt).
+-- F3 (Lauf baer-f3, PLAN_F3.md 6.7; Kevin 13.11.2026, f3/KEVIN_ANTWORTEN.md): SCHLAFEN auf demselben Weg -- der Schreiber haelt den Baeren
+-- und meldet in der Sicht slp (ab Hinlegen bis zum Wecken), jeder Client zeigt es an SEINER Kopie. Vorrang: beschaeftigt > Kampf-Clip >
+-- kein Ruhebild bei Kampf / Rueckzug (fst), versteckt, mitfahrend > am Boden (Sitzbild wie bisher) > Schlaf > Sitzen.
+--   * F3 = ERSATZBILD (B.CFG.sleepClips ~= true): Schlafen sieht aus wie Sitzen -- dieselbe Kette sitdown -> sit -> standup, die es in allen
+--     Modellen gibt. Es wird KEIN neuer Wert gesetzt, also kann nichts stehend erstarren. Ein sitzender Baer, der einschlaeft, bleibt
+--     einfach sitzen (kein Aufstehen und Wieder-Hinsetzen); das z Z z zeigt den Unterschied.
+--   * F3b (B.CFG.sleepClips == true, erst mit den Clips in allen GLBs und den Knoten): liedown -> sleep -> nach B.CFG.curlAfterMs (90 s
+--     Echtzeit) curlin -> sleepcurl (Kevin Antwort 1: beide Haltungen); aufwachen aus der Sphinx "wakeup", bei Aufschrecken (Sicht wka)
+--     "wakealarm"; eingerollt "curlout" -> "wakeup" bzw. "wakecurl". Ein sitzender Baer steht erst auf, dann legt er sich.
+--   * Traegt die erste Sicht einer Kennung schon slpO (schlaeft > 5 s -- nach dem Laden oder wenn er erst jetzt in Sichtweite kommt),
+--     springt der Treiber direkt in die Schleife (kein Hinlegen bei jedem Laden).
+--   * Streicheln laesst ihn liegen (die Streichel-Aktion schreibt B.ACT nicht); Fuettern / Traenken wecken ihn (Schreiber), die Aktion
+--     setzt "eat" und loescht es wieder -- danach gilt die Sicht neu.
+--   * U.PoseSleeping(id) = die Schlaf-SCHLEIFE laeuft an dieser Kopie (fuer das z Z z, client/ISUI/BanditsNPCBearZz.lua; Beginn und
+--     Ende melden U.ZzPoke). U.PoseTick ruft je Takt U.SleepReport (ebenfalls in client/ISUI/BanditsNPCBearZz.lua, Existenz-Riegel):
+--     meldet dem Schreiber, wenn der Besitzer schlaeft bzw. aufwacht (Bitte "Sleep") -- dann legt sich ein folgender Baer neben ihn
+--     (Kevin 6d).
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -39,8 +56,16 @@ local SIT_RENEW_MS = 2000       -- im Sitzen "sit" so oft nachsetzen (Nachbesser
 local HANDS_MS = 30000          -- eine eigene Fuetter-Aktion sperrt den Treiber hoechstens so lange (falls ihr Ende nie kommt)
 local HANDS_MAX = 8             -- Deckel der Liste H
 local DONE = "NCBearDone"       -- Marke der Knoten (Ereignis SetVariable am Clip-Ende); vor jedem Wechsel loeschen
+-- F3b (nur mit Schlaf-Clips): Rueckfall-Dauern, wenn B.CLIPS einen Schluessel nicht kennt (geplante Dauern PLAN_F3.md 14.3 + Frist)
+local LIE_DOWN_MS = 2500        -- "liedown" 2,4 s
+local WAKE_UP_MS = 2300         -- "wakeup" 2,2 s (auch Rueckfall fuer "wakealarm" 1,1 s / "wakecurl" 1,4 s: lieber zu lang als zu kurz)
+local CURL_MS = 2100            -- "curlin" / "curlout" 2,0 s
+local CURL_AFTER_MS = 90000     -- Rueckfall fuer B.CFG.curlAfterMs: so lange Sphinx, dann einrollen
+local SLEEP_PH = { liedown = true, sleep = true, wakeup = true, wakealarm = true, curlin = true, sleepcurl = true, curlout = true,
+    wakecurl = true }
 
--- Zustand je Kennung: { obj, ph = "sitdown" / "sit" / "standup" / "act", t0 = ms, busy, cleared, act, dur }. Nur diese Sitzung.
+-- Zustand je Kennung: { obj, ph = "sitdown" / "sit" / "standup" / "act" (F3b: + die Phasen aus SLEEP_PH), t0 = ms, busy, cleared, act,
+-- dur, slp = Schlaf-Schleife laeuft, loopAt = Beginn der Sphinx-Schleife }. Nur diese Sitzung.
 local P = {}
 -- Tiere, die DIESES Spiel gerade selbst fuettert: { obj, t }. Nur diese Sitzung, Deckel HANDS_MAX.
 local H = {}
@@ -100,8 +125,69 @@ function U.PoseHands(obj, on)
     end
 end
 
+-- F3 (PLAN_F3.md 6.7): ruhig genug fuer ein Ruhebild? Nie versteckt, mitfahrend oder im Kampf / Rueckzug (fst).
+local function calm(v)
+    return v.hide ~= true and v.ride ~= true and v.fst == nil
+end
+
+-- F3: gibt es die eigenen Schlaf-Clips (Liegen)? Nur wenn der Kern es sagt (B.CFG.sleepClips, erst F3b -- Knoten und Clips in allen
+-- GLBs); sonst ist Schlafen das Sitzbild (Ersatzbild, PLAN_F3.md 1, 6.7) und KEIN neuer Wert wird je gesetzt (nichts kann erstarren).
+local function sleepClips()
+    return B.CFG ~= nil and B.CFG.sleepClips == true
+end
+
+-- F3b (PLAN_F3.md 6.7, 14.3; Kevin 13.11.2026 Antwort 1 "Beide"): die Liege-Kette, nur mit Schlaf-Clips. e.ph ist eine Phase aus SLEEP_PH.
+-- lie = er soll (weiter) liegen. Hinlegen -> Schlaf-Schleife (Sphinx) -> nach curlAfterMs Echtzeit einrollen -> Schleife eingerollt;
+-- aufwachen: aus der Sphinx "wakeup" bzw. bei Aufschrecken (Sicht wka) "wakealarm"; eingerollt "curlout" -> "wakeup" bzw. "wakecurl".
+-- Jeder Wechsel nur nach der Uhr (B.ClipMs), nie getVariableString. Werte sind Schluessel von B.CLIPS, nie Clip-Namen.
+local function lieChain(id, e, obj, v, now, dt, bd, lie)
+    local ph = e.ph
+    if lie then
+        if ph == "liedown" then
+            if dt >= clipMs("liedown", bd, LIE_DOWN_MS) then
+                phase(e, obj, "sleep", now)
+                e.loopAt = now
+            end
+        elseif ph == "sleep" then
+            local after = tonumber(B.CFG.curlAfterMs) or CURL_AFTER_MS
+            if now - (e.loopAt or now) >= after and clipMs("curlin", bd, nil) ~= nil and clipMs("sleepcurl", bd, nil) ~= nil then
+                phase(e, obj, "curlin", now)
+            elseif dt >= SIT_RENEW_MS then
+                obj:setVariable(act(), "sleep")                 -- gleicher Wert; heilt ein fremdes clearVariable (ISPetAnimal.lua:43)
+                e.t0 = now
+            end
+        elseif ph == "curlin" then
+            if dt >= clipMs("curlin", bd, CURL_MS) then phase(e, obj, "sleepcurl", now) end
+        elseif ph == "sleepcurl" then
+            if dt >= SIT_RENEW_MS then
+                obj:setVariable(act(), "sleepcurl")             -- ISPetAnimal.lua:43
+                e.t0 = now
+            end
+        elseif ph == "curlout" then
+            if dt >= clipMs("curlout", bd, CURL_MS) then        -- wollte aufwachen, schlaeft wieder: zurueck in die Sphinx-Schleife
+                phase(e, obj, "sleep", now)
+                e.loopAt = now
+            end
+        elseif dt >= clipMs(ph, bd, WAKE_UP_MS) then            -- Aufsteh-Clip lief aus, er soll wieder liegen
+            phase(e, obj, "liedown", now)
+        end
+        return
+    end
+    if ph == "liedown" or ph == "sleep" then
+        phase(e, obj, (v.wka == true) and "wakealarm" or "wakeup", now)
+    elseif ph == "curlin" or ph == "sleepcurl" then
+        phase(e, obj, (v.wka == true) and "wakecurl" or "curlout", now)
+    elseif ph == "curlout" then
+        if dt >= clipMs("curlout", bd, CURL_MS) then phase(e, obj, "wakeup", now) end
+    elseif dt >= clipMs(ph, bd, WAKE_UP_MS) then                -- wakeup / wakealarm / wakecurl sind zu Ende: er steht
+        obj:clearVariable(act())                                -- ISPetAnimal.lua:48
+        obj:clearVariable(DONE)
+        P[id] = nil
+    end
+end
+
 -- Ein Eintrag der Sicht, je Takt.
-local function step(id, v, now)
+local function drive(id, v, now)
     local obj = nil
     if U.CubObj then obj = U.CubObj(id) end                     -- lebende Kopie aus der Balken-Tabelle (kein Suchlauf)
     local e = P[id]
@@ -114,8 +200,13 @@ local function step(id, v, now)
         if e ~= nil then e.busy = true end                      -- die Zeitaktion laeuft: nichts schreiben, Zustand behalten
         return
     end
-    -- F2 (PLAN_F2.md 4.6): sitzen bei Befehl Sitz ODER am Boden (dn), nie im Kampf (fst), versteckt oder mitfahrend
-    local want = (v.sit == true or v.dn == true) and v.hide ~= true and v.ride ~= true and v.fst == nil
+    -- F2 (PLAN_F2.md 4.6): sitzen bei Befehl Sitz ODER am Boden (dn), nie im Kampf (fst), versteckt oder mitfahrend.
+    -- F3 (PLAN_F3.md 6.7): schlafen (Sicht slp) nach "am Boden", vor Sitzen. Ohne Schlaf-Clips sieht Schlafen aus wie Sitzen (dieselbe
+    -- Kette sitdown / sit / standup); mit Schlaf-Clips (lie) laeuft die Liege-Kette.
+    local quiet = calm(v)
+    local asleep = v.slp == true and v.dn ~= true and quiet
+    local lie = asleep and sleepClips()
+    local want = ((v.sit == true or v.dn == true) and quiet) or (asleep and not lie)
     local bd = bodyOf(v)
     if e ~= nil and e.ph == "act" then
         -- F2: ein Kampf-Clip laeuft -- nur nach der Uhr beenden (nie getVariableString); danach wie bisher (setzt sich ggf. wieder hin)
@@ -124,7 +215,9 @@ local function step(id, v, now)
         obj:clearVariable(act())                                -- ISPetAnimal.lua:48
         obj:clearVariable(DONE)
         e.act, e.dur, e.busy, e.cleared = nil, nil, nil, nil
-        if want then
+        if lie then
+            phase(e, obj, "liedown", now)
+        elseif want then
             phase(e, obj, "sitdown", now)
         else
             P[id] = nil
@@ -132,16 +225,26 @@ local function step(id, v, now)
         return
     end
     if e == nil then
-        if not want then return end
+        if not want and not lie then return end
         e = { obj = obj }
         P[id] = e
-        phase(e, obj, "sitdown", now)
+        -- F3: schlaeft er laut Sicht schon laenger (slpO: nach dem Laden oder wenn er erst jetzt in Sichtweite kommt), direkt in die
+        -- Schleife -- kein Hinlege-Bild bei jedem Laden
+        local jump = asleep and v.slpO == true
+        if lie then
+            phase(e, obj, jump and "sleep" or "liedown", now)
+            if jump then e.loopAt = now end
+        else
+            phase(e, obj, jump and "sit" or "sitdown", now)
+        end
         return
     end
     if e.cleared then
-        -- die Fuetter-Aktion hat B.ACT geloescht: er steht -> neu hinsetzen, sonst fertig
+        -- die Fuetter- / Traenk-Aktion hat B.ACT geloescht: er steht -> neu hinsetzen bzw. hinlegen, sonst fertig
         e.cleared, e.busy = nil, nil
-        if want then
+        if lie then
+            phase(e, obj, "liedown", now)
+        elseif want then
             phase(e, obj, "sitdown", now)
         else
             obj:clearVariable(DONE)                             -- ISPetAnimal.lua:48
@@ -150,16 +253,28 @@ local function step(id, v, now)
         return
     end
     if e.busy then
-        -- nach dem Streicheln (B.ACT unberuehrt): er sass und sitzt weiter, kein Hinsetz-Clip aus dem Sitzen
+        -- nach dem Streicheln (B.ACT unberuehrt): er sass und sitzt weiter (F3: er schlief und schlaeft weiter -- Streicheln laesst ihn
+        -- liegen, Kevin 6e), kein Hinsetz-Clip aus dem Sitzen
         e.busy = nil
         if want and e.ph == "sit" then
             obj:setVariable(act(), "sit")                       -- ISPetAnimal.lua:43
             e.t0 = now
             return
         end
+        if lie and (e.ph == "sleep" or e.ph == "sleepcurl") then
+            obj:setVariable(act(), e.ph)                        -- ISPetAnimal.lua:43
+            e.t0 = now
+            return
+        end
     end
     local dt = now - e.t0
     if dt < 0 then dt = 0 end
+    if SLEEP_PH[e.ph] then
+        lieChain(id, e, obj, v, now, dt, bd, lie)               -- F3b: die Liege-Kette (nur mit Schlaf-Clips erreichbar)
+        return
+    end
+    -- F3b: er sitzt (oder steht gerade auf) und soll LIEGEN: erst aufstehen wie beim Sitz-Ende, dann legt er sich (naechster Takt, e == nil)
+    if lie then want = false end
     if want then
         if e.ph == "sitdown" and dt >= clipMs("sitdown", bd, SIT_DOWN_MS) then
             phase(e, obj, "sit", now)
@@ -180,6 +295,29 @@ local function step(id, v, now)
     end
 end
 
+-- F3 (PLAN_F3.md 6.7, 8): laeuft an dieser Kopie gerade eine Schlaf-SCHLEIFE (fuer das z Z z)? Mit Schlaf-Clips die Phasen der Schleifen
+-- (auch das Einrollen dazwischen); mit dem Ersatzbild die Sitz-Schleife, solange die Sicht ihn schlafen laesst.
+local function sleepLoop(e, v)
+    local ph = e.ph
+    if ph == "sleep" or ph == "curlin" or ph == "sleepcurl" then return true end
+    return ph == "sit" and v.slp == true and v.dn ~= true and calm(v) and not sleepClips()
+end
+
+-- Ein Eintrag der Sicht, je Takt: Ruhebild treiben, danach merken, ob die Schlaf-Schleife laeuft (e.slp fuer U.PoseSleeping). Beginnt
+-- oder endet sie, baut das z Z z seine Liste im naechsten Bild neu (U.ZzPoke, client/ISUI/BanditsNPCBearZz.lua, Existenz-Riegel).
+local function step(id, v, now)
+    local was = P[id]
+    local wasOn = was ~= nil and was.slp == true
+    drive(id, v, now)
+    local e = P[id]
+    local on = false
+    if e ~= nil then
+        on = sleepLoop(e, v)
+        e.slp = on
+    end
+    if on ~= wasOn and U.ZzPoke then U.ZzPoke() end
+end
+
 -- Je 250 ms (gedrosselt im OnTick). Nur Eintraege der Sicht dieses Spiels (U.Fresh); gezaehmt.
 function U.PoseTick()
     local now = getTimestampMs()                                -- V:client/Foraging/ISBaseIcon.lua:485
@@ -191,6 +329,8 @@ function U.PoseTick()
     for id, v in pairs(cubs) do
         if type(v) == "table" and v.st == "tame" then step(id, v, now) end
     end
+    -- F3 (PLAN_F3.md 6.7; Kevin 6d): schlaeft der Besitzer? Meldung an den Schreiber (client/ISUI/BanditsNPCBearZz.lua, selbst gedrosselt)
+    if U.SleepReport then U.SleepReport(now) end
 end
 
 -- Neue Sicht: Kennungen vergessen, die sie nicht mehr traegt (erst sammeln, dann loeschen). Deckel P <= Sicht.
@@ -240,6 +380,12 @@ end
 function U.PosePhase(id)
     local e = P[id]
     return e and e.ph or nil
+end
+
+-- F3 (PLAN_F3.md 6.7, 8): laeuft an der lebenden Kopie dieser Kennung gerade die Schlaf-Schleife? (fuer das z Z z)
+function U.PoseSleeping(id)
+    local e = P[id]
+    return e ~= nil and e.slp == true
 end
 
 local function onGameStart()

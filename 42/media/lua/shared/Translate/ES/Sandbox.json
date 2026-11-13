@@ -23,6 +23,8 @@
     "Sandbox_BanditsNPC_BearHealPercent_tooltip": "Lo rápido que un oso domado se cura solo. 100 = normal (alrededor de 1 por ciento de su salud por hora de juego), 0 = nunca solo. Los vendajes no cambian.",
     "Sandbox_BanditsNPC_BearMaxPerPlayer": "Osos por jugador",
     "Sandbox_BanditsNPC_BearMaxPerPlayer_tooltip": "Cuántos osos domesticados puede tener un jugador.",
+    "Sandbox_BanditsNPC_BearNeedsPercent": "Oso: velocidad de las necesidades (porcentaje)",
+    "Sandbox_BanditsNPC_BearNeedsPercent_tooltip": "Lo rápido que a un oso domado le entra hambre, sed y cansancio. 100 = normal, 200 = el doble de rápido. 0 = desactivado: el hambre, la sed y el cansancio se quedan en cero, y solo duerme junto a la persona a la que pertenece cuando esta duerme. La confianza sigue funcionando.",
     "Sandbox_BanditsNPC_BearSkillAgeCap": "Oso: habilidades limitadas por la edad",
     "Sandbox_BanditsNPC_BearSkillAgeCap_tooltip": "Una cría aprende hasta el nivel 3, un oso a medio crecer hasta 6, un oso fuerte hasta 8; solo un oso crecido del todo llega a 10. La experiencia que ya tiene se queda. Desactivado: sin límite.",
     "Sandbox_BanditsNPC_BearSkillXpPercent": "Oso: velocidad de aprendizaje de habilidades (porcentaje)",

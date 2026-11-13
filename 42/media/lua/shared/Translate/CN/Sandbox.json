@@ -23,6 +23,8 @@
     "Sandbox_BanditsNPC_BearHealPercent_tooltip": "驯服的熊自行恢复有多快。100 = 正常 (每游戏小时大约恢复1个百分点的生命)，0 = 从不自行恢复。绷带不受影响。",
     "Sandbox_BanditsNPC_BearMaxPerPlayer": "每名玩家的熊",
     "Sandbox_BanditsNPC_BearMaxPerPlayer_tooltip": "一名玩家最多可以拥有多少只已驯服的熊。",
+    "Sandbox_BanditsNPC_BearNeedsPercent": "熊: 需求速度 (百分比)",
+    "Sandbox_BanditsNPC_BearNeedsPercent_tooltip": "驯服的熊变饿、变渴、变累有多快。100 = 正常，200 = 快一倍。0 = 关闭: 饥饿、口渴和疲劳保持为零，它只会在睡着的主人身边睡觉。信任照常计算。",
     "Sandbox_BanditsNPC_BearSkillAgeCap": "熊: 技能受年龄限制",
     "Sandbox_BanditsNPC_BearSkillAgeCap_tooltip": "小熊最多学到3级，半大的熊6级，强壮的熊8级，只有成年的熊能到10级。已经有的经验会保留。关闭: 没有限制。",
     "Sandbox_BanditsNPC_BearSkillXpPercent": "熊: 技能学习速度 (百分比)",

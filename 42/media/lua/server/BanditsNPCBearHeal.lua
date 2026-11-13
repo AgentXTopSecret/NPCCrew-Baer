@@ -43,6 +43,8 @@ end
 -- F2 (PLAN_F2.md 4.2, 11.5): + down (am Boden seit Spielstunde), bndH / bndR (Verband), kZ / kB (Kills). Fassung bleibt B.MARK_V = 2.
 -- Aussehen (Lauf baer-aussehen, PLAN_AUSSEHEN.md 3): + look (Familie des Wunsches; fehlt = "std"). Fassung bleibt B.MARK_V = 2 (Leser nehmen
 -- Fehlendes als "nicht da", wie B1e body).
+-- F3 (PLAN_F3.md 7): + nH / nT / nF / tr (Hunger, Durst, Muedigkeit, Vertrauen 0..100) -- sonst kaeme ein Baer nach einem Registerverlust
+-- mit den Erst-Werten zurueck. Fassung bleibt B.MARK_V = 2. Nicht im Spiegel: nDay / trD / slpAt (Tagesbuch und Verlauf beginnen neu).
 local MARK_FIELDS = {
     "u", "id", "nr", "gen", "r", "kind", "src", "st", "finder", "bond", "owner", "tame", "fedN", "petN", "last",
     "feedAt", "petAt", "born", "tamedAt", "mode", "name", "hx", "hy", "hz",
@@ -50,6 +52,7 @@ local MARK_FIELDS = {
     "body", "passive",
     "down", "bndH", "bndR", "kZ", "kB",
     "look",
+    "nH", "nT", "nF", "tr",
 }
 
 -- Aussehen (PLAN_AUSSEHEN.md 3): ein Wunsch-Aussehen aus dem Spiegel nur, wenn es eine bekannte Familie ausser "std" ist (B.LOOK_KEYS,
@@ -326,6 +329,7 @@ function B.Restore(o, mark, players)
         if rec.look == nil then rec.look = markLook(look) end
         if mark.passive == true then rec.passive = true end      -- F1 (PLAN_F1.md 5.2)
         markF2(rec, mark, now)                                   -- F2 (PLAN_F2.md 4.2)
+        if B.NeedsFromMark then B.NeedsFromMark(rec, mark, now) end   -- F3 (PLAN_F3.md 7; server/BanditsNPCBearNeeds.lua, geklemmt)
     end
     if st ~= "tame" then rec.mode = nil end
     -- B1d (PLAN_B1D.md 2.4 "restore"): Wachstum und Erfahrung aus dem Spiegel, geklemmt; im Mehrspieler g gedeckelt (Grow.lua)
@@ -439,6 +443,7 @@ function B.TakeNewerMark(rec, mark)
         rec.look = markLook(mark.look)                           -- Aussehen (PLAN_AUSSEHEN.md 3)
         if mark.passive == true then rec.passive = true end      -- F1 (PLAN_F1.md 5.2)
         markF2(rec, mark, now)                                   -- F2 (PLAN_F2.md 4.2)
+        if B.NeedsFromMark then B.NeedsFromMark(rec, mark, now) end   -- F3 (PLAN_F3.md 7; server/BanditsNPCBearNeeds.lua, geklemmt)
     end
     rec.name = nil
     if type(mark.name) == "string" then rec.name = B.CleanName(mark.name) end

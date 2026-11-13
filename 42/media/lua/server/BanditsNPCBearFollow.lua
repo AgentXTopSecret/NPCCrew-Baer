@@ -102,6 +102,9 @@ function B.SetMode(rec, mode, why, players)
     local modes = B.MODES
     if type(modes) ~= "table" then modes = MODES_DEF end
     if type(rec) ~= "table" or type(mode) ~= "string" or modes[mode] ~= true then return false end
+    -- F3 (Kevin 13.11.2026, Antwort 6c / 6e: "kann man ihn per folgen wieder aufwecken mitten drinne", jeder Befehl weckt): schlaeft er,
+    -- wacht er auf (server/BanditsNPCBearSleep.lua; die Muedigkeit bleibt, wo sie ist). Auch derselbe Modus noch einmal weckt.
+    if B.SleepStop then B.SleepStop(rec, "order", nil, players) end
     local s = B.Ses(rec.id)
     local old = B.ModeOf(rec)
     local stillSat = old == "sit" and mode == "sit" and s.sat == true

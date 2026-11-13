@@ -30,6 +30,8 @@ B._s = B._s or {}               -- Sitzung je Eintrag: [id] = { obj, held, moveA
                                 -- Nachbesserung B1e: + swapWantAt (Wartezeit "move"), placedAt (Koerper erzeugt, "Call to me")
                                 -- F1: + sat, satAt, backTried (Sitz), standUntil (Aufstehen), roam = { pauseUntil } (Frei), come
                                 --     (Komm her), revN, revFail (C1), ldSent, busySent (Sicht nachschicken bei Wechsel)
+                                -- F3: + slp, wkUntil, wkSpan, wka, slpLock, slpLockSpan, wokeUntil, wokeSpan (Schlaf), tirAcc
+                                --     (Anstrengung), nb, nv, noteAt, refAt (Stufen, Sicht-Drossel, Meldungs-Uhren), fsy
 B._healUntil = B._healUntil or 0    -- B1c: Echtzeit-Ende des Heil-Fensters nach InitRegistry (PLAN_B1C.md 1.1 Schritt 2)
 B._healScanAt = B._healScanAt or nil
 B._rev = B._rev or 0            -- zaehlt jede Aenderung, die eine Sicht betrifft
@@ -211,6 +213,13 @@ function B.InitRegistry()
     if B.GrowFix then
         local now = B.Now()
         for _, rec in pairs(r.cubs) do B.GrowFix(rec, now, true) end
+    end
+    -- F3 (PLAN_F3.md 7): Hunger, Durst, Muedigkeit, Vertrauen nachtragen / klemmen (server/BanditsNPCBearNeeds.lua). Ein gezaehmter Baer
+    -- von vor F3 bekommt die Erst-Werte (Hunger 20, Durst 20, Muedigkeit 10, Vertrauen 50 -- keiner startet hungrig); wilde Eintraege:
+    -- alle F3-Felder nil.
+    if B.NeedsFix then
+        local now = B.Now()
+        for _, rec in pairs(r.cubs) do B.NeedsFix(rec, now) end
     end
     bad = {}
     for bid, bait in pairs(r.baits) do
@@ -666,6 +675,10 @@ local function viewEntry(rec, pkey, ms)
         if B.FightView then B.FightView(rec, t, ms) end
         if B.DownView then B.DownView(rec, t, now) end
         if B.MendView then B.MendView(rec, t, now) end
+        -- F3 (PLAN_F3.md 7): hun / thr / tir / tru, trM (Herz), nof, trW, meal, bowl (server/BanditsNPCBearNeeds.lua) und slp / slpO /
+        -- wka (server/BanditsNPCBearSleep.lua) -- flach, fuer eigene UND fremde Baeren
+        if B.NeedsView then B.NeedsView(rec, t) end
+        if B.SleepView then B.SleepView(rec, t, ms) end
     end
     return t
 end

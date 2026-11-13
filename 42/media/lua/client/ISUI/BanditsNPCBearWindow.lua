@@ -6,9 +6,9 @@
 -- V:client/ISUI/ISPanel.lua:49-95), NICHT ISCollapsableWindow (dessen Titelleiste nimmt fest UIFont.Small, ISCollapsableWindow.lua:398-399,
 -- bei 4K winzig). Alles waechst mit EINEM Faktor f = U.MarkerFactor(Bildschirmhoehe, Option WinSize) (B1e, 1080 -> 1,0, Kevins
 -- 2054 -> 2,0); Zeilenhoehen aus der echten Schrifthoehe, Breiten aus MeasureStringX -- so passt es bei jeder Vanilla-Schriftgroesse.
--- Aufbau (PLAN_F1.md 1.1): Kopf (Kevins Symbol 1, Name + Umbenennen, Koerper/Tag, naechste Stufe, Zustand-Chip, Abstand, Pfeile bei
--- mehreren Baeren, Schliessen), Karte "Condition" (Leben, Ausdauer, Traglast, "kommt spaeter"), Karte "Skills" (6 Faehigkeiten),
--- Karte "Orders" (6 Befehle, Passiv, Namensschild), Fusszeile. Bausteine: client/ISUI/BanditsNPCBearWinParts.lua; Inhalt:
+-- Aufbau (PLAN_F1.md 1.1; seit F3 Variante B, siehe unten): Kopf (Kevins Symbol 1, Name + Umbenennen, Koerper/Tag, naechste Stufe,
+-- Zustand-Chip, Abstand, Pfeile bei mehreren Baeren, Schliessen), Karten "Condition" | "Needs" | "Skills", Karte "Orders" (Befehle,
+-- Handgriffe, Schalter), Fusszeile. Bausteine: client/ISUI/BanditsNPCBearWinParts.lua; Inhalt:
 -- client/BanditsNPCBearWinData.lua (U.WinModel).
 -- Takt (nichts Teures je Bild, PLAN_F1.md 0.10): das Modell entsteht nur bei neuer Sicht (U.WinOnView) und hoechstens 1 x je Sekunde,
 -- nur solange das Fenster offen ist; je Bild wird nur aus fertigen Feldern gezeichnet. Geschlossen: kein Bau, kein Zeichnen.
@@ -33,6 +33,18 @@
 -- am Knopf mit allen Aussehen dieses Koerpers (das jetzige abgehakt, ohne Funktion); die Wahl schickt die Bitte "Look" { id, look } an
 -- den Schreiber (B.Ask) -- Besitz, Zustand, Zombies, Platz und die gemeinsame Uhr mit Unstuck prueft der Schreiber (B.HandleLook).
 -- Kennt der Kern kein Aussehen (Modell ohne d.look), bleibt die Zelle leer (Knopf unsichtbar).
+-- F3 (Lauf baer-f3, PLAN_F3.md 10; Kevin 12./13.11.2026: Variante B FEST): NEUE ANORDNUNG -- drei Karten nebeneinander
+--   Condition (Leben, Ausdauer, Can carry, Melee damage, Kills) | Needs (Hunger, Thirst, Tiredness, Trust als Balken mit Prozent) |
+--   Skills (6 Faehigkeiten), darunter die Karte "Orders" mit FUENF Spalten in drei Reihen:
+--   Reihe 1 Befehle   Follow | Stay | Sit | Roam free | Come here
+--   Reihe 2 Handgriffe Fish (grau bis F5) | Unstuck | Look | Inventory (grau bis F4) | Bandage bzw. Help up
+--   Reihe 3 Schalter  Passive | Nose alerts (grau bis F5) | Name tag | Show damage | Growth line (verschwindet ausgewachsen: die Luecke
+--                     liegt am Reihenende wie seit F1B).
+-- Aus dem Prototyp ui_entwurf/proto nur der Zweig "wide" (Masse und Lagen); die Zeile "Coming later", die Trennlinie der linken Karte und
+-- die vierte Reihe gibt es nicht mehr. Das Fenster wird breiter und NIEDRIGER als bisher (1080p EN etwa 769 x 615 statt 640 x 682). Die
+-- grauen Platzhalter sind gewoehnliche graue Knoepfe / ein grauer Schalter mit Grund im Tooltip: kein Klick, keine Bitte -- F4 / F5
+-- schalten sie nur scharf, nichts wandert spaeter. Kein Schlaf-Knopf (Kevin 6e): jeder Befehl weckt. Die Fusszeile zeigt in Warnfarbe,
+-- wenn der Baer nicht kaempft (zu muede / kein Vertrauen, client/BanditsNPCBearWinData.lua d.footerCol).
 -- Jeder Engine-Aufruf hat eine Vanilla-Fundstelle (Kommentar daneben). Statisch geprueft, nicht gespielt.
 --
 
@@ -54,7 +66,11 @@ local FIT = 0.92                                -- passt das Fenster nicht in 92
 local ICON_FILE = "media/ui/BanditsNPCBearCub_marker288.png"
 local DISC_FILE = "media/ui/BanditsNPCBearMarker_disc.png"
 local CLOSE_FILE = "media/ui/inventoryPanes/Button_Close.png"
-local CMDS = { "follow", "stay", "sit", "roam", "come", "unstuck" }
+local CMDS = { "follow", "stay", "sit", "roam", "come", "unstuck", "fish", "inv" }     -- F3: + fish, inv (grau bis F5 / F4)
+local NEEDS = { "hun", "thr", "tir", "tru" }                                            -- F3: Balken-Zeilen der Karte "Needs"
+-- F3 (PLAN_F3.md 10.2): Reihe 1 und die ersten vier Zellen von Reihe 2 der Befehle (Zelle 3 von Reihe 2 = Knopf "Look", Zelle 5 = Pflege)
+local ROW1 = { "follow", "stay", "sit", "roam", "come" }
+local ROW2 = { "fish", "unstuck", false, "inv" }
 
 -- Alles, was das Fenster sich merkt (nur diese Sitzung): genau EIN Fenster-Objekt je Spielstart.
 local W = { win = nil, tex = nil }
@@ -128,16 +144,17 @@ local function metrics(f, d, n, sw, sh, idx)
     m.headH = math.max(R(100), R(14) + ln + R(2) + lb + R(2) + lb + R(10))
     m.rowBar = lb + R(4) + R(10) + R(10)
     m.rowVal = lb + R(10)
-    m.needGrid = 2 * (ls + R(6))
-    -- F2: drei Wert-Zeilen (Can carry, Melee damage, Kills) statt einer
-    local leftH = R(10) + lb + R(8) + 2 * m.rowBar + 3 * m.rowVal + R(9) + ls + R(6) + m.needGrid + R(10)
     m.rowSk = lb + R(4) + R(8) + R(8)
-    local rightH = R(10) + lb + R(8) + 6 * m.rowSk + R(4)
-    m.cardH = math.max(leftH, rightH)
+    -- F3 (Variante B): drei Karten gleicher Hoehe -- Condition (2 Balken + 3 Werte) | Needs (4 Balken) | Skills (6 Faehigkeiten)
+    local top = R(10) + lb + R(8)                       -- Kartenrand + Titel bis zur ersten Zeile
+    local c1 = top + 2 * m.rowBar + 3 * m.rowVal + R(4)
+    local c2 = top + 4 * m.rowBar + R(4)
+    local c3 = top + 6 * m.rowSk + R(4)
+    m.cardH = math.max(c1, c2, c3)
     m.bh = math.max(R(34), lb + R(12))
     m.th = math.max(R(30), lb + R(10))
-    -- F2: vierte Reihe (Pflege-Knopf, Show damage) unter den Schaltern
-    m.ordH = R(10) + lb + R(8) + m.bh + R(8) + m.bh + R(10) + m.th + R(8) + m.th + R(12)
+    -- F3: Befehle in fuenf Spalten -- Reihe Befehle, Reihe Handgriffe, Reihe Schalter
+    m.ordH = R(10) + lb + R(8) + m.bh + R(8) + m.bh + R(10) + m.th + R(12)
     m.y1 = m.headH + R(16)
     m.y2 = m.y1 + m.cardH + R(16)
     m.y3 = m.y2 + m.ordH + R(10)
@@ -167,19 +184,17 @@ local function metrics(f, d, n, sw, sh, idx)
     col2(tw(m.fBody, s.tHealth), tw(m.fBody, s.wideVal))
     col2(tw(m.fBody, s.tStamina), tw(m.fBody, s.wideVal))
     col2(tw(m.fBody, s.tCarry), tw(m.fBody, s.wideCarry))
+    for _, t in ipairs({ s.tHunger, s.tThirst, s.tTired, s.tTrust }) do     -- F3: die vier Beduerfnis-Zeilen
+        col2(tw(m.fBody, t), math.max(tw(m.fBody, s.widePctNeed), tw(m.fBody, s.off)))      -- Nachbesserung P3: "Off" bei Regler 0
+    end
+    cw = math.max(cw, tw(m.fBody, s.tNeeds) + R(24), tw(m.fBody, s.tSkills) + R(24), tw(m.fBody, s.tCond) + R(24))
     col2(tw(m.fBody, s.tMelee), tw(m.fBody, s.wideMelee))                  -- F2 (11.2)
     col2(tw(m.fBody, s.tKills), tw(m.fBody, s.wideKills))                  -- F2 (11.5)
     local lvW, pctW = tw(m.fBody, s.wideLv), math.max(tw(m.fSmall, s.widePct), tw(m.fSmall, s.max), tw(m.fSmall, s.ageMax))
     if type(s.skName) == "table" then
         for i = 1, #s.skName do col2(tw(m.fBody, s.skName[i]), lvW + R(8) + pctW, R(44)) end
     end
-    if type(s.needs) == "table" then
-        local wMax = 0
-        for i = 1, #s.needs do wMax = math.max(wMax, tw(m.fSmall, s.needs[i])) end
-        cw = math.max(cw, 2 * (R(12) + wMax + R(8)) + R(24))
-    end
-    cw = math.max(cw, tw(m.fSmall, s.tLater) + R(24))
-    grow(2 * P + 2 * cw + R(16))
+    grow(2 * P + 3 * cw + 2 * R(16))                    -- F3: drei Karten
     -- Befehle: jeder Knopf bw >= laengster Knopftext + 24 x f; Schalter: Kaestchen + Abstaende + Text
     local bwNeed = 0
     if type(s.btn) == "table" then
@@ -196,9 +211,13 @@ local function metrics(f, d, n, sw, sh, idx)
     if type(s.lookLabels) == "table" then
         for i = 1, #s.lookLabels do bwNeed = math.max(bwNeed, tw(m.fBody, s.lookLabels[i]) + R(24)) end
     end
-    grow(2 * P + 3 * bwNeed + R(40))
+    -- F3: Fish, Inventory stehen in s.btn (oben gemessen); dazu der Schalter Nose alerts. Fuenf Spalten.
+    bwNeed = math.max(bwNeed, tw(m.fBody, s.nose) + R(46))
+    grow(2 * P + 5 * bwNeed + R(24) + 4 * R(8))
     local footW = 0
-    for _, txt in ipairs({ s.hintMissing, s.hintRide, s.hintAway, s.hintEsc }) do footW = math.max(footW, tw(m.fSmall, txt)) end
+    for _, txt in ipairs({ s.hintMissing, s.hintRide, s.hintAway, s.hintEsc, s.hintSleep, s.hintTired, s.hintNoTrust }) do
+        footW = math.max(footW, tw(m.fSmall, txt))
+    end
     grow(2 * P + footW)
     m.needStatic = need
     local dyn, nameW, countW = dynNeed(m, d, n)
@@ -206,11 +225,11 @@ local function metrics(f, d, n, sw, sh, idx)
     if dyn > need then need = dyn end
     m.need = need
     -- Spaltenbreite ganzzahlig, Fensterbreite exakt daraus (keine Rundungsluecke am rechten Rand)
-    m.CW = math.floor((need - 2 * P - R(16)) / 2 + 0.999)
-    m.W = 2 * P + 2 * m.CW + R(16)
+    m.CW = math.floor((need - 2 * P - 2 * R(16)) / 3 + 0.999)
+    m.W = 2 * P + 3 * m.CW + 2 * R(16)
     m.ow = m.W - 2 * P
-    m.bw = math.floor((m.ow - R(24) - 2 * R(8)) / 3)
-    m.lx, m.rx = P, P + m.CW + R(16)
+    m.bw = math.floor((m.ow - R(24) - 4 * R(8)) / 5)
+    m.lx, m.mx, m.rx = P, P + m.CW + R(16), P + 2 * (m.CW + R(16))
     return m
 end
 
@@ -240,45 +259,51 @@ local function place(win, m)
     win.nextB.font, win.nextB.fh = m.fBody, m.lb
     win.prevB:setVisible(m.n > 1)                   -- ISButton:setVisible V:client/ISUI/ISButton.lua:9
     win.nextB:setVisible(m.n > 1)
-    -- Karte links: Leben, Ausdauer, Traglast, "kommt spaeter"
-    local yy = m.y1 + m.R10 + m.lb + m.R8
-    put(win.rows.hp, m.lx + m.R4, yy - m.R3, m.CW - m.R8, m.rowBar - m.R2)
+    -- F3 (Variante B, PLAN_F3.md 10.2): drei Karten -- jede Zeile liegt 4 x f im Kartenrand und 3 x f ueber ihrem Text
+    local top = m.y1 + m.R10 + m.lb + m.R8
+    local function row(el, x, yy, h) put(el, x + m.R4, yy - m.R3, m.CW - m.R8, h - m.R2) end
+    -- Karte 1 "Condition": Leben, Ausdauer, Traglast, Melee damage (F2 11.2), Kills (F2 11.5)
+    local yy = top
+    row(win.rows.hp, m.lx, yy, m.rowBar)
     yy = yy + m.rowBar
-    put(win.rows.sta, m.lx + m.R4, yy - m.R3, m.CW - m.R8, m.rowBar - m.R2)
+    row(win.rows.sta, m.lx, yy, m.rowBar)
     yy = yy + m.rowBar
-    put(win.rows.carry, m.lx + m.R4, yy - m.R3, m.CW - m.R8, m.rowVal - m.R2)
+    row(win.rows.carry, m.lx, yy, m.rowVal)
     yy = yy + m.rowVal
-    put(win.rows.melee, m.lx + m.R4, yy - m.R3, m.CW - m.R8, m.rowVal - m.R2)      -- F2 (11.2)
+    row(win.rows.melee, m.lx, yy, m.rowVal)
     yy = yy + m.rowVal
-    put(win.rows.kills, m.lx + m.R4, yy - m.R3, m.CW - m.R8, m.rowVal - m.R2)      -- F2 (11.5)
-    yy = yy + m.rowVal
-    m.divY = yy
-    yy = yy + m.R9
-    put(win.rows.later, m.lx + m.R4, yy - m.R3, m.CW - m.R8, 3 * (m.ls + m.R6))
-    -- Karte rechts: sechs Faehigkeiten
-    yy = m.y1 + m.R10 + m.lb + m.R8
+    row(win.rows.kills, m.lx, yy, m.rowVal)
+    -- Karte 2 "Needs": Hunger, Durst, Muedigkeit, Vertrauen
+    yy = top
+    for i = 1, #NEEDS do
+        row(win.rows[NEEDS[i]], m.mx, yy, m.rowBar)
+        yy = yy + m.rowBar
+    end
+    -- Karte 3 "Skills": sechs Faehigkeiten
+    yy = top
     for i = 1, 6 do
-        put(win.rows[i], m.rx + m.R4, yy - m.R3, m.CW - m.R8, m.rowSk - m.R2)
+        row(win.rows[i], m.rx, yy, m.rowSk)
         yy = yy + m.rowSk
     end
-    -- Befehle: 2 Reihen x 3 Knoepfe, darunter die Schalter
-    local by0 = m.y2 + m.R10 + m.lb + m.R8
-    for i = 1, #CMDS do
-        local b = win.btn[CMDS[i]]
-        put(b, P + m.R12 + ((i - 1) % 3) * (m.bw + m.R8), by0 + math.floor((i - 1) / 3) * (m.bh + m.R8), m.bw, m.bh)
-        b.font, b.fh = m.fBody, m.lb
+    -- Befehle in fuenf Spalten: Zelle c (1..5) der Reihe bei y
+    local function cell(el, c, y, h)
+        put(el, P + m.R12 + (c - 1) * (m.bw + m.R8), y, m.bw, h)
+        el.font, el.fh = m.fBody, m.lb
     end
-    local ty0 = by0 + 2 * (m.bh + m.R8) + m.R2
-    put(win.tick.pas, P + m.R12, ty0, m.bw, m.th)
-    put(win.tick.tag, P + m.R12 + m.bw + m.R8, ty0, m.bw, m.th)
-    put(win.tick.age, P + m.R12 + 2 * (m.bw + m.R8), ty0, m.bw, m.th)     -- F1B: dritte Zelle (PLAN_F1B.md 5.3)
-    -- F2: vierte Reihe -- Zelle 1 Pflege-Knopf, Zelle 2 Schalter "Show damage", Zelle 3 (Aussehen) der Knopf "Look"
-    local ty1 = ty0 + m.th + m.R8
-    put(win.care, P + m.R12, ty1, m.bw, m.th)
-    win.care.font, win.care.fh = m.fBody, m.lb
-    put(win.tick.dmg, P + m.R12 + m.bw + m.R8, ty1, m.bw, m.th)
-    put(win.look, P + m.R12 + 2 * (m.bw + m.R8), ty1, m.bw, m.th)              -- Aussehen (PLAN_AUSSEHEN.md 8.1)
-    win.look.font, win.look.fh = m.fBody, m.lb
+    local by0 = m.y2 + m.R10 + m.lb + m.R8
+    local by1 = by0 + m.bh + m.R8
+    for c = 1, 5 do cell(win.btn[ROW1[c]], c, by0, m.bh) end                    -- Reihe 1: Befehle
+    for c = 1, 4 do
+        if ROW2[c] then cell(win.btn[ROW2[c]], c, by1, m.bh) end                -- Reihe 2: Fish, Unstuck, (Look), Inventory
+    end
+    cell(win.look, 3, by1, m.bh)                                                -- Aussehen (PLAN_AUSSEHEN.md 8.1): neben Unstuck (gemeinsame Uhr)
+    cell(win.care, 5, by1, m.bh)                                                -- F2: "Bandage" / am Boden "Help up"
+    local ty0 = by1 + m.bh + m.R8 + m.R2
+    cell(win.tick.pas, 1, ty0, m.th)                                            -- Reihe 3: Schalter
+    cell(win.tick.nose, 2, ty0, m.th)
+    cell(win.tick.tag, 3, ty0, m.th)
+    cell(win.tick.dmg, 4, ty0, m.th)
+    cell(win.tick.age, 5, ty0, m.th)                    -- F1B: verschwindet ausgewachsen -- die Luecke liegt am Reihenende
 end
 
 -- Auf den Bildschirm klemmen: mindestens 40 x f px sichtbar, Oberkante nie ueber dem Bild (PLAN_F1.md 1.1 "Lage").
@@ -359,19 +384,25 @@ function Win:build()
     self.nextB = kid(self, U.WinBtn, "next", "small")
     self.prevB.label, self.nextB.label = "<", ">"
     self.tick = { pas = kid(self, U.WinTick, "passive"), tag = kid(self, U.WinTick, "tag"), age = kid(self, U.WinTick, "growth"),
-        dmg = kid(self, U.WinTick, "showdmg") }                                     -- F2 (11.1)
+        dmg = kid(self, U.WinTick, "showdmg"),                                      -- F2 (11.1)
+        nose = kid(self, U.WinTick, "nose") }                                       -- F3: Platzhalter "Nose alerts" (grau bis F5)
     self.care = kid(self, U.WinBtn, "care", "cmd")                                  -- F2: "Bandage" / "Help up"
     self.look = kid(self, U.WinBtn, "look", "cmd")                                  -- Aussehen: "Look: <Name>"
     self.rows = {
         hp = kid(self, U.WinRow, nil), sta = kid(self, U.WinRow, nil), carry = kid(self, U.WinRow, nil),
-        later = kid(self, U.WinRow, nil), melee = kid(self, U.WinRow, nil), kills = kid(self, U.WinRow, nil),
+        melee = kid(self, U.WinRow, nil), kills = kid(self, U.WinRow, nil),
     }
+    -- F3: vier Balken-Zeilen der Karte "Needs" (derselbe Baustein wie Leben / Ausdauer) statt der Zeile "Coming later"
+    for i = 1, #NEEDS do
+        local r = kid(self, U.WinRow, nil)
+        r.kind, r.key = "bar", NEEDS[i]
+        self.rows[NEEDS[i]] = r
+    end
     self.rows.hp.kind, self.rows.hp.key = "bar", "hp"
     self.rows.sta.kind, self.rows.sta.key = "bar", "sta"
     self.rows.carry.kind, self.rows.carry.key = "val", "carry"
     self.rows.melee.kind, self.rows.melee.key = "val", "melee"                      -- F2 (11.2)
     self.rows.kills.kind, self.rows.kills.key = "val", "kills"                      -- F2 (11.5)
-    self.rows.later.kind = "later"
     for i = 1, 6 do
         local r = kid(self, U.WinRow, nil)
         r.kind, r.key = "skill", i
@@ -437,7 +468,8 @@ local function apply(win, d)
         age:setVisible(show)
     end
     win.rows.hp.tooltip, win.rows.sta.tooltip = d.tips.hp, d.tips.sta
-    win.rows.carry.tooltip, win.rows.later.tooltip = d.tips.carry, d.tips.later
+    win.rows.carry.tooltip = d.tips.carry
+    for i = 1, #NEEDS do win.rows[NEEDS[i]].tooltip = d.tips[NEEDS[i]] end         -- F3: Hunger, Durst, Muedigkeit, Vertrauen
     -- F2: Melee damage / Kills, Pflege-Knopf, Show damage; Breite des Leben-Werts fuer das Verband-Zeichen (WinParts drawBar)
     win.rows.melee.tooltip, win.rows.kills.tooltip = d.tips.melee, d.tips.kills
     d.hp.valW = tw(m.fBody, d.hp.val)
@@ -447,6 +479,11 @@ local function apply(win, d)
         win.care.enable = (c.state ~= "off")                        -- ISButton.lua:45
     end
     win.tick.dmg.on, win.tick.dmg.label, win.tick.dmg.tooltip = t.dmg, t.dmgLabel, t.dmgTip
+    -- F3 (PLAN_F3.md 10.2): Schalter "Nose alerts" -- bis F5 ein grauer Platzhalter (state "off": kein Klick, Grund im Tooltip)
+    local nose = win.tick.nose
+    nose.on, nose.label, nose.tooltip = t.nose, t.noseLabel, t.noseTip
+    nose.state = (t.noseOff == true) and "off" or "normal"
+    nose.enable = (nose.state ~= "off")                             -- ISButton.lua:45
     -- Aussehen (PLAN_AUSSEHEN.md 8.1): Knopf "Look"; ohne d.look (Kern ohne Aussehen) unsichtbar -- wie der Wachstums-Schalter oben nur bei
     -- einem Wechsel umschalten und den offenen Tooltip vorher abmelden (ISButton:setVisible V:client/ISUI/ISButton.lua:9, getIsVisible :34)
     local lb, le = win.look, d.look
@@ -609,6 +646,8 @@ function Win:onCmd(button)
         -- Aussehen: grau kam oben schon zurueck (state "off"); hier nur das Menue -- die Bitte schickt erst die Wahl
         lookMenu(self, button, v)
     end
+    -- F3: "fish", "inv", "nose" haben bis F4 / F5 bewusst keinen Zweig -- sie sind grau (state "off", oben schon zurueck) und schicken nie
+    -- eine Bitte; kein Schlaf-Befehl (Kevin 6e).
 end
 
 function Win:onClose()
@@ -675,10 +714,11 @@ function Win:prerender()
     drawHead(self, m, d)
     U.WinRect(self, m.P, m.headH + m.R4, m.W - 2 * m.P, m.t, col("divider"))
     card(self, m, m.lx, m.y1, m.CW, m.cardH, d.tCond)
-    U.WinRect(self, m.lx + m.R12, m.divY, m.CW - m.R24, m.t, col("divider"))
+    card(self, m, m.mx, m.y1, m.CW, m.cardH, d.tNeeds)                              -- F3 (Variante B): eigene Karte "Needs"
     card(self, m, m.rx, m.y1, m.CW, m.cardH, d.tSkills)
     card(self, m, m.P, m.y2, m.ow, m.ordH, d.tOrders, d.ordersInfo)
-    local c = col("dim")
+    -- Fusszeile; F3: in Warnfarbe, wenn der Baer nicht kaempft (zu muede / kein Vertrauen -- d.footerCol aus dem Modell)
+    local c = col(d.footerCol or "dim")
     self:drawText(d.footer or "", m.P, m.y3, c[1], c[2], c[3], c[4], m.fSmall)
 end
 

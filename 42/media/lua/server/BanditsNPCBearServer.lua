@@ -17,6 +17,9 @@ if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: la
 -- liveRec "am Boden" (B.DownStep) direkt nach der Laerm-Wache und der Kampf (B.FightStep) VOR der Zombie-Wache; im Langsam-Takt allein
 -- aufstehen (B.DownSlow); handCheck / takeOne als B.HandCheck / B.TakeOne fuer Verband und Aufhelfen (server/BanditsNPCBearMend.lua,
 -- ...Hurt.lua).
+-- F3 (PLAN_F3.md 2.4, 5, 6.5; Kevins Antworten 13.11.2026): im Langsam-Takt B.NeedsSlow je Eintrag (Hunger, Durst, Muedigkeit, Vertrauen;
+-- eigene Schleife NACH B.GrowSlow), in liveRec der Schlaf (B.SleepStep) direkt VOR dem Kampf, Bitten "Sleep" / "Wake", B.FeedComplete senkt
+-- am gezaehmten Baeren den Hunger (B.NeedEat) und gibt Vertrauen (B.TrustAdd), B.PetComplete gibt Vertrauen.
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -246,6 +249,10 @@ function B.FeedComplete(character, animal, food)
         return false
     end
     local wasTame = isTame(rec.st)
+    -- F3 (PLAN_F3.md 5.1): Mahlzeiten des Stuecks VOR dem Nehmen lesen (20 Vanilla-Hungerpunkte = eine Mahlzeit, B.MealsOf).
+    -- food:getHungerChange(): Vanilla client/ISUI/Animal/ISAnimalContextMenu.lua:37 (schon in B.FoodClass, shared/BanditsNPCBearFood.lua).
+    local meals = 0
+    if wasTame and B.MealsOf then meals = B.MealsOf(food:getHungerChange()) end
     if not takeOne(character, food) then return false end
     -- ab hier ist das Stueck weg: gutschreiben im selben Aufruf, ohne Engine-Wurf dazwischen
     local res = B.ApplyGain(rec, pkey, "feed", class, now)
@@ -259,10 +266,26 @@ function B.FeedComplete(character, animal, food)
     rec.goneP = nil
     -- B1d (PLAN_B1D.md 1.1 Schritt 4): gutes Fuettern beschleunigt das Wachsen ein wenig (gedeckelt, server/BanditsNPCBearGrow.lua)
     if wasTame and B.GrowFeed then B.GrowFeed(rec, class, now) end
+    -- F3 (PLAN_F3.md 5.1, 5.3; Kevin 13.11. 6e "Fuettern/Traenken wecken kurz"): am gezaehmten Baeren senkt das Stueck den Hunger und
+    -- gibt Vertrauen (server/BanditsNPCBearNeeds.lua); schlaeft er noch (die Bitte "Wake" des Menues ging verloren), weckt ihn das
+    -- Fuettern selbst (server/BanditsNPCBearSleep.lua) -- eine Ablehnung gaebe es nur VOR dem Nehmen. Mit BearNeedsPercent 0 kein Hunger.
+    -- Eben gezaehmt: die vier Werte bekommen ihre Erst-Werte (Vertrauen 50), damit die erste Sicht sie schon traegt.
+    local hunLeft = nil
+    if wasTame and B.NeedEat then
+        if B.SleepStop then B.SleepStop(rec, "hand") end
+        if B.NeedsOn and B.NeedsOn() then hunLeft = B.NeedEat(rec, meals, "hand") end
+        if B.TrustAdd then B.TrustAdd(rec, "feed", class, now) end
+    elseif res.tamed and B.NeedsFix then
+        B.NeedsFix(rec, now)
+    end
     B.Commit(rec)
     if wasTame then
         -- am zahmen Jungen nur Abklingzeit und Meldung (Plan 11), wie B.PetComplete (Nachbesserung B4)
         B.Tell(character, note("UI_BN_Bear_Note_Happy", nil, nil, "good"))
+        -- F3: "Hunger 35%" nach dem Fuettern (abgerundet wie die Sicht)
+        if hunLeft ~= nil then
+            B.Tell(character, B.NoteBd(note("UI_BN_Bear_Note_Fed", "num", math.floor(hunLeft + 0.000001), nil), rec))
+        end
     else
         tellGain(character, res, class)
     end
@@ -292,6 +315,13 @@ function B.PetComplete(character, animal)
     animal:petAnimal(character)
     rec.idleH = 0
     rec.goneP = nil
+    -- F3 (PLAN_F3.md 4.1, 5.3): Streicheln gibt am gezaehmten Baeren Vertrauen und laesst einen schlafenden liegen (kein B.SleepStop --
+    -- Kevin 13.11. 6e); eben gezaehmt: Erst-Werte
+    if wasTame and B.TrustAdd then
+        B.TrustAdd(rec, "pet", nil, now)
+    elseif res.tamed and B.NeedsFix then
+        B.NeedsFix(rec, now)
+    end
     B.Commit(rec)
     if wasTame then
         B.Tell(character, note("UI_BN_Bear_Note_Happy", nil, nil, "good"))
@@ -434,6 +464,16 @@ function B.Handle(player, command, args)
     -- der Client bittet nur, getauscht wird nur hier beim Schreiber
     if command == "Look" then
         if B.HandleLook then B.HandleLook(player, args) end
+        return
+    end
+    -- F3 (PLAN_F3.md 5.3, 6.5): "Sleep" { on } (der Client meldet, dass SEIN Spieler schlaeft bzw. wieder wach ist) und "Wake" { id } (vor
+    -- dem Fuettern / Traenken eines schlafenden Baeren) pruefen die Bitten selbst (server/BanditsNPCBearSleep.lua)
+    if command == "Sleep" then
+        if B.HandleSleep then B.HandleSleep(player, args) end
+        return
+    end
+    if command == "Wake" then
+        if B.HandleWake then B.HandleWake(player, args) end
         return
     end
 end
@@ -631,6 +671,14 @@ local function slowTickBody()
             if reg.cubs[rec.id] == rec then B.GrowSlow(rec, dt, online, now, players) end
         end
     end
+    -- F3 (PLAN_F3.md 2.4): Hunger, Durst, Muedigkeit, Vertrauen (server/BanditsNPCBearNeeds.lua) -- eigene Schleife NACH B.GrowSlow, aus
+    -- demselben Grund wie dort: wirft ein F3-Schritt, sind Wachsen und Heilen in diesem Takt schon durch
+    if B.NeedsSlow then
+        for i = 1, #list do
+            local rec = list[i]
+            if reg.cubs[rec.id] == rec then B.NeedsSlow(rec, dt, online, now, players) end
+        end
+    end
     B.FlushViews(players)
 end
 
@@ -815,6 +863,10 @@ local function liveRec(rec, a, players, cache, ms)
     end
     -- F2 (PLAN_F2.md 2.2.1): der Kampf geht vor jedem Befehl und vor der Zombie-Wache (server/BanditsNPCBearFight.lua); false = kein Kampf
     -- (passiv, zu wenig Leben, verschnaufen, Junges ...) -> die Zombie-Wache versteckt ihn bzw. der Befehl gilt
+    -- F3 (PLAN_F3.md 6.5; Kevin 13.11.: bei 100 % Muedigkeit schlaeft er, bis er bei 0 % ist, oder neben dem schlafenden Besitzer): der
+    -- Schlaf haelt ihn VOR dem Kampf, solange keine Gefahr nah ist (server/BanditsNPCBearSleep.lua). Gefahr weckt -- dann entscheidet
+    -- B.FightStep wie immer (schlaftrunken, zu muede oder ohne Vertrauen: Rueckzug).
+    if rec.st == "tame" and B.SleepStep and B.SleepStep(rec, a, env, ms, players) then return end
     if rec.st == "tame" and B.FightStep and B.FightStep(rec, a, env, ms, players) then return end
     -- B1c (PLAN_B1C.md 1.3 Schritt 5): die Zombie-Wache geht vor Folgen und B.Decide (verstecken bzw. fliehen)
     if B.GuardStep and B.GuardStep(rec, a, env, ms, players) then return end

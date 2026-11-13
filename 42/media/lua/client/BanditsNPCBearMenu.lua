@@ -29,6 +29,14 @@
 -- Sandbox-Kuerzung (Lauf baer-aussehen, PLAN_AUSSEHEN.md 9.3; Kevin 12.11.2026): Call-Abklingzeit, Verband-Heilung und -Stunden sind feste
 -- Werte des Kerns (B.CFG callCoolMin, bandageHeal, bandageHours) statt Sandbox-Optionen. Das Aussehen hat KEINEN Rechtsklick-Eintrag
 -- (Kevin: "fuer spieler als knopf" -- nur das Baeren-Fenster, PLAN_AUSSEHEN.md 8.3).
+-- F3 (Lauf baer-f3, PLAN_F3.md 5; Kevin 13.11.2026, f3/KEVIN_ANTWORTEN.md): am eigenen gezaehmten Baeren "Give water to the cub/bear"
+-- mit einem Untermenue der Wasser-Behaelter aus dem Inventar -- Vanillas eigene Liste und Beschriftung (V:client/ISUI/Animal/
+-- ISAnimalContextMenu.lua:464-489), Zeitaktion BanditsNPCBearDrinkAction; wie viel er trinkt und ob es gilt, entscheidet der Schreiber
+-- (B.DrinkComplete: Wasser wird erst nach allen Pruefungen in EINEM Aufruf genommen). Grau mit Grund aus der Sicht (B.CheckDrink des
+-- Kerns: faehrt mit, am Boden, nicht durstig) bzw. Vanillas Text "kein Wasser". "Feed" am gezaehmten Baeren senkt jetzt den Hunger (die
+-- Abklingzeit faellt dort weg, "satt" lehnt ab -- B.CheckFeed des Kerns); der Tooltip nennt Hunger bzw. Vertrauen von jetzt.
+-- Schlaeft der Baer (Sicht slp), schickt der Klick auf Fuettern / Traenken vorher die Bitte "Wake" { id } (sanft wecken, Kevin 6e); die
+-- Zeitaktionen warten ueber U.WakeWait hoechstens 5 s darauf. Streicheln weckt nicht. Kein Schlaf- oder Weck-Punkt im Menue.
 --
 -- Das Menue BIETET nur AN. Es stellt Zeitaktionen an (Fuettern, Streicheln, Koeder) bzw. schickt eine Bitte (Koederplatz
 -- aufgeben); ob etwas gilt, entscheidet der Schreiber in complete() bzw. in B.Handle (Einzelspieler: dasselbe Programm,
@@ -45,6 +53,9 @@ B.UI = B.UI or {}
 local U = B.UI
 
 local DROP_RANGE = 3    -- Kacheln: so nah am eigenen Koederplatz gibt es "Koederplatz aufgeben" (Plan 6.8)
+local WAKE_WAIT_MS = 5000   -- F3: so lange wartet Fuettern / Traenken hoechstens darauf, dass ein schlafender Baer aufsteht
+-- F3: Phasen des Ruhe-Treibers, in denen er gerade aufsteht (client/BanditsNPCBearPose.lua)
+local RISING = { standup = true, wakeup = true, wakealarm = true, wakecurl = true, curlout = true }
 
 -- ---------------------------------------------------------------------------
 -- Kleine Helfer
@@ -171,6 +182,39 @@ function U.HelpAsk(playerObj, v)
 end
 
 -- ---------------------------------------------------------------------------
+-- F3 (PLAN_F3.md 5.3; Kevin 13.11.2026 Antwort 6e): Fuettern / Traenken wecken einen schlafenden Baeren sanft.
+-- wakeAsk: schlaeft der EIGENE Baer laut Sicht, eine Bitte "Wake" { id } an den Schreiber (B.Ask: Einzelspieler B.Handle direkt,
+-- Mehrspieler sendClientCommand; der Schreiber prueft Besitz und Typ selbst). Nur auf Klick.
+-- U.WakeWait(action): fuer waitToStart der Fuetter- und der Traenk-Aktion (shared/TimedActions) -- true, solange gewartet werden soll:
+-- der Baer schlief beim ersten Blick laut Sicht und schlaeft noch oder steht gerade auf (U.PosePhase), hoechstens WAKE_WAIT_MS seit dem
+-- ersten Blick. Schlief er nie: sofort false. So startet die Aktion nie in das Aufsteh-Bild hinein und haengt nie.
+-- getTimestampMs: V:client/Foraging/ISBaseIcon.lua:485.
+-- ---------------------------------------------------------------------------
+local function wakeAsk(playerObj, animal)
+    local v = nil
+    if B.ViewOf and viewMe() then v = B.ViewOf(animal) end
+    if type(v) ~= "table" or v.id == nil or v.slp ~= true or not ownTame(playerObj, v) then return end
+    B.Ask(playerObj, "Wake", { id = v.id })
+end
+
+function U.WakeWait(action)
+    local a = type(action) == "table" and action.animal or nil
+    if a == nil or not B.ViewOf then return false end
+    local v = B.ViewOf(a)
+    if type(v) ~= "table" then return false end
+    local now = getTimestampMs()
+    if action.wakeAt == nil then
+        if v.slp ~= true then return false end
+        action.wakeAt = now
+    end
+    if now < action.wakeAt or now - action.wakeAt >= WAKE_WAIT_MS then return false end
+    if v.slp == true then return true end
+    local ph = nil
+    if U.PosePhase then ph = U.PosePhase(v.id) end
+    return ph ~= nil and RISING[ph] == true
+end
+
+-- ---------------------------------------------------------------------------
 -- Klick-Handler: stellen nur Aktionen an
 -- ---------------------------------------------------------------------------
 
@@ -182,11 +226,29 @@ local function onFeed(playerObj, animal, food)
     if not animal:isExistInTheWorld() then return end               -- ISAnimalContextMenu.lua:88
     local sq = animal:getSquare()                                   -- :90
     if not sq then return end
+    wakeAsk(playerObj, animal)                                      -- F3: schlaeft er, vorher sanft wecken
     ISTimedActionQueue.clear(playerObj)                             -- client/ISUI/ISWorldObjectContextMenu.lua:1056
     -- equip holt das Stueck bei Bedarf selbst aus der Tasche (transferIfNeeded, ISWorldObjectContextMenu.lua:2606-2612)
     ISWorldObjectContextMenu.equip(playerObj, playerObj:getPrimaryHandItem(), food, true, false)    -- ISAnimalContextMenu.lua:93
     if luautils.walkAdj(playerObj, sq, true) then                   -- ISWorldObjectContextMenu.lua:2564 (keepActions)
         ISTimedActionQueue.add(BanditsNPCBearFeedAction:new(playerObj, animal, food))   -- ISAnimalContextMenu.lua:94
+    end
+end
+
+-- F3 (PLAN_F3.md 5.2): Wasser geben -- hingehen, den Behaelter bei Bedarf aus der Tasche holen, dann die Zeitaktion. Reihenfolge wie
+-- U.MendAsk oben (V:client/ISUI/ISWorldObjectContextMenu.lua:426-428: walkAdj leert die Warteschlange, transferIfNeeded und die Aktion
+-- kommen danach hinein). Der Behaelter wird NICHT in die Hand gelegt (Vanilla ruestet ihn aus, ISAnimalContextMenu.lua:498 -- hier bleibt
+-- die Waffe in der Hand; das Bild in der Hand setzt die Aktion selbst, setOverrideHandModels). Nimmt nichts: das tut der Schreiber in
+-- complete() (B.DrinkComplete). Schlaeft der Baer, vorher die Bitte "Wake".
+local function onWater(playerObj, animal, item)
+    if not playerObj or not animal or not item then return end
+    if not animal:isExistInTheWorld() then return end               -- ISAnimalContextMenu.lua:494
+    local sq = animal:getSquare()                                   -- :496
+    if not sq then return end
+    wakeAsk(playerObj, animal)
+    if luautils.walkAdj(playerObj, sq) then                         -- :496
+        ISWorldObjectContextMenu.transferIfNeeded(playerObj, item)  -- ISWorldObjectContextMenu.lua:427
+        ISTimedActionQueue.add(BanditsNPCBearDrinkAction:new(playerObj, animal, item))  -- Form ISAnimalContextMenu.lua:499
     end
 end
 
@@ -251,11 +313,15 @@ end
 -- Tier-Menue
 -- ---------------------------------------------------------------------------
 
--- Tooltip der freien Punkte: Stand des Balkens und der Hinweis auf die Mischung.
-local function tipStatus(option, v)
+-- Tooltip der freien Punkte: Stand des Balkens und der Hinweis auf die Mischung. F3: am GEZAEHMTEN Baeren steht oben der Wert von jetzt
+-- aus der Sicht (field "hun" -> "Hunger 35%", "tru" -> "Trust 62%"; Schluessel der Schild-Zahlen), wenn die Sicht ihn traegt.
+local NOW_KEY = { hun = "UI_BN_Bear_Tag_Hunger", tru = "UI_BN_Bear_Tag_Trust" }
+local function tipStatus(option, v, field)
     local name = nil
     if v and type(v.tame) == "number" and v.st ~= "tame" then
         name = U.T("UI_BN_Bear_Hud_Taming", math.floor(v.tame))
+    elseif v and v.st == "tame" and field ~= nil and NOW_KEY[field] and type(v[field]) == "number" then
+        name = U.T(NOW_KEY[field], math.floor(v[field] + 0.5))
     end
     setTip(option, name, U.T("UI_BN_Bear_Tip_Mix"))
 end
@@ -290,7 +356,7 @@ local function addFeed(menu, playerObj, animal, v, me, key)
         setGray(feedOpt, U.T("UI_BN_Bear_Menu_NoFood"))
         return
     end
-    tipStatus(feedOpt, v)
+    tipStatus(feedOpt, v, "hun")
     local sub = ISContextMenu:getNew(menu)                                      -- ISAnimalContextMenu.lua:273
     menu:addSubMenu(feedOpt, sub)                                               -- :274
     for _, row in ipairs(rows) do
@@ -308,7 +374,49 @@ local function addPet(menu, playerObj, animal, v, me, key)
             return
         end
     end
-    tipStatus(petOpt, v)
+    tipStatus(petOpt, v, "tru")
+end
+
+-- F3 (PLAN_F3.md 5.2): "Give water to the cub/bear" am eigenen gezaehmten Baeren -- Untermenue der Wasser-Behaelter wie Vanilla:
+-- playerObj:getInventory():getAllWaterFluidSources(true) V:client/ISUI/Animal/ISAnimalContextMenu.lua:466, :isEmpty() :472, :size() /
+-- :get(i) :483-484, Beschriftung item:getName() .. " (" .. round(item:getFluidContainer():getAmount() * 1000, 2) .. " mL)" :485 (round:
+-- Definition V:shared/env.lua:1), gleiche Beschriftung nur einmal :486-489; Punkt mit Untermenue :468 / :480-481, Bild :469, grau ohne Wasser
+-- mit Vanillas Text :473-476. Grau mit Grund aus der Sicht ueber die Regel des Kerns B.CheckDrink(Eintrag, Spielerschluessel) -> ok,
+-- Grund (faehrt mit, am Boden, nicht durstig); fehlt sie (Kern ohne F3), bleibt der Punkt frei und der Schreiber entscheidet.
+-- Existenz-Riegel wie "Bandage": ohne die Zeitaktion kein Punkt. Der Tooltip nennt den Durst von jetzt.
+local function addWater(menu, playerObj, animal, v, key)
+    if BanditsNPCBearDrinkAction == nil then return end
+    local opt = menu:addOption(U.TB("UI_BN_Bear_Menu_Water", v.bd), nil, nil)
+    opt.iconTexture = getTexture("Item_WaterDrop.png")
+    if B.CheckDrink then
+        local ok, whyKey, whyVal = B.CheckDrink(v, key)
+        if not ok then
+            setGray(opt, U.WhyText(whyKey, whyVal, v.bd))
+            return
+        end
+    end
+    local items = playerObj:getInventory():getAllWaterFluidSources(true)
+    if items:isEmpty() then
+        opt.notAvailable = true
+        local tip = ISWorldObjectContextMenu.addToolTip()
+        tip:setName(getText("ContextMenu_NoWaterItemFound"))
+        opt.toolTip = tip
+        return
+    end
+    local name = nil
+    if type(v.thr) == "number" then name = U.T("UI_BN_Bear_Tag_Thirst", math.floor(v.thr + 0.5)) end
+    setTip(opt, name, U.T("UI_BN_Bear_Menu_WaterTip"))
+    local sub = ISContextMenu:getNew(menu)
+    menu:addSubMenu(opt, sub)
+    local seen = {}
+    for i = 0, items:size() - 1 do
+        local item = items:get(i)
+        local text = item:getName() .. " (" .. round(item:getFluidContainer():getAmount() * 1000, 2) .. " mL)"
+        if not seen[text] then
+            sub:addOption(text, playerObj, onWater, animal, item)               -- Form ISAnimalContextMenu.lua:487
+            seen[text] = true
+        end
+    end
 end
 
 -- Zustand des Jungen laut Sicht (Regel des Kerns B.ModeOf, Plan 5.3: nil und alles andere heisst "stay"; F1: follow / stay / sit /
@@ -480,6 +588,8 @@ local function cubMenu(context, playerObj, animal, name, nth)
     addPet(menu, playerObj, animal, v, me, key)
     -- B1b: nur am eigenen gezaehmten Jungen und nur, wenn die Sicht es kennt (Fremde sehen die Punkte gar nicht, Plan 1.1, 1.6).
     if v and v.id ~= nil and v.st == "tame" and key ~= nil and v.owner == key then
+        -- F3: "Give water" (PLAN_F3.md 5.2) gleich nach Fuettern / Streicheln
+        addWater(menu, playerObj, animal, v, key)
         addMode(menu, playerObj, v)
         addName(menu, playerObj, v)
         -- B1c: "Call to me" (Plan 1.5)

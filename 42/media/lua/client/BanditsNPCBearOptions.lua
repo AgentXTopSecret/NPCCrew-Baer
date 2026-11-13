@@ -15,6 +15,13 @@
 -- TagSize, MarkerSize, WinSize, Titel Keys, KeyNear, KeyFar. Keine Zeile mehr in Vanillas Tastaturbelegung (keyBinding).
 -- F2 (PLAN_F2.md 3.2; Kevin ENT:237 '"DODGE" ein/aus'): nach WinSize die Schaltbox TagDodge (Vorgabe an) -- "DODGE" schwebt ueber dem
 -- eigenen Baeren, wenn ein Angriff ihn verfehlt (client/BanditsNPCBearFx.lua U.HudFloat). Reihenfolge: ..., WinSize, TagDodge, Titel Keys, ...
+-- F3 (Lauf baer-f3, PLAN_F3.md 9; Kevin 08.11.2026 "bei bedarf noch mehr balken hunger/essen", 11.11. "jeden wert einzelnd"): nach
+-- TagStamina vier Auswahlen TagHunger, TagThirst, TagTired, TagTrust (Aus / Balken / Zahl, Vorgabe AUS -- die Werte stehen im Baeren-
+-- Fenster) und nach TagDodge die Schaltbox TagSleep (z Z z ueber schlafenden Baeren, Vorgabe an; client/ISUI/BanditsNPCBearZz.lua).
+-- Das HERZ bei maximalem Vertrauen hat bewusst KEINEN eigenen Eintrag (Kevin 13.11.2026: "oder das herz wird nur angezeigt wenn die
+-- namens anzeige vom baeren an ist") -- es haengt an TagShow bzw. am Schalter "Name tag" des Baeren. Reihenfolge jetzt: TagShow,
+-- TagHealth, TagStamina, TagHunger, TagThirst, TagTired, TagTrust, TagAge, TagSize, MarkerSize, WinSize, TagDodge, TagSleep, Titel Keys,
+-- KeyNear, KeyFar. Vanilla speichert je Id (ModOptions.ini), die Reihenfolge der Seite aendert keine gespeicherte Einstellung.
 -- addKeyBind(id, Name, Taste, Tooltip): V:client/PZAPI/ModOptions.lua:182-204 (getValue :191 = Tastencode), Aufrufer derselben Form
 -- B:client/BanditModOptions.lua:14. AUSNAHME von der Regel "hier stehen Schluessel": der NAME einer Tasten-Zeile ist schon
 -- uebersetzt (getText auf Dateiebene wie Bandits :12-14) -- Vanilla beschriftet die Zeile mit getText(option.name)
@@ -61,7 +68,8 @@ local U = B.UI
 local PAGE = "BanditsNPCBear"
 local CACHE_MS = 1000
 
--- Zwischenspeicher je Wert: { v = Wert oder nil, at = ms }. Gedeckelt durch die festen Ids dieser Seite (B1d: 5, B1e: 6, F1: 7, F1B: 9, F2: 10).
+-- Zwischenspeicher je Wert: { v = Wert oder nil, at = ms }. Gedeckelt durch die festen Ids dieser Seite (B1d: 5, B1e: 6, F1: 7, F1B: 9, F2: 10,
+-- F3: 15).
 local cache = {}
 
 local function err(msg)
@@ -97,6 +105,24 @@ if PZAPI and PZAPI.ModOptions and PZAPI.ModOptions.create then
     st:addItem("UI_BN_Bear_MO_Off", true)
     st:addItem("UI_BN_Bear_MO_Bar")
     st:addItem("UI_BN_Bear_MO_Number")
+    -- F3 (PLAN_F3.md 9): Hunger, Durst, Muedigkeit, Vertrauen ueber jedem gezaehmten Baeren -- je Index 1 Aus (Vorgabe), 2 Balken,
+    -- 3 Zahl ("Hunger 35%"). Bauform wie TagStamina (addComboBox :121, addItem :131).
+    local hu = o:addComboBox("TagHunger", "UI_BN_Bear_MO_Hunger", "UI_BN_Bear_MO_HungerTip")
+    hu:addItem("UI_BN_Bear_MO_Off", true)
+    hu:addItem("UI_BN_Bear_MO_Bar")
+    hu:addItem("UI_BN_Bear_MO_Number")
+    local th = o:addComboBox("TagThirst", "UI_BN_Bear_MO_Thirst", "UI_BN_Bear_MO_ThirstTip")
+    th:addItem("UI_BN_Bear_MO_Off", true)
+    th:addItem("UI_BN_Bear_MO_Bar")
+    th:addItem("UI_BN_Bear_MO_Number")
+    local ti = o:addComboBox("TagTired", "UI_BN_Bear_MO_Tired", "UI_BN_Bear_MO_TiredTip")
+    ti:addItem("UI_BN_Bear_MO_Off", true)
+    ti:addItem("UI_BN_Bear_MO_Bar")
+    ti:addItem("UI_BN_Bear_MO_Number")
+    local tr = o:addComboBox("TagTrust", "UI_BN_Bear_MO_Trust", "UI_BN_Bear_MO_TrustTip")
+    tr:addItem("UI_BN_Bear_MO_Off", true)
+    tr:addItem("UI_BN_Bear_MO_Bar")
+    tr:addItem("UI_BN_Bear_MO_Number")
     -- B1d: Alter-Zeile ("Day 12 - half-grown in 3 day(s)"), Vorgabe an.
     o:addTickBox("TagAge", "UI_BN_Bear_MO_Age", true, "UI_BN_Bear_MO_AgeTip")
     -- Groesse von Schild UND Balken: 100 = Small (Stand B1b), 150 = Medium, 200 = Large. Stufen statt stufenlos, weil
@@ -125,15 +151,16 @@ if PZAPI and PZAPI.ModOptions and PZAPI.ModOptions.create then
     ws:addItem("UI_BN_Bear_MO_Pct300")
     -- F2 (PLAN_F2.md 3.2): "DODGE" ueber dem eigenen Baeren an/aus (Vorgabe an). addTickBox :64-86 wie TagShow oben.
     o:addTickBox("TagDodge", "UI_BN_Bear_MO_Dodge", true, "UI_BN_Bear_MO_DodgeTip")
+    -- F3 (PLAN_F3.md 8): z Z z ueber schlafenden Baeren an/aus (Vorgabe an). addTickBox :64-86 wie TagDodge.
+    o:addTickBox("TagSleep", "UI_BN_Bear_MO_Sleep", true, "UI_BN_Bear_MO_SleepTip")
     -- F1B (PLAN_F1B.md 3.1; Kevin 12.11.2026, Kopf dieser Datei): die zwei Tasten des Baeren-Fensters. addTitle :28-30 (gezeichnet mit
     -- getText, V:client/OptionScreens/MainOptions.lua:2803-2804); addKeyBind :182-204 mit SCHON UEBERSETZTEM Namen (getText wie
     -- B:client/BanditModOptions.lua:14 -- Grund im Kopf), Tooltip als Schluessel. Vorgaben aus U.KEY_DEF (oben).
     o:addTitle("UI_BN_Bear_MO_Keys")
     o:addKeyBind("KeyNear", getText("UI_BN_Bear_MO_KeyNear"), U.KEY_DEF.KeyNear, "UI_BN_Bear_MO_KeyNearTip")
     o:addKeyBind("KeyFar", getText("UI_BN_Bear_MO_KeyFar"), U.KEY_DEF.KeyFar, "UI_BN_Bear_MO_KeyFarTip")
-    -- Spaeter (NICHT jetzt anlegen; ENTSCHEIDUNGEN.md "Anzeige ueber dem Baeren"): Hunger, Durst, Muedigkeit je als Auswahl
-    -- Aus / Balken / Zahl wie TagHealth, sobald es die Werte gibt (Beduerfnisse, Schlafen). "DODGE" steht seit F2 oben (TagDodge).
-    -- Gelesen wird alles ueber U.Opt(id, vorgabe); jeder neue Schluessel in allen sieben UI.json.
+    -- Hunger, Durst, Muedigkeit, Vertrauen und das z Z z stehen seit F3 oben (TagHunger ... TagTrust, TagSleep), "DODGE" seit F2
+    -- (TagDodge). Gelesen wird alles ueber U.Opt(id, vorgabe); jeder neue Schluessel in allen acht UI.json.
 else
     err("PZAPI.ModOptions is not available -- the bear display page (Options > Mods) was not created; the defaults apply")
 end

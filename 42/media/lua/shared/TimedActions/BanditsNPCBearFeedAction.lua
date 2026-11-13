@@ -13,6 +13,10 @@
 -- server/BanditsNPCBearGrow.lua; SP in start(), MP-Server in serverStart(); geloescht in complete()/stop()/serverStop(), Deckel busyMs).
 -- Die Klasse ist eine GLOBALE Variable mit dem Namen ihres Typs und new() nennt seine Parameter wie die Felder: beides verlangt
 -- die Engine fuer Netz-Aktionen (Form Vanilla shared/TimedActions/Animals/ISFeedAnimalFromHand.lua:3 und :66-74).
+-- F3 (Lauf baer-f3, PLAN_F3.md 5.1, 5.3; Kevin 13.11.2026 Antwort 6e "Fuettern/Traenken wecken kurz"): am gezaehmten Baeren senkt das
+-- Fuettern den Hunger (B.FeedComplete im Kern; "satt" lehnt ab, ohne ein Stueck zu nehmen). Schlaeft er, hat das Menue vorher um sanftes
+-- Wecken gebeten (Bitte "Wake", client/BanditsNPCBearMenu.lua); waitToStart wartet hoechstens 5 s darauf (U.WakeWait, nur Client /
+-- Einzelspieler). Kommt die Bitte nie an, weckt der Schreiber in complete() selbst (f3/schnittstelle.md K3) -- nichts haengt.
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -37,10 +41,13 @@ function BanditsNPCBearFeedAction:isValid()
     return self.character:getInventory():contains(self.food)
 end
 
--- Erst zum Tier drehen: ISPetAnimal.lua:9-12.
+-- Erst zum Tier drehen: ISPetAnimal.lua:9-12. F3: dann -- nur wenn er laut Sicht schlief -- kurz auf das Aufwachen warten (U.WakeWait,
+-- client/BanditsNPCBearMenu.lua, Deckel 5 s; B.UI gibt es nur auf einem Client bzw. im Einzelspieler).
 function BanditsNPCBearFeedAction:waitToStart()
     self.character:faceThisObject(self.animal)
-    return self.character:shouldBeTurning()
+    if self.character:shouldBeTurning() then return true end
+    local ui = B.UI
+    return ui ~= nil and ui.WakeWait ~= nil and ui.WakeWait(self) == true
 end
 
 -- Figur und Junges sehen sich an: ISPetAnimal.lua:16-17.

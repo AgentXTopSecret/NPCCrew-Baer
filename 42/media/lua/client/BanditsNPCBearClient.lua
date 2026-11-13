@@ -7,7 +7,9 @@
 -- zwei Tasten (Optionen-Seite), der Fusszeile und des Wachstums-Schalters, zwei neue Werte, "Tag_AgeDone" entfaellt; F2 = B5a,
 -- PLAN_F2.md 2.7, 4.1, 4.4, Nachtrag 11: Texte des Kampfs, Am Boden, Verband, Show damage, Melee damage, Kills, Alters-Deckel; der neue
 -- Befehl "Fx" Schreiber -> Client wird an B.OnFx weitergereicht -- shared/BanditsNPCBearFoe.lua, KERN); Aussehen (Lauf baer-aussehen,
--- PLAN_AUSSEHEN.md 10): 27 Texte des Aussehen-Knopfs (Namen, Knopf, Tooltips, Meldung, Ablehnungen des Schreibers mit Big-Fassung).
+-- PLAN_AUSSEHEN.md 10): 27 Texte des Aussehen-Knopfs (Namen, Knopf, Tooltips, Meldung, Ablehnungen des Schreibers mit Big-Fassung);
+-- F3 (Lauf baer-f3, PLAN_F3.md 11; Kevin 13.11.2026): 91 Texte fuer Beduerfnisse, Vertrauen, Schlafen, Traenken und das Fenster
+-- Variante B (2 geaendert, 2 entfernt), dazu U.SleepColor -- die EINE Schlaf-Farbe fuer z Z z, Chip und Schild-Zeile.
 --
 -- Laeuft im Einzelspieler und auf jedem MP-Client (der dedizierte Server laedt client/ nicht). Diese Datei entscheidet NICHTS:
 -- sie nimmt die Sicht ("Sync") und die Meldungen ("Note") des Schreibers an, zeigt Meldungen ueber der Figur und bittet beim
@@ -24,6 +26,20 @@ BanditsNPC.Bear = BanditsNPC.Bear or {}
 local B = BanditsNPC.Bear
 B.UI = B.UI or {}
 local U = B.UI
+
+-- F3 (PLAN_F3.md 8, 10.1; Kevin 13.11.2026 "Hellblau, ueber dem Kopf"): die EINE Schlaf-Farbe -- z Z z (client/ISUI/BanditsNPCBearZz.lua),
+-- Chip "Sleeping" (client/ISUI/BanditsNPCBearWinParts.lua) und Schild-Zeile "sleeping" (client/ISUI/BanditsNPCBearHud.lua). Der Wert
+-- gehoert dem Kern (B.CFG.sleepCol = { r, g, b }, auch als Felder r / g / b); fehlt er oder ist er Unsinn: derselbe Wert als Rueckfall.
+-- Reines Tabellen-Lesen, gibt r, g, b.
+local SLEEP_COL = { 0.70, 0.85, 1.00 }
+function U.SleepColor()
+    local c = B.CFG and B.CFG.sleepCol
+    if type(c) == "table" then
+        local r, g, b = tonumber(c[1] or c.r), tonumber(c[2] or c.g), tonumber(c[3] or c.b)
+        if r and g and b and r == r and g == g and b == b then return r, g, b end
+    end
+    return SLEEP_COL[1], SLEEP_COL[2], SLEEP_COL[3]
+end
 
 -- ---------------------------------------------------------------------------
 -- Englische Ersatztexte (wortgleich mit Translate/EN/UI.json; attrappe/ober/texte_pruefen.py vergleicht beide). Gebraucht, wenn ein
@@ -139,7 +155,7 @@ U.EN = {
     UI_BN_Bear_MO_Page = "NPC Crew: Bear",
     UI_BN_Bear_MO_Title = "Display above bears",
     UI_BN_Bear_MO_TagShow = "Show name tags above tamed bears",
-    UI_BN_Bear_MO_TagShowTip = "Name and state. The taming bar always shows.",
+    UI_BN_Bear_MO_TagShowTip = "Name and state - and the heart at full trust. The taming bar always shows.",
     UI_BN_Bear_MO_TagSize = "Size of the display above bears (%%)",
     UI_BN_Bear_MO_TagSizeTip = "100, 150 or 200.",
     -- B1d (PLAN_B1D.md 6.7): Werte-Zeilen des Schilds, Stufen, Faehigkeiten, zwei Meldungen des Kerns, Anzeige-Optionen
@@ -223,7 +239,6 @@ U.EN = {
     UI_BN_Bear_Win_Carry = "Can carry",
     UI_BN_Bear_Win_CarryVal = "up to %1",
     UI_BN_Bear_Win_None = "--",
-    UI_BN_Bear_Win_Later = "Coming later:",
     UI_BN_Bear_Win_Hunger = "Hunger",
     UI_BN_Bear_Win_Thirst = "Thirst",
     UI_BN_Bear_Win_Tired = "Tiredness",
@@ -231,7 +246,6 @@ U.EN = {
     UI_BN_Bear_Win_HealthTip = "Grows every day as your bear grows, and with Toughness. Heals slowly on its own, faster with a bandage.",
     UI_BN_Bear_Win_StaminaTip = "Drops while your bear runs and fights, and comes back while it rests. Empty: it backs off to catch its breath. More with Endurance.",
     UI_BN_Bear_Win_CarryTip = "How much your bear could carry. Its own inventory and bags come later.",
-    UI_BN_Bear_Win_LaterTip = "Hunger, thirst, tiredness and trust come with a later version. Nothing is counted yet.",
     UI_BN_Bear_Win_Sk_Agi = "Agility",
     UI_BN_Bear_Win_Sk_Vit = "Toughness",
     UI_BN_Bear_Win_Sk_Con = "Endurance",
@@ -274,7 +288,7 @@ U.EN = {
     UI_BN_Bear_Win_RoamTip = "It strolls around freely, but never further than %1 tiles from this spot.",
     UI_BN_Bear_Win_ComeTip = "It walks over to you and waits there. If it is stuck, use Unstuck.",
     UI_BN_Bear_Win_PassiveTip = "Your bear stays out of fights and comes back to you. A cub never fights anyway.",
-    UI_BN_Bear_Win_TagTip = "Shows the name above this bear - only on your screen.",
+    UI_BN_Bear_Win_TagTip = "Shows the name above this bear - and its heart at full trust. Only on your screen.",
     UI_BN_Bear_Win_TagOffAll = "All name tags are switched off in Options - Mods.",
     UI_BN_Bear_Win_RoamInfo = "Roams within %1 tiles",
     UI_BN_Bear_Win_Active = "This is its current order.",
@@ -422,6 +436,99 @@ U.EN = {
     UI_BN_Bear_Why_LookMissing = "This look is not available in this world.",
     UI_BN_Bear_Why_LookNoRoom = "There is no free spot right next to your cub.",
     UI_BN_Bear_Why_LookNoRoomBig = "There is no free spot right next to your bear.",
+    -- F3 (Lauf baer-f3, PLAN_F3.md 11; Kevin 13.11.2026): Beduerfnisse, Vertrauen, Schlafen, Traenken, Fenster Variante B -- wortgleich
+    -- mit Translate/EN/UI.json (Quelle _arbeit/baer_zaehmen/f3/werkzeug/texte_f3_daten.py). Entfernt: Win_Later, Win_LaterTip.
+    UI_BN_Bear_Win_Needs = "Needs",
+    UI_BN_Bear_Win_Fish = "Fish",
+    UI_BN_Bear_Win_Inv = "Inventory",
+    UI_BN_Bear_Win_Nose = "Nose alerts",
+    UI_BN_Bear_Why_Later = "Comes with a later version.",
+    UI_BN_Bear_Win_St_Sleep = "Sleeping",
+    UI_BN_Bear_Win_HintSleep = "Your bear is asleep. Any order wakes it up.",
+    UI_BN_Bear_Win_HintTired = "Your bear is too tired to fight. Let it sleep.",
+    UI_BN_Bear_Win_HintNoTrust = "Your bear refuses to fight: it does not trust you enough. Feed, water and pet it.",
+    UI_BN_Bear_Win_NeedNow = "Now: %1 (%2%%)",
+    UI_BN_Bear_Win_HungerTip = "Rises all day. Feed your bear to bring it down - the bigger it gets, the more it needs. Hungry: slower, weaker, grows slower. Starving: no growth, no healing, and it loses health down to %1%%. It never dies of hunger.",
+    UI_BN_Bear_Win_ThirstTip = "Rises faster than hunger. Right-click your bear: Give water. Thirsty: slower, weaker, grows slower. Parched: no growth, no healing, and it loses health down to %1%%. It never dies of thirst.",
+    UI_BN_Bear_Win_TiredTip = "Rises while your bear is awake - also while it follows you, and faster when it runs and fights. From %1%% it is too tired to fight and only backs off. At %2%% it falls asleep where it stands and sleeps until it is rested. Any order wakes it. If you sleep while it follows you, it lies down next to you.",
+    UI_BN_Bear_Win_SleepHeal = "Asleep it heals much faster - after a few hours of sleep it is almost full.",
+    UI_BN_Bear_Win_TrustTip = "Grows when you feed, water and pet your bear and when it is well cared for. Drops when it goes hungry or thirsty, or goes down. High trust: its needs rise up to %1%% slower. Low trust: they rise up to %2%% faster. Below %3%% it refuses to fight.",
+    UI_BN_Bear_Win_TrustHeart = "At full trust a heart shows above its name tag.",
+    UI_BN_Bear_Win_TrustDays = "Last days, oldest first: %1.",
+    UI_BN_Bear_Win_TrustDay0 = "well cared for",
+    UI_BN_Bear_Win_TrustDay1 = "hungry or thirsty",
+    UI_BN_Bear_Win_TrustDay2 = "starving or parched",
+    UI_BN_Bear_Win_NeedEffect2 = "Right now: it is slower and weaker and grows slower.",
+    UI_BN_Bear_Win_NeedEffect3 = "Right now: it is much weaker, does not grow and does not heal on its own.",
+    UI_BN_Bear_Win_NeedEffect4 = "Right now: it is losing health.",
+    UI_BN_Bear_Win_Word_Hun1 = "Full",
+    UI_BN_Bear_Win_Word_Hun2 = "Peckish",
+    UI_BN_Bear_Win_Word_Hun3 = "Hungry",
+    UI_BN_Bear_Win_Word_Hun4 = "Starving",
+    UI_BN_Bear_Win_Word_Thr1 = "Quenched",
+    UI_BN_Bear_Win_Word_Thr2 = "A little thirsty",
+    UI_BN_Bear_Win_Word_Thr3 = "Thirsty",
+    UI_BN_Bear_Win_Word_Thr4 = "Parched",
+    UI_BN_Bear_Win_Word_Tir1 = "Rested",
+    UI_BN_Bear_Win_Word_Tir2 = "Tired",
+    UI_BN_Bear_Win_Word_Tir3 = "Very tired",
+    UI_BN_Bear_Win_Word_Tir4 = "Exhausted",
+    UI_BN_Bear_Win_TrustWord1 = "Wary",
+    UI_BN_Bear_Win_TrustWord2 = "Unsure",
+    UI_BN_Bear_Win_TrustWord3 = "Trusting",
+    UI_BN_Bear_Win_TrustWord4 = "Close",
+    UI_BN_Bear_Win_TrustWord5 = "Devoted",
+    UI_BN_Bear_Tag_Hunger = "Hunger %1%%",
+    UI_BN_Bear_Tag_Thirst = "Thirst %1%%",
+    UI_BN_Bear_Tag_Tired = "Tired %1%%",
+    UI_BN_Bear_Tag_Trust = "Trust %1%%",
+    UI_BN_Bear_Tag_Sleep = "sleeping",
+    UI_BN_Bear_Tag_TiredBack = "too tired - backing off",
+    UI_BN_Bear_Tag_TrustBack = "won't fight - backing off",
+    UI_BN_Bear_MO_Hunger = "Hunger above tamed bears",
+    UI_BN_Bear_MO_HungerTip = "Off, as a bar or as a number (percent). The bar fills as hunger grows.",
+    UI_BN_Bear_MO_Thirst = "Thirst above tamed bears",
+    UI_BN_Bear_MO_ThirstTip = "Off, as a bar or as a number (percent). The bar fills as thirst grows.",
+    UI_BN_Bear_MO_Tired = "Tiredness above tamed bears",
+    UI_BN_Bear_MO_TiredTip = "Off, as a bar or as a number (percent). The bar fills as a bear gets tired.",
+    UI_BN_Bear_MO_Trust = "Trust above tamed bears",
+    UI_BN_Bear_MO_TrustTip = "Off, as a bar or as a number (percent). The heart at full trust belongs to the name tag, not to this setting.",
+    UI_BN_Bear_MO_Sleep = "z Z z above sleeping bears",
+    UI_BN_Bear_MO_SleepTip = "Small letters rise above a sleeping bear - only on your screen.",
+    UI_BN_Bear_Menu_Water = "Give water to the cub",
+    UI_BN_Bear_Menu_WaterBig = "Give water to the bear",
+    UI_BN_Bear_Menu_WaterTip = "Drinks from the container until the thirst is gone or the water runs out.",
+    UI_BN_Bear_Why_NotHungry = "Your cub is not hungry.",
+    UI_BN_Bear_Why_NotHungryBig = "Your bear is not hungry.",
+    UI_BN_Bear_Why_NotThirsty = "Your cub is not thirsty.",
+    UI_BN_Bear_Why_NotThirstyBig = "Your bear is not thirsty.",
+    UI_BN_Bear_Why_NoWater = "There is no water in that container.",
+    UI_BN_Bear_Note_Fed = "Fed. Hunger %1%%.",
+    UI_BN_Bear_Note_Drank = "Watered. Thirst %1%%.",
+    UI_BN_Bear_Note_Hungry = "Your cub is hungry.",
+    UI_BN_Bear_Note_HungryBig = "Your bear is hungry.",
+    UI_BN_Bear_Note_Starving = "Your cub is starving! Feed it.",
+    UI_BN_Bear_Note_StarvingBig = "Your bear is starving! Feed it.",
+    UI_BN_Bear_Note_Thirsty = "Your cub is thirsty.",
+    UI_BN_Bear_Note_ThirstyBig = "Your bear is thirsty.",
+    UI_BN_Bear_Note_Parched = "Your cub is parched! Give it water.",
+    UI_BN_Bear_Note_ParchedBig = "Your bear is parched! Give it water.",
+    UI_BN_Bear_Note_Tired = "Your cub is worn out and needs sleep.",
+    UI_BN_Bear_Note_TiredBig = "Your bear is too tired to fight. Let it sleep.",
+    UI_BN_Bear_Note_NoTrust = "Your cub hardly trusts you. Feed, water and pet it.",
+    UI_BN_Bear_Note_NoTrustBig = "Your bear refuses to fight: it does not trust you enough. Feed, water and pet it.",
+    UI_BN_Bear_Note_TrustBack = "Your cub trusts you again.",
+    UI_BN_Bear_Note_TrustBackBig = "Your bear trusts you enough to fight for you again.",
+    UI_BN_Bear_Note_Collapse = "Your cub is exhausted and lies down to sleep.",
+    UI_BN_Bear_Note_CollapseBig = "Your bear is exhausted and lies down to sleep.",
+    UI_BN_Bear_Note_Rested = "Your cub wakes up, well rested.",
+    UI_BN_Bear_Note_RestedBig = "Your bear wakes up, well rested.",
+    UI_BN_Bear_Note_TrustTop = "Your cub trusts you completely.",
+    UI_BN_Bear_Note_TrustTopBig = "Your bear trusts you completely.",
+    UI_BN_Bear_Win_MealLine = "A good meal - a jar of honey, for example - lowers it by about %1%% at its size.",
+    UI_BN_Bear_Win_BowlLine = "Half a litre of water lowers it by about %1%% at its size.",
+    UI_BN_Bear_Win_MeleeWeak = "Weakened by hunger or thirst: %1%% of its normal damage.",
+    UI_BN_Bear_Win_NeedsOff = "Hunger, thirst and tiredness are switched off in the sandbox settings.",
 }
 
 local KEY_HEAD = "UI_BN_Bear_"

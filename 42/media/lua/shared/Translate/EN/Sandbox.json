@@ -23,6 +23,8 @@
     "Sandbox_BanditsNPC_BearHealPercent_tooltip": "How fast a tamed bear heals on its own. 100 = normal (about 1 percent of its health per in-game hour), 0 = never on its own. Bandages are not affected.",
     "Sandbox_BanditsNPC_BearMaxPerPlayer": "Bears per player",
     "Sandbox_BanditsNPC_BearMaxPerPlayer_tooltip": "How many tamed bears one player may have.",
+    "Sandbox_BanditsNPC_BearNeedsPercent": "Bear: needs speed (percent)",
+    "Sandbox_BanditsNPC_BearNeedsPercent_tooltip": "How fast a tamed bear gets hungry, thirsty and tired. 100 = normal, 200 = twice as fast. 0 = off: hunger, thirst and tiredness stay at zero, and it only sleeps next to its sleeping owner. Trust keeps working.",
     "Sandbox_BanditsNPC_BearSkillAgeCap": "Bear: skills limited by age",
     "Sandbox_BanditsNPC_BearSkillAgeCap_tooltip": "A cub learns up to level 3, a half-grown bear up to 6, a strong bear up to 8; only a full-grown bear reaches 10. Experience it already has stays. Off: no limit.",
     "Sandbox_BanditsNPC_BearSkillXpPercent": "Bear: skill learning speed (percent)",

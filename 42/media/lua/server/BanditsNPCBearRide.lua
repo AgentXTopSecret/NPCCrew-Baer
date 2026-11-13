@@ -61,6 +61,9 @@ local function clearBodySession(s)
     s.tx, s.ty, s.td0 = nil, nil, nil                 -- Nachbesserung B1c B5 (Ziel des eigenen Befehls)
     s.sat, s.satAt, s.backTried, s.standUntil, s.roam = nil, nil, nil, nil, nil
     s.fight, s.fleeSaid, s.huffAt, s.shieldObj, s.hpComAt, s.fstSent, s.holdAt = nil, nil, nil, nil, nil, nil, nil
+    -- F3 (PLAN_F3.md 6.8): + Schlaf (der neue Koerper hat kein Liege-Bild; die Register-Marke loescht B.SleepStop VOR diesem Aufruf),
+    -- Aufsteh-Halt, Aufschrecken, Rueckzugs-Grund. Nicht: die Sperren (slpLock, wokeUntil -- harmlos) und die Beduerfnisse (Register).
+    s.slp, s.wkUntil, s.wkSpan, s.wka, s.fsy = nil, nil, nil, nil, nil
 end
 
 -- ---------------------------------------------------------------------------
@@ -120,6 +123,9 @@ function B.PlaceCub(rec, x, y, z, why, body, look)
         if look == "std" then rec.look = nil else rec.look = look end
     end
     s.obj = a
+    -- F3 (PLAN_F3.md 6.8): jeder neue Koerper (Wachsen, Aussehen-Knopf, Call / Unstuck, Aussteigen, C1) beendet den Schlaf ohne Bild
+    -- (server/BanditsNPCBearSleep.lua); Hunger, Durst, Muedigkeit, Vertrauen bleiben (Register)
+    if B.SleepStop then B.SleepStop(rec, "swap") end
     clearBodySession(s)
     s.placedAt = getTimestampMs()       -- Nachbesserung B1e B1: erst im naechsten Bild in der Welt (B.HandleCall wartet darauf)
     rec.x, rec.y, rec.z = math.floor(x), math.floor(y), math.floor(z or 0)
@@ -157,6 +163,7 @@ function B.RideBoard(rec, a, o, players)
         return false
     end
     local s = B.Ses(rec.id)
+    if B.SleepStop then B.SleepStop(rec, "ride") end      -- F3: einsteigen beendet den Schlaf ohne Bild
     s.obj = nil
     clearBodySession(s)
     s.ride = { offMs = nil, lostMs = nil, failN = 0 }

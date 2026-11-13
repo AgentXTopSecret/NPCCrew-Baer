@@ -17,6 +17,9 @@
 -- F2 = B5a (PLAN_F2.md 3.1, 4.4, 4.5): Stellwerte fuer Kampf, Gegner, Am Boden und Verband in B.CFG (standMs entfaellt: B.StandMs aus der
 -- Clip-Tabelle B.CLIPS, shared/BanditsNPCBearFightRules.lua), Sandbox-Optionen (3.1; mit dem Nachtrag 11: BearFleeHits statt BearFleeHealth,
 -- BearSkillXpPercent, BearSkillAgeCap -- zusammen 11), der Weg Schreiber -> Clients fuer Kampf-Ereignisse (B.Fx).
+-- F3 (PLAN_F3.md 2-7, 12; Kevins Antworten 13.11.2026, f3/KEVIN_ANTWORTEN.md): Stellwerte fuer Hunger, Durst, Muedigkeit, Vertrauen und
+-- Schlaf in B.CFG (Block "F3"), EIN neuer Sandbox-Regler BearNeedsPercent (Beduerfnis-Tempo in Prozent, 0 = aus) -> 13 Optionen. Keine
+-- Uhrzeiten (Kevin 6c): Schlaf nur nach Muedigkeit. Formeln: shared/BanditsNPCBearNeedRules.lua.
 --
 -- Laeuft ohne NPC Crew und ohne Bandits. Am Ende kopiert das Uebernahme-Skript diese Datei unveraendert nach NPC Crew.
 -- Deshalb: auf Dateiebene wird kein fremdes Modul eingefangen; jeder Griff nach BanditsNPC.X passiert zur Laufzeit und
@@ -245,6 +248,48 @@ B.CFG = B.CFG or {
     zombieDmg = 6, banditDmg = 12,                        -- BearZombieDamage / BearBanditDamage (Lebenspunkte je Treffer)
     bandageHeal = 6.0, bandageHours = 8,                  -- BearBandageHeal (Prozent je Spielstunde) / BearBandageHours
     downedHours = 12,                                     -- BearDownedHours
+    -- F3 (PLAN_F3.md 2-6; Kevins Antworten 13.11.2026). Werte 0..100: Hunger / Durst / Muedigkeit fuellen sich mit dem Druck, Vertrauen
+    -- mit dem Guten. Zeiten in Echtzeit-ms, Tempi je Spielstunde bzw. Spieltag. KEINE Uhrzeit-Werte (Kevin 6c: kein Nachtfenster, kein
+    -- Mittagsschlaf) -- geschlafen wird nur nach der Muedigkeit und neben dem schlafenden Besitzer.
+    needHunDay = 50, needThrDay = 75,                     -- Anstieg Hunger / Durst je Spieltag (x Tempo BearNeedsPercent x Vertrauen)
+    mealsAt = { 1, 2, 4 }, bowlsAt = { 1, 2, 3 },         -- Kevins Tabelle: Mahlzeiten / Schalen je Tag an den Stuetzpunkten statAt
+    mealPts = 20, bowlL = 0.5,                            -- eine Mahlzeit = 20 Vanilla-Hungerpunkte (ein Honig) / eine Schale = 0,5 l
+    needFull = 5,                                         -- darunter satt / nicht durstig: Fuettern / Traenken lehnt ab
+    needPeckish = 25, needHungry = 50, needStarve = 80,   -- Stufen Hunger UND Durst (Wort / ab hier Folgen / schwere Folgen)
+    needStartHun = 20, needStartThr = 20, needStartTir = 10,   -- Erst-Werte beim Zaehmen und fuer Baeren von vor F3
+    needStaK = 0.5, needDmgK1 = 0.85, needDmgK2 = 0.7, needGrowK1 = 0.5,   -- Ausdauer-Erholung / Schaden ab 50 / ab 80 / Wachsen ab 50
+    -- Kevin 6a (13.11.): "geht sein leben auf 1% runter aber er stirbt nie daran" -- Prozent Leben je Spielstunde bei Hunger / Durst 100
+    needHpHun = 2, needHpThr = 3, needHpFloor = 0.01,
+    -- Sicht ab so vielen Punkten Aenderung / Meldung je Art hoechstens je (Spielstunden). Der Spiegel folgt dem Wachstums-Commit
+    -- (growCommitH, server/BanditsNPCBearGrow.lua), sofort bei einem Stufenwechsel.
+    needViewStep = 2, needNoteH = 6,
+    -- Muedigkeit: Anstieg je Spielstunde wach an statAt (ausgewachsen = der Wert der NPC-Crew-Figuren, NPC Crew shared/BanditsNPCNeeds.lua
+    -- Rate.fatigue 1,6), Punkte je verbrauchte Ausdauer-Leiste, Abbau im Schlaf am Boden / im Bett (NPC Crew shared/BanditsNPCPrograms.lua:
+    -- 15 x 0,7 bzw. 15 je Spielstunde; das Bett kommt spaeter)
+    tirAt = { 2.4, 2.0, 1.6 }, tirPerBar = 3, tirAccBars = 10,
+    tirSleepGround = 10.5, tirSleepBed = 15,
+    tirTired = 40, tirHeavy = 70,                         -- Woerter; ab tirHeavy erholt sich die Ausdauer halb so schnell
+    -- Kevin 3 (13.11.): "ab 90% sagt das er zu muede ist zum kaempfen und erst bei 100% von selbst einschlaeft"; Kevin 6c: "schlaeft er
+    -- solange bis er auf 0% runter ist". tirStaySleep: in Bleiben / Sitz / Frei schon ab hier hinlegen (100 = kein Unterschied; Frage an Kevin)
+    tirVery = 90, tirCollapse = 100, tirWake = 0, tirStaySleep = 100,
+    -- Vertrauen (Kevin 4): Start, bis so viel langsamere (viel Vertrauen) bzw. schnellere (wenig) Beduerfnisse, UNTER trRefuse weigert er
+    -- sich zu kaempfen, ab trHeart das Herz ueber dem Namensschild (Kevin 7)
+    trStart = 50, trBonus = 0.2, trMalus = 0.2, trRefuse = 15, trHeart = 100,
+    trWordAt = { 20, 40, 60, 80 },                        -- Stufen der Woerter (Wary / Unsure / Trusting / Close / Devoted)
+    trFeedFav = 4, trFeedOk = 3, trFeedSnack = 1, trPet = 2, trDrink = 1,   -- Punkte aus der Hand
+    trMix = 1.5, trHandDay = 12,                          -- Faktor im Wechsel / Deckel der Hand-Punkte je Spieltag
+    trDayGood = 3, trDayBad = -3, trDayWorst = -8, trDaySleep = 2, trDown = -5,   -- Tagesabschluss / am Boden
+    trDayMinH = 6, trSleepH = 6,                          -- ein Tag zaehlt ab so vielen gezaehlten Stunden / Schlaf-Bonus ab so vielen Stunden
+    -- Schlaf: Gefahr in so vielen Kacheln weckt; Kevin 2 (13.11.): "nach 5 sec schlaftrunken wieder kaempft"; Sperren nach Gefahr / Laerm
+    -- bzw. nach Befehl, Fuettern, Traenken; Weg zum schlafenden Besitzer; dessen Meldung veraltet; ab so lange "schlaeft schon" (Sicht slpO)
+    sleepWakeR = 8, wokeFleeMs = 5000, sleepDangerLockMs = 30000, sleepRetryMs = 60000,
+    sleepWalkMs = 30000, sleepNear = 2.5, sleepArrive = 1.2, ownSleepStaleMs = 90000, sleepOldMs = 5000, sleepAlarmPadMs = 300,
+    sleepBackNear = 3,          -- Nachbesserung C2: legt er sich nach dem Fuettern / Traenken so nah am alten Platz wieder hin, bleibt es still
+    refuseSayMs = 60000,                                  -- "zu muede" / "kein Vertrauen" beim verweigerten Kampf hoechstens je
+    -- sleepClips false = Ersatzbild Sitzen (F3); F3b (Modell-Lauf baer-schlaf-pose) schaltet um, wenn ALLE GLBs die Clips haben.
+    -- sleepCol (Kevin 5: Hellblau), tagSleepK, zzHeadE, curlAfterMs liest die OBERFLAECHE (z Z z, Schild, Pose-Treiber)
+    sleepClips = false, sleepCol = { 0.70, 0.85, 1.00 }, tagSleepK = 0.65, zzHeadE = 0.30, curlAfterMs = 90000,
+    drinkTime = 150, drinkMinL = 0.05,                    -- Dauer der Traenk-Aktion / kleinste Menge (Vanillas Schritt, ISGiveWaterToAnimal.lua:34)
 }
 
 -- F1 (PLAN_F1.md 0.3, 6.1): die vier Modi eines gezaehmten Baeren. Jeder andere Wert (auch nil) gilt als "stay" (B.ModeOf).
@@ -254,6 +299,7 @@ B.MODES = B.MODES or { follow = true, stay = true, sit = true, roam = true }
 -- Sandbox-Kuerzung (Kevin 12.11.2026: von 39 bleiben genau ZWOELF, "ja okay den rest koennen wir so lassen"; PLAN_AUSSEHEN.md 9): zehn
 -- alte (Namen unveraendert, gespeicherte Werte gelten weiter) und zwei neue Prozent-Regler; alle anderen sind feste Werte in B.CFG
 -- (Block "Sandbox-Kuerzung"). Gruppen fuer die spaeteren Kategorien-Seiten (baer/NAEHTE.md "Sandbox-Seiten") im Kommentar.
+-- F3 (Kevin 13.11.2026): + BearNeedsPercent -> DREIZEHN.
 B.OPTS = B.OPTS or {
     BearCubsEnabled = { def = true },                            -- Finden und Zaehmen
     BearCubForestRate = { def = 3, min = 1, max = 5 },           -- Finden und Zaehmen
@@ -274,6 +320,9 @@ B.OPTS = B.OPTS or {
     -- Heil-Tempo in Prozent (Kampf, Leben und Heilen): ersetzt BearHealAwake / BearHealSleep -- multipliziert beide (B.CFG.healAwake /
     -- healSleep); 100 = die bisherigen Vorgaben, 0 = heilt nie von selbst. Der Verband (B.CFG.bandageHeal) bleibt gleich.
     BearHealPercent = { def = 100, min = 0, max = 1000 },
+    -- F3 (Kevin 13.11.2026, Antwort 6b: EIN neuer Regler) -- Beduerfnisse: Tempo von Hunger, Durst und Muedigkeit in Prozent
+    -- (100 = Vorgabe; 0 = alle drei aus und auf 0 gehalten, kein Schlaf aus Muedigkeit). Schlaf-Abbau und Vertrauen skalieren nicht.
+    BearNeedsPercent = { def = 100, min = 0, max = 1000 },
     -- F2 11.4 (Kevin 12.11. ~05:10): Lerntempo der Faehigkeiten in Prozent (Gutschrift und Minuten-Deckel) / Deckel nach dem Alter --
     -- Wachsen und Faehigkeiten
     BearSkillXpPercent = { def = 100, min = 25, max = 1000 },
