@@ -723,3 +723,8 @@ Kevin ~00:20 (Bild Fenster: Nahkampfschaden "70 je Treffer", Durst 100 %, Toolti
    Nachtrag Kevin ~00:22, woertlich: *"mit info dann im screen"* -> der Tooltip sagt beim roten Wert genau, WARUM und wie viel: normaler Schaden, jetziger Schaden,
    Grund mit Stand (z. B. "Durst 100 %: 70 % des normalen Schadens (normal 100, jetzt 70)"); Prankenhieb/Biss/Zerfleischen je mit normal -> jetzt.
    Kevin ~00:25 (Auswahl "Soll Muedigkeit auch den Schaden senken?"): *"Nein, so lassen"* -> Schaden sinkt nur durch Hunger/Durst wie heute.
+Kevin ~00:30 (Frage "ab wie viel % essen/trinken ... aus dem inventar?"; Auswahl "Soll er auch Wasser aus seinem Inventar selbst trinken?"): *"Ja, ab 50 % Durst"*
+-> **Korrektur-Lauf:** Selbst trinken aus dem eigenen Inventar wie das Fressen (T `server/BanditsNPCBearInv.lua` ~985-1010: ab needHungry 50 bis unter needPeckish 25,
+   hoechstens je invEatGapMin 10 Spielminuten): ab Durst 50 % trinkt er aus Behaeltern mit Wasser (Satz-Feld fl, nur "w"/"tw" -- anderes nimmt das Inventar gar nicht an),
+   eine Schale (bowlL 0,5 l) je Schluck, bis Durst unter 25 %; die Flasche bleibt (leer) im Inventar -- nichts verloren, nichts doppelt. Wie beim Traenken aus der Hand (B.DrinkNeedL).
+   Vorschlag: sauberes Wasser zuerst, dann ungekochtes (Baeren trinken aus Fluessen). Zaehlt NICHT als "satt getraenkt" fuer das Vertrauen (das gibt es nur beim Traenken aus der Hand).
