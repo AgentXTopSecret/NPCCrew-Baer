@@ -803,3 +803,4 @@ Kevin ~02:25, woertlich: *"aber der muss eine futter und trinken einstellung bek
    (NC `UI_BN_Food_Eats` / `UI_BN_Food_AllowAll`, nur Vorbild, nichts kopieren) -- je Futterart erlaubt / nie, gilt fuer Inventar und Troege; (3) TRINKEN: nur Wasser
    (sauber/ungekocht), Milch und alles andere nie -- steht schon (00:45).
 Kevin ~02:30 (Auswahl "Ist der Vorschlag mit markierten Troegen und Futterliste so gut?"): *"Ja, so"* -> (1) nur markierte Troege, (2) Futterliste frisst/nie im Fenster, (3) nur Wasser: FEST.
+Kevin ~02:31, woertlich: *"aber mehrer troege sind erlaubt zu zuweisen"* -> beliebig viele Troege markierbar (Futter und Wasser je Trog); Deckel nur gegen Missbrauch (Vorschlag 32 je Baer).
