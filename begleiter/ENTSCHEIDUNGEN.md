@@ -750,3 +750,10 @@ Kevin ~01:05, woertlich: *"so jz hoer zu wichtige regeln beim schlafen/ausgelogt
    anderer Spieler ihn geladen und die Werte liefen weiter). Heute schon eingefroren (T `server/BanditsNPCBearNeeds.lua:424-430` counts()): abgemeldet, nicht geladen
    (kein Koerper, nicht mitfahrend). NEU: (a) -- heute steigen Hunger/Durst auch im Schlaf (:459-461 "auch im Schlaf"), nur die Muedigkeit sinkt; Schlaf-Abbau der
    Muedigkeit bleibt. NEU: (d). Leben-Abzug bei 100 und Tagesabschluss/Vertrauen folgen derselben Sperre (nur gezaehlte Stunden); kein Nachholen nach dem Laden (maxDtH).
+Kevin ~01:10, woertlich: *"wenn ein spieler schlaeft schlaeft der baer immer mit legt sich neben dem spieler und wenn der spieler vorspult das spiel dan legt er sich auch zum schlafen hin ausser gegner sind in der naehe dann kaempft er"*
+-> **Korrektur-Lauf:** (1) Besitzer schlaeft -> Baer schlaeft IMMER mit, geht zu ihm und legt sich daneben (heute schon: B._ownSleep, Weg sleepWalkMs 30 s, sleepNear 2,5;
+   T `server/BanditsNPCBearSleep.lua:99-135`) -- auch aus Bleiben/Sitz/Frei; ist er zu weit weg zum Hingehen (nicht in der Naehe geladen), schlaeft er, wo er ist (Claudes Annahme).
+   (2) NEU: Besitzer spult vor (Spieltempo > 1) -> der Baer legt sich ebenfalls schlafen (neben dem Besitzer wie bei 1). Beleg Vanilla: `UIManager.getSpeedControls():getCurrentGameSpeed()`
+   V:`client/Context/ISMenuContextWorld.lua:37`, V:`client/Foraging/ISBaseIcon.lua:63`; der Client meldet es mit der Bitte "Sleep" (heute player:isAsleep(), client/BanditsNPCBearPose.lua).
+   Im MP gibt es Vorspulen nur, wenn alle schlafen -> dort zaehlt (1). (3) Gegner in der Naehe (sleepWakeR 8) -> er wacht auf und kaempft (heute: wokeFleeMs 5 s schlaftrunken).
+   Zusammen mit der Regel 01:05: solange er schlaeft, steigen seine Beduerfnisse nicht.
