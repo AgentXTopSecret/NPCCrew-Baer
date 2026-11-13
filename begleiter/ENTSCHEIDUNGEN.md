@@ -738,3 +738,4 @@ Kevin ~00:50, woertlich: *"ich will das er isst + trinkt bis er 0% erreicht also
 -> **Korrektur-Lauf:** Selbst fressen UND selbst trinken aus dem Inventar: Start ab 50 %, weiter bis 0 % (heute Fressen bis unter needPeckish 25 -> neu bis 0;
    eigener Wert z. B. invEatStop = 0). Trinken nimmt beim letzten Schluck nur, was bis 0 fehlt (B.DrinkNeedL), der Rest bleibt im Behaelter. Beim Fressen beim letzten
    Stueck das kleinste passende waehlen, damit wenig verfaellt (was unter 0 ginge, verfaellt heute -- B.Feed). Bei Saft/Milch/Limo nicht geantwortet -> nur Wasser.
+Kevin ~00:55, woertlich: *"ja der darf natuerlich auch dreckiges wasser trinken weils ein tier ist"* -> bestaetigt: sauberes UND ungekochtes (TaintedWater) Wasser, ohne Krankheit; sauberes zuerst.
