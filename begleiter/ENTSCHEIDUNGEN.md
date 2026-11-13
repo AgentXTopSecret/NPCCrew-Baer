@@ -682,3 +682,32 @@ Grundlage `../_arbeit/baer_zaehmen/f4/PLAN_F4.md` Abschnitt 23 und FORSCHUNG_F4.
      **wenn noetig**: das Ziel entfernt sich bzw. laeuft vor ihm her (vor allem ein Zombie, der den BESITZER verfolgt -> "Retter-Move"), nicht als Standard-Angriff;
      Abklingzeit. Weg: eigener Clip mit Vorwaerts-Bewegung im Clip (Tiere bewegen sich laut Forschung baer-laerm ueber die Bewegung im Clip, `getDeferredMovement` --
      im Lauf erst belegen, dass ein Clip mit Wurzel-Bewegung den Baeren wirklich traegt). Reihenfolge: nach dem Kampf-Lauf (der zuerst Zombies auf den Baeren lenkt).
+
+### 13.11.2026 ~23:45 -- F4 im Spiel: Inventar (Kevins Test nach dem Rezept-Fix)
+Woertlich (Bild Baer-Inventar, Fusszeile "bis zu 50 auf einmal"): *"guck mal nur 50 items aufienmal verschieben unsere npc crew mod kann da mehr das bitte noch genauso anpassen wie essen/trinken anzeige ist die genauso wie bei npc crew?"*
+-> **Fest fuer den Korrektur-Lauf:** "Alle" verschiebt den GANZEN Stapel wie NPC Crew (NC `client/ISUI/BanditsNPCInventoryWindow.lua:153-164` moveStack: ganze Zeile, haelt beim
+   ersten Stueck an, das nicht passt, und sagt es). Grenzen nur noch Traglast und 1000 Stueck, kein 50er-Deckel je Klick. Heute: Nehmen nimmt schon den ganzen Stapel
+   (Aktionen zu je invTakeMax 50, T `client/BanditsNPCBearInvClient.lua:460-480`), Geben ist bei 50 gedeckelt (U.InvGiveWhy) und stellt je Stueck EINE Zeitaktion an
+   (40 + 8 x kg Ticks, `:436-458`) -> grosse Stapel dauern. Lauf prueft, ob Geben wie Nehmen buendelweise geht -- verlustfrei (rote Linie). Fusszeile ohne "(bis zu 50)", 8 Sprachen.
+-> **Frage offen (Claude 23:45 gestellt):** Anzeige der Zeilen wie NPC Crew? NPC Crew zeigt den Vanilla-Namen MIT Zustand in der Zeile ("Frisch, ...", "Verdorben, ...";
+   NC `client/ISUI/BanditsNPCItemList.lua:212` item:getName), "x5", Gewicht rechts. Baer heute: Name OHNE Zustand, "x5", kg rechts; frisch/alt/verdorben, gekocht,
+   Fuellung, "frisst er selbst" nur im Tooltip (T `client/ISUI/BanditsNPCBearInvWindow.lua:270-290`, `:318-327`), Verdorbenes in Warnfarbe.
+Dazu Kevins Frage zum Vertrauen (Bild: 44 % nach dem ersten Tag): erklaert -- Tag mit Hunger UND Durst ueber 50 = -3 -3 (B.TrustDayClose); keine Aenderung verlangt.
+Kevin ~23:50, woertlich: *"nur die 1000 items einstellen zum gleichzeitig verschieben"* -> **Anzeige bleibt wie sie ist** (Zustand im Tooltip). **Korrektur-Lauf:** "Alle"
+   verschiebt bis zu 1000 Stueck auf einmal (Geben: `GIVE_MAX 50` in T `client/BanditsNPCBearInvClient.lua:41`; Nehmen/Server: `invTakeMax 50` in
+   T `shared/BanditsNPCBear.lua:301`, Server `server/BanditsNPCBearInv.lua:648`, `:697`) -> beide 1000 (= invMaxItems); Grenzen nur Traglast und 1000; Fusszeile ohne "(bis zu 50)".
+Kevin ~23:50, woertlich: *"aber vertrauen muessen wir rebalancen das geht viel zu schnell hoch und runter"* -> **Korrektur-Lauf: Vertrauen deutlich langsamer hoch UND runter**
+   (heute bestenfalls +17 je Tag auf 0..100, schlechter Tag -6, ausgehungert -16, am Boden -5). Zahlen: Kevins Antwort folgt (Fragen 23:50: Tage bis +100, Kosten eines schlechten Tags).
+Kevin ~23:55 statt der Auswahl, woertlich: *"ganz anders erst ab 90% trinken/durst soll er vertrauen verlieren wie heute die regel, aber gewinnen soll er immer nur beim streicheln und wenn das essen und trinken 100 erreicht bei den aktionen um 0,5 aber immer nur 1x pro tag darf das passieren genauso wie der verlust  des vertrauens, sag mir wie du das verstanden hast und wie lange man dann braucht im optimal fall auf 100 vertraune zu kommen"*
+   Claudes Verstaendnis (an Kevin zur Bestaetigung): Gewinn NUR noch je Spieltag hoechstens einmal je Quelle +0,5: Streicheln; satt gefuettert (Hunger durch Fuettern auf 0 %);
+   satt getraenkt (Durst durch Traenken auf 0 %) -> bestenfalls +1,5 am Tag -> 0 bis +100 in ~67 Spieltagen. Weg: Hand-Punkte je Futter, Wechsel-Bonus, "gut versorgt" +3, Schlaf +2.
+   Verlust NUR noch, wenn Hunger oder Durst an dem Tag 90 % erreicht, hoechstens einmal am Tag (Betrag offen: Vorschlag -0,5); "am Boden -5" faellt weg (offen).
+Kevin ~00:00, woertlich: *"ja ausser das trinken/essen bei 90% direkt - 5 machen und wenn der baer down (todesschutz) geht verliert er -10 und ab 1% hp (durch hunger/durst) auch -10 vertrauen wenn das geht ;D  muesste aber weil er bei downed ja mehr als 1% hp hat und unter 1% waere er ja sowieso tot ^^"*
+-> **ENDGUELTIGE VERTRAUENS-REGEL fuer den Korrektur-Lauf** (Skala -100..+100, Start 0, wie 21:40 entschieden):
+   GEWINN nur so, je Quelle hoechstens 1x je Spieltag, je +0,5: Streicheln / satt gefuettert (Hunger durch Fuettern auf 0 %) / satt getraenkt (Durst durch Traenken auf 0 %).
+     Bestenfalls +1,5 am Tag -> 0 bis +100 in ~67 Spieltagen. Alles andere entfaellt (Punkte je Futter, Wechsel-Bonus, gut versorgt +3, Schlaf +2, Tages-Hand-Deckel).
+   VERLUST: Hunger erreicht 90 % -> SOFORT -5; Durst erreicht 90 % -> SOFORT -5 (je Wert hoechstens 1x je Spieltag). Kein Tagesabschluss-Verlust mehr (50/80-Stufen weg).
+     Am Boden (Todesschutz) -> -10 (heute trDown -5, T `server/BanditsNPCBearHurt.lua:154-155`), jedes Mal.
+     Leben faellt durch Hunger/Durst auf 1 % (needHpFloor, T `server/BanditsNPCBearNeeds.lua:479-494`) -> -10, hoechstens 1x je Spieltag.
+     Kevins Begruendung stimmt mit dem Code: der Hunger-Abzug stoppt bei 1 % und laeuft nie, solange er am Boden ist (rec.down == nil, :485); am Boden kommt nur aus Treffern.
+   Bleibt: Bedarf bis 20 % langsamer/schneller je Vertrauen, Kampf-Verweigerung unter -70, Herz bei +100, Balken gruen/rot mit Zahl.
