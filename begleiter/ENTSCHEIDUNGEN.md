@@ -716,3 +716,9 @@ Kevin ~00:10 (Bild: .357 Magnum Patrone (94), Knoepfe Geben / Alle), woertlich: 
    (Traglast, 1000); OK/Abbrechen; bei 1 Stueck sofort geben wie heute. "Alle" bleibt. Beleg Vanilla-Zahlenfeld: `ISTextBox:new(0, 0, 280, 180, text, wert, nil, onClick, playerNum, ...)`
    V:`client/ISUI/Animal/ISAnimalContextMenu.lua:791` (Wolle-Menge), `setOnlyNumbers(true)` V:`client/Entity/ISUI/BuildRecipe/ISWidgetBuildControl.lua`. Ob auch "Nehmen" ein Zahlenfeld bekommt: an Kevin gefragt.
 Kevin ~00:15 (Auswahl): *"Ja, auch Nehmen"* -> auch "Nehmen" oeffnet bei einem Stapel das Zahlenfeld (vorbelegt: ganzer Satz bzw. was in deine Tasche passt); 1 Stueck sofort wie heute; "Alle" bleibt.
+Kevin ~00:20 (Bild Fenster: Nahkampfschaden "70 je Treffer", Durst 100 %, Tooltip "Von Hunger oder Durst geschwaecht: 70%"), woertlich: *"die damage zahl soll rot werden und echte wert angezeigt werden wenn er durch hunger/muedigkeit etc wenigert dmg verursacht"*
+-> **Korrektur-Lauf:** Wert "Nahkampfschaden" (und die Zeilen Prankenhieb/Biss/Zerfleischen im Tooltip) in ROT, solange ein Schwaeche-Faktor wirkt (Sicht mdmgK < 1,
+   T `client/BanditsNPCBearWinData.lua:901-903`). Der Wert ist schon heute der echte (mdmg enthaelt den Faktor: normal 100, hungrig 85, Durst 100 % -> 70).
+   Muedigkeit senkt den Schaden heute NICHT (B.NeedK: ab 70 nur Ausdauer-Erholung halb, ab 90 kein Kampf) -- an Kevin gefragt, ob sie es soll.
+   Nachtrag Kevin ~00:22, woertlich: *"mit info dann im screen"* -> der Tooltip sagt beim roten Wert genau, WARUM und wie viel: normaler Schaden, jetziger Schaden,
+   Grund mit Stand (z. B. "Durst 100 %: 70 % des normalen Schadens (normal 100, jetzt 70)"); Prankenhieb/Biss/Zerfleischen je mit normal -> jetzt.
