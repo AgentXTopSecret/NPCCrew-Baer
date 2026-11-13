@@ -757,3 +757,5 @@ Kevin ~01:10, woertlich: *"wenn ein spieler schlaeft schlaeft der baer immer mit
    V:`client/Context/ISMenuContextWorld.lua:37`, V:`client/Foraging/ISBaseIcon.lua:63`; der Client meldet es mit der Bitte "Sleep" (heute player:isAsleep(), client/BanditsNPCBearPose.lua).
    Im MP gibt es Vorspulen nur, wenn alle schlafen -> dort zaehlt (1). (3) Gegner in der Naehe (sleepWakeR 8) -> er wacht auf und kaempft (heute: wokeFleeMs 5 s schlaftrunken).
    Zusammen mit der Regel 01:05: solange er schlaeft, steigen seine Beduerfnisse nicht.
+Kevin ~01:15, woertlich: *"dann nimm dein vorschlag fuer den mp"* -> (d) BESTAETIGT: weiter als ~70 Kacheln vom Besitzer (Ladeweite) = eingefroren, auch wenn ihn im MP ein
+   anderer Spieler geladen haelt; im SP faellt das mit "nicht geladen" zusammen. Wert als B.CFG (z. B. needFreezeR = 70), unter dem Lade-Rand von 76 Kacheln.
