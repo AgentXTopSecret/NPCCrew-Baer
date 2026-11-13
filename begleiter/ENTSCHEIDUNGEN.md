@@ -734,3 +734,7 @@ Kevin ~00:35, woertlich: *"kann der baer auch spaeter auf kisten zugreifen und e
 -> **Spaeter (B-Liste, nicht im Korrektur-Lauf):** der Baer frisst und trinkt selbst WIE VANILLAS NUTZTIERE -- aus Futtertroegen und Wassertroegen (B42-Tiere gehen selbst
    hin), in der Wildnis aus Fluss/See; NICHT aus Kisten. Erst Forschung: wie Vanilla-Tiere Troege finden und nutzen (IsoAnimal, Trog-Objekte; Belege Vanilla-Lua/Jar),
    ob das am Baeren (AnimSet buck, eigene Beduerfnisse statt Vanilla-Werte) mitlaeuft oder nachgebaut werden muss; MP und "nichts verloren/doppelt" am Trog. Passt zu F5 (Fischen/Nase).
+Kevin ~00:50, woertlich: *"ich will das er isst + trinkt bis er 0% erreicht also garnichtmehr hunrig oder drustig ist und ab 50% wieder isst/trinkt"*
+-> **Korrektur-Lauf:** Selbst fressen UND selbst trinken aus dem Inventar: Start ab 50 %, weiter bis 0 % (heute Fressen bis unter needPeckish 25 -> neu bis 0;
+   eigener Wert z. B. invEatStop = 0). Trinken nimmt beim letzten Schluck nur, was bis 0 fehlt (B.DrinkNeedL), der Rest bleibt im Behaelter. Beim Fressen beim letzten
+   Stueck das kleinste passende waehlen, damit wenig verfaellt (was unter 0 ginge, verfaellt heute -- B.Feed). Bei Saft/Milch/Limo nicht geantwortet -> nur Wasser.
