@@ -759,3 +759,8 @@ Kevin ~01:10, woertlich: *"wenn ein spieler schlaeft schlaeft der baer immer mit
    Zusammen mit der Regel 01:05: solange er schlaeft, steigen seine Beduerfnisse nicht.
 Kevin ~01:15, woertlich: *"dann nimm dein vorschlag fuer den mp"* -> (d) BESTAETIGT: weiter als ~70 Kacheln vom Besitzer (Ladeweite) = eingefroren, auch wenn ihn im MP ein
    anderer Spieler geladen haelt; im SP faellt das mit "nicht geladen" zusammen. Wert als B.CFG (z. B. needFreezeR = 70), unter dem Lade-Rand von 76 Kacheln.
+Kevin ~01:40 (Auswahl "Welchen Trinkwert soll der Baer bekommen?", Netzsuche `begleiter/bedarf_echte_baeren.md`): *"Mitte, ~6 %"*
+-> **Trinkbedarf = 6 % des Koerpergewichts je Spieltag.** Gewicht je Groesse (Claudes Annahme aus den Quellen, Kevin darf aendern): Junges ~25 kg, halbstark ~80 kg,
+   ausgewachsen ~250 kg (an statAt 0.35 / 0.75 / 1.35, dazwischen gleitend wie carryAt) -> **1,5 l / 4,8 l / 15 l am Tag** (heute 0,5 / 1 / 1,5 l; bowlsAt {1,2,3}
+   wird daraus abgeleitet: Liter / bowlL 0,5 -> 3 / 9,6 / 30 Schalen). Traenken aus der Hand und selbst trinken nehmen je Aktion so viel, wie bis 0 % fehlt (B.DrinkNeedL),
+   damit niemand 30 Mal klicken muss. Gilt fuer den Hunger-/Durst-Umbau "realistisch nach Groesse" (01:00); Futter-Zahlen noch offen (Netzsuche Futter folgt).
