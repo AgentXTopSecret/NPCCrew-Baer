@@ -5,6 +5,26 @@ ascocunt berreit und wenn die workflows durch sind nochmal alles speichern, stel
 berreit fuer die uebergabe und mach ein 5h std waechter an falls er beendet wird deswegen"*. **Statisch geprueft, nicht gespielt**, ausser wo "gespielt" steht.
 Die vorige Uebergabe (12.11. frueh) ist hiermit ersetzt; ihr Inhalt ist erledigt (F1b, F2, Kopfnaht, Generator-Modelle).
 
+## KURZ FUER DEN NEUEN ACCOUNT (Kevin 13.11.: "merk dir mal den aktuellen stand und was ich noch testen muss und ansteht als naechstes fuer meinen anderen claude account")
+**Stand:** Nichts laeuft, alles gesichert und gepusht (Test-Mod `NCBearTest` main **fda41e8**, Unterlagen `baer\` Zweig unterlagen). Woche 87 % (Reset Sa 14.11. 04:00).
+
+**Kevin TESTET (Spiel mit -debug neu starten, Wegwerf-Spielstand, nur NCBearTest; alles ungespielt):**
+1. F1b -- Fenster mit **E** nah am Baeren, Fern-Taste (Optionen > Mods > NPC Crew: Bear): `baer\spiel\anleitung_f1b.md`
+2. F2 -- Kampf, Fliehen, Am Boden/Aufhelfen, Verband, Schadenszahlen, Kills, Deutsch: `baer\spiel\anleitung_f2.md`
+3. Grosser Baer neu (Aufrichten/Bruellen, Nacken ohne roten Bogen): `NCBear_CubHere(4)`, `NCBear_CubTame(100)`, `NCBear_CubGrow(55)`, von vorn-oben ansehen
+4. Aussehen-Knopf + Sandbox (nur noch 12 Regler): `baer\spiel\anleitung_aussehen.md`
+5. Vergleiche: Generator-Baer mit schmaler Nase `NCBear_GenLive()`, Generator-Junges `NCBear_CubGen()` (`baer\spiel\anleitung_gen_junges_v2.md`)
+
+**Kevin ENTSCHEIDET (je mit Empfehlung in den Dateien):**
+- F3 Beduerfnisse + Schlafen: 6 Fragen am Ende von `_arbeit\baer_zaehmen\f3\PLAN_F3.md` ("Ja, alle so" nimmt jede Empfehlung).
+- Maul: darf die Lippenlinie 1,3-1,8 cm nach innen? Blatt `_arbeit\baer_maul\bilder\KEVIN_maul.png` (Abschnitt 3 Punkt 2).
+- Aussehen K1-K8 (`_arbeit\baer_zaehmen\aussehen\FORSCHUNG.md`, PLAN_AUSSEHEN.md): Namen der Aussehen, Generator-Junges waehlbar, Werkbank-Datei loeschen ...
+- F2-Kleinfragen (STAND.md Block "12.11. 15:08"); Generator-Junges: Gehen 0,34 oder Trippeln 0,51, gleich gross wie das Standard-Junge?
+
+**ALS NAECHSTES (neue Laeufe nur auf Kevins Wort, je Spur einer):** Funktion: F3-Bau (7 Agenten, Fenster-Variante B, nach Kevins F3-Antworten).
+Modell: Maul-Nachbesserung (nach Kevins Antwort) bzw. Schlafpose (8 Agenten, PLAN_F3 Abschnitt 11) / Liegen-Tot beider Baeren. Danach F4 Inventar,
+F5 Spuernase + Fischen, F6 Mehrspieler, Sandbox-Seiten (sobald NPC Crew die page-Namen meldet).
+
 ## 0. Zuerst lesen (in dieser Reihenfolge)
 1. `C:\Users\Kevin\.claude\CLAUDE.md` (global: max. 10 Agenten je Workflow, **UI-Bilder nur aus echtem Code**, neu 12.11.) und
    `C:\Users\Kevin\NPCCrew-Nebenprojekte\CLAUDE.md` (Werkstatt-Regeln: Deutsch/kurz, nie in NPC Crew schreiben, nur bei geschlossenem Spiel bzw. nicht
@@ -15,7 +35,7 @@ Die vorige Uebergabe (12.11. frueh) ist hiermit ersetzt; ihr Inhalt ist erledigt
    zeigen, wenn sie wirklich schoen sind; UI-Bilder per Zeichen-Mitschrift des echten Codes. **ABER: Kevin 20:10 "keinen neuen workflow mehr starten"** --
    neue Laeufe erst auf Kevins Wort im neuen Account.
 
-## 1. Was im Spiel ist (Test-Mod `C:\Users\Kevin\Zomboid\mods\NCBearTest`, Git main 99e0368, alles UNGESPIELT seit F1b)
+## 1. Was im Spiel ist (Test-Mod `C:\Users\Kevin\Zomboid\mods\NCBearTest`, Git main fda41e8, alles UNGESPIELT seit F1b)
 | Commit | Was | Kevins Test |
 |---|---|---|
 | db80ad6 | F1b: Baerenfenster mit **E** nah am Baeren, Fern-Taste in Optionen > Mods, V wieder Vanilla, Schalter Growth line | `baer\spiel\anleitung_f1b.md` |
@@ -23,6 +43,7 @@ Die vorige Uebergabe (12.11. frueh) ist hiermit ersetzt; ihr Inhalt ist erledigt
 | 71ce40a, 59973dc | Generator-Baer v2 (nur Vergleich `NCBear_GenLive()`), Kevins **schmale Nase** | Blatt `_arbeit\baer_gen_gross\v2\bilder\KEVIN_gen_gross_schmal.png` |
 | d5ab258 | **Grosser Baer** neu: Aufrichten/Bruellen wie ein echter Baer, Kevins roter Bogen am Nacken weg (Rest: ~0,1 s Kopfumriss am Ende des Aufrichtens, Nackenfell nah knittrig) | Blatt `_arbeit\baer_kopfnaht\bilder\KEVIN_kopfnaht.png`; Test in `_arbeit\baer_kopfnaht\gegen_bericht.md` (kevin_test) |
 | 99e0368 | **Generator-Junges v2** (nur Vergleich `NCBear_CubGen()`): kurze Beine, Baerenfuesse, Baerenschritt, groesseres Gesicht | `baer\spiel\anleitung_gen_junges_v2.md`; Fragen: Gehen 0,34 statt 0,52 Kacheln/s (Trippel-Variante 0,51 liegt in `_arbeit\baer_gen_junges\v2\beine\var_gehen3\`), gleich gross wie Standard? |
+| fda41e8 | **Aussehen-Knopf** im Baerenfenster (gross: 2c / Generator braun / Fototon; Junges: Standard / Generator-Junges) + **Sandbox 39 -> 12 Regler** | `baer\spiel\anleitung_aussehen.md` |
 
 ## 2. Laufende Laeufe (gestartet in Sitzung d5933cc7 -- `resumeFromRunId` gilt NUR dort)
 Transkripte: `C:\Users\Kevin\.claude\projects\C--Users-Kevin-NPCCrew-Nebenprojekte-baer\d5933cc7-7f9d-46b2-a3a8-0929595b654b\subagents\workflows\<Lauf-ID>\journal.jsonl`
@@ -74,7 +95,7 @@ Die Stand-Zeile oben in `baer\STAND.md` sagt, ob ein Lauf inzwischen fertig/eing
 - UI-Bild aus echtem Code: `_arbeit\baer_zaehmen\ui_entwurf\werkzeug\zeichne_entwurf.py` (Vorbild), F1/F2: `_arbeit\baer_zaehmen\f1_entwurf\`.
 - Gedaechtnis sichern: `python C:/Users/Kevin/Claude-Gedaechtnis/sichern.py`; dann Commit + Push in Test-Mod (main) und `baer\` (Zweig unterlagen, einfaches `git push`).
 
-## 6. Verbrauch und Waechter (alte Sitzung)
+## 6. Verbrauch und Waechter (alte Sitzung) -- ERLEDIGT: Waechter 13.11. ~01:00 geloescht, nichts laeuft mehr
 12.11. 20:13: Woche 75 % (Reset Sa 14.11. 04:00), 5 h 63 % (Reset 23:40). In der alten Sitzung laeuft ein Waechter (CronCreate, alle 10 min):
 Woche >= 95 % -> alle Laeufe anhalten (TaskStop), diese Datei mit dem Halt-Stand nachziehen, Commit/Push; 5-h-Limit -> nach dem Reset haengende
 Laeufe mit `resumeFromRunId` fortsetzen (nur in der alten Sitzung moeglich).
