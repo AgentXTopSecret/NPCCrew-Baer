@@ -744,3 +744,9 @@ Kevin ~01:00, woertlich: *"und ich will noch das hunger system aendern und das t
    gleich (Hunger +50, Durst +75 je Spieltag); nur die Menge waechst: Junges 1 Mahlzeit / 1 Schale, halbstark 2 / 2, ausgewachsen 4 / 3 (Mahlzeit = 20 Vanilla-Hungerpunkte
    = 1 Honig, Schale = 0,5 l -> ausgewachsen 1,5 l am Tag). Plan: zuerst Forschung mit Quellen (Futter- und Wasserbedarf echter Braunbaeren je Koerpergewicht, Jahreszeit;
    Vanilla-Kalorien/Hungerwerte der Spiel-Lebensmittel), dann Kevin zwei Varianten (realistisch / spielbar) mit Tabelle je Groesse zur Wahl, erst dann bauen.
+Kevin ~01:05, woertlich: *"so jz hoer zu wichtige regeln beim schlafen/ausgelogt/nicht geladen in der welt weit out of range  duerfen seine beduerfnisse nie steigen"*
+-> **FESTE REGEL (Korrektur-Lauf):** Hunger, Durst, Muedigkeit steigen NIE, wenn (a) der Baer schlaeft ODER sein Besitzer schlaeft (Zeitraffer im Bett), (b) der Besitzer
+   abgemeldet ist, (c) der Baer nicht geladen ist, (d) der Baer weit weg vom Besitzer ist (Vorschlag: weiter als die Ladeweite, ~70 Kacheln -- im MP haelt sonst ein
+   anderer Spieler ihn geladen und die Werte liefen weiter). Heute schon eingefroren (T `server/BanditsNPCBearNeeds.lua:424-430` counts()): abgemeldet, nicht geladen
+   (kein Koerper, nicht mitfahrend). NEU: (a) -- heute steigen Hunger/Durst auch im Schlaf (:459-461 "auch im Schlaf"), nur die Muedigkeit sinkt; Schlaf-Abbau der
+   Muedigkeit bleibt. NEU: (d). Leben-Abzug bei 100 und Tagesabschluss/Vertrauen folgen derselben Sperre (nur gezaehlte Stunden); kein Nachholen nach dem Laden (maxDtH).
