@@ -571,3 +571,114 @@ Grundlage `../_arbeit/baer_zaehmen/f4/PLAN_F4.md` Abschnitt 23 und FORSCHUNG_F4.
 * **Kevin 13.11. abends (F4 laeuft schon): Packtaschen +150 statt +50** (woertlich: *"okay aber die traglast kann man ja sicher noch leicht erhoehen oder? weil nur +50kg find ich aktuell zu wenig um ehrlich zu sein 😃 ich bin eher so bei +150 das der baer am ende dann bei 250kg ist das waere er doch oder?"*)
   -> **Fest:** Packtaschen geben **+150** (ausgewachsen 100 + 150 = **250 kg** bei Regler 100 %). Der Regler "Traglast %" (50-250) wirkt weiter nur auf die
   Grundlast, nicht auf die Taschen: hoechstens 250 + 150 = 400 kg (unter den 500, die Kevin am 08.11. abgelehnt hat). Halbstark mit Taschen 40 + 150 = 190.
+* **Kevin 13.11. ~21:15 zu Liegen/Tot** (woertlich: *"ja okay das ist gut genug dafuer der tot muss nicht so schoen sein haha"*): Liegen/Tot ist **abgenommen, so wie es ist**.
+  Die Kleinfragen des Laufs (K1 obere Beine in der Luft, K2 Junges Braun steifer, K3 Plumps-Ton frueh, K5 von hinten verdeckt, K6 Falten, Bein kurz im Bauch beim
+  Sturz) werden NICHT weiter verfolgt. Offen bleibt nur die Frage, ob F2 "Am Boden" spaeter die Seitenlage statt Sitzen zeigt (nicht beantwortet).
+* **Kevin 13.11. ~21:25: Bauch von unten verbessern** (woertlich: *"aber das baeren model koennen wir jederzeit noch verschoenern ohne das es den posen schadet oder? ^^"* --
+  *"weil von unten der bauch von den baer sieht ja noch verbesserungswuerdig aus sag ich mal ;D"*). -> **Auf die Modell-Liste nach der Pause:** Unterseite/Bauch
+  des grossen Baeren (beide Aussehen; Junge pruefen) schoener -- Fell/Textur und, wo noetig, Form; danach alle Posen (Sitzen, Aufrichten, Liegen/Tot, spaeter
+  Schlafpose) neu rendern und nachmessen (Liegen per `spiel/baer_kern_liegen.py` wiederholbar). Kevins Bild vorher erfragen (was genau stoert).
+  Nachtrag, woertlich: *"das hat man bei der todes animation gesehn"* -> gesehen auf dem Blatt `../_arbeit/baer_liegen/bilder/KEVIN_liegen.png`
+  (Spalte "nah, Blick 90 Grad (Bauch)" und die TON-Reihe): die Bauchseite des liegenden Baeren ist dort der Massstab.
+* **Kevin 13.11. ~21:40: Vertrauen von -100 % bis +100 %, Start bei 0** (woertlich: *"warte mal ich hab gesehn dass das vertrauen vom baeren bei 50% schon ist ist es so eingestellt das unter 50% negativ ist und ueber 0% psotiiv"* -- nach der Erklaerung: *"das ist nicht gut das must du bitte aendern ich will bei 0 starten und dann bis 100% und bis -100%"*).
+  -> **Fest (Korrektur an F3):** Vertrauen laeuft von **-100 % bis +100 %**, ein frisch gezaehmter Baer startet bei **0**. 0 = neutral; +100 = Beduerfnisse 20 % langsamer
+  und Herz ueber dem Namen; -100 = 20 % schneller; **unter -70 % weigert er sich zu kaempfen** (Kevin: "Unter -70 %", = alte Grenze 15). Anzeige: **normaler Balken mit
+  Zahl** (links -100, rechts +100, Zahl daneben, z. B. "-20 %"; Kevin waehlte das, nicht den Mittel-Balken). Alte Spielstaende umrechnen: neu = (alt - 50) x 2.
+  Kopf-Balken (TagTrust), Tooltips und Texte in acht Sprachen nachziehen. Einbau NACH F4 (F4-Staging enthaelt dieselben Dateien), als kleiner Lauf.
+  Nachtrag, woertlich: *"und bei negativ halt in einer negativen farbe und positiv eine positive = gruen ;D und negativ rot"* -> Balken (Fenster UND Kopf-Balken)
+  **gruen bei positivem, rot bei negativem Vertrauen** (bei 0 neutral grau); die Zahl daneben in derselben Farbe.
+* **Kevin 13.11. ~21:50, Fehler beim Aufrichten/Bruellen** (Spielbild `kevin_rear_schild_1113.webp`, `NCBear_AnimTest("rear")` am ausgewachsenen Baeren; woertlich: *"hier der erste fehler beim roar geht der text nicht hoeher und versperrt die sicht"*):
+  das Namensschild ("Baer von Dee", "folgt", Balken) bleibt beim Aufrichten auf der Steh-Hoehe und liegt dann mitten ueber Kopf/Brust. **Fix (im Korrektur-Lauf nach
+  F4, zusammen mit dem Vertrauen):** Schild (samt Herz, z Z z, Kopf-Balken) folgt der Pose -- beim Aufrichten weich mit dem Kopf nach oben und wieder herunter
+  (Zeitkurve des Clips bzw. was belegt ist), so dass es nie Kopf oder Gesicht verdeckt; gilt fuer alle Aussehen und Groessen (auch Generator-Baer mit altem Clip).
+  Dabei alle hohen/tiefen Posen mitpruefen (Aufrichten, Doppelschlag, Sitzen, Liegen/Tot, spaeter Schlafen). Pruefbild aus dem echten Code ueber Kevins Spielbild.
+  - **Nachtrag ~21:55, Spielbild beim Aufrichten von vorn** `kevin_rear_bauch_1113.webp` (woertlich: *"hier siehst du seinen bauch von unten sieht der noch komisch aus"*).
+    Claude sieht darin (vergroessert): Bauch und Brust als flache, hellere Platte zwischen den Vorderbeinen (wie ein Brett/Latz, kaum Fell, keine Rundung), unten
+    eine waagerechte Kante wie eine Hosennaht, Innenseite der Hinterbeine als Bogen ("Hose"); Rumpf von vorn ein langes Rechteck ohne Bauchwoelbung;
+    Vorderbeine haengen wie Aermel seitlich an der Platte; helle Flecken an den Hinterfuessen. **Massstab fuer den Bauch-Lauf** (neben KEVIN_liegen.png Spalte
+    Bauch): runder Bauch mit Fell und Struktur, kein Latz, keine Naht, Uebergang Brust-Bauch-Innenschenkel fliessend -- aus Kevins Kamera beim Aufrichten,
+    Sitzen und Liegen pruefen.
+  - Nachtrag ~22:00 zum Schild-Fehler, woertlich: *"der hp balken geht auch nicht hoeher dabei der stoert also auch"* (im Bild `kevin_rear_bauch_1113.webp` liegt der
+    rote Lebensbalken genau unter dem offenen Maul) -> der Fix gilt ausdruecklich fuer ALLES ueber dem Baeren: Name, Zustandszeile, Lebens-/Ausdauer-Balken,
+    Beduerfnis-Balken, Herz, z Z z -- alles hebt sich beim Aufrichten mit dem Kopf und verdeckt nie Kopf oder Maul.
+* **Kevin 13.11. ~22:05: Lebensbalken per Knopf ausblenden** (woertlich: *"und ich wuerde den hp balken auch gern ausblenden lassen durch einen botton"*). Heute geht das nur
+  unter Optionen > Mods > "NPC Crew: Bear" > Health over the bear (Aus / Balken / Zahl, Vorgabe Balken; `client/BanditsNPCBearOptions.lua:99-102`).
+  -> **Im Korrektur-Lauf nach F4:** im Baerenfenster in der Schalter-Reihe (neben Namensschild / Schaden zeigen / Wachstumszeile) ein Schalter **"Lebensbalken"**,
+  der denselben Wert umschaltet (an = wie in den Optionen gewaehlt, aus = Aus), je Spieler gespeichert wie die anderen Schalter; Texte acht Sprachen.
+* **Kevin 13.11. ~22:10, deutsche Uebersetzung "Verbinden" irrefuehrend** (woertlich: *"ausserdem ist die deutsche uebersetzung "Verbinden" ireefuehren das hat mehrere bedeutungen und ist nicht eindeuig wie "Heilen""*).
+  -> **Im Korrektur-Lauf nach F4:** DE `UI_BN_Bear_Win_Bandage` "Verbinden" -> **"Heilen"**; Rechtsklick `UI_BN_Bear_Menu_Bandage` "Junges verbinden" -> **"Junges heilen"**,
+  `UI_BN_Bear_Menu_BandageBig` "Baeren verbinden" -> **"Baeren heilen"** (Translate/DE/UI.json:87-88, :289). Tooltip/Meldungen, die "verbinden" sagen, ebenso; dass dabei
+  ein Verband verbraucht wird, sagt der Tooltip. Andere Sprachen unveraendert (nur DE betroffen). Gilt ab jetzt auch fuer neue DE-Texte: "heilen" statt "verbinden".
+* **Kevin 13.11. ~22:20: `NCBear_CubLook("gen")` sagt immer "dein Baer ist beschaeftigt"** (woertlich: *"geht nicht NCBear_CubLook("gen") da steht immer dein baer ist beschaeftigt"*).
+  Ursache laut console.txt (f:90955 NCBear_CubGrow(55) -> "body big (swapped)", Look-Bitten f:95000-98322 = rund 28-51 s spaeter bei ~144 Bildern/s) und Code: nach JEDEM
+  Koerper-Tausch (auch dem Wachsen) sperrt `B.BodySwapReady` 60 s Echtzeit (`server/BanditsNPCBearGrow.lua:594`, swapMinMs 60000, Grund "cool" -> Meldung LookBusy);
+  der Testbefehl setzt nur die gemeinsame Uhr Unstuck/Look zurueck, nicht diese Minute. -> **Im Korrektur-Lauf nach F4:** Meldung nennt den Grund und die Restzeit
+  ("gerade erst gewachsen/gewechselt -- noch 40 s"), und `NCBear_CubLook` (Testhilfe) setzt auch diese Minute zurueck.
+* **Claude 13.11. ~22:25 (beim Zusammenstellen der Posen fuer Kevin gefunden):** `NCBear_AnimTest()` listet seit F3 auch die acht Schlaf-Schluessel (liedown, sleep,
+  wakeup, wakealarm, curlin, sleepcurl, curlout, wakecurl; `shared/BanditsNPCBearFightRules.lua:77-84`), deren Clips/Knoten erst F3b bringt -- abgespielt wuerde der
+  Baer stehend erstarren. -> **Im Korrektur-Lauf nach F4:** AnimTest zeigt und spielt diese Schluessel nur, wenn `B.CFG.sleepClips == true`; Kevin vorher gewarnt.
+* **Kevin 13.11. ~22:35: Generator-Baer bekommt das neue Bruellen** (woertlich: *"ja uebertrag die version auf den"*; Vergleichsbild `kevin_rear_gen_1113.webp` mit
+  `kevin_rear_bauch_1113.webp`). -> Kleiner Modell-Lauf: Clip NCBear_Rear aus dem 2c-GLB in NCBearGen.glb uebernehmen (gleiches Skelett; Weg wie beim Liegen per Clip-Tausch),
+  nur Rear aendern, Hals/Brust beim Aufrichten am Generator-Netz pruefen (beim 2c brauchte es die Kopfnaht-Reparatur), Bilder aus Kevins Kamera von vorn.
+  Reihenfolge: nach F4 und dem Korrektur-Lauf, vor dem Maul (beruehrt dieselbe Datei NCBearGen.glb).
+* **Kevin 13.11. ~22:35, Augen** (woertlich: *"was haelst du von deren augen kann man die noch verbessern oder egal weil eh zu klein zum erkennen?"*). Claudes Einschaetzung
+  aus Kevins Spielbildern (4K, vergroessert): Klassisch -- kleine dunkle Augen auf hellem Gesichtsfell, als Augen lesbar; Generator-Baer -- dunkle Augen im dunklen Fell
+  verschwinden fast (dazu verdeckt heute das Schild das Gesicht). Vorschlag: kein eigener Lauf; im naechsten Modell-Lauf am Generator-Baeren nur Textur: etwas helleres
+  Fell als Ring ums Auge und ein winziger Glanzpunkt (aendert keine Pose); erst nach dem Schild-Fix beurteilen.
+  **Kevin, woertlich: *"ne lass die augen so"* -> Augen bleiben bei allen Baeren, wie sie sind (kein Textur-Eingriff).**
+* **Kevin 13.11. ~22:45, Bauch-Lauf eingegrenzt** (woertlich: *"beim bauch vom std baeren will ich nur das das fell besser aussieht beim ROAR der rest soll so bleiben okay die textur da sieht nur matschig aus nicht wie richtiges fell beim bauch da"*).
+  -> **Fest: NUR TEXTUR** am Klassisch-Baeren (2c, `textures/Body/NCBear.png`): Bauch/Brust/Innenschenkel bekommen echte Fellstruktur statt Matsch (Straehnen, Richtung,
+  Tiefe), gesehen beim Aufrichten von vorn (`kevin_rear_bauch_1113.webp`). **Form, Netz, Gewichte, Clips bleiben unveraendert** -- also kein Posen-Risiko; Kopf/Gesicht und
+  Augen unveraendert. Die frueheren Punkte "Latz/Platte, Naht, Rechteck" sind damit KEIN Auftrag mehr (Kevin: "der rest soll so bleiben").
+* **Kevin 13.11. ~22:55: Prankenhieb (swipeL/swipeR) besser** (woertlich: *"und kannst du noch besser NCBear_AnimTest("swipeR") und swipeL animationen bauen? die sieht nicht so geil aus das geht besser ;D"* --
+  *"der muss mehr schwung holen und die pfote drehn der tut die pfote komplett in den winkel lassen wie wenn er laufen wuerde das wirkt sehr unnatuerlich"*).
+  -> **Auf die Modell-Liste (Clip-Lauf, alle Koerper):** (1) **mehr Schwung holen** -- deutliches Ausholen (Arm weit zurueck/hoch, Schulter und Rumpf drehen mit), dann schneller
+  Schlag mit Wucht und Durchzug; (2) **die Pfote dreht beim Schlag** -- Handflaeche/Krallen zum Ziel (Pranke dreht sich auf, Krallen voraus), NICHT die Lauf-Haltung der Pfote
+  (heute bleibt die Pfote im Winkel wie beim Gehen). Massstab: echte Baeren-Prankenhiebe (Referenz nur ansehen), Bilder aus Kevins Kamera von vorn und von der Seite,
+  Einzelbilder des Schlags. Trefferzeitpunkt (hitPc 0,40) und Dauer 1,5 s nur aendern, wenn noetig -- dann B.CLIPS und Knoten-XML nachziehen. Gilt fuer Klassisch,
+  Generator-Baer und die Jungen (gleicher Clip-Weg wie Liegen/Tot), alle anderen Clips bit-gleich.
+  Nachtrag, woertlich: *"normalerweise wuerde man die pfote90grad drehn und dann baeaeaem"* -> beim Ausholen dreht die Pranke um **etwa 90 Grad** (Handflaeche/Krallen
+  vom Gehen-Winkel zum Ziel gedreht), DANN der schnelle, harte Schlag.
+* **Kevin 13.11. ~23:00, Kampf-Fehler aus seinem Test (Stand F3, Kampf aus F2)**, woertlich:
+  1. *"der baer macht nicht den roar wenn ein zombie kommt wieso? der sollte das doch machen bevor er in den kampf stuermt das erste mal"* -- heute: Aufrichten nur als erster
+     Angriff, 50 % Zufall, Ziel weiter als 2,5 Kacheln, hoechstens alle 120 s, nur ausgewachsen (`shared/BanditsNPCBearFightRules.lua:215`, `server/BanditsNPCBearFight.lua:274`,
+     `shared/BanditsNPCBear.lua:214`). Claudes Vorschlag: IMMER beim ersten Kontakt eines Kampfes (rearChance 100), 120-s-Pause bleibt, steht ein Zombie schon direkt
+     dran (< 2,5) greift er sofort an. Kevin, woertlich: *"okay verstanden den punkt mit dem bruellen der macht sinn abeeeeeeeeer der kampf code muss noch verbessert werden"*
+     -> Bruellen so bauen (immer beim ersten Kontakt, Pause 120 s, ganz nah sofort Angriff); **der Kampf-Code wird insgesamt verbessert** (eigener Kampf-Lauf).
+  2. *"und er hat eben einen zombie der am boden lag nichtmehr angegrifen und gewartet bis er aufgestanden ist"* -- Verdacht (statisch, ungeprueft): die Wahl nimmt nur
+     `isProne()` (Fight.lua:631); ein umgeworfener Zombie ist im Fall/Liegen evtl. nicht "prone" -> Biss statt Zerfleischen, oder die Treffer-/Sicht-Pruefung (CanSee,
+     "kein Luftschlag" F2 B3) lehnt Liegende ab, bzw. der Liegende ist nach dem Wegfliegen ausserhalb maulReach (1,1 x Groesse). Im Lauf klaeren und beheben: liegende
+     Ziele werden zerfleischt (maul), auch nach dem Wegfliegen hinlaufen.
+  3. *"ausserdem hat er probleme zombies abzuraeumen die sich bewegen dann rennt er langsam hinterher eher ein folgen und kommt nie zum zug"* -- Verdacht: Anlauf mit
+     B.MoveTo/fleeTo alle 750 ms neu auf die JETZIGE Lage minus Ankunftsabstand (Fight.lua:672-676); jeder neue Weg startet die Wegsuche neu (Ruckeln), und waehrend
+     des Ausholens (Hieb 1,5 s, Treffer bei 0,6 s) laeuft das Ziel aus der Weite. Im Lauf klaeren und beheben: Vorhalt (wohin der Zombie laeuft), volles Tempo, angreifen,
+     sobald in Weite, kurzer Ausfallschritt im Schlag.
+  -> Alle drei in den Korrektur-Lauf (nach der Pause), mit Kampf-Log: Kevin testet mit `NCBear_FightLog(true)`, damit die Entscheidungen in console.txt stehen.
+  4. Nachtrag, woertlich: *"ausserdem sind braunbaeren schneller also die sollten zombies locker einholen und weg klatschen"* -> **Fest fuer den Kampf-Lauf:** im Kampf ist der
+     Baer klar schneller als jeder Zombie (auch Sprinter) und holt ihn locker ein. Heute: Tempo kommt aus dem Renn-Clip (tier_spez.md 2.8; Stellwert runSpeedBig 3,17
+     Kacheln/s ist nur die Schaetzung fuer die Wegzeit, `shared/BanditsNPCBear.lua:168`). Im Lauf messen (echtes Tempo im Spiel vs. Zombie-Tempo je Sandbox-Art) und,
+     falls zu langsam, nur fuer unsere Baeren schneller machen (belegter Weg: z. B. schnellerer Renn-Clip im GLB oder Tempo-Faktor im eigenen Knoten; nie Vanillas Reh/Hirsch aendern).
+     Nachtrag, woertlich: *"der soll jz aber auch nicht permanent rumrennen wie ein geisteskranker das soll schon realtisch wirken ^^"* -> schnell NUR im Angriff (kurzer,
+     kraftvoller Sprint zum Ziel), sonst ruhig: Folgen, Bleiben, Frei im normalen Gang, nach dem Kampf ruhig zurueck; kein dauerndes Hin- und Herrennen zwischen Zielen
+     (kurze Pausen/Verschnaufen wie heute die Ausdauer, kein Zappeln). Realistisch vor schnell.
+  5. **Zombies ignorieren den Baeren** (woertlich: *"zombies ignorieren den scheinbar noch stimms?"* -- nach Claudes Erklaerung "naechster gewinnt, du standest daneben":
+     *"das kan nich nciht bestaetigen die sind sehr fixiert auf mich und beissen ihn nur wenn ich genau so laufe das der weg zu mir am baeren vorbei fuehrt ansosnten wird der total ignoriert"*).
+     Kevin hat recht (sein Spielbild schlaegt den Code-Plan): gebaut ist ein Lenken (`shared/BanditsNPCBearFoe.lua` lureBody :553-588, Zombies im Umkreis lureR 10, nur wenn der
+     Baer naeher ist als jeder Spieler, steerZombie), aber offenbar gewinnt die Engine-Jagd auf den Spieler. -> **Hauptpunkt im Kampf-Lauf:** Zombies, die den Baeren
+     sehen bzw. ihm nahe kommen, greifen IHN an (er ist Gefahr und Hindernis), nicht nur, wenn er zufaellig im Weg steht; mit Beleg, wie Bandits Zombies auf seine
+     Banditen lenkt (nur lesen, nichts kopieren), Kampf-Log in console.txt als Nachweis. Claudes Vorschlag zusaetzlich: wer bis ~2 Kacheln an den Baeren kommt, greift ihn an.
+  6. **Kampf-Log 13.11. ~22:33** (Kevin hat `NCBear_FightLog(true)` eingeschaltet; console.txt ab f:349486): 2 Kaempfe, 4 Zombies getoetet (kZ 16-19), dazwischen
+     `[TC-BEAR] guard: b2 hides behind its owner from a zombie at 6` -- der AUSGEWACHSENE Baer versteckt sich hinter dem Besitzer (Verhalten des Jungen aus B1c) statt anzugreifen:
+     Verdacht Fehler (`server/BanditsNPCBearGuard.lua`), im Kampf-Lauf pruefen. Ausserdem `calm: b2 noise answered (run, walk)`. Das Log sagt NICHT, warum er einen liegenden
+     Zombie auslaesst oder was die Zombies tun -> im Kampf-Lauf genauere Diagnose-Zeilen (Grund je "kein Angriff": liegt/ausser Weite/keine Sicht/gesperrt; Lenk-Zustand
+     je Zombie) hinter demselben Schalter.
+  7. **Reichweiten** (Kevin zu den Werten "kommt mir was sparsam vor"; Auswahl-Dialog, woertlich): Erkennen *"10 reichen aber er ist bei mir grad nie hingelaufen eher bei wenigern ^^"*
+     -> fightRadius bleibt **10 Kacheln**, ABER er reagiert im Spiel erst deutlich naeher -> im Kampf-Lauf messen und beheben, warum er bei 10 nicht losgeht (Sicht/CanSee,
+     Leine, guard-Fehler aus Punkt 6, Suchtakt); Leine: **25 Kacheln** (fightLeash 14 -> 25; *"25 Kacheln"*).
+     Nachtrag Leine, woertlich: *"er soll dann wenn ich 25 kacheln weg bin in fullspeed zu mir sprinten ;D"* -> bricht er den Kampf wegen der Leine ab (Besitzer > 25 Kacheln),
+     SPRINTET er mit vollem Tempo zum Besitzer (nicht gehen/traben), bis er wieder in normaler Folge-Naehe ist; dann wieder ruhiger Gang (Kevin 23:05 "realistisch").
+  8. **Sprung-Hieb / "Retter-Move"** (Kevin 13.11. ~23:15, woertlich: *"ja sowas waere auch meine idee gewesen das er das machen darf ab und zu also wenn notwendig wenn sich das ziel von ihn entfernt statt zu ihn zu kommen z.b aber ich denke wenn du es schaffst das die zombeis den baeren soweiso angreifen dann gibs so ein problem viel letzdener ausser vllt der spieler selbst wird verfolgt und der baer kommt zur hilfe , in jeden fall waere so ein angriff cool so als retter move :D"*).
+     -> **Fest, neuer Angriff (Modell + Kampf):** ein Sprung-Hieb aus dem Lauf (Anlauf, Sprung 1-2 Kacheln nach vorn, Pranke trifft im Flug/Aufkommen, Umwerfen), nur
+     **wenn noetig**: das Ziel entfernt sich bzw. laeuft vor ihm her (vor allem ein Zombie, der den BESITZER verfolgt -> "Retter-Move"), nicht als Standard-Angriff;
+     Abklingzeit. Weg: eigener Clip mit Vorwaerts-Bewegung im Clip (Tiere bewegen sich laut Forschung baer-laerm ueber die Bewegung im Clip, `getDeferredMovement` --
+     im Lauf erst belegen, dass ein Clip mit Wurzel-Bewegung den Baeren wirklich traegt). Reihenfolge: nach dem Kampf-Lauf (der zuerst Zombies auf den Baeren lenkt).

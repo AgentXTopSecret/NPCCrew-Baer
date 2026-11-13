@@ -1,11 +1,27 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **13.11. 22:46: F4 EINGEBAUT** (Spiel zu; `tools/einbau_f4.py`: 150 Dateien -- 24 neu, 30 ueberschrieben inkl. mod.info, 96 gleich, Modelle nie aus dem Staging;
+> Zips `NCBearTest_vor_f4_2026-11-13_224631.zip` / `_mit_`; Liegen-GLBs bleiben; Trockenlauf 0 Fehler; Test `spiel/anleitung_f4.md`, Bericht `spiel/f4_gegen_bericht.md`).
+> (frueherer Stand:) **13.11. ~22:40: F4 FERTIG (8/8)** -- Gegenpruefer: bereit fuer SP-Test, kein Blocker (27 Befunde, alle major fuer SP zu; offen nur MP C5/C4).
+> Staging `../_arbeit/baer_zaehmen/mod_f4/` (183 Dateien, Liste `f4/staging_dateien_f4.txt`), Bericht `f4/GEGEN.md`, Anleitung `f4/anleitung_entwurf.md`, Packtaschen +150 drin.
+> **Einbau erst, wenn Kevin NCBearTest nicht mehr geladen hat** (er testet gerade). Vorlage `tools/einbau_f3.py` (SRC/LISTE auf mod_f4/f4 umstellen, mod.info aus
+> `f4/mod_info_vorschlag_f4.txt`). ~12 Kevin-Fragen in GEGEN.md (Taschen nur leer, Farbton im MP, MP-Absturz, Essen stapelt nicht ...) -- nach seinem Test stellen.
+
+> **13.11. ~21:10 PAUSE NACH F4 (Kevin: *"Ja, dann pausieren"*, Woche 69 % am ersten Tag):** F4 laeuft noch zu Ende, wird geprueft und eingebaut. DANACH KEIN NEUER LAUF
+> (auch nicht die Maul-Nachbesserung oder die Schlafpose) bis Kevin wieder Start sagt. Die Regel "zwei Spuren immer weiter" ruht so lange.
+> Modell-Liste nach der Pause: Maul-Nachbesserung -> Schlafpose -> **Bauch-Fell (NUR Textur, Klassisch; Kevin 22:45)** -> **Prankenhieb neu: mehr Schwung, Pfote dreht beim Schlag** (Kevin 22:55); davor Generator-Baer bekommt das neue Bruellen (Kevin 22:35).
+> **Ausnahme von der Pause (Kevin 21:40, ausdruecklich "must du bitte aendern"): Vertrauen -100..+100, Start 0** -- kleiner Korrektur-Lauf direkt NACH dem F4-Einbau
+> (gleiche Dateien wie F4). Einzelheiten ENTSCHEIDUNGEN.md unten.
+> Dazu im selben Korrektur-Lauf (Liste ENTSCHEIDUNGEN.md unten, 13.11. 21:40-23:00): Lebensbalken-Knopf im Fenster, DE "Heilen" statt "Verbinden", Look-Sperre
+> mit Restzeit, AnimTest ohne Schlaf-Schluessel, **drei Kampf-Fehler** (Bruellen beim ersten Kontakt, liegende Zombies, laufende Zombies) und **Namensschild beim Aufrichten mit hoch** (Kevins erster Fehler im Spiel 21:50, Bild `begleiter/kevin_rear_schild_1113.webp`).
+
 > **13.11. 21:00: LIEGEN/TOT FERTIG UND EINGEBAUT** (Lauf baer-liegen wf_c0a986cb-3dd; Gegenpruefer nach Fable-Limit mit Opus fortgesetzt: bestanden, schoen genug).
 > 5 GLB aus `../_arbeit/baer_liegen/out/` (NCBear dc50d350, NCBearGen 867b558b, NCBearCub 8a1b1e27, NCBearCubGen = NCBearBenchCubGen dae9dbed) bei laufendem Spiel
 > OHNE NCBearTest (console.txt: kein "loading NCBearTest"); Zips `NCBearTest_vor_liegen_2026-11-13_210013.zip` / `_mit_`. Nur Death/Dead geaendert, alles andere bit-gleich.
 > Blatt `../_arbeit/baer_liegen/bilder/KEVIN_liegen.png`, Bericht `spiel/liegen_gegen_bericht.md`. WIEDERHOLEN (fuer den Maul-Lauf): `../_arbeit/baer_liegen/WIEDERHOLEN.md`
 > (Kern `spiel/baer_kern_liegen.py`, Spuren `spiel/baer_spuren_gross_liegen.py`, `spiel/baer_spuren_junges_liegen.py`). Kevin-Fragen K1 (obere Beine frei in der Luft),
 > K2 (Junges Braun steifer), K3 (Plumps-Ton frueh), K5 (von hinten verdeckt), K6 (Falten), J3 (Junges schwebt beim Rennen 1,3 cm). Woche 69 % (Fable 100 %).
+> **Kevin 21:15: "der tot muss nicht so schoen sein" -> abgenommen, Kleinfragen K1-K6 erledigt** (J3 Rennen des Jungen und "Am Boden" als Seitenlage bleiben offen).
 
 > **13.11. abends: F4-PLAN FERTIG, Kevins Antworten (alles tragen, Jar-Ausnahmen wie NPC Crew, 1000 Gegenstaende, Ansehen ueberall/nehmen nah, Tod -> Boden,
 > Packtaschen jetzt ohne Bild, Regler Traglast % 50-250, selbst fressen ab 50 %) in ENTSCHEIDUNGEN.md unten und `../_arbeit/baer_zaehmen/f4/KEVIN_ANTWORTEN.md`.

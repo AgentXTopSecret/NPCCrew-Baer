@@ -84,6 +84,33 @@ Muedigkeit), Vertrauen, Traenken, Schlafen (ohne neue Clips: Ersatzbild Sitzen),
     Tiers fuer das z Z z) nur in aim (client/ISUI/BanditsNPCBearZz.lua); am Zombie (Lua-Beleg Bandits) nur in knock
     (shared/BanditsNPCBearFoe.lua). Eine zweite Stelle am Tier waere ein Fehler.
 
+F4 (Lauf baer-f4, PLAN_F4.md 17.1; Kevins Antworten 13.11.2026 abends, _arbeit/baer_zaehmen/f4/KEVIN_ANTWORTEN.md): eigenes Inventar des
+Baeren (Register-Inventar + Spieler-Kopie im Einzelspieler), Traglast, Packtaschen, frisst selbst aus dem Inventar.
+  * Neue Lua-Dateien deckt LUA_BEAR von selbst: shared/BanditsNPCBearInvRules.lua, server/BanditsNPCBearInv.lua (KERN),
+    shared/TimedActions/BanditsNPCBearPutAction.lua, ...TakeAction.lua, client/BanditsNPCBearInvClient.lua, client/ISUI/BanditsNPCBearInvWindow.lua
+    (OBERFLAECHE); die Werkbank client/NCBearBenchInv.lua wird nie kopiert (BENCH_ANY).
+  * Neue Klasse PACKS_ASSET: 42/media/scripts/nc_bear_packs.txt (Gegenstand NPCCrew.BearPacks in module NPCCrew + Schneider-Rezept SewBearPacks in
+    module Base). packs_check: das Rezept-Ergebnis steht als item in DERSELBEN Datei (NPC-Crew-Lehre: ein Rezept mit unbekannter Ausgabe frisst die
+    Zutaten), jede Zutat Base.X gibt es in Vanillas scripts/generated/items, der Gegenstand ist KEIN Behaelter (kein Inhalt im Inhalt).
+  * TEXT_NS: ItemName.json (nur NPCCrew.BearPacks) und Recipes.json (nur SewBearPacks) -- NPC Crew hat beide Dateien (noch) nicht: die erste
+    Uebernahme legt sie sortiert an, wer danach kommt (Zweihaender, Crew Backpack), fuehrt zusammen (NAEHTE.md "ItemName/Recipes").
+  * Sandbox: EIN neuer Regler BearCarryPercent (14 Optionen); plan_sandbox prueft ihn wie die anderen.
+  * Neue Tier-Regeln (rote Linie "kein Gegenstand verloren oder verdoppelt"): invWrite (rec.inv / rec.bag zuweisen nur in server/BanditsNPCBearInv.lua),
+    invCopy (der Spieler-ModData-Schluessel BanditsNPCBearInv nur dort), AddWorldInventoryItem nur in K.dropAll (Tod / Abwurf-Liste), invAdd (AddItem /
+    sendAddItemToContainer nur in K.give, Nehmen), invRemove (sendRemoveItemFromContainer nur in takeOne, server/BanditsNPCBearServer.lua -- Geben,
+    Fuettern und Verband gehen alle durch takeOne). probeweg + InvSet / InvSnap (Absturz nachstellen -- nur die Werkbank). getHour: zusaetzlich
+    INV.alarmRead (die WECKZEIT eines Weckers reist mit -- nie die Tageszeit).
+  * Cheat-Regel "erzeugen": je Stelle einzeln freigegeben (CHEAT_ALLOWED): instanceItem in INV.refOf (Vergleichs-Stueck, kommt in keinen Behaelter),
+    B.InvBuild (Neubau aus einem Satz) und dem Anbauteil einer Schusswaffe; inv:AddItem / sendAddItemToContainer in K.give -- jede Stelle baut nur
+    aus einem Satz, der vorher als echter Gegenstand vom Spieler genommen wurde (kein Spawn-Weg).
+  * Jar-Ausnahmen (Kevin 13.11.: "Ja, dieselben wie NPC Crew"): Liste im Kopf von shared/BanditsNPCBearInvRules.lua und in f4/JAR_LISTE.md;
+    geprueft von _arbeit/baer_zaehmen/f4/werkzeug_kern/feldpruefer.py.
+  * Keine Naht in eine NPC-Crew-Datei. NAEHTE.md: Kopf F4, Zeile 42 (gebaut), neu "Absturz-Schere", "Spieler-ModData", "ItemName/Recipes",
+    "Sandbox-Seiten" + BearCarryPercent.
+  * Nachbesserung F4 (13.11.2026 spaet, _arbeit/baer_zaehmen/f4/NACHBESSERUNG.md, Befund C1): PZ_ALLOWED + die zwei neuen Aktionsklassen
+    BanditsNPCBearPutAction (Menue + InvClient) und BanditsNPCBearTakeAction (InvClient) -- ohne sie war die Probe rot (8 x W113), dieselbe
+    Luecke wie F3 bei DrinkAction: nach JEDER neuen Aktionsklasse --probe laufen lassen.
+
 Grundregel (Werkstatt-CLAUDE.md Abschnitt 0, Kevin 08.11.2026): alles wird FUER NPC Crew gebaut und soll am Ende "einfach copy paste"
 hinueber; keine Cheat- oder Testmenues kommen mit. Plan: _arbeit/baer_zaehmen/PLAN_ZAEHMEN.md Abschnitt 12 (B1b: PLAN_B1B.md 7),
 Naehte: baer/NAEHTE.md.
@@ -248,6 +275,10 @@ BIG_GLB = "42/media/models_X/Skinned/NCBear.glb"
 LOOK_ASSET = re.compile(r"^42/media/(models_X/Skinned/(NCBearGen|NCBearCubGen)\.glb|textures/Body/(NCBearGen|NCBearGenFoto|NCBearCubGen)\.png"
                         r"|scripts/nc_bear_look\.txt)$")
 GEN_GLB = "42/media/models_X/Skinned/NCBearGen.glb"               # Generator-Baer gross (Koerper big, wie BIG_GLB)
+# F4 (PLAN_F4.md 17.1 Nr. 2): Gegenstand NPCCrew.BearPacks + Schneider-Rezept SewBearPacks (packs_check). Wird kopiert.
+PACKS_ASSET = re.compile(r"^42/media/scripts/nc_bear_packs\.txt$")
+PACKS_ITEM = "NPCCrew.BearPacks"
+VANILLA_ITEMS = os.path.join(r"C:\Program Files (x86)\Steam\steamapps\common\ProjectZomboid\media", "scripts", "generated", "items")
 CUBGEN_GLB = "42/media/models_X/Skinned/NCBearCubGen.glb"         # Generator-Junges v2 (Koerper cub, wie CUB_GLB)
 # F2 (PLAN_F2.md 0.3, 7.3): eigener Zombie-Biss-Knoten (Vanilla-Clip; Name ewig stabil). Kopiert; Form-Pruefung in form_check.
 ZOMBIE_ANIM = re.compile(r"^42/media/AnimSets/zombie/bumped/BanditsNPCBear[A-Za-z0-9]*\.xml$")
@@ -274,6 +305,9 @@ TEXT_NS = {
     # Vanillas keyBinding -> keine Ausnahme mehr (NAEHTE.md Zeile 27)
     "UI.json": (re.compile(r"^UI_BN_Bear_[A-Za-z0-9_]+$"), set()),
     "Sandbox.json": (re.compile(r"^Sandbox_BanditsNPC_Bear[A-Za-z0-9_]+$"), {"Sandbox_BanditsNPC"}),
+    # F4 (PLAN_F4.md 13, 17.1 Nr. 3): Name des Gegenstands (voller Typ, ersetzt laut Jar den DisplayName) und des Rezepts
+    "ItemName.json": (re.compile(r"^NPCCrew\.BearPacks$"), set()),
+    "Recipes.json": (re.compile(r"^SewBearPacks$"), set()),
     "IG_UI.json": (re.compile(r"^$"), {"IGUI_AnimalType_ncbearcub", "IGUI_Animal_Group_ncbear", "IGUI_Breed_brown",
                                        "IGUI_AnimalType_ncbeargrown",                 # B1e: Tiername des grossen Koerpers
                                        # Aussehen (PLAN_AUSSEHEN.md 12.1 Nr. 5): Tiernamen der drei neuen Arten
@@ -445,8 +479,10 @@ TIER_RULES = [
     # Definitionen zaehlen nicht (TIER_DEF). Ein Aufrufer waere ein Spieler-Weg ohne Spielmechanik (Cheat-Pfad).
     # F2 (PLAN_F2.md 4.3, 7.3): + B.FightForce (der naechste Angriff von Hand, NCBear_FightNext) -- ebenfalls nur die Werkbank
     # F3 (PLAN_F3.md 13, 17.1): + B.NeedsSet (Hunger / Durst / Muedigkeit / Vertrauen von Hand setzen) -- ebenfalls nur die Werkbank
-    ("probeweg", re.compile(r"\bGrowSetG\b|\bGrowSetHp\b|\bSkillSet\b|\bFightForce\b|\bNeedsSet\b"), set(),
-     "B.GrowSetG / B.GrowSetHp / B.SkillSet / B.FightForce / B.NeedsSet nur aus der Werkbank (im kopierten Code nur die Definition)"),
+    # F4 (PLAN_F4.md 14, 17.1 Nr. 4): + B.InvSet / B.InvSnap (Register-Inventar zuruecksetzen = Absturz nachstellen) -- nur die Werkbank
+    ("probeweg", re.compile(r"\bGrowSetG\b|\bGrowSetHp\b|\bSkillSet\b|\bFightForce\b|\bNeedsSet\b|\bInvSet\b|\bInvSnap\b"), set(),
+     "B.GrowSetG / B.GrowSetHp / B.SkillSet / B.FightForce / B.NeedsSet / B.InvSet / B.InvSnap nur aus der Werkbank (im kopierten Code nur "
+     "die Definition)"),
     # F3 (PLAN_F3.md 3.1, 17.1; Kevin ENT "Schaden nur von Zombies, Banditen, Hunger, Durst"): das Register-Leben senkt nur B.BodyHurt, und
     # das rufen nur der Treffer (B.BearHurt) und der Langsam-Takt der Beduerfnisse (B.NeedsSlow: Hunger / Durst 100, bis 1 %, nie Tod)
     ("BodyHurt", re.compile(r"\bB\.BodyHurt\s*\("), {("42/media/lua/server/BanditsNPCBearHurt.lua", "B.BearHurt"),
@@ -467,8 +503,10 @@ TIER_RULES = [
      {("42/media/lua/client/ISUI/BanditsNPCBearZz.lua", "aim"), ("42/media/lua/shared/BanditsNPCBearFoe.lua", "knock")},
      "Blickrichtung (getForwardDirection) nur in aim (z Z z, Kevins Jar-Ausnahme 13.11.) und knock (am Zombie)"),
     # F3 (Kevin 13.11.2026, Antwort 6c: KEINE Uhrzeiten -- kein Nachtfenster, kein Mittagsschlaf): die Tagesstunde fragt niemand
-    ("getHour", re.compile(r"\bgetHour\b"), set(),
-     "Uhrzeit (getHour) nirgends -- geschlafen wird nur nach der Muedigkeit und neben dem schlafenden Besitzer (Kevin 13.11.)"),
+    # F4: einzige Ausnahme ist die WECKZEIT eines Weckers, der im Baeren-Inventar reist (INV.alarmRead, shared/BanditsNPCBearInvRules.lua)
+    ("getHour", re.compile(r"\bgetHour\b"), {("42/media/lua/shared/BanditsNPCBearInvRules.lua", "INV.alarmRead")},
+     "Uhrzeit (getHour) nirgends -- geschlafen wird nur nach der Muedigkeit und neben dem schlafenden Besitzer (Kevin 13.11.); nur die "
+     "Weckzeit eines Weckers im Baeren-Inventar (INV.alarmRead)"),
     # F2 (PLAN_F2.md 0.4, 5.1 Nr. 26; Kevin baer/STAND.md "Fragen fuer Kevin" B1d Nr. 9 + begleiter/ENTSCHEIDUNGEN.md "Kein Schaden am eigenen Baeren", 11.6): der gezaehmte Koerper ist fuer die
     # Engine unverwundbar -- den Schutz
     # setzen/loesen nur diese drei Stellen (jedes Vorkommen des Namens im Code-Teil). Die Cheat-Regel "engine" meldet den Namen ausserdem;
@@ -506,6 +544,20 @@ TIER_RULES = [
     # vorbei (im Einzelspieler teilen Client und Schreiber dieselben Lua-Tabellen). Die Definition zaehlt nicht (TIER_DEF).
     ("CallUnstamp", re.compile(r"\bCallUnstamp\b"), {("42/media/lua/server/BanditsNPCBearGrow.lua", "B.BodySwap")},
      "Abklingzeit zuruecknehmen (B.CallUnstamp) nur in B.BodySwap nach einem Fehlversuch ohne neuen Koerper"),
+    # F4 (PLAN_F4.md 10, 17.1 Nr. 4; rote Linie "kein Gegenstand verloren oder verdoppelt"): das Inventar des Baeren (rec.inv / rec.bag) wird nur in
+    # server/BanditsNPCBearInv.lua zugewiesen -- an EINER Stelle je Vorgang (Geben, Nehmen, Tod, Abgleich, Laden, Werkbank)
+    ("invWrite", re.compile(r"\brec\.(?:inv|bag)\s*=(?!=)"), {
+        ("42/media/lua/server/BanditsNPCBearInv.lua", "K.inv"), ("42/media/lua/server/BanditsNPCBearInv.lua", "B.InvHealRec"), ("42/media/lua/server/BanditsNPCBearInv.lua", "K.fixInv"), ("42/media/lua/server/BanditsNPCBearInv.lua", "B.InvPutComplete"),
+        ("42/media/lua/server/BanditsNPCBearInv.lua", "B.InvTakeComplete"), ("42/media/lua/server/BanditsNPCBearInv.lua", "B.InvDrop"), ("42/media/lua/server/BanditsNPCBearInv.lua", "B.InvSet")},
+     "Baeren-Inventar (rec.inv / rec.bag) zuweisen nur in server/BanditsNPCBearInv.lua"),
+    ("invCopy", re.compile(r"\bBanditsNPCBearInv\b"), {("42/media/lua/server/BanditsNPCBearInv.lua", None)},
+     "Spieler-Kopie (ModData-Schluessel BanditsNPCBearInv) nur in server/BanditsNPCBearInv.lua (B.INV_COPY)"),
+    ("AddWorldInventoryItem", re.compile(r"(?i)\bAddWorldInventoryItem\b"), {("42/media/lua/server/BanditsNPCBearInv.lua", "K.dropAll")},
+     "Gegenstaende auf den Boden (AddWorldInventoryItem) nur in K.dropAll (Tod / Abwurf-Liste)"),
+    ("invAdd", re.compile(r":AddItems?\s*\(|(?i:\bsendAddItemToContainer\b)"), {("42/media/lua/server/BanditsNPCBearInv.lua", "K.give")},
+     "Gegenstand ins Spieler-Inventar (AddItem / sendAddItemToContainer) nur in K.give (Nehmen)"),
+    ("invRemove", re.compile(r"(?i)\bsendRemoveItemFromContainer\b"), {("42/media/lua/server/BanditsNPCBearServer.lua", "takeOne")},
+     "Gegenstand vom Spieler nehmen (sendRemoveItemFromContainer) nur in takeOne (Fuettern, Verband, Geben)"),
 ]
 # B1c (PLAN_B1C.md 6.8): die Seite unter Optionen -> Mods bekommt nur Textschluessel (Vanilla ruft getText,
 # client/OptionScreens/MainOptions.lua:2801-2812). Methode -> Stellen der Text-Argumente (0 = erstes Argument).
@@ -557,11 +609,23 @@ def mo_text_hits(code_text):
 
 
 TIER_DEF = re.compile(r"^function\s+B\.(CreateCub|AppearFor|RemoveCub|GrowSetG|GrowSetHp|SkillSet|PlaceCub|FightForce|BodySwap"
-                      r"|CallUnstamp|NeedsSet|BodyHurt)\s*\(")   # B1d:
+                      r"|CallUnstamp|NeedsSet|BodyHurt|InvSet|InvSnap)\s*\(")   # F4: + InvSet, InvSnap; B1d:
 # + die drei Probe-Wege; F1: + PlaceCub; F2: + FightForce; Aussehen: + BodySwap; Nachbesserung Aussehen B1: + CallUnstamp;
 # F3: + NeedsSet, BodyHurt
 # Ausnahmen einzeln mit Grund: Datei, Regel, ein Text im Code-Teil der Zeile. Greift eine nicht mehr, warnt das Skript.
 CHEAT_ALLOWED = [
+    # F4 (PLAN_F4.md 5, 6.3, 10): Neubau aus einem Satz, der vorher als ECHTER Gegenstand vom Spieler genommen wurde (B.InvPutComplete) bzw. den
+    # F5 aus einem Fang baut (B.InvAddItem) -- kein Spawn-Weg; Zaehl-Invariante Spieler + Baer + Boden in attrappe/f4_kern (Kevins rote Linie)
+    {"file": "42/media/lua/shared/BanditsNPCBearInvRules.lua", "rule": "erzeugen", "code": "r = instanceItem(t)", "exact": True,
+     "why": "F4: Vergleichs-Stueck je Typ (INV.refOf) fuer die Anbauteile einer Waffe -- kommt in keinen Behaelter"},
+    {"file": "42/media/lua/shared/BanditsNPCBearInvRules.lua", "rule": "erzeugen", "code": "local item = instanceItem(s.t)", "exact": True,
+     "why": "F4: B.InvBuild -- Neubau eines Satzes (Nehmen, Tod), der Satz stammt von einem genommenen Gegenstand"},
+    {"file": "42/media/lua/shared/BanditsNPCBearInvRules.lua", "rule": "erzeugen", "code": "part = instanceItem(e.t)", "exact": True,
+     "why": "F4: Anbauteil einer Schusswaffe aus deren Satz (das Teil hing am genommenen Original)"},
+    {"file": "42/media/lua/server/BanditsNPCBearInv.lua", "rule": "erzeugen", "code": "inv:AddItem(item)", "exact": True,
+     "why": "F4: K.give -- der gebaute Satz in das Inventar des Besitzers (Ankunft per contains, erst danach ausgetragen)"},
+    {"file": "42/media/lua/server/BanditsNPCBearInv.lua", "rule": "erzeugen", "code": "sendAddItemToContainer(inv, item)", "exact": True,
+     "why": "F4: K.give -- der Server meldet den angekommenen Gegenstand dem Client (Vanilla FishingNet.lua:152-153)"},
     {"file": "42/media/lua/shared/BanditsNPCBearDefs.lua", "rule": "befehl", "code": 'bodyModel = "NCBearCub_Body"',
      "why": "Name des model-Skripts (scripts/nc_bear_cub.txt), kein Befehl (Plan 12.1 Punkt 5)"},
     {"file": "42/media/lua/shared/BanditsNPCBearDefs.lua", "rule": "befehl", "code": 'bodyModel = "NCBear_Body"',
@@ -619,6 +683,18 @@ CHEAT_ALLOWED = [
      "why": "F1B: Vorfahrt Tier-Radial eines fremden Tiers, falls eine unserer Tasten darauf liegt (V:client/ISUI/ISUIHandler.lua:37, :44); "
             "Nachbesserung F1B B1 (zweite Stelle, closeBearRadial): liegt sie darauf, geht Vanillas Radial am eigenen Baeren mit dem "
             "Fenster zu (V:client/ISUI/ISUIHandler.lua:91-92, V:client/ISUI/Animal/ISAnimalContextMenu.lua:1164)"},
+    # F4 (OBERFLAECHE, schnittstelle.md O1): das Inventar-Fenster schliesst wie das Baerenfenster nur mit Esc (V:client/ISUI/Crafting/
+    # ISHandcraftWindow.lua:289-297, :386); nicht, solange der Chat tippt
+    {"file": "42/media/lua/client/ISUI/BanditsNPCBearInvWindow.lua", "rule": "taste", "code": "o:setWantKeyEvents(true)",
+     "why": "F4: das Inventar-Fenster bekommt Tasten (nur Esc schliesst; V:client/ISUI/Crafting/ISHandcraftWindow.lua:386)"},
+    {"file": "42/media/lua/client/ISUI/BanditsNPCBearInvWindow.lua", "rule": "taste", "code": "function Inv:isKeyConsumed(key)",
+     "why": "F4: nur Esc gehoert dem offenen Inventar-Fenster (V:client/ISUI/Crafting/ISHandcraftWindow.lua:289-292)"},
+    {"file": "42/media/lua/client/ISUI/BanditsNPCBearInvWindow.lua", "rule": "taste", "code": "return key == Keyboard.KEY_ESCAPE", "exact": True,
+     "why": "F4: nur Esc (V:client/ISUI/Crafting/ISHandcraftWindow.lua:290)"},
+    {"file": "42/media/lua/client/ISUI/BanditsNPCBearInvWindow.lua", "rule": "taste", "code": "function Inv:onKeyRelease(key)",
+     "why": "F4: Esc schliesst das Inventar-Fenster (V:client/ISUI/Crafting/ISHandcraftWindow.lua:294-297)"},
+    {"file": "42/media/lua/client/ISUI/BanditsNPCBearInvWindow.lua", "rule": "taste", "code": "if self:isVisible() and key == Keyboard.KEY_ESCAPE then U.InvClose() end", "exact": True,
+     "why": "F4: Esc schliesst das Inventar-Fenster (V:client/ISUI/Crafting/ISHandcraftWindow.lua:294-297)"},
     {"file": "42/media/lua/client/ISUI/BanditsNPCBearWindow.lua", "rule": "taste", "code": "o:setWantKeyEvents(true)",
      "why": "F1: das Fenster bekommt Tasten (F1B: nur Esc schliesst; V:client/ISUI/Crafting/ISHandcraftWindow.lua:386)"},
     {"file": "42/media/lua/client/ISUI/BanditsNPCBearWindow.lua", "rule": "taste", "code": "function Win:isKeyConsumed(key)",
@@ -637,6 +713,9 @@ PZ_ALLOWED = {
     ("BanditsNPCBearMenu.lua", "BanditsNPCBearMendAction"),         # F2: Verband (shared/TimedActions/BanditsNPCBearMendAction.lua)
     ("BanditsNPCBearMenu.lua", "BanditsNPCBearHelpAction"),         # F2: Aufhelfen (shared/TimedActions/BanditsNPCBearHelpAction.lua)
     ("BanditsNPCBearMenu.lua", "BanditsNPCBearDrinkAction"),        # F3: Traenken (shared/TimedActions/BanditsNPCBearDrinkAction.lua)
+    ("BanditsNPCBearMenu.lua", "BanditsNPCBearPutAction"),          # F4: Packtaschen anlegen (shared/TimedActions/BanditsNPCBearPutAction.lua)
+    ("BanditsNPCBearInvClient.lua", "BanditsNPCBearPutAction"),     # F4: Geben (Nachbesserung F4, Befund C1)
+    ("BanditsNPCBearInvClient.lua", "BanditsNPCBearTakeAction"),    # F4: Nehmen (shared/TimedActions/BanditsNPCBearTakeAction.lua)
 }
 
 ARGS = {"erneut": False, "vor_b5a": False, "echt": False}
@@ -793,8 +872,9 @@ def collect_source(src, rep):
         elif rel == SANDBOX:
             sandbox = rel
         elif (CUB_ASSET.match(rel) or ANIMSET_OK.match(rel) or UI_ASSET.match(rel) or BIG_ASSET.match(rel)
-              or ZOMBIE_ANIM.match(rel) or LOOK_ASSET.match(rel)):   # F2: + grosses Modell/Toene (BIG_ASSET), Zombie-Biss-Knoten
-                                                                  # (ZOMBIE_ANIM); Aussehen: + LOOK_ASSET
+              or ZOMBIE_ANIM.match(rel) or LOOK_ASSET.match(rel) or PACKS_ASSET.match(rel)):   # F2: + grosses Modell/Toene
+                                                                  # (BIG_ASSET), Zombie-Biss-Knoten (ZOMBIE_ANIM); Aussehen: + LOOK_ASSET;
+                                                                  # F4: + PACKS_ASSET (Packtaschen + Rezept)
             copy_asset.append(rel)
         elif rel in WERKBANK_ASSET:                         # F2: Werkbank-Dateien ohne NCBearBench-Namen (je mit Grund)
             skipped.append((rel, "Werkbank, wird nie kopiert: " + WERKBANK_ASSET[rel]))
@@ -932,6 +1012,48 @@ def zombie_knot(rel, final, copy_lua, rep):
         rep.err("Kollision: Zombie-Knoten-Name %s gibt es schon in %s" % (name, h))
     rep.say("  %s: Knoten %s, Clip %s, Ende BumpAnimFinished=true: %s, in der Lua: %s, Kollision (Vanilla/NPC Crew/Bandits): %d" % (
         rel, name, ", ".join(anims), "ja" if len(ends) == 1 else "NEIN", "ja" if named else "NEIN", len(hits)))
+
+
+def packs_check(final, rep):
+    """F4 (PLAN_F4.md 17.1 Nr. 2): scripts/nc_bear_packs.txt -- jedes craftRecipe-Ergebnis steht als item in DIESER Datei (sonst frisst das Rezept die
+    Zutaten), jede Zutat Base.X gibt es in Vanillas scripts/generated/items, der Packtaschen-Gegenstand ist kein Behaelter (Capacity/container)."""
+    rels = [r for r in final if PACKS_ASSET.match(r)]
+    if not rels:
+        return
+    van = set()
+    if os.path.isdir(VANILLA_ITEMS):
+        for fn in os.listdir(VANILLA_ITEMS):
+            if fn.endswith(".txt"):
+                van.update(re.findall(r"^\s*item\s+(\w+)", rd(os.path.join(VANILLA_ITEMS, fn)).decode("latin-1"), re.M))
+    for rel in rels:
+        text = final[rel].decode("latin-1")
+        mods = re.findall(r"^\s*module\s+(\w+)", text, re.M)
+        items = {}
+        cur = None
+        for line in text.split("\n"):
+            m = re.match(r"^\s*module\s+(\w+)", line)
+            if m:
+                cur = m.group(1)
+            m = re.match(r"^\s*item\s+(\w+)\s*$", line)
+            if m and cur:
+                items["%s.%s" % (cur, m.group(1))] = True
+        if PACKS_ITEM not in items:
+            rep.err("%s: Gegenstand %s fehlt" % (rel, PACKS_ITEM))
+        blk = re.search(r"item\s+BearPacks\s*\{(.*?)\}", text, re.S)
+        if blk and re.search(r"(?i)\b(Capacity|ItemType\s*=\s*base:container)\b", blk.group(1)):
+            rep.err("%s: %s ist ein Behaelter -- die Packtaschen sind eine Zahl im Register (kein Inhalt im Inhalt)" % (rel, PACKS_ITEM))
+        n_out = 0
+        for m in re.finditer(r"outputs\s*\{(.*?)\}", text, re.S):
+            for o in re.findall(r"item\s+\d+\s+([\w.]+)", m.group(1)):
+                n_out += 1
+                if o not in items:
+                    rep.err("%s: Rezept-Ergebnis %s steht nicht als item in dieser Datei" % (rel, o))
+        for m in re.finditer(r"inputs\s*\{(.*?)\}", text, re.S):
+            for line in m.group(1).split("\n"):
+                for name in re.findall(r"Base\.(\w+)", line):
+                    if van and name not in van:
+                        rep.err("%s: Zutat Base.%s gibt es in Vanillas scripts/generated/items nicht" % (rel, name))
+        rep.say("Packtaschen %s: Module %s, Gegenstaende %s, %d Rezept-Ergebnis(se) geprueft" % (rel, ", ".join(mods), ", ".join(sorted(items)), n_out))
 
 
 def form_check(final, copy_lua, copy_asset, rep):
@@ -1565,7 +1687,8 @@ def collisions(tgt, final, copy_lua, copy_asset, rep):
     van_scripts = os.path.join(VANILLA_MEDIA, "scripts")
     own_models = set()
     for rel in [r for r in final if r.startswith("42/media/scripts/")]:
-        own_models.update(re.findall(r"^\s*(?:model|animationsMesh|item|sound)\s+(\w+)", final[rel].decode("latin-1"), re.M))
+        # F4: nur echte Namen (Buchstabe zuerst, allein auf der Zeile) -- Rezept-Zeilen "item 4 [Base.X] ..." (scripts/nc_bear_packs.txt) sind keine
+        own_models.update(re.findall(r"^\s*(?:model|animationsMesh|item|sound)\s+([A-Za-z_]\w*)\s*$", final[rel].decode("latin-1"), re.M))
     hits = []
     for dp, _d, fs in os.walk(van_scripts):
         for fn in fs:
@@ -2149,6 +2272,7 @@ def build_plan(tgt, src, rep):
     for rel in copy_lua + copy_asset:
         final[rel] = rd(src[rel])
     form_check(final, copy_lua, copy_asset, rep)
+    packs_check(final, rep)                                    # F4 (PLAN_F4.md 17.1 Nr. 2)
     texts, tsum, by_file, text_alt = plan_texts(tgt, src, merge, rep)
     final.update(texts)
     en_sb = {}
