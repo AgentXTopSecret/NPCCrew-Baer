@@ -552,3 +552,22 @@ Kevin: *"so les dir durch wo es weiter geht und dann mach weiter :D"*. Antworten
   Vorgabe an). Das Herz ist ein EIGENES, selbst gezeichnetes Bild (nichts kopiert, kein Download), mehrere Entwuerfe auf einem Blatt fuer Kevin, der huebscheste ist eingebaut.
   - Nachtrag gleich danach, woertlich: *"oder das herz wird nur angezeigt wenn die namens anzeige vom baeren an ist eins von beiden"* -> **Gebaut wird diese
     zweite Fassung:** das Herz haengt am Namensschild -- es ist nur zu sehen, wenn die Namensanzeige des Baeren an ist; KEIN eigener Schalter (weniger Optionen).
+
+## 13.11.2026 abends: Kevins Antworten zu F4 (Traglast + eigenes Inventar), per Auswahl-Dialog
+Grundlage `../_arbeit/baer_zaehmen/f4/PLAN_F4.md` Abschnitt 23 und FORSCHUNG_F4.md (Weg D: Register-Inventar + Spieler-Kopie als Absturz-Schutz).
+* **Frage 1 (was tragen):** woertlich *"alles was es gibt :D und wie hoch wird das slot limit die npc's duerfen nur maixmal 1000 items im inventar tragen z.b"*
+  -> **ALLES** (auch Kleidung, Taschen, gekochtes/gefrorenes Essen, Schusswaffen, Schluessel, Zettel/Karten, Elektronik, Klingen).
+* **Jar-Ausnahme dafuer:** *"Ja, dieselben wie NPC Crew"* -> der Baer darf JEDE Jar-Methode nutzen, die NPC Crew fuer seine Inventar-Manifeste schon mit
+  Kevins Wort nutzt (Liste mit Klasse/Methode/NPC-Crew-Fundstelle im Bau in NAEHTE.md und hier nachtragen). Was selbst NPC Crew nicht verlustfrei kann
+  (z. B. Inhalt von Taschen, echte Flicken), wird im Plan genannt und erst nach Kevins Wort gebaut -- bis dahin ehrlich ablehnen statt Werte verlieren.
+* **Item-Limit:** *"1000 wie die NPCs"* -> hoechstens 1000 Gegenstaende, zusaetzlich zur Gewichtsgrenze.
+* **Frage 2 (oeffnen):** ansehen ueberall (auch Fern-Taste), hineinlegen/herausnehmen nur daneben (3 Kacheln), nicht waehrend er im Auto mitfaehrt.
+* **Frage 3 (Tod):** alles faellt an der Stelle auf den Boden (auch die Packtaschen).
+* **Frage 4 (Packtaschen):** eigener Gegenstand "Bear Packs"/"Baeren-Packtaschen", selbst naehen (Schneidern 3: Jute oder Stoff, Lederstreifen, Seil,
+  Faden; Nadel und Schere bleiben), anlegen ab halbstark, mit F4 nutzbar, Modell/Bild am Ruecken in einem eigenen Modell-Lauf danach.
+* **Frage 5 (Sandbox):** neuer Regler "Traglast %" 50-250, Vorgabe 100, Packtaschen immer +50 -> 14 Regler.
+* **Frage 6 (selbst fressen):** ja -- ab 50 % Hunger aus dem eigenen Inventar, nur Baerenfutter, nie Verdorbenes, Lieblingsfutter zuerst.
+* Ohne Frage (Plan): nicht langsamer bei Last, nur der Besitzer kommt ran, hineinlegen weckt nicht, Absturz-Schutz ueber die Spieler-Kopie.
+* **Kevin 13.11. abends (F4 laeuft schon): Packtaschen +150 statt +50** (woertlich: *"okay aber die traglast kann man ja sicher noch leicht erhoehen oder? weil nur +50kg find ich aktuell zu wenig um ehrlich zu sein 😃 ich bin eher so bei +150 das der baer am ende dann bei 250kg ist das waere er doch oder?"*)
+  -> **Fest:** Packtaschen geben **+150** (ausgewachsen 100 + 150 = **250 kg** bei Regler 100 %). Der Regler "Traglast %" (50-250) wirkt weiter nur auf die
+  Grundlast, nicht auf die Taschen: hoechstens 250 + 150 = 400 kg (unter den 500, die Kevin am 08.11. abgelehnt hat). Halbstark mit Taschen 40 + 150 = 190.

@@ -1,5 +1,18 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **13.11. 21:00: LIEGEN/TOT FERTIG UND EINGEBAUT** (Lauf baer-liegen wf_c0a986cb-3dd; Gegenpruefer nach Fable-Limit mit Opus fortgesetzt: bestanden, schoen genug).
+> 5 GLB aus `../_arbeit/baer_liegen/out/` (NCBear dc50d350, NCBearGen 867b558b, NCBearCub 8a1b1e27, NCBearCubGen = NCBearBenchCubGen dae9dbed) bei laufendem Spiel
+> OHNE NCBearTest (console.txt: kein "loading NCBearTest"); Zips `NCBearTest_vor_liegen_2026-11-13_210013.zip` / `_mit_`. Nur Death/Dead geaendert, alles andere bit-gleich.
+> Blatt `../_arbeit/baer_liegen/bilder/KEVIN_liegen.png`, Bericht `spiel/liegen_gegen_bericht.md`. WIEDERHOLEN (fuer den Maul-Lauf): `../_arbeit/baer_liegen/WIEDERHOLEN.md`
+> (Kern `spiel/baer_kern_liegen.py`, Spuren `spiel/baer_spuren_gross_liegen.py`, `spiel/baer_spuren_junges_liegen.py`). Kevin-Fragen K1 (obere Beine frei in der Luft),
+> K2 (Junges Braun steifer), K3 (Plumps-Ton frueh), K5 (von hinten verdeckt), K6 (Falten), J3 (Junges schwebt beim Rennen 1,3 cm). Woche 69 % (Fable 100 %).
+
+> **13.11. abends: F4-PLAN FERTIG, Kevins Antworten (alles tragen, Jar-Ausnahmen wie NPC Crew, 1000 Gegenstaende, Ansehen ueberall/nehmen nah, Tod -> Boden,
+> Packtaschen jetzt ohne Bild, Regler Traglast % 50-250, selbst fressen ab 50 %) in ENTSCHEIDUNGEN.md unten und `../_arbeit/baer_zaehmen/f4/KEVIN_ANTWORTEN.md`.
+> **F4-BAU GESTARTET:** `wf_0c353a24-4b0` (Task wtowzpq87, 8 Agenten, scriptPath `.../baer/spiel/f4_workflow.js`; Staging `../_arbeit/baer_zaehmen/mod_f4/` =
+> Test-Mod 9b4ccca, Berichte `../_arbeit/baer_zaehmen/f4/`: GATES, JAR_LISTE, BAU_KERN, BAU_OBER, BAU_TEXTE, PRUEF_CODE, PRUEF_BILD, NACHBESSERUNG, GEGEN).
+> Einbau danach wie F3 (`tools/einbau_f3.py` als Vorlage). baer-liegen laeuft weiter (wf_c0a986cb-3dd).
+
 > **13.11. 18:10: F3 FERTIG (7/7) UND EINGEBAUT** (Spiel zu; `tools/einbau_f3.py`: 126 Dateien -- 14 neu, 40 ueberschrieben (inkl. beider mod.info), 72 gleich,
 > 33 Modell-Dateien nie aus dem Staging; Zips `NCBearTest_vor_f3_2026-11-13_180949.zip` / `_mit_`; Trockenlauf Uebernahme 0 Fehler, 2 Warnungen). Gegenpruefer:
 > bereit fuer SP-Test, kein Blocker (`spiel/f3_gegen_bericht.md`). Test `spiel/anleitung_f3.md` (vom Gegenpruefer berichtigt). Bilder aus dem echten Code:
@@ -8,6 +21,8 @@
 > Rhythmus: wach bis 100 % Junges ~42 / halbstark ~50 / ausgewachsen ~62 Spielstunden, Schlaf 100 -> 0 % 9,5 h. **17 Kleinfragen an Kevin** in
 > `spiel/f3_gegen_bericht.md` (Herz D/A, Rhythmus, frueher hinlegen in Bleiben/Sitz, Schwelle 15, Herz ab 100/95, geweckt weiterschlafen, Rosa statt Gelb ...).
 > Modell-Lauf **baer-liegen** laeuft weiter (wf_c0a986cb-3dd).
+> **18:20 Funktionen-Spur weiter: baer-f4-plan** `wf_8fe8d35e-3ea` (Task wjmvcjg55, 2 Agenten, scriptPath `.../baer/spiel/f4_plan_workflow.js`) ->
+> `../_arbeit/baer_zaehmen/f4/` (FORSCHUNG_F4.md, PLAN_F4.md mit hoechstens 6 Kevin-Fragen). F4-Bau erst nach Kevins Antworten (einzeln fragen).
 
 > **13.11. ~15:20 WEITER IM ERSTEN ACCOUNT (Sitzung cccbd9d6, Kevin: *"les dir durch wo es weiter geht und dann mach weiter"*; Woche 2 %, Reset 20.11.):**
 > Kevins Antworten zu F3 (alle 6 Fragen einzeln, mit Aenderungen: 5 s schlaftrunken, zu muede zum Kaempfen ab 90 %, Schlaf bei 100 % bis 0 % OHNE Uhrzeiten,
