@@ -802,3 +802,4 @@ Kevin ~02:25, woertlich: *"aber der muss eine futter und trinken einstellung bek
    "Fuer den Baeren" markierst (Futter und/oder Wasser), alle anderen (Huehner, Kuehe) nie; (2) FUTTER-LISTE im Baerenfenster wie NPC Crews Essensliste "Isst / Nie"
    (NC `UI_BN_Food_Eats` / `UI_BN_Food_AllowAll`, nur Vorbild, nichts kopieren) -- je Futterart erlaubt / nie, gilt fuer Inventar und Troege; (3) TRINKEN: nur Wasser
    (sauber/ungekocht), Milch und alles andere nie -- steht schon (00:45).
+Kevin ~02:30 (Auswahl "Ist der Vorschlag mit markierten Troegen und Futterliste so gut?"): *"Ja, so"* -> (1) nur markierte Troege, (2) Futterliste frisst/nie im Fenster, (3) nur Wasser: FEST.
