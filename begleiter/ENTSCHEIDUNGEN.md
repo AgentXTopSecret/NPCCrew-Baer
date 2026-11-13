@@ -764,3 +764,8 @@ Kevin ~01:40 (Auswahl "Welchen Trinkwert soll der Baer bekommen?", Netzsuche `be
    ausgewachsen ~250 kg (an statAt 0.35 / 0.75 / 1.35, dazwischen gleitend wie carryAt) -> **1,5 l / 4,8 l / 15 l am Tag** (heute 0,5 / 1 / 1,5 l; bowlsAt {1,2,3}
    wird daraus abgeleitet: Liter / bowlL 0,5 -> 3 / 9,6 / 30 Schalen). Traenken aus der Hand und selbst trinken nehmen je Aktion so viel, wie bis 0 % fehlt (B.DrinkNeedL),
    damit niemand 30 Mal klicken muss. Gilt fuer den Hunger-/Durst-Umbau "realistisch nach Groesse" (01:00); Futter-Zahlen noch offen (Netzsuche Futter folgt).
+Kevin ~01:55 (Netzsuche Futter, `begleiter/bedarf_echte_baeren.md`): *"da nehmen wir dann auch die mitte ;D"* und Auswahl "Wie soll das Futter zaehlen?": *"Nach Saettigung"*
+-> **Futterbedarf = Mitte ~10 % des Koerpergewichts (Junges ~3 kg / halbstark ~8 kg / ausgewachsen ~25 kg echtes Futter je Tag), gezaehlt NACH SAETTIGUNG:**
+   umgerechnet ueber den Menschen (Annahme ~2 kg Essen je Tag) -> Junges ~1,5 x, halbstark ~4 x, ausgewachsen ~12,5 x der Vanilla-Hungerpunkte, die ein SPIELER je
+   Spieltag verbraucht (Zahl im Lauf aus Vanilla belegen: Hunger-Anstieg je Stunde des Spielers). Jedes Futter sattigt nach seinem Vanilla-Hungerwert (HungerChange,
+   z. B. Steak 40, Wild 80, Honig 20, Apfel 16), wie heute (B.MealsOf). Heute: mealsAt {1,2,4} x 20 Punkte = 20 / 40 / 80 Punkte je Tag. Dazwischen gleitend mit der Groesse.
