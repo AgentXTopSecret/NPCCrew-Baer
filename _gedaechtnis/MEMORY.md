@@ -4,3 +4,4 @@
 - [Uebergabe an den anderen Account](uebergabe-account2.md) — zuerst baer/STAND.md oben + UEBERGABE_ACCOUNT2.md; seit 13.11. laufen baer-f3 und baer-liegen (Sitzung cccbd9d6)
 - [UI-Vorschau aus echtem Code](ui-vorschau-aus-echtem-code.md) — Fenster-Bilder per Zeichen-Mitschrift des echten Lua-Codes + echte Spielschriften, nie frei malen
 - [CPU voll nutzen ist ok](cpu-voll-nutzen-ok.md) — Kevin 13.11.: Laeufe duerfen die CPU voll auslasten, nicht deckeln
+- [Rezept-Syntax pruefen](rezept-syntax-pruefen.md) — craftRecipe-Eingaben in [ ]; ein Skriptfehler laesst das ganze Spiel nicht laden (F4, 13.11.)
