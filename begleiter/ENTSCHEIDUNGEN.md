@@ -792,3 +792,8 @@ Kevin ~02:15, woertlich: *"gut und das trinken und essen was wir ausgerechnet ha
    **Claudes Vorschlag (an Kevin):** Tagesmenge auf ~16 WACH-Stunden verteilen (8 h Schlaf je Nacht angenommen): 0 -> 50 % in ~16 Wachstunden, dann frisst/trinkt er die
    ganze Tagesmenge (50 -> 0 %); 100 % nach ~2 Tagen ohne Futter. Durst dabei wie Hunger 50 % je Tag (heute 75 % -- Aenderung). Schlaeft der Spieler nie, braucht der
    Baer etwas mehr (~1,25 Tagesmengen je Tag, er schlaeft dann nur alle 2-3 Tage ~9,5 h).
+Kevin ~02:20, woertlich: *"ich will aber das seine werte nach 16std von 0 auf 100springen also essen und trinken weil schlafen ja kostenlos ist ^^"*
+-> **FEST:** Hunger UND Durst steigen in 16 WACH-Stunden von 0 auf 100 % (= 6,25 % je Wachstunde x Tempo-Regler x Vertrauens-Faktor); im Schlaf/eingefroren nichts (01:05).
+   Die volle Leiste (0 -> 100 %) = die ganze Tagesmenge der Groesse (ausgewachsen 25-kg-Saettigung bzw. 15 l). Folgen (Claude, an Kevin gesagt): selbst fressen/trinken ab 50 %
+   -> etwa alle 8 Wachstunden eine halbe Tagesmenge; ohne Futter nach ~14,5 Wachstunden 90 % (-5 Vertrauen), nach 16 Wachstunden 100 % (Leben sinkt bis 1 %, dann -10).
+   Ersetzt needHunDay 50 / needThrDay 75 je 24 h und Claudes 16-h-Vorschlag mit 50 %.
