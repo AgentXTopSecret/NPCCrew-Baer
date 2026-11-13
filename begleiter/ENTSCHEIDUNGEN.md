@@ -725,7 +725,9 @@ Kevin ~00:20 (Bild Fenster: Nahkampfschaden "70 je Treffer", Durst 100 %, Toolti
    Kevin ~00:25 (Auswahl "Soll Muedigkeit auch den Schaden senken?"): *"Nein, so lassen"* -> Schaden sinkt nur durch Hunger/Durst wie heute.
 Kevin ~00:30 (Frage "ab wie viel % essen/trinken ... aus dem inventar?"; Auswahl "Soll er auch Wasser aus seinem Inventar selbst trinken?"): *"Ja, ab 50 % Durst"*
 -> **Korrektur-Lauf:** Selbst trinken aus dem eigenen Inventar wie das Fressen (T `server/BanditsNPCBearInv.lua` ~985-1010: ab needHungry 50 bis unter needPeckish 25,
-   hoechstens je invEatGapMin 10 Spielminuten): ab Durst 50 % trinkt er aus Behaeltern mit Wasser (Satz-Feld fl, nur "w"/"tw" -- anderes nimmt das Inventar gar nicht an),
+   hoechstens je invEatGapMin 10 Spielminuten): ab Durst 50 % trinkt er aus Behaeltern mit Wasser. BERICHTIGT 00:45: das Inventar nimmt JEDEN Fluessigkeits-Behaelter mit genau EINEM Stoff an
+   (Satz-Felder q/ft, T `shared/BanditsNPCBearInvRules.lua:370-405`: Flasche, Feldflasche, Topf, 10-l-Eimer, Kanister -- auch Benzin, Bleiche, Alkohol). Trinken daher NUR
+   aus ft Water / TaintedWater (Namen im Lauf an Vanilla belegen), nie aus anderen Stoffen;
    eine Schale (bowlL 0,5 l) je Schluck, bis Durst unter 25 %; die Flasche bleibt (leer) im Inventar -- nichts verloren, nichts doppelt. Wie beim Traenken aus der Hand (B.DrinkNeedL).
    Vorschlag: sauberes Wasser zuerst, dann ungekochtes (Baeren trinken aus Fluessen). Zaehlt NICHT als "satt getraenkt" fuer das Vertrauen (das gibt es nur beim Traenken aus der Hand).
 Kevin ~00:35, woertlich: *"kann der baer auch spaeter auf kisten zugreifen und essen holen und trinken?"* -> gleich danach: *"okay nur wie die tiere das macht mehr sinn haha"*
