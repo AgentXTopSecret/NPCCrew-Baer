@@ -739,3 +739,8 @@ Kevin ~00:50, woertlich: *"ich will das er isst + trinkt bis er 0% erreicht also
    eigener Wert z. B. invEatStop = 0). Trinken nimmt beim letzten Schluck nur, was bis 0 fehlt (B.DrinkNeedL), der Rest bleibt im Behaelter. Beim Fressen beim letzten
    Stueck das kleinste passende waehlen, damit wenig verfaellt (was unter 0 ginge, verfaellt heute -- B.Feed). Bei Saft/Milch/Limo nicht geantwortet -> nur Wasser.
 Kevin ~00:55, woertlich: *"ja der darf natuerlich auch dreckiges wasser trinken weils ein tier ist"* -> bestaetigt: sauberes UND ungekochtes (TaintedWater) Wasser, ohne Krankheit; sauberes zuerst.
+Kevin ~01:00, woertlich: *"und ich will noch das hunger system aendern und das trinken 😃 das soll realistisch sein nach groesseeee"*
+-> **Neuer Punkt (vor dem Bau erst Zahlen):** Hunger und Durst realistisch nach Groesse. Heute (T `shared/BanditsNPCBear.lua:258-260`): Prozent steigen fuer ALLE Groessen
+   gleich (Hunger +50, Durst +75 je Spieltag); nur die Menge waechst: Junges 1 Mahlzeit / 1 Schale, halbstark 2 / 2, ausgewachsen 4 / 3 (Mahlzeit = 20 Vanilla-Hungerpunkte
+   = 1 Honig, Schale = 0,5 l -> ausgewachsen 1,5 l am Tag). Plan: zuerst Forschung mit Quellen (Futter- und Wasserbedarf echter Braunbaeren je Koerpergewicht, Jahreszeit;
+   Vanilla-Kalorien/Hungerwerte der Spiel-Lebensmittel), dann Kevin zwei Varianten (realistisch / spielbar) mit Tabelle je Groesse zur Wahl, erst dann bauen.
