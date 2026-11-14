@@ -845,3 +845,7 @@ Kevin ~03:00, woertlich: *"achso und der gespuersinn von den baeren soll machen 
    `setOutlineHighlightCol(r, g, b, a)` V:`client/DebugUIs/ISDebugAnimationTextUI.lua:36-37` (ob der Umriss DURCH WAENDE bzw. bei unsichtbaren Zombies gezeichnet wird:
    ungeprueft, im Lauf testen); (b) sicher: eigene Marker auf dem Bildschirm an der Zombie-Stelle (Weg wie Bandits `client/BanditProjectile.lua` ToScreen/renderPoly,
    CLAUDE.md 8). Nur auf dem Bildschirm des Besitzers, nur solange der Baer wach und in der Naehe ist; Schalter "Nasen-Warnung" im Fenster/Zahnrad. MP: nur Client-Anzeige.
+Kevin ~05:05, woertlich: *"achso ich hab mir noch ueberleg ich wil lab 10% wachstum schon ein skill punkt oder perk punkt wie auf immer wir das nenen sollen und ich will noch einen skill +25% krit chance fuegt doppelten schaden aus also +100% geht das?"*
+   Antworten (Auswahl-Dialog): 2. Punkt *"Bei ausgewachsen"*; Name *"Talentpunkt"* (DE "Talente"/"Talentpunkt", EN "Perks"/"Perk point"); Krit *"9 Skills"*.
+-> **Fest (I9 geaendert):** 1. Talentpunkt bei 10 % Wachstum (Junges), 2. Talentpunkt bei ausgewachsen (Tag 100); hoechstens 2, Sperren wie 02:45. Reiter heisst "Talente".
+   **9 Talente:** die 8 von 02:50 + **9 Kritischer Treffer** (25 % Chance je Treffer auf doppelten Schaden; Zahl ueber dem Zombie bei Krit gross in Gold, "Schaden zeigen").

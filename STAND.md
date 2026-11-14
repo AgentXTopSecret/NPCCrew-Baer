@@ -1,5 +1,11 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **14.11. ~03:05 NACHTAUFTRAG (Kevin geht schlafen, woertlich):** *"gut deine aufgabe ist es jz nur daran zu bauen die models und posen machst du erst morgen weiter und du stellst dir nen wecker und checkste jede 5 min mein wochenlimit wenn das auf 98% ist stoppst du alles speicherst es ab und merkst dir den abgebrochenen workflow fuer morgen und faehrst meinen pc dann nach 3min herunter okay?"* -- auf die Frage nach anderen Sitzungen: *"ich hab nichts anderes in auftrag gegeben nur du wirst arbeiten"*.
+> -> PAUSE AUFGEHOBEN nur fuer FUNKTIONEN (keine Modelle/Posen bis morgen). Reihenfolge: Korrektur-Lauf -> Hunger/Durst nach Groesse -> weiter Funktionen. Woche bei Start 82 %.
+> Waechter (Kevin 03:15 "Ja, sparen"): bis 94 % jede Stunde (Kevin 05:00 "ja mach"), 94-96 % alle 20 min, ab 96 % alle 5 min. Lauf K1 = wf_2ca8b148-ff7 (Staging ../_arbeit/baer_zaehmen/mod_k1, Berichte ../_arbeit/baer_zaehmen/k1/).
+> Bei 98 %: Lauf stoppen, Stand sichern + committen, abgebrochenen Lauf hier notieren (Run-ID, Skript, was fertig war), dann `shutdown /s /t 180`.
+> Kevins "PC nie herunterfahren" (CLAUDE.md 6) gilt weiter -- die Ausnahme gilt NUR fuer diese Nacht.
+
 > **14.11. ~02:35 NACHT-STAND (Kevin geht schlafen; PAUSE gilt weiter bis sein Startwort):** F4 laeuft im Spiel (nach Rezept-Fix 6996693 laedt es).
 > Kevin hat abends getestet und entschieden -- ALLES woertlich in `begleiter/ENTSCHEIDUNGEN.md` ganz unten (13.11. ~23:45 bis 14.11. ~02:31), Netzsuche in `begleiter/bedarf_echte_baeren.md`.
 > **Korrektur-Lauf (zuerst, gleiche Dateien wie F4):** Vertrauen -100..+100 Start 0 mit NEUER Regel (+0,5 je Streicheln / satt gefuettert / satt getraenkt, je 1x am Tag;
