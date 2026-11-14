@@ -1,5 +1,9 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **14.11. ~10:40: Kevin hat ALLE Plan-Fragen beantwortet** (Talente, Troege, F5 -- ENTSCHEIDUNGEN.md unten): Talente FREIE WAHL 3 von 9; Troege: erst Fluss/See, dann
+> Trog, dann Inventar, volle Leiste in 30 Spielminuten, Futterliste als Untermenue im Zahnrad; F5: Markierung wie Entwurf, Brummen an, Fischen immer 2x, Knopf "Fischen".
+> Offen nur noch die Kleinfragen aus K1-/Kampf-/Fix1-Berichten (nach Kevins Test). Bau der drei Pakete: je ein Lauf (Talente, Troege, F5), Woche ~93 %.
+
 > **14.11. ~09:55 (Woche ~93 %): FIX 1 FERTIG UND EINGEBAUT** (baer-fix1 wf_54ec828a-899; Gegenpruefer: einbaubar). 17 Dateien (inkl. mod.info), Zips
 > `NCBearTest_vor_fix1_2026-11-14_095353.zip` / `_mit_`. R1 Doppel nach Absturz beim ersten Geben geschlossen (Rest: erste ~10 s nach dem ersten Laden mit fix1 noch wie
 > vorher), R2-R6, G-R3 (Uhr nur neu, wenn das Ziel im Hieb weglief; er verfolgt fliehende Sprinter jetzt bis zur Leine, trifft sie aber nicht -> Sprung-Hieb).

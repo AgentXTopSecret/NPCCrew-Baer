@@ -865,3 +865,10 @@ Kevin ~05:07, woertlich: *"genau also am ende genau 3 punkte zum verteilen"* -> 
     fuer Fressen und Trinken am Trog/Fluss gleich.
  T-5 *"Erst Fress-Clip, Trink-Clip spaeter"*. T-6 *"Vanilla-Flusston leiser"*. T-7 Futterliste: *"Untermenue im Zahnrad"* (je Klick eine Art umschalten).
  T-8 Fluss/See: *"Bis 20 Kacheln"*.
+
+### 14.11.2026 ~10:40 -- Kevins Antworten zum Plan F5 (plaene/PLAN_F5.md, Auswahl-Dialog)
+ F5-1 Markierung: erst *"zeig mir den entfwurf erst und dann frag mich nochmal"*, nach dem Bild (plaene/bilder/ENTWURF_nase_DE_1080.png): *"So wie im Entwurf"*
+    (orange Ecken-Rahmen + Nasen-Bild + Ring am Boden). F5-2 *"An, mit leisem Brummen"* (hoechstens alle 20 s). F5-3 *"Nein, kein Regler"*.
+ F5-4 *"Wach und in deiner Naehe"*. F5-5 Fangmenge: *"Immer 2x so stark"* (auch fuer den Vorrat). F5-6 *"Knopf "Fischen""* (geht zum naechsten Wasser bis 20 Kacheln,
+    fischt bis zum naechsten Befehl). F5-7 *"Legt sich ans Ufer"*. F5-8 *"Eigener Modell-Lauf"* (Fisch-Clip zusammen mit dem Trink-Clip; bis dahin Ersatz-Bewegungen).
+-> Alle drei Plaene (Talente, Troege, F5) sind entschieden. Bau-Reihenfolge-Vorschlag: nach Kevins K1-/Kampf-/Fix1-Test; Wochenlimit ~93 % (Reset 20.11.).
