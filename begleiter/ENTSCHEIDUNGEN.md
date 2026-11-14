@@ -834,3 +834,6 @@ Kevins Antworten ~02:50 (Auswahl-Dialog): I3 Vertrauen -> *"Nur Beduerfnisse"* (
 Claudes Skill-Vorschlag (8, an Kevin): 1 Genuegsam (Hunger/Durst halten +50 %: 24 statt 16 Wachstunden) | 2 Dickes Fell (+250 Leben) | 3 Ausdauernd (+30 % Ausdauer,
    erholt sich schneller) | 4 Schwere Pranke (Prankenhieb wirft jeden Zombie um) | 5 Lasttier (+50 kg Traglast) | 6 Wachsam (erkennt Gegner 50 % weiter, nie schlaftrunken)
    | 7 Angler (faengt doppelt so viel Fisch, F5) | 8 Zaeh (heilt doppelt so schnell, steht vom Boden schneller auf).
+Kevin ~02:55, woertlich: *"die icon sollen aber recht gut sichtbar sein also wie in anderen spielen wo man skills vergeben kann"* -> Skill-Icons gross und klar (eigene
+   Zeichnung, kraeftige Umrisse, je Skill ein eindeutiges Motiv; aktiv = hell leuchtend, nicht vergeben = gedimmt/grau, gesperrt = mit Schloss), Skill-Baum wie in
+   Rollenspielen; vor dem Bau ein ENTWURF-Bild mit echten Spielschriften (Regel UI-Bilder).
