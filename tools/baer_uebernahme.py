@@ -111,6 +111,21 @@ Baeren (Register-Inventar + Spieler-Kopie im Einzelspieler), Traglast, Packtasch
     BanditsNPCBearPutAction (Menue + InvClient) und BanditsNPCBearTakeAction (InvClient) -- ohne sie war die Probe rot (8 x W113), dieselbe
     Luecke wie F3 bei DrinkAction: nach JEDER neuen Aktionsklasse --probe laufen lassen.
 
+K1 (Lauf baer-k1, Korrektur nach F4, _arbeit/baer_zaehmen/k1/PLAN_K1.md 12; Kevins Worte baer/begleiter/ENTSCHEIDUNGEN.md ab 13.11. ~21:40): Vertrauen
+-100..+100 (Fassung trV im Register UND im Spiegel), Hunger/Durst nach Groesse, Einfrieren, Mitschlafen in jedem Modus, Geben gebuendelt / Nehmen 1000,
+selbst trinken, Look-Sperre mit Restzeit; dazu (OBERFLAECHE) Schild folgt der Pose, Zahnrad, Zahlenfeld.
+  * Neue Lua-Dateien deckt LUA_BEAR von selbst: shared/BanditsNPCBearTagPose.lua (erzeugte Daten), client/ISUI/BanditsNPCBearCountBox.lua.
+    Neue Werkbank-Befehle NCBear_CubTrustDay, NCBear_InvItems (Gegenstaende fuer den Test grosser Stapel) leben nur in NCBearBench*.lua (BENCH_ANY).
+  * Neue Tier-Regel k1entfallen: die alten Vertrauens- und Mengen-Regeln (B.TrustGain, B.TrustDayClose, B.MealsDay, B.BowlsDay und ihre
+    Stellwerte needHunDay / needThrDay / mealsAt / bowlsAt / trHandDay / trMix / trFeed* / trPet / trDrink / trDay* / trSleepH) stehen in KEINER
+    kopierten Code-Zeile mehr -- ein uebersehener Leser rechnete sonst still mit nil bzw. einem alten Rueckfall-Wert.
+  * Keine Naht in eine NPC-Crew-Datei. NAEHTE.md: Absatz "K1" (Vertrauens-Skala v2 im Register, Liste hpoff in BanditsNPCBear.ini, Zahnrad-Bild
+    aus Vanilla, erzeugte Daten-Datei TagPose).
+  * Nachbesserung K1 (14.11.2026, _arbeit/baer_zaehmen/k1/NACHBESSERUNG.md): keine Aenderung an diesem Skript noetig -- Trockenlauf und
+    --probe gruen. Lehre aus dem Trockenlauf: eine Vorab-Erklaerung "local f" + spaeter "function f(...)" meldet die Cheat-Pruefung als globale
+    Funktion (Regel global) -- lokale Hilfen darum VOR ihrem ersten Aufrufer als "local function" schreiben (server/BanditsNPCBearNeeds.lua counts).
+    TagPose (erzeugte Daten) kommt jetzt aus _arbeit/baer_zaehmen/k1/werkzeug_nach/tagpose_schirm.py (Bildschirm-Hoehe, Befund P2).
+
 Grundregel (Werkstatt-CLAUDE.md Abschnitt 0, Kevin 08.11.2026): alles wird FUER NPC Crew gebaut und soll am Ende "einfach copy paste"
 hinueber; keine Cheat- oder Testmenues kommen mit. Plan: _arbeit/baer_zaehmen/PLAN_ZAEHMEN.md Abschnitt 12 (B1b: PLAN_B1B.md 7),
 Naehte: baer/NAEHTE.md.
@@ -485,6 +500,12 @@ TIER_RULES = [
      "die Definition)"),
     # F3 (PLAN_F3.md 3.1, 17.1; Kevin ENT "Schaden nur von Zombies, Banditen, Hunger, Durst"): das Register-Leben senkt nur B.BodyHurt, und
     # das rufen nur der Treffer (B.BearHurt) und der Langsam-Takt der Beduerfnisse (B.NeedsSlow: Hunger / Durst 100, bis 1 %, nie Tod)
+    # K1 (PLAN_K1.md 2.1, 8, 9): die alten Vertrauens- und Mengen-Regeln sind ENTFALLEN -- wer sie noch ruft oder ihre Stellwerte liest, rechnet
+    # mit nil bzw. einem Rueckfall auf die alten Zahlen (still falsch). Im kopierten Code nirgends erlaubt (es gibt auch keine Definition mehr).
+    ("k1entfallen", re.compile(r"\bTrustGain\b|\bTrustDayClose\b|\bMealsDay\b|\bBowlsDay\b|\bneedHunDay\b|\bneedThrDay\b|\bmealsAt\b"
+                               r"|\bbowlsAt\b|\btrHandDay\b|\btrMix\b|\btrFeed(?:Fav|Ok|Snack)\b|\btrPet\b|\btrDrink\b"
+                               r"|\btrDay(?:Good|Bad|Worst|Sleep|MinH)\b|\btrSleepH\b"), set(),
+     "alte Vertrauens-/Mengen-Regel (K1 entfallen: B.TrustGain / B.TrustDayClose / B.MealsDay / B.BowlsDay und ihre Stellwerte)"),
     ("BodyHurt", re.compile(r"\bB\.BodyHurt\s*\("), {("42/media/lua/server/BanditsNPCBearHurt.lua", "B.BearHurt"),
                                                        ("42/media/lua/server/BanditsNPCBearNeeds.lua", "B.NeedsSlow")},
      "Register-Leben sinkt (B.BodyHurt) nur durch Treffer (B.BearHurt) und Hunger / Durst (B.NeedsSlow)"),

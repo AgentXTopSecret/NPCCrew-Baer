@@ -1,5 +1,12 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **14.11. ~05:25: K1 FERTIG UND EINGEBAUT** (Lauf baer-k1 wf_2ca8b148-ff7, 8 Agenten, ~3 h; Gegenpruefer: bereit fuer SP-Test, kein Blocker). Spiel war zu;
+> `tools/einbau_k1.py`: 152 Dateien (2 neu, 47 ueberschrieben inkl. beider mod.info aus `k1/mod_info_vorschlag_k1.txt`, 103 gleich), keine Modell-Datei;
+> Zips `NCBearTest_vor_k1_2026-11-14_052031.zip` / `_mit_`; Test-Mod-Commit 68f9181. Test `spiel/anleitung_k1.md`, Bericht `spiel/k1_gegen_bericht.md`
+> (Fragen an Kevin dort: satt = unter 1 %, am Boden -10 auch eingefroren?, Tageswechsel 7 Uhr statt Mitternacht, Spieler-Tagesbedarf 55 Hungerpunkte = ausgewachsen
+> ~17 Steaks je volle Leiste, Kopf-Balken zeigt +0,5 als +1 ...). Restbefunde R1-R6 minor (R1 schon aus F4: erstes Geben an leeren Baeren + Absturz genau zwischen zwei Speicherungen).
+> Woche bei Ende ~85-86 %. NAECHSTER Funktions-Lauf (Nachtauftrag): Kampf-Lauf (ENTSCHEIDUNGEN 13.11. ~23:00 Punkte 1-7; Retter-Move erst danach, braucht Clip).
+
 > **14.11. ~03:05 NACHTAUFTRAG (Kevin geht schlafen, woertlich):** *"gut deine aufgabe ist es jz nur daran zu bauen die models und posen machst du erst morgen weiter und du stellst dir nen wecker und checkste jede 5 min mein wochenlimit wenn das auf 98% ist stoppst du alles speicherst es ab und merkst dir den abgebrochenen workflow fuer morgen und faehrst meinen pc dann nach 3min herunter okay?"* -- auf die Frage nach anderen Sitzungen: *"ich hab nichts anderes in auftrag gegeben nur du wirst arbeiten"*.
 > -> PAUSE AUFGEHOBEN nur fuer FUNKTIONEN (keine Modelle/Posen bis morgen). Reihenfolge: Korrektur-Lauf -> Hunger/Durst nach Groesse -> weiter Funktionen. Woche bei Start 82 %.
 > Waechter (Kevin 03:15 "Ja, sparen"): bis 94 % jede Stunde (Kevin 05:00 "ja mach"), 94-96 % alle 20 min, ab 96 % alle 5 min. Lauf K1 = wf_2ca8b148-ff7 (Staging ../_arbeit/baer_zaehmen/mod_k1, Berichte ../_arbeit/baer_zaehmen/k1/).
