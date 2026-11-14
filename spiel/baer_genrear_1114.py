@@ -461,6 +461,7 @@ def bauen(pfad_k, pfad_g, aus, vor, aus_g, bericht=None, jobs=None):
     os.replace(tmp, aus)
     h = md5b(neu)
     if bericht:
+        os.makedirs(os.path.dirname(os.path.abspath(bericht)) or ".", exist_ok=True)   # Nachbesserung: erst nach dem Schreibschutz
         json.dump(dict(klassisch=pfad_k, klassisch_md5=md5b(open(pfad_k, "rb").read()), generator=pfad_g,
                        generator_md5=md5b(open(pfad_g, "rb").read()), aus=aus, md5=h, bytes=len(neu), info=info, beweis=beweis,
                        abnahme=z, schwellen=dict(A3=A3, A4=A4), bilder=m), open(bericht, "w"), indent=1)
@@ -519,10 +520,25 @@ def mess_glb(pfad, bericht=None, jobs=None):
         json.dump(dict(glb=pfad, md5=md5b(open(pfad, "rb").read()), abnahme=z, bilder=m), open(bericht, "w"), indent=1)
 
 
+def eingang_da(*pfade):
+    """Nachbesserung (Befund T10): fehlender Eingang -> REAR_GEN_FEHLER Code 2 statt Python-Traceback; nichts geschrieben."""
+    fehlt = [p for p in pfade if not os.path.isfile(p)]
+    for p in fehlt:
+        print("REAR_GEN_FEHLER Eingang fehlt oder ist keine Datei:", p)
+    if fehlt:
+        raise SystemExit(2)
+
+
 def main():
     a = sys.argv[1:]
     jobs = _arg(a, "--jobs")
     jobs = int(jobs) if jobs else None
+    if a and a[0] == "--scan" and len(a) >= 3:
+        eingang_da(a[1], a[2])
+    if a and a[0] == "--mess" and len(a) >= 2:
+        eingang_da(a[1])
+    if a and a[0] == "--pruefe" and len(a) >= 4:
+        eingang_da(a[1], a[2], a[3])
     if a and a[0] == "--scan":
         scan(a[1], a[2], [float(x) for x in a[3].split(",")], [float(x) for x in a[4].split(",")], jobs)
         return
@@ -539,6 +555,7 @@ def main():
     if len(a) != 3:
         print(__doc__ or "", "Aufruf: python baer_genrear_1114.py KLASSISCH.glb GENERATOR.glb AUS.glb [--arm VOR,AUS] [--bericht B.json] [--jobs N]")
         raise SystemExit(1)
+    eingang_da(a[0], a[1])
     vor, aus_g = (float(x) for x in arm.split(",")) if arm else VORGABE_ARM
     bauen(a[0], a[1], a[2], vor, aus_g, bericht, jobs)
 

@@ -877,3 +877,8 @@ Kevin ~05:07, woertlich: *"genau also am ende genau 3 punkte zum verteilen"* -> 
 *"achso die hp anzeige ueber den baeren soll schoener werden erstell mir da bitte 3 vorlagen die ich aussuchen kann auch in farbe je nachdem wie viel hp der baer noch hat und wenn geht gerne uach mit heil effekt oder dmg effekt bei der anzeige das man sieht was grad passiert ob er geheitl wird oder schaden bekommt weil er am verhungern ist z.b"*
 -> Entwurfs-Lauf baer-hp-entwurf `wf_4b56a453-e34` (4 Agenten): drei Vorlagen A Schlicht-Klar / B Rollenspiel / C Modern-Rund, Farbe nach Leben, Effekte Heilen / Treffer /
    Hunger-Durst / fast leer als Bildfolge und GIF, ueber Kevins Spielbild, echte Spielschriften, "ENTWURF". Ergebnis `../_arbeit/baer_hp_entwurf/KEVIN_hp_vorlagen.png/.gif`. Kevin waehlt.
+Kevin ~12:25 nach dem Vergleichsblatt (plaene/hp_entwurf/KEVIN_hp_vorlagen.png/.gif), woertlich: *"B rollenspiel ist geil"* -> **Lebensanzeige = Vorlage B "Rollenspiel"**
+   (Bronze-Plakette mit Pfote, Rahmen mit 10 Segmenten, Zahl "352/400" im Balken, Farbstufen gruen ab 61 / gelb ab 31 / orange ab 16 / rot darunter pulsierend; Effekte:
+   Heilen gruene Kreuze + "+12" + Pflaster-Symbol bei Verband, Treffer Wackeln + Blitz + rote "-28" + Nachlauf, Hunger/Durst oranger Puls + Keule/Tropfen + kleine "-4",
+   fast leer schneller roter Puls; Groesse waechst mit der Schrifthoehe). Bau-Grundlage `../_arbeit/baer_hp_entwurf/B/` (zeichne.py, BESCHREIBUNG.md, tex/). Server: Feld
+   fx.pts im Ereignis "hurt". Bau als naechster Funktions-Lauf NACH den Talenten (beide aendern server/BanditsNPCBearHurt.lua und die Kopf-Anzeigen).

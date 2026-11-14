@@ -25,6 +25,7 @@
 #
 # Aufruf: python baer/spiel/baer_bauch_1114.py <NCBear.glb> <NCBear.png> <AUS.png> [--bericht B.json] [--felder F.npz] [--trotzdem]
 #   Wieder-Aufsetzen: ist der Bauchbereich schon das neue Fell -> BAUCHFELL_SCHON, Eingang unveraendert nach AUS; weder alt noch neu -> Abbruch.
+#   Fehlt ein Eingang oder ist die Textur unlesbar -> BAUCHFELL_FEHLER, Code 2, nichts geschrieben (Nachbesserung 14.11., Befund T10).
 #   (EIN = geltende Klassisch-Dateien, heute Test-Mod NCBearTest/42/media/models_X/Skinned/NCBear.glb + textures/Body/NCBear.png)
 # Statisch gerechnet, nicht gespielt. Reines Python/numpy + PIL. Schreibt nur AUS (und die optionalen Bericht-/Felder-Dateien).
 # Schreibschutz: AUS darf kein Eingang sein und nicht unter .../Zomboid/mods/... oder .../steamapps/... liegen.
@@ -677,6 +678,10 @@ def main(argv):
         print(__doc__ if __doc__ else "Aufruf: python baer_bauch_1114.py NCBear.glb NCBear.png AUS.png [--bericht B.json] [--felder F.npz]")
         fehler("Aufruf: GLB TEXTUR AUS")
     glb, texp, aus = pos
+    # Nachbesserung (Befund T10): fehlender/unlesbarer Eingang -> BAUCHFELL_FEHLER Code 2 statt Python-Traceback (Code 1); nichts geschrieben.
+    for p in (glb, texp):
+        if not os.path.isfile(p):
+            fehler("Eingang fehlt oder ist keine Datei: %s" % p)
     schreibschutz(aus, (glb, texp))
     for p in (bericht, felder_aus):
         if p:
@@ -688,7 +693,11 @@ def main(argv):
         fehler("Netz/UV anders als dc50d350 (Punkte %d/%d, Indizes %d/%d, UV-MD5 %s/%s) -> Maske neu rechnen" % (
             len(nz.P), NETZ_PUNKTE, nz.n_idx, NETZ_INDIZES, uvm, UV_MD5))
     alt_bytes = open(texp, "rb").read()
-    im = Image.open(io.BytesIO(alt_bytes))
+    try:
+        im = Image.open(io.BytesIO(alt_bytes))
+        im.load()
+    except Exception as e:  # kaputte/fremde Bilddatei -> Code 2 (T10), nicht Traceback
+        fehler("Textur nicht lesbar: %s (%s)" % (texp, e))
     if im.size != (R, R) or im.mode != "RGB":
         fehler("Textur nicht 1024x1024 RGB: %s %s" % (im.size, im.mode))
     old8 = np.asarray(im.convert("RGB")).copy()
@@ -701,6 +710,7 @@ def main(argv):
     fp = hashlib.md5(np.ascontiguousarray(old8[f["TM"] > 0]).tobytes()).hexdigest()
     if fp == BAUCH_NEU_MD5:
         tmp = aus + ".tmp"
+        os.makedirs(os.path.dirname(os.path.abspath(aus)) or ".", exist_ok=True)   # Nachbesserung: AUS-Ordner auch hier anlegen
         with open(tmp, "wb") as fh:
             fh.write(alt_bytes)
         os.replace(tmp, aus)
@@ -739,8 +749,10 @@ def main(argv):
     print("geaendert %d Texel (Insel %d, Polster %d), ausserhalb 0, gesperrte Inseln (%d) bit-gleich" % (
         info["texel_geaendert"], info["texel_geaendert_insel"], info["texel_geaendert_polster"], len(gl)))
     if bericht:
+        os.makedirs(os.path.dirname(os.path.abspath(bericht)) or ".", exist_ok=True)
         json.dump(info, open(bericht, "w"), indent=1)
     if felder_aus:
+        os.makedirs(os.path.dirname(os.path.abspath(felder_aus)) or ".", exist_ok=True)
         np.savez_compressed(felder_aus, **{k: v for k, v in f.items()})
     print("BAUCHFELL_OK MD5 %s (%.1fs) -> %s" % (md5, time.time() - t0, aus))
 
