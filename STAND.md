@@ -1,5 +1,13 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **14.11. ~09:55 (Woche ~93 %): FIX 1 FERTIG UND EINGEBAUT** (baer-fix1 wf_54ec828a-899; Gegenpruefer: einbaubar). 17 Dateien (inkl. mod.info), Zips
+> `NCBearTest_vor_fix1_2026-11-14_095353.zip` / `_mit_`. R1 Doppel nach Absturz beim ersten Geben geschlossen (Rest: erste ~10 s nach dem ersten Laden mit fix1 noch wie
+> vorher), R2-R6, G-R3 (Uhr nur neu, wenn das Ziel im Hieb weglief; er verfolgt fliehende Sprinter jetzt bis zur Leine, trifft sie aber nicht -> Sprung-Hieb).
+> **NACHT-ENDE:** alle Funktions-Arbeit, die ohne Kevins Antworten geht, ist getan. Kein Lauf aktiv. 98 % nicht erreicht -> PC NICHT heruntergefahren.
+> **Fuer Kevin als Naechstes:** 1. testen: `spiel/anleitung_k1.md`, `spiel/anleitung_kampf.md`, `spiel/anleitung_fix1.md` (neuer Wegwerf-Spielstand, -debug);
+> 2. Fragen beantworten: K1 (`spiel/k1_gegen_bericht.md`), Kampf (15 in `spiel/kampf_gegen_bericht.md`), Plaene `plaene/PLAN_TALENTE.md`, `PLAN_TROEGE.md`, `PLAN_F5.md`;
+> 3. Modell-Laeufe (sein Wort 03:05: "die models und posen machst du erst morgen"): Generator-Bruellen, Bauch-Fell, Prankenhieb neu, Maul, Schlafpose, Retter-Move-Clip.
+
 > **14.11. ~08:15 (Woche 91 %):** Plan-Lauf fertig -> `plaene/PLAN_TALENTE.md`, `plaene/PLAN_TROEGE.md`, `plaene/PLAN_F5.md` + Entwuerfe `plaene/bilder/` (je mit
 > Frageliste fuer Kevin; Talente: Baum in 3 Reihen empfohlen, Schwere Pranke braucht neue Wirkung, 2 neue Sandbox-Regler fuer Reset). Bau erst nach Kevins K1-/Kampf-Test.
 > **FIX-LAUF baer-fix1** `wf_54ec828a-899` (3 Agenten; Staging `../_arbeit/baer_zaehmen/mod_fix1/`, Berichte `../_arbeit/baer_zaehmen/fix1/`): R1 Doppel nach Absturz
