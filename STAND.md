@@ -1,5 +1,8 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **14.11. ~10:50: TALENTE-LAUF GESTARTET** (Kevin: *"Talente bauen"*): baer-talente `wf_8f661724-5a2` (7 Agenten; Staging `../_arbeit/baer_zaehmen/mod_tal/` = Test-Mod
+> 93ba693, Berichte `../_arbeit/baer_zaehmen/tal/`). Woche bei Start ~92 %. Bei 98 %: Lauf stoppen, hier notieren, Fortsetzen mit resumeFromRunId (Sitzung cccbd9d6).
+
 > **14.11. ~10:40: Kevin hat ALLE Plan-Fragen beantwortet** (Talente, Troege, F5 -- ENTSCHEIDUNGEN.md unten): Talente FREIE WAHL 3 von 9; Troege: erst Fluss/See, dann
 > Trog, dann Inventar, volle Leiste in 30 Spielminuten, Futterliste als Untermenue im Zahnrad; F5: Markierung wie Entwurf, Brummen an, Fischen immer 2x, Knopf "Fischen".
 > Offen nur noch die Kleinfragen aus K1-/Kampf-/Fix1-Berichten (nach Kevins Test). Bau der drei Pakete: je ein Lauf (Talente, Troege, F5), Woche ~93 %.
