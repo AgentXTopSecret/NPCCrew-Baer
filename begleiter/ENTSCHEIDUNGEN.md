@@ -908,3 +908,6 @@ Kevin ~13:35 zum Tooltip, woertlich: *"nein schreib einfach sowas wie essen und 
 Kevin ~13:40, woertlich: *"auchso das aussehen also die model wahl gehoert eigtl ins zahnrad menue das ist nichts was man immer druecken wuerde"* -> **Aussehen-Wahl (Look) ins Zahnrad-Menue**
    (Untermenue mit den Aussehen wie heute, Sperren/Wartezeit wie heute, grau mit Grund). Damit wird in Reihe 2 ein Platz frei: Fliehen kann dorthin, und Fischen koennte bleiben
    -> an Kevin gefragt (zusammen mit den drei Fischen-Varianten).
+Kevin ~13:42, woertlich: *"dann koennte fischen doch unten bleiben im menue"* -- *"und wir haetten das problem geloest"* -> **FEST:** Fischen bleibt in Reihe 2. Neue Befehle (2 Reihen):
+   Reihe 1 Folgen / Bleiben / Sitz / Frei laufen / Komm her; Reihe 2 Fischen / Herholen / **Fliehen** (Schalter, heute "Passiv", an der Stelle von Aussehen) / Inventar / Heilen.
+   Aussehen-Wahl ins Zahnrad-Menue. Die dritte Reihe faellt weg. Entwurfs-Lauf baer-fenster-entwurf damit ueberfluessig, abgebrochen. Kommt mit dem Fliehen-Lauf.
