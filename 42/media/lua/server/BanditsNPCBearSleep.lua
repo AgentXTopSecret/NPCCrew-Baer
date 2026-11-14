@@ -8,7 +8,12 @@ if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: la
 -- auf 0% runter ist ansonsten kann man ihn per folgen wieder aufwecken mitten drinne". Also KEINE Uhrzeiten: kein Nachtfenster, kein
 -- Mittagsschlaf, kein getGameTime():getHour(). Geschlafen wird nur
 --   "tired": Muedigkeit bei tirCollapse (100) -- wo er steht, in jedem Modus, auch beim Folgen; bis tirWake (0);
---   "owner": er folgt und sein Besitzer schlaeft (Kevin 6d) -- er geht 1-2 Kacheln neben ihn und legt sich; bis der Besitzer aufwacht.
+--   "owner": sein Besitzer schlaeft (Kevin 6d) -- er geht 1-2 Kacheln neben ihn und legt sich; bis der Besitzer aufwacht.
+--   K1 (Kevin 14.11. ~01:10, woertlich: "wenn ein spieler schlaeft schlaeft der baer immer mit legt sich neben dem spieler und wenn der spieler
+--   vorspult das spiel dan legt er sich auch zum schlafen hin ausser gegner sind in der naehe dann kaempft er"): aus JEDEM Modus (Folgen,
+--   Bleiben, Sitz, Frei), nicht nur beim Folgen. Hingehen nur bis sleepGoR (25) Kacheln auf derselben Ebene, sonst legt er sich, wo er ist;
+--   der Weg hat sleepWalkMs (45 s) Frist. Vorspulen meldet der Client als "schlaeft" (Bitte "Sleep", nur Einzelspieler -- OBERFLAECHE).
+--   Nach dem Aufwachen ("ownerup") gilt sein Modus wie vorher (Bleiben / Sitz / Frei rechnet wieder B.OrderStep).
 -- Wecken (B.SleepStop, die EINE Weck-Stelle): jeder Befehl (B.SetMode: Mode / Come / Call; der Aussehen-Knopf ueber den neuen Koerper),
 -- Fuettern / Traenken (Bitte "Wake" bzw. B.FeedComplete / B.DrinkComplete), Gefahr in sleepWakeR Kacheln, ein Treffer (B.BearHurt) oder
 -- Laerm (B.CalmAnswer) -- die drei letzten als Aufschrecken. Streicheln und Passiv wecken nicht. Geweckt bleibt die Muedigkeit, wo sie ist.
@@ -109,7 +114,14 @@ function B.OwnerAsleep(pkey, ms)
 end
 
 -- Bitte "Sleep" { on }: nur der Typ zaehlt (on muss ein Wahrheitswert sein, sonst still verworfen); dieselbe Meldung hoechstens je askMs.
--- Geglaubt wird nur "MEIN Spieler schlaeft" -- das legt hoechstens den eigenen folgenden Baeren hin.
+-- Geglaubt wird nur "MEIN Spieler schlaeft" -- das legt hoechstens den eigenen Baeren hin.
+-- Nachbesserung K1 C6 (Pruef-Tor G-K1; CLAUDE.md 4 "was der Server wissen muss, kommt nie aus einem Client-Glauben"): seit K1 friert die
+-- Meldung auch Hunger, Durst und Muedigkeit ein -- im Mehrspieler glaubt der Server "on = true" darum nur, wenn ER den Spieler schlafen
+-- sieht: player:isAsleep() (Aufruf wie V:shared/TimedActions/ISWakeOtherPlayer.lua:6, am anderen Spieler). Beleg, dass der Server es weiss
+-- (Jar nur gelesen, k1/jar/nach/): PlayerPacket.processServer ruft NetworkPlayerAI.parse(PlayerPacket), das setzt ueber
+-- NetworkPlayerVariables.setBooleanVariables die Flagge isAsleep (IsoPlayer.setAsleep) -- dieselbe Flagge, die der Client aus isAsleep()
+-- schickt. Kommt die Bitte vor der Flagge an, gilt die naechste Auffrischung (je 30 s, client/ISUI/BanditsNPCBearZz.lua U.SleepReport).
+-- Einzelspieler: ungeprueft geglaubt (dort zaehlt auch das Vorspulen, und es gibt keinen fremden Client).
 function B.HandleSleep(player, args)
     if not player or not B.IsWriter() then return end
     if type(args) ~= "table" or type(args.on) ~= "boolean" then return end
@@ -118,6 +130,10 @@ function B.HandleSleep(player, args)
     local t = B._ownSleep
     if args.on ~= true then
         t[pkey] = nil
+        return
+    end
+    if isServer() and player:isAsleep() ~= true then
+        B.Log("sleep: " .. tostring(pkey) .. " reports asleep, the server sees it awake -- ignored")
         return
     end
     local ms = getTimestampMs()
@@ -179,7 +195,7 @@ end
 -- ---------------------------------------------------------------------------
 -- Abbau der Muedigkeit im Schlaf: tirSleepGround (10,5) je Spielstunde seit dem letzten Abzug -- eigene Uhr slp.hAt in Weltstunden
 -- (wie rt.sleepHour der NPC-Crew-Figuren, NPC Crew shared/BanditsNPCPrograms.lua, nur gelesen), je Aufruf hoechstens maxDtH (ein
--- entladener oder angehaltener Baer holt nichts nach). Zaehlt die Schlafstunden des Tages (Vertrauen). Der Regler BearNeedsPercent
+-- entladener oder angehaltener Baer holt nichts nach). Zaehlt die Schlafstunden des Tages (nur noch Diagnose: K1 hat keinen Schlaf-Bonus). Der Regler BearNeedsPercent
 -- skaliert den Abbau NICHT (wie bei der Crew: die Schlaflaenge ist bei jedem Tempo dieselbe). Rueckgabe: gezaehlte Stunden.
 -- ---------------------------------------------------------------------------
 function B.SleepDrain(rec, s, now)
@@ -326,14 +342,15 @@ local function gapOf(rec)
     return B.BodyGap(bd, bsz)
 end
 
--- Einschlafen (aus B.SleepStep). "owner": steht er weiter als sleepNear vom schlafenden Besitzer (gleiche Ebene), geht er erst auf eine
--- freie Kachel 1-2 neben ihm (B.SpotNear: nie die Kachel des Besitzers, gleicher Raum, ohne Sperre erreichbar) -- Phase "go", hoechstens
--- sleepWalkMs; sonst legt er sich, wo er ist. square:getX()/getY(): Vanilla client/DebugUIs/DebugContextMenu.lua:636.
+-- Einschlafen (aus B.SleepStep). "owner": steht er weiter als sleepNear vom schlafenden Besitzer (gleiche Ebene, K1: hoechstens sleepGoR), geht
+-- er erst auf eine freie Kachel 1-2 neben ihm (B.SpotNear: nie die Kachel des Besitzers, gleicher Raum, ohne Sperre erreichbar) -- Phase "go",
+-- hoechstens sleepWalkMs; sonst legt er sich, wo er ist. square:getX()/getY(): Vanilla client/DebugUIs/DebugContextMenu.lua:636.
 local function begin(rec, a, s, why, env, ms, players)
     local now = B.Now()
     if why == "owner" then
         local o = env and env.owner or nil
-        if o ~= nil and (num(o.dist) or 0) > cfg("sleepNear", 2.5) + gapOf(rec)
+        -- K1: nur hingehen, wenn er erreichbar ist (gleiche Ebene, hoechstens sleepGoR Kacheln) -- sonst legt er sich, wo er ist
+        if o ~= nil and (num(o.dist) or 0) > cfg("sleepNear", 2.5) + gapOf(rec) and (num(o.dist) or 0) <= cfg("sleepGoR", 25)
             and math.floor(num(o.z) or 0) == math.floor(num(rec.z) or 0) then
             local sq = B.SpotNear(o.x, o.y, o.z, 2, rec.gen)
             if sq ~= nil then
@@ -392,11 +409,12 @@ function B.SleepStep(rec, a, env, ms, players)
         -- der Abbau zaehlt nur, solange der Besitzer im Spiel ist (wie alle Uhren des Baeren); sonst nur die Uhr nachstellen
         if o ~= nil then B.SleepDrain(rec, s, now) else slp.hAt = now end
         if slp.ph == "go" then
-            if danger or not ownerAsleep or mode ~= "follow" then
+            -- K1: der Weg gilt in jedem Modus (frueher nur beim Folgen)
+            if danger or not ownerAsleep then
                 s.slp = nil
                 return false
             end
-            local span = cfg("sleepWalkMs", 30000)
+            local span = cfg("sleepWalkMs", 45000)
             local late = not pending((num(slp.at) or ms) + span, ms, span)
             if late or B.DistXY(a:getX(), a:getY(), slp.tx, slp.ty) <= cfg("sleepArrive", 1.2) then
                 lie(rec, a, s, "owner", ms, now, false, players)

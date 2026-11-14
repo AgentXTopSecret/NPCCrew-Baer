@@ -20,6 +20,8 @@ if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: la
 -- F3 (PLAN_F3.md 2.4, 5, 6.5; Kevins Antworten 13.11.2026): im Langsam-Takt B.NeedsSlow je Eintrag (Hunger, Durst, Muedigkeit, Vertrauen;
 -- eigene Schleife NACH B.GrowSlow), in liveRec der Schlaf (B.SleepStep) direkt VOR dem Kampf, Bitten "Sleep" / "Wake", B.FeedComplete senkt
 -- am gezaehmten Baeren den Hunger (B.NeedEat) und gibt Vertrauen (B.TrustAdd), B.PetComplete gibt Vertrauen.
+-- K1 (PLAN_K1.md 2.2; Kevin 14.11. ~00:00): Vertrauen aus der Hand nur noch "satt gefuettert" (dieses Stueck brachte den Hunger auf 0 %) und
+-- "gestreichelt", je 1x am Spieltag +0,5 (B.TrustAdd "feedfull" / "pet"); Punkte je Futter gibt es nicht mehr.
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -269,12 +271,15 @@ function B.FeedComplete(character, animal, food)
     -- F3 (PLAN_F3.md 5.1, 5.3; Kevin 13.11. 6e "Fuettern/Traenken wecken kurz"): am gezaehmten Baeren senkt das Stueck den Hunger und
     -- gibt Vertrauen (server/BanditsNPCBearNeeds.lua); schlaeft er noch (die Bitte "Wake" des Menues ging verloren), weckt ihn das
     -- Fuettern selbst (server/BanditsNPCBearSleep.lua) -- eine Ablehnung gaebe es nur VOR dem Nehmen. Mit BearNeedsPercent 0 kein Hunger.
-    -- Eben gezaehmt: die vier Werte bekommen ihre Erst-Werte (Vertrauen 50), damit die erste Sicht sie schon traegt.
+    -- Eben gezaehmt: die vier Werte bekommen ihre Erst-Werte (Vertrauen 0), damit die erste Sicht sie schon traegt.
+    -- K1 (Kevin 14.11. ~00:00 "wenn das essen und trinken 100 erreicht bei den aktionen um 0,5 aber immer nur 1x pro tag"): brachte DIESES
+    -- Stueck den Hunger auf 0 %, ist er satt gefuettert (B.TrustAdd "feedfull", 1x je Spieltag); jedes andere Stueck gibt kein Vertrauen.
     local hunLeft = nil
     if wasTame and B.NeedEat then
         if B.SleepStop then B.SleepStop(rec, "hand") end
+        local hun0 = tonumber(rec.nH) or 0
         if B.NeedsOn and B.NeedsOn() then hunLeft = B.NeedEat(rec, meals, "hand") end
-        if B.TrustAdd then B.TrustAdd(rec, "feed", class, now) end
+        if B.TrustAdd and hunLeft ~= nil and hun0 > 0 and hunLeft <= 0 then B.TrustAdd(rec, "feedfull", nil, now) end
     elseif res.tamed and B.NeedsFix then
         B.NeedsFix(rec, now)
     end
@@ -316,7 +321,7 @@ function B.PetComplete(character, animal)
     rec.idleH = 0
     rec.goneP = nil
     -- F3 (PLAN_F3.md 4.1, 5.3): Streicheln gibt am gezaehmten Baeren Vertrauen und laesst einen schlafenden liegen (kein B.SleepStop --
-    -- Kevin 13.11. 6e); eben gezaehmt: Erst-Werte
+    -- Kevin 13.11. 6e); eben gezaehmt: Erst-Werte. K1: +0,5 hoechstens 1x je Spieltag (server/BanditsNPCBearNeeds.lua B.TrustAdd "pet")
     if wasTame and B.TrustAdd then
         B.TrustAdd(rec, "pet", nil, now)
     elseif res.tamed and B.NeedsFix then

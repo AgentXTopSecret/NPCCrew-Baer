@@ -48,6 +48,13 @@
 -- F4 (Lauf baer-f4, PLAN_F4.md 7, 8.1): der Knopf "Inventory" (Reihe 2, Zelle 4) ist scharf und oeffnet das Inventar-Fenster dieses Baeren
 -- (U.InvOpen, client/ISUI/BanditsNPCBearInvWindow.lua) -- auch von weitem (Kevin Antwort 2: ansehen ueberall). Die Zeile "Can carry" heisst
 -- jetzt "Load" (Inhalt aus client/BanditsNPCBearWinData.lua; Lage und Masse unveraendert).
+-- K1 (Lauf baer-k1, PLAN_K1.md 1.5, 4 Z; Kevin 14.11.2026 I1 "zahnrad menue einbauen in baeren ui fuer mehr platz im ui fuer unnoetige
+-- ausblendungknoepfe"): ZAHNRAD oben rechts neben "Schliessen" -- Vanillas Knopf mit Vanillas Bild media/ui/inventoryPanes/Button_Gear.png (Form
+-- des Chat-Zahnrads V:client/Chat/ISChat.lua:130-140), Klick oeffnet Vanillas Kontextmenue am Zahnrad (ISChat.lua:245-272: ISContextMenu.get,
+-- addOption, setOptionChecked) mit den Ausblend-Schaltern Name tag / Health bar (NEU) / Show damage / Growth line (nur solange er waechst) /
+-- Nose alerts (grau bis F5); Haken = an. Die Punkte kommen fertig aus dem Modell (d.gear, client/BanditsNPCBearWinData.lua). Reihe 3 der
+-- Befehle traegt nur noch "Passive" (Zelle 1; der Rest bleibt frei fuer spaeter); Fensterhoehe unveraendert, nichts springt. Pfeile bei
+-- mehreren Baeren ruecken um ein Zahnrad nach links.
 -- Jeder Engine-Aufruf hat eine Vanilla-Fundstelle (Kommentar daneben). Statisch geprueft, nicht gespielt.
 --
 
@@ -69,6 +76,7 @@ local FIT = 0.92                                -- passt das Fenster nicht in 92
 local ICON_FILE = "media/ui/BanditsNPCBearCub_marker288.png"
 local DISC_FILE = "media/ui/BanditsNPCBearMarker_disc.png"
 local CLOSE_FILE = "media/ui/inventoryPanes/Button_Close.png"
+local GEAR_FILE = "media/ui/inventoryPanes/Button_Gear.png"   -- K1: Vanillas Zahnrad-Bild (V:client/Chat/ISChat.lua:137)
 local CMDS = { "follow", "stay", "sit", "roam", "come", "unstuck", "fish", "inv" }     -- F3: + fish (grau bis F5), inv (F4 scharf)
 local NEEDS = { "hun", "thr", "tir", "tru" }                                            -- F3: Balken-Zeilen der Karte "Needs"
 -- F3 (PLAN_F3.md 10.2): Reihe 1 und die ersten vier Zellen von Reihe 2 der Befehle (Zelle 3 von Reihe 2 = Knopf "Look", Zelle 5 = Pflege)
@@ -117,7 +125,7 @@ local function dynNeed(m, d, n)
     local P = m.P
     local need = 0
     local function grow(v) if v > need then need = v end end
-    local right = m.R24
+    local right = m.R24 + m.R6 + m.R24                  -- K1: Schliessen + Zahnrad
     local countW = 0
     if n > 1 then
         countW = math.max(tw(m.fSmall, d and d.count), m.R28)
@@ -190,6 +198,7 @@ local function metrics(f, d, n, sw, sh, idx)
     for _, t in ipairs({ s.tHunger, s.tThirst, s.tTired, s.tTrust }) do     -- F3: die vier Beduerfnis-Zeilen
         col2(tw(m.fBody, t), math.max(tw(m.fBody, s.widePctNeed), tw(m.fBody, s.off)))      -- Nachbesserung P3: "Off" bei Regler 0
     end
+    col2(tw(m.fBody, s.tTrust), tw(m.fBody, s.wideTrust))                 -- K1: Vertrauen mit Vorzeichen und Nachkommastelle
     cw = math.max(cw, tw(m.fBody, s.tNeeds) + R(24), tw(m.fBody, s.tSkills) + R(24), tw(m.fBody, s.tCond) + R(24))
     col2(tw(m.fBody, s.tMelee), tw(m.fBody, s.wideMelee))                  -- F2 (11.2)
     col2(tw(m.fBody, s.tKills), tw(m.fBody, s.wideKills))                  -- F2 (11.5)
@@ -204,18 +213,16 @@ local function metrics(f, d, n, sw, sh, idx)
         for _, txt in pairs(s.btn) do bwNeed = math.max(bwNeed, tw(m.fBody, txt) + R(24)) end
     end
     bwNeed = math.max(bwNeed, tw(m.fBody, s.wideUnstuck) + R(24))
-    bwNeed = math.max(bwNeed, tw(m.fBody, s.passive) + R(46), tw(m.fBody, s.tag) + R(46))
-    -- F1B: der dritte Schalter "Growth line" -- immer mitgemessen (auch wenn er gerade verschwunden ist), damit nichts springt
-    bwNeed = math.max(bwNeed, tw(m.fBody, s.growth) + R(46))
-    -- F2: Pflege-Knopf (beide Texte) und Schalter "Show damage"
-    bwNeed = math.max(bwNeed, tw(m.fBody, s.bandage) + R(24), tw(m.fBody, s.helpUp) + R(24), tw(m.fBody, s.showDmg) + R(46))
+    bwNeed = math.max(bwNeed, tw(m.fBody, s.passive) + R(46))
+    -- K1: Name tag, Growth line, Show damage, Nose alerts stehen im Zahnrad-Menue (Vanillas Kontextmenue misst sich selbst)
+    -- F2: Pflege-Knopf (beide Texte)
+    bwNeed = math.max(bwNeed, tw(m.fBody, s.bandage) + R(24), tw(m.fBody, s.helpUp) + R(24))
     -- Aussehen (PLAN_AUSSEHEN.md 8.1): "Look: <Name>" mit jedem Namen und "Look  9:59" -- immer mitgemessen, damit nichts springt
     bwNeed = math.max(bwNeed, tw(m.fBody, s.wideLook) + R(24))
     if type(s.lookLabels) == "table" then
         for i = 1, #s.lookLabels do bwNeed = math.max(bwNeed, tw(m.fBody, s.lookLabels[i]) + R(24)) end
     end
-    -- F3: Fish, Inventory stehen in s.btn (oben gemessen); dazu der Schalter Nose alerts. Fuenf Spalten.
-    bwNeed = math.max(bwNeed, tw(m.fBody, s.nose) + R(46))
+    -- F3: Fish, Inventory stehen in s.btn (oben gemessen). Fuenf Spalten.
     grow(2 * P + 5 * bwNeed + R(24) + 4 * R(8))
     local footW = 0
     for _, txt in ipairs({ s.hintMissing, s.hintRide, s.hintAway, s.hintEsc, s.hintSleep, s.hintTired, s.hintNoTrust }) do
@@ -252,9 +259,12 @@ local function place(win, m)
     -- Kopf
     put(win.closeB, m.W - P - m.R24, m.R12, m.R24, m.R24)
     win.closeB:forceImageSize(m.R24, m.R24)          -- V:client/ISUI/ISInventoryPage.lua:1479
+    -- K1: Zahnrad links neben Schliessen, gleiche Masse
+    put(win.gearB, m.W - P - m.R24 - m.R6 - m.R24, m.R12, m.R24, m.R24)
+    win.gearB:forceImageSize(m.R24, m.R24)           -- ISInventoryPage.lua:1479
     put(win.rename, m.tx + m.nameW + m.bold + m.R12, m.ty + math.floor((m.ln - m.rbh) / 2), m.renameW, m.rbh)
     win.rename.font, win.rename.fh = m.fSmall, m.ls
-    local nx = m.W - P - m.R24 - m.R6 - m.R24
+    local nx = m.W - P - m.R24 - m.R6 - m.R24 - m.R6 - m.R24
     put(win.nextB, nx, m.R12, m.R24, m.R24)
     m.countX = nx - m.R6 - math.floor(m.countW / 2)
     put(win.prevB, nx - m.R6 - m.countW - m.R6 - m.R24, m.R12, m.R24, m.R24)
@@ -302,11 +312,7 @@ local function place(win, m)
     cell(win.look, 3, by1, m.bh)                                                -- Aussehen (PLAN_AUSSEHEN.md 8.1): neben Unstuck (gemeinsame Uhr)
     cell(win.care, 5, by1, m.bh)                                                -- F2: "Bandage" / am Boden "Help up"
     local ty0 = by1 + m.bh + m.R8 + m.R2
-    cell(win.tick.pas, 1, ty0, m.th)                                            -- Reihe 3: Schalter
-    cell(win.tick.nose, 2, ty0, m.th)
-    cell(win.tick.tag, 3, ty0, m.th)
-    cell(win.tick.dmg, 4, ty0, m.th)
-    cell(win.tick.age, 5, ty0, m.th)                    -- F1B: verschwindet ausgewachsen -- die Luecke liegt am Reihenende
+    cell(win.tick.pas, 1, ty0, m.th)                    -- Reihe 3: nur noch "Passive" (K1: die anderen Schalter im Zahnrad-Menue)
 end
 
 -- Auf den Bildschirm klemmen: mindestens 40 x f px sichtbar, Oberkante nie ueber dem Bild (PLAN_F1.md 1.1 "Lage").
@@ -386,9 +392,7 @@ function Win:build()
     self.prevB = kid(self, U.WinBtn, "prev", "small")
     self.nextB = kid(self, U.WinBtn, "next", "small")
     self.prevB.label, self.nextB.label = "<", ">"
-    self.tick = { pas = kid(self, U.WinTick, "passive"), tag = kid(self, U.WinTick, "tag"), age = kid(self, U.WinTick, "growth"),
-        dmg = kid(self, U.WinTick, "showdmg"),                                      -- F2 (11.1)
-        nose = kid(self, U.WinTick, "nose") }                                       -- F3: Platzhalter "Nose alerts" (grau bis F5)
+    self.tick = { pas = kid(self, U.WinTick, "passive") }                          -- K1: die anderen Schalter stehen im Zahnrad-Menue
     self.care = kid(self, U.WinBtn, "care", "cmd")                                  -- F2: "Bandage" / "Help up"
     self.look = kid(self, U.WinBtn, "look", "cmd")                                  -- Aussehen: "Look: <Name>"
     self.rows = {
@@ -423,6 +427,16 @@ function Win:build()
     self:addChild(c)
     self.kids[#self.kids + 1] = c
     self.closeB = c                                 -- nicht "close": das ist ISPanel:close (V:client/ISUI/ISPanel.lua:14)
+    -- K1: Zahnrad wie Vanillas Chat (V:client/Chat/ISChat.lua:130-140: ISButton mit Bild, Rahmen aus) mit den Farben unseres Schliessen-Knopfs
+    local g = ISButton:new(0, 0, 10, 10, "", self, Win.onGear)
+    g:initialise()
+    g.borderColor.a = 0.0                           -- ISChat.lua:134
+    g.backgroundColor = { r = bg[1], g = bg[2], b = bg[3], a = bg[4] }
+    g.backgroundColorMouseOver = { r = hv[1], g = hv[2], b = hv[3], a = hv[4] }
+    if W.tex and W.tex.gear then g:setImage(W.tex.gear) end       -- ISChat.lua:137
+    self:addChild(g)
+    self.kids[#self.kids + 1] = g
+    self.gearB = g
 end
 
 -- Offenen Tooltip EINES Kindes abmelden (wie ISButton:updateTooltip selbst: V:client/ISUI/ISButton.lua:341-343). F1B: auch fuer den
@@ -460,16 +474,7 @@ local function apply(win, d)
     win.rename.label = d.rename
     local t = d.toggles
     win.tick.pas.on, win.tick.pas.label, win.tick.pas.tooltip = t.pas, t.pasLabel, t.pasTip
-    win.tick.tag.on, win.tick.tag.label, win.tick.tag.tooltip = t.tag, t.tagLabel, t.tagTip
-    -- F1B: Wachstums-Schalter; verschwindet, wenn der Baer ausgewachsen ist (t.ageShow false). ISButton:setVisible V:client/ISUI/ISButton.lua:9
-    -- (wie prev/next oben in place), getIsVisible :34. Nur bei einem Wechsel, und den offenen Tooltip vorher abmelden.
-    local age = win.tick.age
-    age.on, age.label, age.tooltip = t.age, t.ageLabel, t.ageTip
-    local show = (t.ageShow == true)
-    if age:getIsVisible() ~= show then
-        if not show then hideTip(age) end
-        age:setVisible(show)
-    end
+    win.gearB.tooltip = d.gearTip                                   -- K1: Zahnrad (ISButton-Tooltip, V:client/ISUI/ISButton.lua:316-346)
     win.rows.hp.tooltip, win.rows.sta.tooltip = d.tips.hp, d.tips.sta
     win.rows.carry.tooltip = d.tips.carry
     for i = 1, #NEEDS do win.rows[NEEDS[i]].tooltip = d.tips[NEEDS[i]] end         -- F3: Hunger, Durst, Muedigkeit, Vertrauen
@@ -481,12 +486,6 @@ local function apply(win, d)
         win.care.label, win.care.state, win.care.tooltip, win.care.kind = c.label, c.state, c.tip, c.kind
         win.care.enable = (c.state ~= "off")                        -- ISButton.lua:45
     end
-    win.tick.dmg.on, win.tick.dmg.label, win.tick.dmg.tooltip = t.dmg, t.dmgLabel, t.dmgTip
-    -- F3 (PLAN_F3.md 10.2): Schalter "Nose alerts" -- bis F5 ein grauer Platzhalter (state "off": kein Klick, Grund im Tooltip)
-    local nose = win.tick.nose
-    nose.on, nose.label, nose.tooltip = t.nose, t.noseLabel, t.noseTip
-    nose.state = (t.noseOff == true) and "off" or "normal"
-    nose.enable = (nose.state ~= "off")                             -- ISButton.lua:45
     -- Aussehen (PLAN_AUSSEHEN.md 8.1): Knopf "Look"; ohne d.look (Kern ohne Aussehen) unsichtbar -- wie der Wachstums-Schalter oben nur bei
     -- einem Wechsel umschalten und den offenen Tooltip vorher abmelden (ISButton:setVisible V:client/ISUI/ISButton.lua:9, getIsVisible :34)
     local lb, le = win.look, d.look
@@ -595,6 +594,66 @@ local function lookMenu(win, button, v)
     end
 end
 
+-- K1 (PLAN_K1.md 4 Z): Wahl im Zahnrad-Menue. Vanillas Kontextmenue ruft onSelect(Ziel, Wert1, Wert2) (V:client/ISUI/ISContextMenu.lua:66-70).
+-- Alles nur je Spieler, was ICH sehe (client/BanditsNPCBearTags.lua) -- kein Server, kein Befehl. id = Baer, an dem das Menue aufging; gehoert er
+-- (laut Sicht) nicht mehr mir, passiert nichts.
+function Win.onGearPick(self, key, id)
+    if type(key) ~= "string" or id == nil then return end
+    local v = nil
+    local list = U.WinBears()
+    for i = 1, #list do
+        if list[i].id == id then v = list[i] end
+    end
+    if v == nil then return end
+    if key == "tag" then
+        if U.TagSet and U.TagOn then U.TagSet(v, not U.TagOn(v)) end
+    elseif key == "hp" then
+        if U.HpSet and U.HpOn then U.HpSet(v, not U.HpOn(v)) end
+    elseif key == "showdmg" then
+        if U.DmgSet and U.DmgOn then U.DmgSet(not U.DmgOn()) end
+    elseif key == "growth" then
+        if U.AgeSet and U.AgeOn then U.AgeSet(v, not U.AgeOn(v)) end
+    end
+    -- "nose" ist bis F5 grau (notAvailable) und kommt nie hier an
+    self.dirty = true
+end
+
+-- K1: das Zahnrad-Menue am Knopf (Form V:client/Chat/ISChat.lua:245-272 und unser lookMenu oben): je Punkt des Modells (d.gear) addOption mit
+-- Rueckruf (ISChat.lua:263), Haken = an (setOptionChecked, ISChat.lua:267 / V:client/ISUI/ISContextMenu.lua:1084), grau = notAvailable +
+-- Tooltip (V:client/ISUI/Animal/ISAnimalContextMenu.lua:160-163; ISWorldObjectContextMenu.addToolTip, setName). Der Tooltip-Text ist derselbe
+-- Rich-Text wie an den Knoepfen (ISToolTip description -> ISRichTextPanel, V:client/ISUI/ISToolTip.lua:191-192).
+local function gearMenu(win, button, v)
+    local items = win.model and win.model.gear
+    if type(items) ~= "table" then return end
+    local x = button:getAbsoluteX()                     -- V:client/ISUI/Animal/ISButcherHookUI.lua:668
+    local y = button:getAbsoluteY() + button:getHeight()    -- V:client/ISUI/ISButton.lua:338
+    local context = ISContextMenu.get(0, x, y)
+    for i = 1, #items do
+        local e = items[i]
+        if e.hide ~= true then
+            local opt
+            if e.off then
+                opt = context:addOption(e.label, win)
+                opt.notAvailable = true
+            else
+                opt = context:addOption(e.label, win, Win.onGearPick, e.key, v.id)
+                if e.on then context:setOptionChecked(opt, true) end
+            end
+            if e.tip then
+                local tip = ISWorldObjectContextMenu.addToolTip()
+                tip.description = e.tip
+                opt.toolTip = tip
+            end
+        end
+    end
+end
+
+function Win:onGear(button)
+    local v = self.v
+    if not v or v.id == nil or not button then return end
+    gearMenu(self, button, v)
+end
+
 -- Klick auf einen Knopf / Schalter (ISButton ruft onclick(Ziel, Knopf), V:client/ISUI/ISButton.lua:47). Nur Bitten an den Schreiber;
 -- nie eine leere Tabelle (S:client/BanditsNPCBearClient.lua sendHello).
 function Win:onCmd(button)
@@ -624,13 +683,6 @@ function Win:onCmd(button)
         B.Ask(player, "Call", { id = v.id })
     elseif cmd == "passive" then
         B.Ask(player, "Passive", { id = v.id, on = not (v.pas == true) })
-    elseif cmd == "tag" then
-        if U.TagSet and U.TagOn then U.TagSet(v, not U.TagOn(v)) end
-        self.dirty = true
-    elseif cmd == "growth" then
-        -- F1B: Wachstums-Zeile UEBER diesem Baeren an/aus -- je Spieler, was ICH sehe (wie Name tag); kein Server, kein Befehl
-        if U.AgeSet and U.AgeOn then U.AgeSet(v, not U.AgeOn(v)) end
-        self.dirty = true
     elseif cmd == "rename" then
         if U.AskName then self.nameBox = U.AskName(player, v) end
     elseif cmd == "care" then
@@ -641,10 +693,6 @@ function Win:onCmd(button)
             U.MendAsk(player, v)
         end
         self.dirty = true
-    elseif cmd == "showdmg" then
-        -- F2 (11.1): je Spieler, was ICH sehe -- kein Server, kein Befehl
-        if U.DmgSet and U.DmgOn then U.DmgSet(not U.DmgOn()) end
-        self.dirty = true
     elseif cmd == "look" then
         -- Aussehen: grau kam oben schon zurueck (state "off"); hier nur das Menue -- die Bitte schickt erst die Wahl
         lookMenu(self, button, v)
@@ -653,8 +701,8 @@ function Win:onCmd(button)
         -- Nehmen prueft dort die Vorpruefung, entscheiden tut der Schreiber in complete()
         if U.InvOpen then U.InvOpen(player, v.id) end
     end
-    -- F3: "fish", "nose" haben bis F5 bewusst keinen Zweig -- sie sind grau (state "off", oben schon zurueck) und schicken nie eine Bitte;
-    -- kein Schlaf-Befehl (Kevin 6e).
+    -- F3: "fish" hat bis F5 bewusst keinen Zweig -- grau (state "off", oben schon zurueck), schickt nie eine Bitte; kein Schlaf-Befehl (Kevin 6e).
+    -- K1: Name tag / Growth line / Show damage / Health bar / Nose alerts gehen ueber das Zahnrad (Win.onGearPick).
 end
 
 function Win:onClose()
@@ -784,7 +832,8 @@ end
 -- V:client/ISUI/ISCollapsableWindow.lua:386; eigene Bilder wie S:client/ISUI/BanditsNPCBearMarker.lua (288-px-Symbol, Scheibe).
 local function textures()
     if W.tex then return W.tex end
-    W.tex = { icon = getTexture(ICON_FILE), disc = getTexture(DISC_FILE), close = getTexture(CLOSE_FILE) }
+    W.tex = { icon = getTexture(ICON_FILE), disc = getTexture(DISC_FILE), close = getTexture(CLOSE_FILE),
+        gear = getTexture(GEAR_FILE) }                  -- K1: Zahnrad (V:client/Chat/ISChat.lua:137)
     return W.tex
 end
 

@@ -952,7 +952,7 @@ function B.InvFresh(s, nowH)
 end
 
 -- ---------------------------------------------------------------------------
--- Zeile fuer das Fenster (schnittstelle.md K4): nur Anzeige, nie zurueckgeschickt. nm hoechstens 100 Zeichen (die Daten behalten den ganzen Namen).
+-- Zeile fuer das Fenster (schnittstelle.md K4; K1: + ml): nur Anzeige, nie zurueckgeschickt. nm hoechstens 100 Zeichen (die Daten behalten den ganzen Namen).
 -- ---------------------------------------------------------------------------
 function B.InvRow(nr, s, nowH, typeOk)
     local row = { nr = nr, t = s.t, k = math.floor(num(s.k) or 1), w = math.floor((num(s.w) or 0) * 100 + 0.5) / 100 }
@@ -977,6 +977,9 @@ function B.InvRow(nr, s, nowH, typeOk)
     if num(s.u) ~= nil then row.u = math.floor(s.u * 100 + 0.5) end
     if typeOk == false then row.unk = true end
     if s.fc ~= nil then row.ea = true end
+    -- K1 (PLAN_K1.md 8, Kevin 14.11. ~02:10 "soll da stehn mit prozent"): Mahlzeiten je Stueck (B.MealsOf beim Geben), 0,01 -- die OBERFLAECHE
+    -- rechnet daraus mit der Sicht meal "satt fuer ~x % seines Tagesbedarfs"
+    if s.fc ~= nil and num(s.ml) ~= nil and s.ml > 0 then row.ml = math.floor(s.ml * 100 + 0.5) / 100 end
     return row
 end
 

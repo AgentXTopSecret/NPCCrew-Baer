@@ -19,6 +19,10 @@
 -- fuer alle Baeren dieses Spielers (kein Kennzeichen), Vorgabe an (fehlt die Zeile: an). Gleicher Leser/Schreiber; wie die Listen nur,
 -- wenn AUS: dann "showdmg 0" als letzte Zeile nach beiden Listen ("showdmg 1" wird gelesen, aber nie geschrieben). Eine Datei ohne diese
 -- Zeile (F1/F1B) laedt unveraendert.
+-- K1 (Lauf baer-k1, PLAN_K1.md 4 Z; Kevin 13.11.2026 ~22:05: "ich wuerde den hp balken auch gern ausblenden lassen durch einen botton"): eine
+-- dritte Liste "hpoff <u>" -- Lebensbalken UEBER diesem Baeren aus (Schalter "Health bar" im Zahnrad-Menue des Baeren-Fensters). An = wie
+-- die Option "Health over the bear" (TagHealth) es will, aus = nichts. Geschrieben wird IMMER alles (tag, age, hp, dann showdmg); eine alte
+-- Datei ohne hpoff laedt unveraendert (alle Lebensbalken an).
 -- Dateizugriff: getFileReader(Name, true) / readLine / close und getFileWriter(Name, true, false) / write / close wie
 -- V:client/ISUI/ISLayoutManager.lua:127-135, :172-185; string.trim :136.
 -- Statisch geprueft, nicht gespielt.
@@ -37,8 +41,9 @@ local MAX = 64
 local L = {
     tag = { pre = "tagoff ", off = {}, order = {} },
     age = { pre = "ageoff ", off = {}, order = {} },
+    hp = { pre = "hpoff ", off = {}, order = {} },  -- K1: Lebensbalken aus
 }
-local LISTS = { L.tag, L.age }                      -- Lese- und Schreib-Reihenfolge
+local LISTS = { L.tag, L.age, L.hp }                -- Lese- und Schreib-Reihenfolge (K1: + hp)
 local T = { loaded = false, dmgOff = false }        -- F2: dmgOff = Schalter "Show damage" aus
 local DMG_PRE = "showdmg "
 
@@ -99,7 +104,7 @@ function U.TagLoad()
     r:close()
 end
 
--- Beide Listen schreiben (erst tag, dann age).
+-- Alle Listen schreiben (erst tag, dann age, K1: dann hp).
 local function save()
     local w = getFileWriter(FILE, true, false)
     if not w then
@@ -155,6 +160,15 @@ end
 
 function U.AgeSet(c, on)
     setOn(L.age, c, on)
+end
+
+-- K1 (PLAN_K1.md 4 Z): Lebensbalken ueber diesem Baeren an? (ohne Kennzeichen: an; an = die Option TagHealth gilt)
+function U.HpOn(c)
+    return isOn(L.hp, c)
+end
+
+function U.HpSet(c, on)
+    setOn(L.hp, c, on)
 end
 
 -- F2 (Nachtrag 11.1): Schadenszahlen ueber Zombies/Banditen zeigen? (je Spieler, Vorgabe an)

@@ -14,6 +14,8 @@
 -- V:client/TimedActions/ISInventoryTransferAction.lua:193-209; Ton "PutItemInBag" V:shared/TimedActions/ISDropWorldItemAction.lua:31 / :36).
 -- GLOBALE Klasse mit dem Namen ihres Typs, new() nennt die Parameter wie die Felder (Netz-Aktion, Form
 -- V:shared/TimedActions/Animals/ISFeedAnimalFromHand.lua:3 und :66-74); nur Spieler, Tier, Text, Zahl -- kein nil.
+-- K1 (Lauf baer-k1, k/schnittstelle.md K4): Deckel B.CFG.invTakeMax jetzt 1000 -- EINE Aktion je Satz; Dauer + invPutPerPc je weiteres Stueck,
+-- gebuendelt (k > 1) bis invBundleMax statt invPutMax.
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -133,8 +135,12 @@ function BanditsNPCBearTakeAction:getDuration()
         if srv ~= nil then kg = srv end
     end
     if kg ~= kg or kg < 0 then kg = 0 end
-    local t = cfgNum("invPutTime", 40) + cfgNum("invPutPerKg", 8) * kg
+    -- K1 (k/schnittstelle.md K4): je weiteres Stueck invPutPerPc, Deckel invPutMax (ein Stueck) bzw. invBundleMax (gebuendelt, bis 1000 Stueck)
+    local k = math.floor(tonumber(self.k) or 1)
+    if k < 1 then k = 1 end
+    local t = cfgNum("invPutTime", 40) + cfgNum("invPutPerKg", 8) * kg + cfgNum("invPutPerPc", 2) * (k - 1)
     local most = cfgNum("invPutMax", 150)
+    if k > 1 then most = cfgNum("invBundleMax", 600) end
     if t > most then t = most end
     return math.floor(t + 0.5)
 end

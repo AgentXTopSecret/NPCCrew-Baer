@@ -6,19 +6,24 @@
 -- sind reine Anzeige und gehen ueberall.
 --
 -- Konsole:
---   NCBear_CubNeeds(h, t, f, tr)  Hunger, Durst, Muedigkeit, Vertrauen meines naechsten zahmen Baeren setzen (je 0..100, nil = lassen),
---                                 z. B. NCBear_CubNeeds(85) = ausgehungert, NCBear_CubNeeds(nil, nil, 92) = zu muede zum Kaempfen,
---                                 NCBear_CubNeeds(nil, nil, nil, 100) = volles Vertrauen (Herz), NCBear_CubNeeds(nil, nil, nil, 10) =
---                                 er weigert sich zu kaempfen. Danach ein Hirn-Takt und eine Zeile.
+--   NCBear_CubNeeds(h, t, f, tr)  Hunger, Durst, Muedigkeit (je 0..100) und Vertrauen (K1: -100..+100) meines naechsten zahmen Baeren
+--                                 setzen (nil = lassen), z. B. NCBear_CubNeeds(85) = ausgehungert, NCBear_CubNeeds(nil, nil, 92) = zu muede
+--                                 zum Kaempfen, NCBear_CubNeeds(nil, nil, nil, 100) = volles Vertrauen (Herz), NCBear_CubNeeds(nil, nil, nil,
+--                                 -80) = er weigert sich zu kaempfen (unter -70), NCBear_CubNeeds(89, 10, 10, 0) + eine Spielstunde = Hunger
+--                                 erreicht 90 -> -5 Vertrauen. Danach ein Hirn-Takt und eine Zeile.
+--   NCBear_CubTrustDay()          K1: die sechs Tages-Marken des Vertrauens auf 0 (gestreichelt / satt gefuettert / satt getraenkt / Hunger 90 /
+--                                 Durst 90 / Leben 1 %) -- "einmal am Tag" testen, ohne einen Spieltag zu warten
 --   NCBear_CubSleep()             Muedigkeit auf 100: er schlaeft nach den ECHTEN Regeln von selbst ein (nie bei Gefahr, im Kampf, in
 --                                 einer Sperre -- dann sagt die Zeile, warum nicht) und dreht sich zur Kamera
 --   NCBear_CubWake()              derselbe Modus noch einmal = ein Befehl weckt ihn (Bitte "Mode" wie der Knopf im Fenster)
 --   NCBear_CubNeedsInfo()         Werte, Woerter, Faktoren (B.NeedK, B.TrustK), kaempft-nicht-Grund, Schlafzustand (B.SleepInfo),
---                                 Verlauf der Tage, dazu der Sicht-Eintrag (hun thr tir tru slp slpO wka fsy nof trM trW) und das
+--                                 K1: Fassung der Vertrauens-Skala (trV), heutige Marken, Tagesbedarf (Punkte, Liter) und Einfrier-Grund,
+--                                 dazu der Sicht-Eintrag (hun thr tir tru slp slpO wka fsy nof trM trT meal bowl hd wl nfz) und das
 --                                 Ruhebild dieses Clients (U.PosePhase, U.PoseSleeping, z Z z)
 --   NCBear_ZzLift(px)             z Z z um px Pixel hoeher (negativ: tiefer) ueber dem Schild-Stapel; ohne Wert: Vorgabe 4
 --   NCBear_ZzHead(k)              Kopf-Vorlage des z Z z in Modell-Einheiten (0 = ueber der Tiermitte); ohne Wert: Wert des Kerns
---   Tempo testen: NCBear_CubSet("needHunDay", 500) (client/NCBearBenchCub.lua) bzw. den Sandbox-Regler "Bear: needs speed".
+--   Tempo testen: NCBear_CubSet("needRiseH", 50) (client/NCBearBenchCub.lua; K1: Punkte je gezaehlter Wachstunde, Vorgabe 6,25) bzw. den
+--   Sandbox-Regler "Bear: needs speed".
 --   Leben setzen: NCBear_CubHurt(pct); Spielstunden ueberspringen: NCBear_CubSkip(h).
 --
 -- Engine-Aufrufe (Fundstelle): getSpecificPlayer(0) V:client/Farming/CFarmingSystem.lua:45; player:getX() / getY()
@@ -26,7 +31,8 @@
 -- V:shared/Definitions/animal/ButcheringUtil.lua:574 (dort IsoDirections.NE; gleiche Aufzaehlung); getTimestampMs()
 -- V:client/Foraging/ISBaseIcon.lua:485.
 -- Kern (zur Laufzeit, hinter Existenz-Riegeln): B.Reg, B.PlayerKey, B.IsSP, B.NeedsSet, B.NeedOf, B.NeedK, B.TrustK, B.NoFight,
--- B.NeedWord, B.TrustWord, B.SleepInfo, B.IsAsleep, B.BrainTick, B.PushView, B.FindAnimal, B.ModeOf, B.Ask, B.View; Oberflaeche:
+-- B.NeedWord, B.TrustWord, B.SleepInfo, B.IsAsleep, B.BrainTick, B.PushView, B.FindAnimal, B.ModeOf, B.Ask, B.View, K1: B.HunDayPts,
+-- B.WaterDayL, B.MealPct, B.BowlPct, B.Touch, B._s (nur lesen: nfz); Oberflaeche:
 -- B.UI.ZZ, B.UI.ZzPoke, B.UI.ZzInfo, B.UI.PosePhase, B.UI.PoseSleeping.
 -- Statisch geprueft, nicht gespielt.
 --
@@ -36,7 +42,9 @@ BanditsNPC.Bear = BanditsNPC.Bear or {}
 local B = BanditsNPC.Bear
 
 local KINDS = { "hun", "thr", "tir", "tru" }
-local VIEW_FIELDS = { "hun", "thr", "tir", "tru", "slp", "slpO", "wka", "fst", "fsy", "nof", "trM", "trW", "meal", "bowl", "mdmgK" }
+local VIEW_FIELDS = { "hun", "thr", "tir", "tru", "slp", "slpO", "wka", "fst", "fsy", "nof", "trM", "trT", "meal", "bowl", "hd", "wl", "nfz",
+                      "mdmgK" }
+local MARKS = { "gp", "gf", "gd", "lh", "lt", "lw" }       -- K1: Tages-Marken im Register (server/BanditsNPCBearNeeds.lua)
 
 local function out(text)
     print("[NCBear] " .. tostring(text))
@@ -194,7 +202,20 @@ function NCBear_CubNeedsInfo()
             .. tostring(si.lockMs) .. ", drowsy ms " .. tostring(si.wokeMs) .. ", getting up ms " .. tostring(si.wakeMs) .. ", owner asleep "
             .. tostring(si.ownerAsleep))
     end
-    out("  history (oldest day first, 0 good / 1 hungry or thirsty / 2 starving or parched): " .. tostring(rec.trD))
+    -- K1: Skala, heutige Marken, Tagesbedarf, Einfrier-Grund
+    local d = rec.nDay
+    local marks = {}
+    for i = 1, #MARKS do marks[#marks + 1] = MARKS[i] .. "=" .. tostring(type(d) == "table" and d[MARKS[i]] or nil) end
+    out("  trust scale v" .. tostring(rec.trV) .. ", day " .. tostring(type(d) == "table" and d.d or nil) .. " marks " .. table.concat(marks, " ")
+        .. " (gp petted / gf fed full / gd watered full: +0.5 each; lh hunger 90 / lt thirst 90: -5; lw health 1 %: -10)")
+    if B.HunDayPts and B.WaterDayL then
+        local pts = B.HunDayPts(rec)
+        out("  daily need at its size: " .. fix(pts, 1) .. " hunger points (about " .. fix(pts / 40, 1) .. " steaks), "
+            .. fix(B.WaterDayL(rec), 2) .. " l water; one meal (20 points) = " .. fix(B.MealPct and B.MealPct(rec) or nil, 2)
+            .. " %, one bowl (0.5 l) = " .. fix(B.BowlPct and B.BowlPct(rec) or nil, 2) .. " %")
+    end
+    local ses = B._s and B._s[rec.id] or nil
+    out("  needs frozen: " .. tostring(type(ses) == "table" and ses.nfz or nil) .. " (nil = counting, or owner offline / not loaded)")
     -- Sicht-Eintrag (was das Fenster und die Anzeige ueber dem Baeren lesen) und das Ruhebild dieses Clients
     local v = B.View and B.View.cubs and B.View.cubs[rec.id] or nil
     if type(v) == "table" then
@@ -216,6 +237,21 @@ function NCBear_CubNeedsInfo()
             .. tostring(U.ZZ and U.ZZ.lift) .. ", head " .. tostring(U.ZZ and U.ZZ.head))
     end
     say("needs info printed to the console")
+end
+
+-- K1: die Tages-Marken des Vertrauens auf 0 (nur Einzelspieler; das Register gehoert dem Schreiber -- im SP ist es dasselbe Programm).
+function NCBear_CubTrustDay()
+    local rec, p = myRec()
+    if not rec then return end
+    local d = rec.nDay
+    if type(d) ~= "table" then
+        say("no day book yet (wait one slow tick)")
+        return
+    end
+    for i = 1, #MARKS do d[MARKS[i]] = 0 end
+    if B.Touch then B.Touch(rec) end
+    tick(p)
+    say(needsLine(rec) .. " -- today's trust marks cleared (pet / feed full / water full / 90 % / 1 % count again)")
 end
 
 -- z Z z-Regler (reine Anzeige dieses Rechners; gilt bis zum Spielende). Ohne Wert: zurueck auf die Vorgabe.

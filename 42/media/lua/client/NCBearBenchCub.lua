@@ -1187,7 +1187,9 @@ function NCBear_CubLook(k)
         out("NCBear_CubLook(k): k = std / gen / foto (" .. tostring(body) .. " now " .. tostring(cur) .. ", no other look offered)")
         return
     end
-    -- Einzelspieler: NUR die gemeinsame Uhr Unstuck/Look dieses Baeren loeschen (wie NCBear_CubCallReset, nur ein Eintrag)
+    -- Einzelspieler: die gemeinsame Uhr Unstuck/Look dieses Baeren loeschen (wie NCBear_CubCallReset, nur ein Eintrag) UND (K1, Kevin 13.11.
+    -- ~22:20 "geht nicht NCBear_CubLook ... da steht immer dein baer ist beschaeftigt") die 60-s-Tausch-Sperre nach jedem Koerper-Tausch bzw.
+    -- Wachsen (s.swapAt / s.swapTryAt, server/BanditsNPCBearGrow.lua B.BodySwapReady "cool" / "retry"; Form B.GrowSetG ebenda)
     local reset = "kept (multiplayer: only the request)"
     if sp then
         local t = B._callAt
@@ -1196,6 +1198,11 @@ function NCBear_CubLook(k)
             reset = "reset"
         else
             reset = "n/a (no B._callAt in this core)"
+        end
+        local ses = B._s and B._s[id] or nil
+        if type(ses) == "table" then
+            ses.swapAt, ses.swapTryAt = nil, nil
+            reset = reset .. ", swap lock reset"
         end
     end
     B.Ask(p, "Look", { id = id, look = k })

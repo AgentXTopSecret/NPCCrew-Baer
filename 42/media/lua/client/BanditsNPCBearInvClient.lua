@@ -22,6 +22,12 @@
 -- Namen und Symbole je Typ: getItemNameFromFullType(t) (V:client/Entity/ISUI/ISEntityBuildMenu.lua:176), ScriptManager.instance:getItem(t)
 -- (V:client/ISUI/ISWorldObjectContextMenu.lua:1254) + getNormalTexture() (V:client/ISUI/ISInventoryItem.lua:26-27) -- Cache je Typ, Deckel 256.
 -- Laeuft im Einzelspieler und auf jedem MP-Client; nie je Bild (das Fenster ruft hoechstens 1 x je Sekunde bzw. auf Klick).
+-- K1 (Lauf baer-k1, PLAN_K1.md 1.4, 5; Kevin 13./14.11.2026: "nur die 1000 items einstellen zum gleichzeitig verschieben", Zahlenfeld beim Geben
+-- UND Nehmen): kein 50er-Deckel mehr -- Grenzen nur Traglast und B.CFG.invMaxItems (1000). U.InvGive(player, v, g, n) stellt fuer n Stueck
+-- EINE gebuendelte Put-Aktion an (k = n; vorher holt transferIfNeeded jedes der n Stuecke, das in einer Tasche liegt, ins Hauptinventar --
+-- Frage K-F10), U.InvTake(player, v, row, k) EINE Take-Aktion fuer bis zu invTakeMax (1000) Stueck. U.InvGiveable(g) = die Stuecke, die
+-- gebuendelt gehen (ohne Favoriten / Ausgeruestetes), U.InvFit(player, w) = wie viele Stuecke dieses Gewichts in DEIN Inventar passen
+-- (Vorbelegung des Zahlenfelds beim Nehmen). Verlustfrei bleibt es beim Schreiber: er nimmt je Stueck, prueft die Ankunft, schreibt erst dann gut.
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -38,7 +44,7 @@ local MINE_MAX = 1000       -- Gruppen des eigenen Inventars (PLAN_F4.md 8.2; Na
 local NAME_MAX = 256        -- Cache Namen / Symbole je Typ
 local RETRY_MS = 2000       -- ohne Antwort nach so vielen ms noch einmal fragen ...
 local RETRY_N = 3           -- ... hoechstens so oft
-local GIVE_MAX = 50         -- "Alle geben": hoechstens so viele Zeitaktionen je Klick (PLAN_F4.md 6.4)
+local GIVE_MAX = 1000       -- K1: Rueckfall fuer B.CFG.invMaxItems -- so viele Stuecke hoechstens in EINER gebuendelten Aktion (vorher 50 Aktionen)
 local BAG_TYPE = "NPCCrew.BearPacks"
 
 -- Listen je Baer: [id] = { r, pn, got = { [pg] = Zeilen }, have, rows, n, cnt, cap, load, over, bag, at }; Bitten je Baer:
@@ -398,8 +404,33 @@ function U.InvGiveWhy(v, g)
     end
     if things ~= nil and n > things then n = things end
     if free ~= nil and g.w > 0 then n = math.min(n, math.floor((free + 0.0001) / g.w)) end
-    if n > GIVE_MAX then n = GIVE_MAX end
+    local most = math.floor(cfgNum("invMaxItems", GIVE_MAX))         -- K1: 1000 statt 50
+    if n > most then n = most end
     return nil, n
+end
+
+-- K1: die Stuecke einer Gruppe, die gebuendelt gegeben werden (ohne Favoriten / Ausgeruestetes wie Vanillas "alle dieser Art",
+-- V:client/ISUI/InventoryWindow/Handlers/TransferSameType.lua:61). Neue Liste, nur auf Klick.
+function U.InvGiveable(g)
+    local out = {}
+    if type(g) ~= "table" or type(g.items) ~= "table" then return out end
+    for i = 1, #g.items do
+        local it = g.items[i]
+        if not it:isFavorite() and not it:isEquipped() then out[#out + 1] = it end
+    end
+    return out
+end
+
+-- K1: wie viele Stuecke des Gewichts w passen noch in DEIN Inventar (Vorbelegung "Nehmen"; entscheiden tut der Schreiber mit hasRoomFor).
+-- inv:getCapacityWeight() / inv:getEffectiveCapacity(Spieler): V:client/Foraging/ISBaseIcon.lua:105. nil = unbekannt / gewichtslos.
+function U.InvFit(player, w)
+    w = tonumber(w) or 0
+    if not player or w <= 0 then return nil end
+    local inv = player:getInventory()
+    if not inv then return nil end
+    local free = (tonumber(inv:getEffectiveCapacity(player)) or 0) - (tonumber(inv:getCapacityWeight()) or 0)
+    if free ~= free or free < 0 then free = 0 end
+    return math.floor((free + 0.0001) / w)
 end
 
 -- ---------------------------------------------------------------------------
@@ -421,43 +452,45 @@ local function bearObj(player, v)
     return a
 end
 
--- EIN Stueck geben (Put "inv"): erst ins Hauptinventar, dann die Zeitaktion. Reihenfolge wie U.MendAsk (client/BanditsNPCBearMenu.lua) ohne
--- Hingehen -- das Fenster laeuft nicht von selbst hin (PLAN_F4.md 7). transferIfNeeded: V:client/ISUI/ISWorldObjectContextMenu.lua:427;
--- ISTimedActionQueue.add: :428 / V:client/ISUI/Animal/ISAnimalContextMenu.lua:94.
-local function queuePut(player, a, item, mode)
+-- EIN Stueck (k = 1) bzw. EIN Buendel geben (Put "inv"): erst ins Hauptinventar, dann die Zeitaktion. Reihenfolge wie U.MendAsk
+-- (client/BanditsNPCBearMenu.lua) ohne Hingehen -- das Fenster laeuft nicht von selbst hin (PLAN_F4.md 7). transferIfNeeded:
+-- V:client/ISUI/ISWorldObjectContextMenu.lua:427; ISTimedActionQueue.add: :428 / V:client/ISUI/Animal/ISAnimalContextMenu.lua:94.
+local function queuePut(player, a, item, mode, k)
     ISWorldObjectContextMenu.transferIfNeeded(player, item)
-    ISTimedActionQueue.add(BanditsNPCBearPutAction:new(player, a, item, mode))
+    ISTimedActionQueue.add(BanditsNPCBearPutAction:new(player, a, item, mode, k or 1))
 end
 
--- Gruppe geben: all = false -> ein Stueck (das erste nicht angezogene), all = true -> bis zu n Stueck (U.InvGiveWhy), Favoriten und
--- Ausgeruestetes bleiben dabei wie bei Vanillas "alle dieser Art" (V:client/ISUI/InventoryWindow/Handlers/TransferSameType.lua:61).
--- Rueckgabe: Zahl der angestellten Aktionen.
-function U.InvGive(player, v, g, all)
+-- Gruppe geben (K1): n = Anzahl (Zahl; true = so viele wie gehen, wie "Alle"; nil / false / 1 = ein Stueck). Ein Stueck = das erste der Gruppe
+-- (einzeln geben geht immer, wie bisher). Mehr als eins: n wird auf das geklemmt, was U.InvGiveWhy erlaubt (Gewicht, 1000); es zaehlen nur
+-- Stuecke ohne Favorit / Ausgeruestetes (U.InvGiveable); jedes davon, das in einer Tasche liegt, holt transferIfNeeded vorher ins Hauptinventar,
+-- dann EINE Put-Aktion mit k = n am ersten (der Kern sucht die anderen selbst). Rueckgabe: Zahl der Stuecke, die die Aktion geben SOLL.
+function U.InvGive(player, v, g, n)
     if not player or type(g) ~= "table" or BanditsNPCBearPutAction == nil then return 0 end
-    local why, n = U.InvGiveWhy(v, g)
+    local why, most = U.InvGiveWhy(v, g)
     if why then
         bad(player, why)
         return 0
     end
     local a = bearObj(player, v)
     if a == nil then return 0 end
-    if not all then
-        queuePut(player, a, g.items[1], "inv")
+    local want = 1
+    if n == true then want = most else want = math.floor(tonumber(n) or 1) end
+    if want ~= want then want = 1 end
+    local list = U.InvGiveable(g)
+    if want > most then want = most end
+    if want > #list then want = #list end
+    if want <= 1 then
+        if g.items[1] == nil then return 0 end
+        queuePut(player, a, g.items[1], "inv", 1)
         return 1
     end
-    local done = 0
-    for i = 1, #g.items do
-        if done >= n then break end
-        local item = g.items[i]
-        if not item:isFavorite() and not item:isEquipped() then -- TransferSameType.lua:61
-            queuePut(player, a, item, "inv")
-            done = done + 1
-        end
-    end
-    return done
+    for i = 2, want do ISWorldObjectContextMenu.transferIfNeeded(player, list[i]) end    -- ISWorldObjectContextMenu.lua:427
+    queuePut(player, a, list[1], "inv", want)
+    return want
 end
 
--- Satz nehmen: k Stueck in Aktionen zu hoechstens invTakeMax (50); kg je Aktion nur fuer die Dauer. Rueckgabe: Zahl der Aktionen.
+-- Satz nehmen (K1): k Stueck in EINER Aktion (Deckel invTakeMax, jetzt 1000; ein Rest darueber -- kann es nach dem 1000-Deckel der Liste nicht
+-- geben -- bekaeme eine zweite). kg je Aktion nur fuer die Dauer. Rueckgabe: Zahl der Aktionen.
 function U.InvTake(player, v, row, k)
     if not player or type(row) ~= "table" or BanditsNPCBearTakeAction == nil then return 0 end
     if row.unk then
@@ -469,7 +502,7 @@ function U.InvTake(player, v, row, k)
     k = math.floor(tonumber(k) or 1)
     if k > row.k then k = row.k end
     if k < 1 then return 0 end
-    local step = math.floor(cfgNum("invTakeMax", 50))
+    local step = math.floor(cfgNum("invTakeMax", 1000))              -- K1: 1000 statt 50
     if step < 1 then step = 1 end
     local n = 0
     while k > 0 do

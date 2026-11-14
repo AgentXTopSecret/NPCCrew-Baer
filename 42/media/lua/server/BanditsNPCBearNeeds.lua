@@ -2,19 +2,26 @@ if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: la
 
 --
 -- NPC Crew -- Baer, Beduerfnisse und Vertrauen beim Schreiber (F3, PLAN_F3.md 2-5, 7; Kevins Antworten vom 13.11.2026,
--- _arbeit/baer_zaehmen/f3/KEVIN_ANTWORTEN.md -- sie gehen vor dem Plan).
+-- _arbeit/baer_zaehmen/f3/KEVIN_ANTWORTEN.md -- sie gehen vor dem Plan). K1 (Korrektur-Lauf nach F4, PLAN_K1.md 2, 6, 8; Kevins Worte in
+-- baer/begleiter/ENTSCHEIDUNGEN.md ab 13.11. ~21:40 gehen vor): Vertrauen -100..+100, Gewinn / Verlust nach Kevins Regel vom 14.11. ~00:00,
+-- Hunger / Durst nach Groesse, Einfrieren.
 --
 -- Die Wahrheit steht im Register-Eintrag (nur gezaehmt/vermisst, Koerper-Tausch-fest): nH (Hunger), nT (Durst), nF (Muedigkeit) -- je
--- 0 = gut .. 100 = am Ende --, tr (Vertrauen 0..100, Start 50), nDay (laufender Spieltag: d Tag, h / t Hoechst-Hunger / -Durst, s
--- Schlafstunden, a Aufschrecken, c gezaehlte Stunden, p Hand-Punkte, l letzte Handlung), trD (Verlauf der letzten drei abgeschlossenen
--- Tage als Ziffern-Text, aeltester zuerst: 0 gut versorgt / 1 hungrig oder durstig / 2 ausgehungert oder ausgetrocknet), slpAt
--- (Weltstunde des Einschlafens aus Muedigkeit: mit dieser Marke schlaeft er nach einem Laden und nach dem Fuettern / Traenken weiter,
--- solange die Muedigkeit ueber tirWake liegt -- server/BanditsNPCBearSleep.lua).
+-- 0 = gut .. 100 = am Ende --, tr (Vertrauen -100..+100, Start 0), trV (Fassung der Vertrauens-Skala: 2 = K1; fehlt sie, ist tr ein alter Wert
+-- 0..100 und wird EINMAL umgerechnet: neu = (alt - 50) x 2), nDay (laufender Spieltag: d Tag, h / t Hoechst-Hunger / -Durst, s Schlafstunden,
+-- a Aufschrecken, c gezaehlte Stunden und die sechs Tages-Marken 0/1: gp gestreichelt, gf satt gefuettert, gd satt getraenkt -- je +0,5 --,
+-- lh Hunger 90, lt Durst 90 -- je -5 --, lw Leben 1 % -- -10), slpAt (Weltstunde des Einschlafens aus Muedigkeit: mit dieser Marke schlaeft
+-- er nach einem Laden und nach dem Fuettern / Traenken weiter, solange die Muedigkeit ueber tirWake liegt -- server/BanditsNPCBearSleep.lua).
+-- Der alte Verlauf trD (Tagesabschluss) entfaellt mit K1 und wird beim Klemmen geloescht.
 -- Die Engine-Werte HUNGER / THIRST des Tiers bleiben unbenutzt (FORSCHUNG_F3.md 0.4). Formeln: shared/BanditsNPCBearNeedRules.lua.
 --
 -- Gezaehlt wird im Langsam-Takt (B.NeedsSlow, eigene Schleife NACH B.GrowSlow in server/BanditsNPCBearServer.lua): nur gezaehmt, Besitzer
 -- im Spiel, und nur mit Koerper in der Welt oder mitfahrend -- ein entladener Baer ist eingefroren (er verhungert nie, waehrend du weg
--- bist). Sandbox BearNeedsPercent 0: Hunger, Durst, Muedigkeit stehen auf 0.
+-- bist). K1 (Kevin 14.11. ~01:05 "beim schlafen/ausgelogt/nicht geladen in der welt weit out of range duerfen seine beduerfnisse nie
+-- steigen", ~01:15 MP-Vorschlag bestaetigt): AUCH eingefroren, solange er liegt (nur die Muedigkeit sinkt weiter), sein Besitzer schlaeft
+-- bzw. vorspult (Bitte "Sleep") oder er weiter als needFreezeR (70) Kacheln vom Besitzer ist. Eingefroren: kein Anstieg, kein Leben-Abzug,
+-- kein Vertrauens-Verlust, keine gezaehlte Stunde; kein Nachholen (dt je Takt, gedeckelt auf maxDtH).
+-- Sandbox BearNeedsPercent 0: Hunger, Durst, Muedigkeit stehen auf 0.
 -- Folgen: B.NeedK (shared) an je EINER Stelle (Ausdauer-Erholung, Wachsen, Selbstheilung in server/BanditsNPCBearGrow.lua, Schaden in
 -- shared/BanditsNPCBearFightRules.lua B.MeleeDamage); Leben bei Hunger / Durst 100 hier ueber B.BodyHurt -- Kevin 13.11.: "geht sein
 -- leben auf 1% runter aber er stirbt nie daran" (needHpFloor 0,01; nie Tod, nie am Boden, kein B.OnHitTaken).
@@ -23,7 +30,8 @@ if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: la
 -- Mehrspieler: nur der Server rechnet und nimmt Wasser; Clients bitten nur (Netz-Zeitaktion) und zeigen aus der Sicht (B.NeedsView).
 --
 -- Engine-Aufrufe hier (Fundstelle am Aufruf): character:getInventory():contains(item), item:getFluidContainer(), :isEmpty(), :getAmount(),
--- :contains(Fluid.Water / Fluid.TaintedWater), :removeFluid(Zahl, false), item:sendSyncEntity(nil) (nur isServer()), getTimestampMs().
+-- :contains(Fluid.Water / Fluid.TaintedWater), :removeFluid(Zahl, false), item:sendSyncEntity(nil) (nur isServer()), getTimestampMs(),
+-- getX / getY am Tier (Abstand zum Besitzer).
 -- Ladefolge: server/ alphabetisch nach ...Mend, vor ...Order / ...Registry / ...Ride / ...Server / ...Sleep / ...World; fremde Funktionen
 -- nur zur Laufzeit ueber B.X. Statisch geprueft, nicht gespielt.
 --
@@ -32,11 +40,14 @@ BanditsNPC = BanditsNPC or {}
 BanditsNPC.Bear = BanditsNPC.Bear or {}
 local B = BanditsNPC.Bear
 
--- Alle F3-Felder des Eintrags (an anderen Zustaenden nil).
-local FIELDS = { "nH", "nT", "nF", "tr", "nDay", "trD", "slpAt" }
-local HAND = { feed = true, pet = true, drink = true }
-local CODE = { [0] = "0", [1] = "1", [2] = "2" }
+-- Alle F3/K1-Felder des Eintrags (an anderen Zustaenden nil). trD nur, damit ein alter Verlauf mit verschwindet.
+local FIELDS = { "nH", "nT", "nF", "tr", "trV", "nDay", "trD", "slpAt" }
 local SET_FIELD = { hun = "nH", thr = "nT", tir = "nF", tru = "tr" }
+local TRUST_V = 2                   -- K1: Fassung der Vertrauens-Skala -100..+100 (Register UND Spiegel)
+-- Tages-Marken (0/1) im Tagesbuch nDay; die drei Gewinn-Quellen mit ihrer Meldung
+local MARKS = { "gp", "gf", "gd", "lh", "lt", "lw" }
+local GAIN = { pet = { "gp", "UI_BN_Bear_Note_TrustUpPet" }, feedfull = { "gf", "UI_BN_Bear_Note_TrustUpFed" },
+               drinkfull = { "gd", "UI_BN_Bear_Note_TrustUpDrank" } }
 
 -- ---------------------------------------------------------------------------
 -- Kleine Helfer
@@ -70,10 +81,11 @@ end
 
 -- Diese Datei rechnet mit den Regeln aus shared/BanditsNPCBearNeedRules.lua. Fehlt jene Datei (Teilkopie) oder brach sie beim Laden ab,
 -- tut jeder Weg hier NICHTS (wie statsOk in server/BanditsNPCBearGrow.lua) -- sonst wuerfe schon B.InitRegistry (B.NeedsFix) und der
--- ganze Baer stuende. B.SleepWakeMs ist ihre letzte Funktion. Nur Tabellen-Lesen.
+-- ganze Baer stuende. B.SleepWakeMs ist ihre letzte Funktion; K1: B.TrustDelta / B.TrustMigrate / B.HunDayPts sind neu (eine alte
+-- Regel-Datei ohne sie gilt als fehlend). Nur Tabellen-Lesen.
 local function rulesOk()
-    return B.NeedOf ~= nil and B.NeedsPct ~= nil and B.MealPct ~= nil and B.TrustGain ~= nil and B.TrustDayClose ~= nil
-        and B.SleepWakeMs ~= nil
+    return B.NeedOf ~= nil and B.NeedsPct ~= nil and B.MealPct ~= nil and B.TrustDelta ~= nil and B.TrustMigrate ~= nil
+        and B.HunDayPts ~= nil and B.SleepWakeMs ~= nil
 end
 
 -- Ganze Zahl fuer die Sicht: abgerundet (99,9 zeigt 99 -- 100 steht erst da, wenn es wirklich 100 ist).
@@ -97,30 +109,27 @@ local function fights(rec)
     return B.FightStageOf(B.StatsOf(rec)).swipe == true
 end
 
--- ---------------------------------------------------------------------------
--- Migration und Klemmen (PLAN_F3.md 7). Nur gezaehmt/vermisst; an jedem anderen Zustand sind alle F3-Felder nil. Fehlt ein Wert
--- (eben gezaehmt, Baer von vor F3, Spiegel ohne F3-Felder), bekommt er den Erst-Wert: Hunger 20, Durst 20, Muedigkeit 10, Vertrauen 50
--- (kein Baer startet hungrig). Die Werte bleiben ungerundet (kleine Schritte je Takt), nur die Sicht rundet.
--- ---------------------------------------------------------------------------
-local function fixVal(v, def)
-    local n = num(v)
-    if n == nil then n = def end
-    return clamp(n, 0, 100)
+-- Spieltag einer Weltstunde
+local function dayOf(now)
+    return math.floor(now / 24)
 end
 
-local function fixHist(v)
-    if type(v) ~= "string" then return nil end
-    local n = string.len(v)
-    if n == 0 then return nil end
-    if n > 3 then
-        v = string.sub(v, n - 2, n)
-        n = 3
-    end
-    for i = 1, n do
-        local ch = string.sub(v, i, i)
-        if ch ~= "0" and ch ~= "1" and ch ~= "2" then return nil end
-    end
-    return v
+-- ---------------------------------------------------------------------------
+-- Migration und Klemmen (PLAN_F3.md 7; K1 PLAN_K1.md 2.2). Nur gezaehmt/vermisst; an jedem anderen Zustand sind alle F3/K1-Felder nil. Fehlt
+-- ein Wert (eben gezaehmt, Baer von vor F3, Spiegel ohne F3-Felder), bekommt er den Erst-Wert: Hunger 20, Durst 20, Muedigkeit 10, Vertrauen 0
+-- (kein Baer startet hungrig). Die Werte bleiben ungerundet (kleine Schritte je Takt), nur die Sicht rundet.
+-- V1 (Kevin 13.11. ~21:40): ein Vertrauen OHNE die Marke trV = 2 ist ein alter Wert 0..100 -> EINMAL neu = (alt - 50) x 2 (B.TrustMigrate), die
+-- Marke steht im selben Schritt (nie zweimal); fehlt das Vertrauen ganz, Start trStart (0). Eine hoehere (spaetere) Fassung bleibt unberuehrt.
+-- ---------------------------------------------------------------------------
+local function fixVal(v, def, lo, hi)
+    local n = num(v)
+    if n == nil then n = def end
+    return clamp(n, lo, hi)
+end
+
+local function fixMark(v)
+    if num(v) == 1 then return 1 end
+    return 0
 end
 
 function B.NeedsFix(rec, now)
@@ -129,39 +138,51 @@ function B.NeedsFix(rec, now)
         for i = 1, #FIELDS do rec[FIELDS[i]] = nil end
         return
     end
-    rec.nH = fixVal(rec.nH, cfg("needStartHun", 20))
-    rec.nT = fixVal(rec.nT, cfg("needStartThr", 20))
-    rec.nF = fixVal(rec.nF, cfg("needStartTir", 10))
-    rec.tr = fixVal(rec.tr, cfg("trStart", 50))
+    rec.nH = fixVal(rec.nH, cfg("needStartHun", 20), 0, 100)
+    rec.nT = fixVal(rec.nT, cfg("needStartThr", 20), 0, 100)
+    rec.nF = fixVal(rec.nF, cfg("needStartTir", 10), 0, 100)
+    local lo, hi = cfg("trMin", -100), cfg("trMax", 100)
+    local tv = num(rec.trV)
+    if tv == nil or tv < TRUST_V then
+        local old = num(rec.tr)
+        if old ~= nil then
+            rec.tr = B.TrustMigrate(old)
+            B.Log("trust: " .. tostring(rec.id) .. " scale v2 " .. tostring(B.Round1(old)) .. " -> " .. tostring(B.Round1(rec.tr)))
+        else
+            rec.tr = nil
+        end
+        rec.trV = TRUST_V
+    end
+    rec.tr = fixVal(rec.tr, cfg("trStart", 0), lo, hi)
     local d = rec.nDay
     if type(d) ~= "table" then
         d = {}
         rec.nDay = d
     end
-    local day = math.floor((num(now) or B.Now()) / 24)
+    local day = dayOf(num(now) or B.Now())
     d.d = math.floor(num(d.d) or day)
     d.h = clamp(num(d.h) or 0, 0, 100)
     d.t = clamp(num(d.t) or 0, 0, 100)
     d.s = clamp(num(d.s) or 0, 0, 24)
     d.a = clamp(math.floor(num(d.a) or 0), 0, 99)
     d.c = clamp(num(d.c) or 0, 0, 24)
-    d.p = clamp(num(d.p) or 0, 0, 100)
-    if not HAND[d.l] then d.l = nil end
-    rec.trD = fixHist(rec.trD)
+    for i = 1, #MARKS do d[MARKS[i]] = fixMark(d[MARKS[i]]) end
+    d.p, d.l = nil, nil             -- F3: Hand-Punkte / letzte Handlung (Tages-Hand-Deckel, Wechsel-Bonus) gibt es nicht mehr
+    rec.trD = nil                   -- F3: Verlauf des Tagesabschlusses gibt es nicht mehr
     rec.slpAt = num(rec.slpAt)
 end
 
 -- ---------------------------------------------------------------------------
--- Vertrauen setzen (die EINE Stelle): klemmen, Meldungen beim Ueberschreiten -- trHeart nach oben (das Herz erscheint, Kevin 13.11.
--- Antwort 7), trRefuse nach unten ("weigert sich zu kaempfen ... und das steht dann da auch", Antwort 4) bzw. wieder nach oben; die
--- zwei Kampf-Meldungen nur am kampffaehigen Baeren. Sicht bei jeder Aenderung.
+-- Vertrauen setzen (die EINE Stelle): klemmen auf -100..+100, Meldungen beim Ueberschreiten -- trHeart nach oben (das Herz erscheint, Kevin
+-- 13.11. Antwort 7), trRefuse (-70) nach unten ("weigert sich zu kaempfen ... und das steht dann da auch", Antwort 4) bzw. wieder nach oben;
+-- die zwei Kampf-Meldungen nur am kampffaehigen Baeren. Sicht bei jeder Aenderung. Rueckgabe: die wirkliche Aenderung (0 an der Grenze).
 -- ---------------------------------------------------------------------------
 local function trustSet(rec, v, players)
-    local old = num(rec.tr) or cfg("trStart", 50)
-    local new = clamp(num(v) or old, 0, 100)
+    local old = num(rec.tr) or cfg("trStart", 0)
+    local new = clamp(num(v) or old, cfg("trMin", -100), cfg("trMax", 100))
     rec.tr = new
-    if new == old then return end
-    local refuse, heart = cfg("trRefuse", 15), cfg("trHeart", 100)
+    if new == old then return 0 end
+    local refuse, heart = cfg("trRefuse", -70), cfg("trHeart", 100)
     if old < heart and new >= heart then
         tellOwner(rec, players, note("UI_BN_Bear_Note_TrustTop", nil, nil, "good"))
     end
@@ -177,80 +198,134 @@ local function trustSet(rec, v, players)
     end
     B.Touch(rec)
     B.Log("trust: " .. tostring(rec.id) .. " " .. tostring(B.Round1(old)) .. " -> " .. tostring(B.Round1(new)))
+    return new - old
 end
 
--- Neuer Spieltag? Dann den alten abschliessen (B.TrustDayClose: Aenderung und Kennziffer fuer den Verlauf, hoechstens drei Tage) und
--- neu beginnen. Die letzte Handlung (Mischbonus) bleibt.
--- Nachbesserung C9: laeuft gerade ein Schlaf ueber Mitternacht, nimmt der neue Tag dessen bisherige Stunden mit (slp.hrs,
--- server/BanditsNPCBearSleep.lua B.SleepDrain) -- aber nur, wenn der alte Tag den Schlaf-Bonus (trSleepH, 6 Stunden) nicht schon selbst
--- erreicht hat (kein Bonus zweimal fuer denselben Schlaf). So gibt ein Schlaf von 20 bis 4 Uhr den Bonus am zweiten Tag.
-local function dayRoll(rec, now, needsOn, players)
+-- Neuer Spieltag? Dann beginnt das Tagesbuch neu: alle sechs Marken auf 0 (K1: kein Tagesabschluss mehr -- Kevin 14.11. ~00:00 "Kein
+-- Tagesabschluss-Verlust mehr"). Auch eine rueckwaerts gestellte Uhr beginnt neu.
+local function dayRoll(rec, now)
     local d = rec.nDay
-    local day = math.floor(now / 24)
-    if d.d == day then return end
-    local keep = 0
-    if day == d.d + 1 and (num(d.s) or 0) < cfg("trSleepH", 6) then
-        local s = B._s and B._s[rec.id] or nil
-        local slp = type(s) == "table" and s.slp or nil
-        if type(slp) == "table" and (slp.ph == "lie" or slp.ph == "sleep") then
-            keep = num(slp.hrs) or 0
-            if keep > (num(d.s) or 0) then keep = num(d.s) or 0 end
-        end
-    end
-    if day > d.d then
-        local delta, code = B.TrustDayClose(d, needsOn)
-        if delta ~= nil then
-            local hist = (rec.trD or "") .. (CODE[code] or "0")
-            local n = string.len(hist)
-            if n > 3 then hist = string.sub(hist, n - 2, n) end
-            rec.trD = hist
-            B.Log("trust: " .. tostring(rec.id) .. " day " .. tostring(d.d) .. " closed (hunger " .. tostring(B.Round1(d.h))
-                .. ", thirst " .. tostring(B.Round1(d.t)) .. ", slept " .. tostring(B.Round1(d.s)) .. " h) -> "
-                .. tostring(delta))
-            if delta ~= 0 then trustSet(rec, rec.tr + delta, players) end
-            B.Touch(rec)
-        end
-    end
-    rec.nDay = { d = day, h = 0, t = 0, s = keep, a = 0, c = 0, p = 0, l = d.l }
+    local day = dayOf(now)
+    if type(d) == "table" and d.d == day then return end
+    local nd = { d = day, h = 0, t = 0, s = 0, a = 0, c = 0 }
+    for i = 1, #MARKS do nd[MARKS[i]] = 0 end
+    rec.nDay = nd
+end
+
+-- Ein Verlust nach Kevins Regel (V3): Aenderung B.TrustDelta(kind), Meldung k an den Besitzer mit dem Betrag (nur, wenn sich wirklich etwas
+-- aenderte -- bei -100 bleibt es still). Rueckgabe: die wirkliche Aenderung.
+local function trustLoss(rec, kind, k, players)
+    local want = B.TrustDelta(kind)
+    local got = trustSet(rec, rec.tr + want, players)
+    if got ~= 0 then tellOwner(rec, players, note(k, "num", -want, "bad")) end
+    B.Log("trust: " .. tostring(rec.id) .. " loses (" .. tostring(kind) .. ") " .. tostring(B.Round1(got)))
+    return got
 end
 
 -- ---------------------------------------------------------------------------
--- Vertrauen aus der Hand und aus Ereignissen (PLAN_F3.md 4.1). kind = "feed" (class = Futterklasse) / "pet" / "drink": Punkte nach
--- B.TrustGain (Mischbonus im Wechsel, Tagesdeckel trHandDay); kind = "down": am Boden, sofort trDown (-5). Rueckgabe: Aenderung.
--- Festschreiben tut der Aufrufer (B.Commit).
+-- Zaehlen die Beduerfnisse dieses Eintrags gerade? (PLAN_F3.md 2.1; K1 PLAN_K1.md 6) Rueckgabe: zaehlt, grund.
+-- Nein ohne Grund (wie F3): nicht gezaehmt (vermisst), Besitzer nicht im Spiel, kein Koerper in der Welt und nicht mitfahrend.
+-- Nein MIT Grund (K1, Kevin 14.11. ~01:05 / ~01:15; Grund fuer die Sicht nfz): "sleep" -- er liegt (Hinlegen oder Schlaf; nur die Muedigkeit
+-- sinkt weiter), "owner" -- sein Besitzer schlaeft bzw. spult vor (Bitte "Sleep", B.OwnerAsleep in server/BanditsNPCBearSleep.lua), "far" --
+-- weiter als needFreezeR (70) Kacheln vom naechsten seiner Spieler (im Mehrspieler kann ihn ein ANDERER Spieler geladen halten).
+-- Mitfahrend zaehlt der Abstand nicht (er sitzt beim Besitzer). getX / getY am Tier: Vanilla shared/Definitions/animal/ButcheringUtil.lua:575-576;
+-- die Spieler-Lage kommt fertig aus B.Players() (e.x / e.y, server/BanditsNPCBearWorld.lua). Nachbesserung K1 C2: steht VOR B.TrustAdd,
+-- weil auch "am Boden" (V3) dieser Sperre folgt.
 -- ---------------------------------------------------------------------------
-function B.TrustAdd(rec, kind, class, now, players)
+local function ownerDist(rec, a, players)
+    players = players or B.Players()
+    local ax, ay = a:getX(), a:getY()
+    local best = nil
+    for i = 1, #players do
+        local e = players[i]
+        if e.key == rec.owner and num(e.x) ~= nil and num(e.y) ~= nil then
+            local d = B.DistXY(ax, ay, e.x, e.y)
+            if best == nil or d < best then best = d end
+        end
+    end
+    return best
+end
+
+local function counts(rec, online, players)
+    if rec.st ~= "tame" or rec.owner == nil then return false, nil end
+    if type(online) ~= "table" or online[rec.owner] ~= true then return false, nil end
+    local a = nil
+    if rec.ride == nil then
+        a = B.FindAnimal(rec)
+        if a == nil then return false, nil end
+    end
+    if B.IsLying ~= nil and B.IsLying(rec) then return false, "sleep" end
+    if B.OwnerAsleep ~= nil and B.OwnerAsleep(rec.owner) then return false, "owner" end
+    if a ~= nil then
+        local d = ownerDist(rec, a, players)
+        if d ~= nil and d > cfg("needFreezeR", 70) then return false, "far" end
+    end
+    return true, nil
+end
+
+-- ---------------------------------------------------------------------------
+-- Vertrauen aus der Hand und aus Ereignissen (K1, PLAN_K1.md 2.2; Kevins endgueltige Regel 14.11. ~00:00). kind =
+--   "pet" (gestreichelt) / "feedfull" (Hunger durch Fuettern aus der Hand auf 0 %) / "drinkfull" (Durst durch Traenken aus der Hand auf 0 %):
+--     je Quelle hoechstens 1x je Spieltag +trGain (0,5) -- die Marke gp / gf / gd im Tagesbuch; Meldung UI_BN_Bear_Note_TrustUp*.
+--     Den Fall "auf 0 gebracht" entscheidet der Aufrufer (B.FeedComplete, B.DrinkComplete); selbst gefressen / getrunken ruft nie.
+--   "down": am Boden (Todesschutz), JEDES Mal trDown (-10), Meldung UI_BN_Bear_Note_TrustDown. Nachbesserung K1 C2 (K1-Liste F: "Leben-Abzug
+--     bei 100 % und V3 folgen derselben Sperre"): nur, solange er zaehlt (counts) -- schlaeft der Besitzer, ist er offline oder weiter als
+--     needFreezeR, kostet es nichts (Frage fuer Kevin).
+--   jede andere Art (auch die alten "feed" / "drink"): nichts.
+-- Das dritte Argument (frueher die Futterklasse) wird nicht mehr gebraucht. Rueckgabe: die wirkliche Aenderung. Festschreiben: der Aufrufer.
+-- ---------------------------------------------------------------------------
+function B.TrustAdd(rec, kind, _, now, players)
     if type(rec) ~= "table" or not isTame(rec.st) or not rulesOk() then return 0 end
     now = num(now) or B.Now()
     B.NeedsFix(rec, now)
     if kind == "down" then
-        local delta = cfg("trDown", -5)
-        trustSet(rec, rec.tr + delta, players)
-        return delta
+        players = players or B.Players()
+        local online = {}
+        for i = 1, #players do online[players[i].key] = true end
+        local go, why = counts(rec, online, players)
+        if not go then
+            B.Log("trust: " .. tostring(rec.id) .. " down while needs rest (" .. tostring(why) .. "), no loss")
+            return 0
+        end
+        return trustLoss(rec, "down", "UI_BN_Bear_Note_TrustDown", players)
     end
-    if not HAND[kind] then return 0 end
-    dayRoll(rec, now, B.NeedsOn(), players)
+    local g = GAIN[kind]
+    if g == nil then return 0 end
+    dayRoll(rec, now)
     local d = rec.nDay
-    local pts, _ = B.TrustGain(kind, class, d.l, d.p)
-    d.l = kind
-    if pts > 0 then
-        d.p = d.p + pts
-        trustSet(rec, rec.tr + pts, players)
-    end
-    return pts
+    if d[g[1]] == 1 then return 0 end
+    d[g[1]] = 1
+    B.Touch(rec)                    -- die Sicht traegt die erledigten Quellen (trT)
+    local got = trustSet(rec, rec.tr + B.TrustDelta(kind), players)
+    if got ~= 0 then tellOwner(rec, players, note(g[2], nil, nil, "good")) end
+    B.Log("trust: " .. tostring(rec.id) .. " gains (" .. tostring(kind) .. ") " .. tostring(B.Round1(got)))
+    return got
 end
 
 -- ---------------------------------------------------------------------------
 -- Fressen und Trinken: die Schnittstelle fuer F4 / F5 (frisst aus dem Inventar, Fische, trinkt selbst). meals = Mahlzeiten (B.MealsOf),
 -- bowls = Schalen (Liter / bowlL). Was unter 0 ginge, verfaellt (kein Vorrat). Rueckgabe: der neue Wert. Festschreiben: der Aufrufer.
+-- K1: ein Rest unter 0,0005 (Rundung beim Trinken genau "bis 0") gilt als 0 -- sonst zaehlte "satt" nie.
+-- Nachbesserung K1 C1: aus der HAND (why "hand") gilt schon ein Rest unter needFull (1 %) als 0 -- die Sicht zeigt dann 0 %, das naechste
+-- Fuettern / Traenken lehnt B.CheckFeed / B.CheckDrink ab; so bringt das letzte Stueck den Hunger immer auf 0 ("satt gefuettert"). Hoechstens
+-- 1 % der Tagesmenge geschenkt; selbst gefressen / getrunken ("inv") bleibt genau.
 -- ---------------------------------------------------------------------------
+local ZERO = 0.0005
+
+local function restOf(v, why)
+    if v < ZERO then return 0 end
+    if why == "hand" and v < cfg("needFull", 1) then return 0 end
+    return v
+end
+
 function B.NeedEat(rec, meals, why)
     if type(rec) ~= "table" or not isTame(rec.st) or not rulesOk() then return nil end
     B.NeedsFix(rec, B.Now())
     local m = num(meals) or 0
     if m < 0 then m = 0 end
     local was = rec.nH
-    rec.nH = clamp(was - m * B.MealPct(rec), 0, 100)
+    local v = restOf(clamp(was - m * B.MealPct(rec), 0, 100), why)
+    rec.nH = v
     B.Touch(rec)
     B.Log("needs: " .. tostring(rec.id) .. " eats " .. tostring(B.Round1(m)) .. " meal(s) (" .. tostring(why) .. "), hunger "
         .. tostring(B.Round1(was)) .. " -> " .. tostring(B.Round1(rec.nH)))
@@ -263,7 +338,8 @@ function B.NeedDrink(rec, bowls, why)
     local b = num(bowls) or 0
     if b < 0 then b = 0 end
     local was = rec.nT
-    rec.nT = clamp(was - b * B.BowlPct(rec), 0, 100)
+    local v = restOf(clamp(was - b * B.BowlPct(rec), 0, 100), why)
+    rec.nT = v
     B.Touch(rec)
     B.Log("needs: " .. tostring(rec.id) .. " drinks " .. tostring(B.Round1(b)) .. " bowl(s) (" .. tostring(why) .. "), thirst "
         .. tostring(B.Round1(was)) .. " -> " .. tostring(B.Round1(rec.nT)))
@@ -276,6 +352,8 @@ end
 -- Why_NotOwner / Why_Riding / Why_Down / Why_NotThirsty (B.CheckDrink, shared/BanditsNPCBearRules.lua), Why_NoItem, Why_NoWater.
 -- Dann GENAU EIN removeFluid mit der Menge, die den Durst stillt (hoechstens was im Behaelter ist, mindestens drinkMinL), und im selben
 -- Lua-Aufruf gutschreiben. Ein schlafender Baer wird dafuer geweckt (Kevin 13.11. 6e "Fuettern/Traenken wecken kurz").
+-- K1: die Menge ist so viel, wie bis 0 % fehlt (B.DrinkNeedL nach Groesse, ausgewachsen bis 15 l); bringt sie den Durst auf 0, ist er "satt
+-- getraenkt" (+0,5 Vertrauen, 1x je Spieltag, B.TrustAdd "drinkfull").
 -- Nachbesserung C8: zwischen Nehmen und Gutschrift steht KEIN Engine-Aufruf mehr -- der Abgleich des Behaelters am Server
 -- (sendSyncEntity) kommt als Letztes, nach Gutschrift, Spiegel, Meldung und Sicht. Wuerfe er, waere das Wasser trotzdem angerechnet.
 -- character:getInventory():contains(item): Vanilla shared/TimedActions/Animals/ISGiveWaterToAnimal.lua:6.
@@ -322,11 +400,12 @@ function B.DrinkComplete(character, animal, item)
     local minL = cfg("drinkMinL", 0.05)
     if take < minL then take = minL end
     if take > have then take = have end
+    local thr0 = rec.nT
     -- ab hier wird genommen: EIN Aufruf, danach im selben Lua-Aufruf gutschreiben, ohne Engine-Aufruf dazwischen
     fc:removeFluid(take, false)
     if B.SleepStop then B.SleepStop(rec, "hand") end
     B.NeedDrink(rec, take / bowlL, "hand")
-    B.TrustAdd(rec, "drink", nil, now)
+    if thr0 > 0 and rec.nT <= 0 then B.TrustAdd(rec, "drinkfull", nil, now) end
     B.Commit(rec)
     B.Tell(character, B.NoteBd(note("UI_BN_Bear_Note_Drank", "num", whole(rec.nT), "good"), rec))
     B.Log("drink " .. tostring(rec.id) .. " " .. tostring(pkey) .. " took " .. tostring(math.floor(take * 1000 + 0.5)) .. " mL of "
@@ -419,81 +498,102 @@ function B.NeedRefuseSay(rec, why, ms, players)
     tellOwner(rec, players, note(k, nil, nil, "bad"))
 end
 
--- ---------------------------------------------------------------------------
--- Zaehlen die Beduerfnisse dieses Eintrags gerade? (PLAN_F3.md 2.1) Nur gezaehmt, Besitzer im Spiel, und mit Koerper in der Welt oder
--- mitfahrend. Vermisst / entladen / Besitzer abgemeldet: eingefroren (Kevins Wahl "Einfrieren" bei der Crew, 11.10.).
--- ---------------------------------------------------------------------------
-local function counts(rec, online)
-    if rec.st ~= "tame" or rec.owner == nil then return false end
-    if type(online) ~= "table" or online[rec.owner] ~= true then return false end
-    if rec.ride ~= nil then return true end
-    return B.FindAnimal(rec) ~= nil
-end
 
 -- ---------------------------------------------------------------------------
 -- Je Langsam-Takt (10 Spielminuten; dt = Spielstunden seit dem letzten Takt, vom Aufrufer auf maxDtH gedeckelt). Eigene Schleife NACH
--- B.GrowSlow (ein Fehler hier reisst Wachsen und Heilen nicht mit). Schritte: klemmen -> zaehlt er? -> Tagesabschluss (Vertrauen) ->
--- Anstieg Hunger / Durst (x Tempo x Vertrauens-Faktor; auch im Schlaf) -> Muedigkeit (wach: Tempo der Groesse + Anstrengung aus der
--- Sitzung s.tirAcc; im Schlaf der Abbau, B.SleepDrain) -> Leben bei 100 -> Meldungen -> Sicht (ab needViewStep Punkten oder bei einem
--- Stufenwechsel) -> Spiegel (ueber s.gDirty mit dem naechsten Wachstums-Commit, sofort bei einem Stufenwechsel).
+-- B.GrowSlow (ein Fehler hier reisst Wachsen und Heilen nicht mit). Schritte: klemmen -> zaehlt er? (Grund des Einfrierens in die Sicht) ->
+-- neuer Spieltag (Marken auf 0) -> Anstieg Hunger / Durst (needRiseH 6,25 je Stunde x Tempo x Vertrauens-Faktor) -> Muedigkeit (wach: Tempo
+-- der Groesse + Anstrengung aus der Sitzung s.tirAcc) -> V3: Hunger / Durst erreicht trLossAt -> -5 (je 1x am Tag) -> Leben bei 100 und V3
+-- Leben 1 % -> -10 (1x am Tag) -> Meldungen -> Sicht (ab needViewStep Punkten oder bei einem Stufenwechsel) -> Spiegel (ueber s.gDirty mit dem
+-- naechsten Wachstums-Commit, sofort bei einem Stufenwechsel oder einer Vertrauens-Aenderung) -> selbst fressen / trinken (F4 / K1 E).
+-- Eingefroren wegen Liegen ("sleep"): nur der Schlaf-Abbau der Muedigkeit (B.SleepDrain), Meldungen, Sicht und Spiegel laufen weiter.
 -- ---------------------------------------------------------------------------
 function B.NeedsSlow(rec, dt, online, now, players)
     if type(rec) ~= "table" or not isTame(rec.st) or not rulesOk() then return end
     now = num(now) or B.Now()
     B.NeedsFix(rec, now)
-    if not counts(rec, online) then return end
+    local go, why = counts(rec, online, players)
+    -- Sicht nfz: der Grund, solange er eingefroren ist (Wechsel -> neue Sicht); eine Sitzung wird dafuer nur angelegt, wenn es einen Grund gibt
+    local s0 = B._s and B._s[rec.id] or nil
+    if s0 ~= nil or why ~= nil then
+        s0 = B.Ses(rec.id)
+        if s0.nfz ~= why then
+            s0.nfz = why
+            B.Touch(rec)
+        end
+    end
+    if not go and why ~= "sleep" then
+        if s0 ~= nil then s0.tirAcc = nil end   -- keine Anstrengung sammeln, waehrend nichts zaehlt (kein Nachholen)
+        return
+    end
     dt = num(dt) or 0
     if dt < 0 then dt = 0 end
     local s = B.Ses(rec.id)
     local pct = B.NeedsPct()
     local on = pct > 0
-    dayRoll(rec, now, on, players)
-    local d = rec.nDay
-    d.c = clamp(d.c + dt, 0, 24)
     local hp0 = rec.hp
+    local tr0 = rec.tr
     if not on then
         -- Sandbox 0: alle drei aus und auf 0 gehalten (Muster NPC Crew shared/BanditsNPCNeeds.lua, NeedsRateMult 0)
         rec.nH, rec.nT, rec.nF = 0, 0, 0
-        s.tirAcc = nil
+    elseif not go then
+        -- er liegt: Hunger und Durst stehen, die Muedigkeit sinkt (der Abbau ist ihre ganze Uhr, wie bei den NPC-Crew-Figuren)
+        if B.SleepDrain then B.SleepDrain(rec, s, now) end
     else
+        dayRoll(rec, now)
+        local d = rec.nDay
+        d.c = clamp(d.c + dt, 0, 24)
         local k = pct / 100 * B.TrustK(rec)
-        rec.nH = clamp(rec.nH + cfg("needHunDay", 50) / 24 * k * dt, 0, 100)
-        rec.nT = clamp(rec.nT + cfg("needThrDay", 75) / 24 * k * dt, 0, 100)
-        local slp = s.slp
-        if type(slp) == "table" and (slp.ph == "lie" or slp.ph == "sleep") then
-            -- im Schlaf steigt die Muedigkeit nicht -- der Abbau ist ihre ganze Uhr (wie bei den NPC-Crew-Figuren)
-            if B.SleepDrain then B.SleepDrain(rec, s, now) end
-        else
-            local add = B.TirRate(rec) * k * dt
-            local acc = num(s.tirAcc) or 0
-            if acc > 0 and B.StatsOf ~= nil then
-                local staMax = num(B.StatsOf(rec).staMax) or 1
-                if staMax <= 0 then staMax = 1 end
-                add = add + acc / staMax * cfg("tirPerBar", 3) * k
-            end
-            rec.nF = clamp(rec.nF + add, 0, 100)
+        local rise = cfg("needRiseH", 6.25) * k * dt
+        rec.nH = clamp(rec.nH + rise, 0, 100)
+        rec.nT = clamp(rec.nT + rise, 0, 100)
+        local add = B.TirRate(rec) * k * dt
+        local acc = num(s.tirAcc) or 0
+        if acc > 0 and B.StatsOf ~= nil then
+            local staMax = num(B.StatsOf(rec).staMax) or 1
+            if staMax <= 0 then staMax = 1 end
+            add = add + acc / staMax * cfg("tirPerBar", 3) * k
         end
-        s.tirAcc = nil
+        rec.nF = clamp(rec.nF + add, 0, 100)
         if rec.nH > d.h then d.h = rec.nH end
         if rec.nT > d.t then d.t = rec.nT end
+        -- V3 (Kevin 14.11. ~00:00 "trinken/essen bei 90% direkt - 5"): je Wert hoechstens 1x je Spieltag (Frage K-F2: steht er am neuen Tag
+        -- noch darueber, kostet auch der neue Tag -5)
+        local lossAt = cfg("trLossAt", 90)
+        if rec.nH >= lossAt and d.lh ~= 1 then
+            d.lh = 1
+            trustLoss(rec, "hun90", "UI_BN_Bear_Note_TrustHungry", players)
+        end
+        if rec.nT >= lossAt and d.lt ~= 1 then
+            d.lt = 1
+            trustLoss(rec, "thr90", "UI_BN_Bear_Note_TrustThirsty", players)
+        end
         -- Leben bei Hunger / Durst 100 (Kevin 13.11. Antwort 6a): bis needHpFloor (1 %), nie Tod, nie am Boden. Nicht am Boden (er ist
         -- schon hilflos) und nicht, solange das Leben noch nie abgeglichen wurde (mitfahrend seit dem Laden). B.BodyHurt ist die EINE
         -- Stelle, an der das Register-Leben sinkt (server/BanditsNPCBearGrow.lua; geht auch ohne Koerper) -- kein B.OnHitTaken.
         local rate = 0
         if rec.nH >= 100 then rate = rate + cfg("needHpHun", 2) end
         if rec.nT >= 100 then rate = rate + cfg("needHpThr", 3) end
+        local floor = cfg("needHpFloor", 0.01)
         if rate > 0 and dt > 0 and rec.down == nil and B.BodyHurt ~= nil then
             local a = B.FindAnimal(rec)
             if a ~= nil and B.BodyHp ~= nil then B.BodyHp(rec, a, 0) end
             local hp = num(rec.hp)
             if hp ~= nil then
                 local frac = rate / 100 * dt
-                local room = hp - cfg("needHpFloor", 0.01)
+                local room = hp - floor
                 if frac > room then frac = room end
                 if frac > 0 then B.BodyHurt(rec, a, frac) end
             end
         end
+        -- V3 (Kevin ~00:00 "ab 1% hp (durch hunger/durst) auch -10"): Leben steht durch Hunger / Durst auf needHpFloor -> -10, 1x je Spieltag
+        local hpNow = num(rec.hp)
+        if rate > 0 and rec.down == nil and hpNow ~= nil and hpNow <= floor + 0.000001 and d.lw ~= 1 then
+            d.lw = 1
+            trustLoss(rec, "weak", "UI_BN_Bear_Note_TrustWeak", players)
+        end
     end
+    s.tirAcc = nil
     local stepped = bands(rec, s, now, players)
     -- Sicht: nur bei sichtbarer Aenderung
     local nv = s.nv
@@ -507,17 +607,23 @@ function B.NeedsSlow(rec, dt, online, now, players)
         B.Touch(rec)
     end
     s.gDirty = true                 -- der naechste Wachstums-Commit (B.GrowSlow, hoechstens je growCommitH) schreibt den Spiegel
-    if stepped then B.Commit(rec) end
-    -- F4 (Kevin 13.11. Antwort 6, PLAN_F4.md 11): hungrig (ab needHungry) frisst er selbst aus seinem Inventar -- nur Baerenfutter, nie
-    -- Verdorbenes, Lieblingsfutter zuerst, ein Stueck je invEatGapMin (server/BanditsNPCBearInv.lua)
-    if on and B.InvEatStep then B.InvEatStep(rec, now, players) end
+    if stepped or rec.tr ~= tr0 then B.Commit(rec) end
+    -- F4 / K1 (Kevin 14.11. ~00:30 / ~00:50): ab 50 % frisst und trinkt er selbst aus seinem Inventar, bis 0 % (server/BanditsNPCBearInv.lua)
+    -- -- nur, solange gezaehlt wird
+    if go and on then
+        if B.InvEatStep then B.InvEatStep(rec, now, players) end
+        if B.InvDrinkStep then B.InvDrinkStep(rec, now, players) end
+    end
 end
 
 -- ---------------------------------------------------------------------------
--- Sicht (PLAN_F3.md 7; schnittstelle.md K2) -- aus viewEntry, nur gezaehmt/vermisst, fuer eigene UND fremde Baeren; schreibt nur in t:
--- hun / thr / tir / tru (ganze Zahlen 0..100, abgerundet), trM (Vertrauen ab trHeart: das Herz ueber dem Namensschild, Kevin 13.11.
--- Antwort 7), nof ("trust" / "tired": er kaempft gerade nicht -- nur am kampffaehigen Baeren), trW (Verlauf der letzten drei Tage als
--- Ziffern-Text), meal / bowl (so viele Punkte senkt eine Mahlzeit / eine Schale bei dieser Groesse, auf 0,1).
+-- Sicht (PLAN_F3.md 7; K1 k1/schnittstelle.md K3) -- aus viewEntry, nur gezaehmt/vermisst, fuer eigene UND fremde Baeren; schreibt nur in t:
+-- hun / thr / tir (ganze Zahlen 0..100, abgerundet), tru (K1: -100..+100 mit EINER Nachkommastelle, B.Round1 -- nie abrunden, -0,5 bleibt
+-- -0,5), trM (Vertrauen ab trHeart: das Herz ueber dem Namensschild, Kevin 13.11. Antwort 7), nof ("trust" / "tired": er kaempft gerade nicht
+-- -- nur am kampffaehigen Baeren), trT (K1: heute schon erledigte Gewinn-Quellen "p" gestreichelt / "f" satt gefuettert / "d" satt getraenkt,
+-- in dieser Reihenfolge; fehlt = keine), meal / bowl (so viele Punkte senkt eine Mahlzeit / eine Schale bei dieser Groesse, auf 0,1), hd / wl
+-- (K1: Vanilla-Hungerpunkte bzw. Liter der vollen Leiste, ganze Zahl / 0,1), nfz (K1: "sleep" / "owner" / "far", nur waehrend eingefroren).
+-- trW (Verlauf der Tage) entfaellt mit K1.
 -- ---------------------------------------------------------------------------
 function B.NeedsView(rec, t)
     if type(rec) ~= "table" or type(t) ~= "table" or not isTame(rec.st) or not rulesOk() then return end
@@ -526,29 +632,81 @@ function B.NeedsView(rec, t)
     if th ~= nil then t.thr = whole(th) end
     if f ~= nil then t.tir = whole(f) end
     if tr ~= nil then
-        t.tru = whole(tr)
+        t.tru = B.Round1(tr)
         if tr >= cfg("trHeart", 100) then t.trM = true end
     end
     if rec.st == "tame" and fights(rec) then t.nof = B.NoFight(rec) end
-    if type(rec.trD) == "string" and rec.trD ~= "" then t.trW = rec.trD end
+    local d = rec.nDay
+    if type(d) == "table" and d.d == dayOf(B.Now()) then
+        local txt = ""
+        if d.gp == 1 then txt = txt .. "p" end
+        if d.gf == 1 then txt = txt .. "f" end
+        if d.gd == 1 then txt = txt .. "d" end
+        if txt ~= "" then t.trT = txt end
+    end
     t.meal = B.Round1(B.MealPct(rec))
     t.bowl = B.Round1(B.BowlPct(rec))
+    t.hd = math.floor(B.HunDayPts(rec) + 0.5)
+    t.wl = B.Round1(B.WaterDayL(rec))
+    local s = B._s and B._s[rec.id] or nil
+    if type(s) == "table" and type(s.nfz) == "string" then t.nfz = s.nfz end
 end
 
 -- ---------------------------------------------------------------------------
 -- Aus dem Spiegel (server/BanditsNPCBearHeal.lua B.Restore / B.TakeNewerMark, nur fuer einen gezaehmten Eintrag): die vier Werte
--- geklemmt uebernehmen (Unsinn -> Erst-Wert), Verlauf und Tagesbuch beginnen neu (nicht im Spiegel -- harmlos).
+-- geklemmt uebernehmen (Unsinn -> Erst-Wert), dazu die Fassung trV (K1: ein Spiegel OHNE trV traegt den alten Wert 0..100 -> B.NeedsFix
+-- rechnet ihn einmal um; ein Spiegel mit trV 2 nie). Tagesbuch beginnt neu (nicht im Spiegel -- harmlos).
+-- Nachbesserung K1 C5: die sechs Tages-Marken (gp gf gd lh lt lw) reisen flach mit (mark.nDd = Spieltag, mark.nDm = Bitmaske 1/2/4/8/16/32,
+-- B.NeedsDayMark; geschrieben in B.MarkOf, server/BanditsNPCBearHeal.lua) -- sonst gaebe es nach B.Restore / B.TakeNewerMark am selben Tag
+-- noch einmal -5 bzw. +0,5 je Quelle ("1x pro tag" gebrochen). Gilt nur fuer den LAUFENDEN Tag; ein eigenes Tagesbuch desselben Tages
+-- (B.TakeNewerMark: der Eintrag lebt weiter) wird vereinigt -- eine Marke geht am Tag nur von 0 auf 1, also nie zweimal. Ein Spiegel ohne
+-- die zwei Felder (von vor der Nachbesserung): wie bisher.
 -- ---------------------------------------------------------------------------
+function B.NeedsDayMark(rec)
+    local d = type(rec) == "table" and rec.nDay or nil
+    if type(d) ~= "table" or num(d.d) == nil then return nil, nil end
+    local m, bit = 0, 1
+    for i = 1, #MARKS do
+        if num(d[MARKS[i]]) == 1 then m = m + bit end
+        bit = bit * 2
+    end
+    return math.floor(d.d), m
+end
+
+local function dayFromMark(mark, own, day)
+    local nd = nil
+    local md, mm = num(mark.nDd), num(mark.nDm)
+    if md ~= nil and mm ~= nil and math.floor(md) == day and mm >= 0 then
+        nd = { d = day, h = 0, t = 0, s = 0, a = 0, c = 0 }
+        local m, bit = math.floor(mm), 1
+        for i = 1, #MARKS do
+            nd[MARKS[i]] = 0
+            if math.floor(m / bit) % 2 == 1 then nd[MARKS[i]] = 1 end
+            bit = bit * 2
+        end
+    end
+    if type(own) == "table" and num(own.d) == day then
+        if nd == nil then return own end
+        for i = 1, #MARKS do
+            if num(own[MARKS[i]]) == 1 then nd[MARKS[i]] = 1 end
+        end
+        nd.h, nd.t, nd.s, nd.a, nd.c = own.h, own.t, own.s, own.a, own.c
+    end
+    return nd
+end
+
 function B.NeedsFromMark(rec, mark, now)
     if type(rec) ~= "table" or type(mark) ~= "table" then return end
-    rec.nH, rec.nT, rec.nF, rec.tr = mark.nH, mark.nT, mark.nF, mark.tr
+    local own = rec.nDay
+    rec.nH, rec.nT, rec.nF, rec.tr, rec.trV = mark.nH, mark.nT, mark.nF, mark.tr, mark.trV
     rec.nDay, rec.trD, rec.slpAt = nil, nil, nil
+    rec.nDay = dayFromMark(mark, own, dayOf(num(now) or B.Now()))
     B.NeedsFix(rec, now)
 end
 
 -- ---------------------------------------------------------------------------
 -- Von Hand (Probeweg der Test-Mod zum Setzen der vier Werte -- im Spiel nie gerufen, das Uebernahme-Skript prueft das: Regel probeweg).
--- k = "hun" / "thr" / "tir" / "tru", v = 0..100. Vertrauen ueber die EINE Setz-Stelle (Meldungen wie im Spiel).
+-- k = "hun" / "thr" / "tir" (0..100) / "tru" (K1: -100..+100). Vertrauen ueber die EINE Setz-Stelle (Meldungen wie im Spiel).
 -- Rueckgabe: der gesetzte Wert oder nil.
 -- ---------------------------------------------------------------------------
 function B.NeedsSet(rec, k, v)
@@ -556,10 +714,11 @@ function B.NeedsSet(rec, k, v)
     local n = num(v)
     if type(rec) ~= "table" or not isTame(rec.st) or field == nil or n == nil or not rulesOk() then return nil end
     B.NeedsFix(rec, B.Now())
-    n = clamp(n, 0, 100)
     if field == "tr" then
+        n = clamp(n, cfg("trMin", -100), cfg("trMax", 100))
         trustSet(rec, n, nil)
     else
+        n = clamp(n, 0, 100)
         rec[field] = n
     end
     B.Commit(rec)

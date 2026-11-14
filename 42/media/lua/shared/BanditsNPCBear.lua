@@ -23,6 +23,8 @@
 -- F4 (PLAN_F4.md 3, 12; Kevins Antworten 13.11.2026 abends, f4/KEVIN_ANTWORTEN.md): Stellwerte des eigenen Inventars in B.CFG (Block "F4"), EIN
 -- neuer Sandbox-Regler BearCarryPercent (Traglast in Prozent, 50-250) -> 14 Optionen. Regeln: shared/BanditsNPCBearInvRules.lua, Schreiber:
 -- server/BanditsNPCBearInv.lua.
+-- K1 (PLAN_K1.md 9; Korrektur-Lauf nach F4, Kevins Worte ab 13.11.2026 ~21:40): Vertrauen -100..+100 (Start 0), Hunger/Durst nach Groesse,
+-- Einfrieren, Mitschlafen, Inventar 1000 auf einmal, selbst trinken -- Stellwerte im Block "K1" am Ende von B.CFG; B.LOOKS[...].pose (Schild-Hoehe).
 --
 -- Laeuft ohne NPC Crew und ohne Bandits. Am Ende kopiert das Uebernahme-Skript diese Datei unveraendert nach NPC Crew.
 -- Deshalb: auf Dateiebene wird kein fremdes Modul eingefangen; jeder Griff nach BanditsNPC.X passiert zur Laufzeit und
@@ -53,15 +55,17 @@ B.BREED = "brown"
 -- dem Clip gemessen, aussehen/werkzeug/glbspeed.py; tagK = Schild-Hoehe gegen das Junge bei gleicher Groesse, aus der Bindepose --
 -- ungespielt), hide = true (Art bleibt erkannt, wird im Fenster nicht mehr angeboten -- fuer ein spaeter gestrichenes Aussehen).
 -- Die Rasse bleibt fuer alle B.BREED. Das Register traegt nur die Familie des Wunsches (rec.look, nil = "std").
+-- K1 (PLAN_K1.md 3): pose = Schluessel der Kopfhoehen-Tabelle B.TAG_POSE (shared/BanditsNPCBearTagPose.lua, offline aus dem GLB gemessen):
+-- "cub" = NCBearCub.glb, "cubgen" = NCBearCubGen.glb, "big" = NCBear.glb, "biggen" = NCBearGen.glb (Generator UND Foto). Liest die OBERFLAECHE.
 B.LOOKS = B.LOOKS or {
     cub = {
-        { k = "std", art = "ncbearcub", txt = "UI_BN_Bear_Look_Classic" },
-        { k = "gen", art = "ncbearcubgen2", txt = "UI_BN_Bear_Look_Brown", walkSpeed = 0.34, runSpeed = 2.25, tagK = 1.11 },
+        { k = "std", art = "ncbearcub", txt = "UI_BN_Bear_Look_Classic", pose = "cub" },
+        { k = "gen", art = "ncbearcubgen2", txt = "UI_BN_Bear_Look_Brown", walkSpeed = 0.34, runSpeed = 2.25, tagK = 1.11, pose = "cubgen" },
     },
     big = {
-        { k = "std", art = "ncbeargrown", txt = "UI_BN_Bear_Look_Classic" },
-        { k = "gen", art = "ncbeargrowngen", txt = "UI_BN_Bear_Look_Brown", tagK = 1.08 },
-        { k = "foto", art = "ncbeargrowngenfoto", txt = "UI_BN_Bear_Look_Natural", tagK = 1.08 },
+        { k = "std", art = "ncbeargrown", txt = "UI_BN_Bear_Look_Classic", pose = "big" },
+        { k = "gen", art = "ncbeargrowngen", txt = "UI_BN_Bear_Look_Brown", tagK = 1.08, pose = "biggen" },
+        { k = "foto", art = "ncbeargrowngenfoto", txt = "UI_BN_Bear_Look_Natural", tagK = 1.08, pose = "biggen" },
     },
 }
 B.LOOK_NEAR = B.LOOK_NEAR or { cub = { foto = "gen" } }   -- Familie ohne eigenen Eintrag in diesem Koerper -> diese
@@ -254,10 +258,12 @@ B.CFG = B.CFG or {
     -- F3 (PLAN_F3.md 2-6; Kevins Antworten 13.11.2026). Werte 0..100: Hunger / Durst / Muedigkeit fuellen sich mit dem Druck, Vertrauen
     -- mit dem Guten. Zeiten in Echtzeit-ms, Tempi je Spielstunde bzw. Spieltag. KEINE Uhrzeit-Werte (Kevin 6c: kein Nachtfenster, kein
     -- Mittagsschlaf) -- geschlafen wird nur nach der Muedigkeit und neben dem schlafenden Besitzer.
-    needHunDay = 50, needThrDay = 75,                     -- Anstieg Hunger / Durst je Spieltag (x Tempo BearNeedsPercent x Vertrauen)
-    mealsAt = { 1, 2, 4 }, bowlsAt = { 1, 2, 3 },         -- Kevins Tabelle: Mahlzeiten / Schalen je Tag an den Stuetzpunkten statAt
+    -- K1 (PLAN_K1.md 8, 9; Kevin 14.11. ~02:20): needHunDay / needThrDay und mealsAt / bowlsAt entfallen -- Hunger UND Durst steigen je GEZAEHLTER
+    -- Wachstunde um needRiseH (Block "K1" unten), die volle Leiste ist eine Tagesmenge nach Groesse (B.HunDayPts / B.WaterDayL).
     mealPts = 20, bowlL = 0.5,                            -- eine Mahlzeit = 20 Vanilla-Hungerpunkte (ein Honig) / eine Schale = 0,5 l
-    needFull = 5,                                         -- darunter satt / nicht durstig: Fuettern / Traenken lehnt ab
+    -- Nachbesserung K1 C1 (Kevin 14.11. ~00:00 "wenn das essen und trinken 100 erreicht"): satt erst unter 1 % (die Sicht zeigt dann 0 %);
+    -- vorher 5 -- beim Erwachsenen (ein Stueck 2-12 %) blieb der Hunger zwischen 0 und 5 stehen und "satt gefuettert" kam nie.
+    needFull = 1,                                         -- darunter satt / nicht durstig: Fuettern / Traenken lehnt ab
     needPeckish = 25, needHungry = 50, needStarve = 80,   -- Stufen Hunger UND Durst (Wort / ab hier Folgen / schwere Folgen)
     needStartHun = 20, needStartThr = 20, needStartTir = 10,   -- Erst-Werte beim Zaehmen und fuer Baeren von vor F3
     needStaK = 0.5, needDmgK1 = 0.85, needDmgK2 = 0.7, needGrowK1 = 0.5,   -- Ausdauer-Erholung / Schaden ab 50 / ab 80 / Wachsen ab 50
@@ -275,18 +281,19 @@ B.CFG = B.CFG or {
     -- Kevin 3 (13.11.): "ab 90% sagt das er zu muede ist zum kaempfen und erst bei 100% von selbst einschlaeft"; Kevin 6c: "schlaeft er
     -- solange bis er auf 0% runter ist". tirStaySleep: in Bleiben / Sitz / Frei schon ab hier hinlegen (100 = kein Unterschied; Frage an Kevin)
     tirVery = 90, tirCollapse = 100, tirWake = 0, tirStaySleep = 100,
-    -- Vertrauen (Kevin 4): Start, bis so viel langsamere (viel Vertrauen) bzw. schnellere (wenig) Beduerfnisse, UNTER trRefuse weigert er
-    -- sich zu kaempfen, ab trHeart das Herz ueber dem Namensschild (Kevin 7)
-    trStart = 50, trBonus = 0.2, trMalus = 0.2, trRefuse = 15, trHeart = 100,
-    trWordAt = { 20, 40, 60, 80 },                        -- Stufen der Woerter (Wary / Unsure / Trusting / Close / Devoted)
-    trFeedFav = 4, trFeedOk = 3, trFeedSnack = 1, trPet = 2, trDrink = 1,   -- Punkte aus der Hand
-    trMix = 1.5, trHandDay = 12,                          -- Faktor im Wechsel / Deckel der Hand-Punkte je Spieltag
-    trDayGood = 3, trDayBad = -3, trDayWorst = -8, trDaySleep = 2, trDown = -5,   -- Tagesabschluss / am Boden
-    trDayMinH = 6, trSleepH = 6,                          -- ein Tag zaehlt ab so vielen gezaehlten Stunden / Schlaf-Bonus ab so vielen Stunden
+    -- Vertrauen (K1, Kevin 13.11. ~21:40 / 14.11. ~00:00 / ~02:50; PLAN_K1.md 2): Skala -100..+100, Start 0. Bis trBonus langsamere (bei +100)
+    -- bzw. trMalus schnellere (bei -100) Beduerfnisse, UNTER trRefuse (-70) weigert er sich zu kaempfen, ab trHeart das Herz ueber dem Namen.
+    -- Punkte je Hand-Futter, Wechsel-Bonus, Tages-Hand-Deckel und Tagesabschluss entfallen (trFeed*, trPet, trDrink, trMix, trHandDay, trDay*).
+    trStart = 0, trBonus = 0.25, trMalus = 0.25, trRefuse = -70, trHeart = 100,
+    trWordAt = { -70, -20, 20, 70 },                      -- Stufen der Woerter (misstrauisch / scheu / neutral / vertraut / ergeben)
+    trMin = -100, trMax = 100,                            -- Grenzen der Skala
+    -- GEWINN je Quelle hoechstens 1x je Spieltag (Streicheln / satt gefuettert / satt getraenkt, aus der Hand); VERLUST: Hunger bzw. Durst
+    -- erreicht trLossAt -> trLossNeed (je 1x am Tag), am Boden trDown (jedes Mal), Leben durch Hunger/Durst auf needHpFloor -> trLossWeak (1x am Tag)
+    trGain = 0.5, trLossAt = 90, trLossNeed = -5, trDown = -10, trLossWeak = -10,
     -- Schlaf: Gefahr in so vielen Kacheln weckt; Kevin 2 (13.11.): "nach 5 sec schlaftrunken wieder kaempft"; Sperren nach Gefahr / Laerm
     -- bzw. nach Befehl, Fuettern, Traenken; Weg zum schlafenden Besitzer; dessen Meldung veraltet; ab so lange "schlaeft schon" (Sicht slpO)
     sleepWakeR = 8, wokeFleeMs = 5000, sleepDangerLockMs = 30000, sleepRetryMs = 60000,
-    sleepWalkMs = 30000, sleepNear = 2.5, sleepArrive = 1.2, ownSleepStaleMs = 90000, sleepOldMs = 5000, sleepAlarmPadMs = 300,
+    sleepWalkMs = 45000, sleepNear = 2.5, sleepArrive = 1.2, ownSleepStaleMs = 90000, sleepOldMs = 5000, sleepAlarmPadMs = 300,
     sleepBackNear = 3,          -- Nachbesserung C2: legt er sich nach dem Fuettern / Traenken so nah am alten Platz wieder hin, bleibt es still
     refuseSayMs = 60000,                                  -- "zu muede" / "kein Vertrauen" beim verweigerten Kampf hoechstens je
     -- sleepClips false = Ersatzbild Sitzen (F3); F3b (Modell-Lauf baer-schlaf-pose) schaltet um, wenn ALLE GLBs die Clips haben.
@@ -298,7 +305,8 @@ B.CFG = B.CFG or {
     -- und Fenster-Uhren (Echtzeit-ms), Fressen aus dem Inventar (Spielminuten / ms), Deckel. invCopyMP: liest der Abgleich die Spieler-Kopie auch im
     -- Mehrspieler? (Pruef-Tor G1, f4/GATES.md). invRotK: Verderb-Tempo je SandboxVars.FoodRotSpeed 1..5 (Pruef-Tor G3; Food.getFoodRotSpeed).
     -- bagAdd: Kevin 13.11. abends waehrend des Laufs (f4/KEVIN_ANTWORTEN.md unten): "+150 das der baer am ende dann bei 250kg ist" (statt +50)
-    bagType = "NPCCrew.BearPacks", bagAdd = 150, invMaxItems = 1000, invPageMax = 100, invTakeMax = 50,
+    -- K1 (Kevin 13.11. ~23:50 "nur die 1000 items einstellen zum gleichzeitig verschieben"): invTakeMax 50 -> 1000 (= invMaxItems)
+    bagType = "NPCCrew.BearPacks", bagAdd = 150, invMaxItems = 1000, invPageMax = 100, invTakeMax = 1000,
     invPutTime = 40, invPutPerKg = 8, invPutMax = 150, bagOnTime = 300, bagOffTime = 200,
     invListMs = 500, invWatchMs = 60000, invKeepMs = 30000, invEatGapMin = 10, invEatShowMs = 4000,
     invMdMax = 2048, invWaifMax = 8, invDropMax = 16, invLostMax = 8,
@@ -310,6 +318,26 @@ B.CFG = B.CFG or {
     -- MP-Client (NPC Crew CLAUDE.md:444-447). false = im Mehrspieler lehnt der Baer Stuecke mit Aussehen (Kleidung, Taschen) mit Grund ab; true erst
     -- nach Kevins Wort "auch am Server" (Frage fuer Kevin, f4/NACHBESSERUNG.md).
     invHueMP = false,
+    -- K1 (Korrektur-Lauf nach F4, PLAN_K1.md 9; Kevins Worte begleiter/ENTSCHEIDUNGEN.md ab 13.11. ~21:40 gehen vor). Werte je Spielstunde bzw. Liter,
+    -- Zeiten Echtzeit-ms, Abstaende Kacheln, Inventar-Dauern Spiel-Ticks.
+    -- H (Kevin 14.11. ~01:40 / ~01:55 / ~02:15 / ~02:20): Hunger UND Durst +needRiseH je gezaehlter Wachstunde (0 -> 100 % in 16 h, x Sandbox-Tempo
+    -- x Vertrauens-Faktor). Volle Leiste = Tagesmenge der Groesse: Futter nach Saettigung = playerHunDay (Vanilla-Hungerpunkte eines satt gehaltenen
+    -- Spielers in 16 Wachstunden, PLAN_K1.md 1.1: 3,456 je h x 16) x foodAt; Wasser = waterPct des Koerpergewichts weightAt (kg). Stuetzen statAt.
+    needRiseH = 6.25, playerHunDay = 55.3, foodAt = { 1.5, 4, 12.5 }, weightAt = { 25, 80, 250 }, waterPct = 0.06,
+    -- F (Kevin 14.11. ~01:05 / ~01:15): weiter als needFreezeR vom Besitzer = eingefroren (unter dem Lade-Rand 76). U: Auto-Anzeige ab needAutoAt
+    -- (liest die OBERFLAECHE).
+    needFreezeR = 70, needAutoAt = 75,
+    -- I (Kevin 13.11. ~23:50 / 14.11. ~00:10): eine gebuendelte Zeitaktion fuer k Stueck -- Dauer invPutTime + invPutPerKg x kg + invPutPerPc x (k-1),
+    -- Deckel invBundleMax (k = 1: invPutMax wie bisher)
+    invBundleMax = 600, invPutPerPc = 2,
+    -- E (Kevin 14.11. ~00:30 / ~00:50 / ~00:55): selbst fressen ab needHungry bis invEatStop; selbst trinken ab invDrinkStart bis 0, hoechstens ein
+    -- Behaelter je invDrinkGapMin Spielminuten, nur diese Stoffe in dieser Reihenfolge (sauber zuerst; Namen V:client/Farming/ISUI/ISFarmingMenu.lua:80).
+    -- invKgPerL: Gewicht eines Liters im Behaelter fuer die Traglast-Rechnung (Pruef-Tor G-K2; nach dem Herausnehmen zaehlt das Engine-Gewicht).
+    invEatStop = 0, invDrinkStart = 50, invDrinkGapMin = 10, invDrinkFluids = { "Water", "TaintedWater" }, invKgPerL = 1.0,
+    -- SL (Kevin 14.11. ~01:10): zum schlafenden Besitzer geht er nur bis sleepGoR Kacheln (gleiche Ebene), sonst legt er sich, wo er ist
+    sleepGoR = 25,
+    -- S (OBERFLAECHE liest): Schild folgt der Pose an / Sinken hoechstens so viele Faktor-Einheiten je s
+    tagPoseOn = true, tagPoseDown = 2.0,
 }
 
 -- F1 (PLAN_F1.md 0.3, 6.1): die vier Modi eines gezaehmten Baeren. Jeder andere Wert (auch nil) gilt als "stay" (B.ModeOf).

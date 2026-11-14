@@ -43,6 +43,9 @@
 -- Schreiber setzt es fuer ALLE, solange er aus dem Inventar frisst, B.CFG.invEatShowMs), spielt dieser Client den vorhandenen Clip "eat"
 -- (derselbe wie beim Fuettern) EINMAL je Fress-Fenster ueber U.PoseAct -- nach der Uhr wieder weg, danach wie bisher (sitzt er, setzt er
 -- sich wieder hin). Nie im Kampf / Rueckzug, versteckt, mitfahrend, am Boden oder schlafend; beschaeftigt geht vor. Kein neuer Clip.
+-- K1 (Lauf baer-k1, PLAN_K1.md 3; Kevin 13.11.2026 ~21:50 / ~22:00): U.PoseLift(id, now) -- Schild-Faktor nach Clip und Zeit DIESES Treibers
+-- aus der offline gemessenen Tabelle B.TAG_POSE (shared/BanditsNPCBearTagPose.lua); Schild, Balken, Herz, z Z z und schwebende Zeilen heben sich
+-- damit beim Aufrichten, Doppelschlag, Biss und Sitzen mit dem Kopf. Kein Engine-Aufruf (Abschnitt unten).
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -76,6 +79,8 @@ local H = {}
 local at = 0
 -- F4: Kennungen, deren Fress-Fenster (Sicht eat) schon ein "eat" bekommen hat. Deckel: nur Kennungen der Sicht (U.PoseOnView raeumt).
 local EAT = {}
+-- K1: Schild-Faktor je Kennung (U.PoseLift): { k = Faktor zuletzt, at = ms, mk = Modell-Schluessel, mbd = bd, mlk = lk }. Deckel wie P.
+local L = {}
 
 local function act()
     return B.ACT or "NCBearAct"
@@ -375,6 +380,18 @@ function U.PoseOnView()
     if old then
         for i = 1, #old do EAT[old[i]] = nil end
     end
+    -- K1: Schild-Faktoren (U.PoseLift) nur fuer Kennungen der Sicht (erst sammeln, dann loeschen)
+    local lost = nil
+    for id, _ in pairs(L) do
+        local v = cubs[id]
+        if v == nil or v.st ~= "tame" then
+            lost = lost or {}
+            lost[#lost + 1] = id
+        end
+    end
+    if lost then
+        for i = 1, #lost do L[lost[i]] = nil end
+    end
 end
 
 -- F2 (PLAN_F2.md 4.4, 4.6): einen Kampf-Clip (oder einen anderen Clip der Tabelle, z. B. "eat") an der lebenden Kopie
@@ -415,10 +432,112 @@ function U.PoseSleeping(id)
     return e ~= nil and e.slp == true
 end
 
+-- ---------------------------------------------------------------------------
+-- K1 (Lauf baer-k1, PLAN_K1.md 1.2, 3; Kevin 13.11.2026 ~21:50 / ~22:00: Schild, Balken, Herz, z Z z folgen der Pose -- "beim roar geht der
+-- text nicht hoeher"): U.PoseLift(id, now) = Faktor >= 1 fuer den Schild-Anker dieser Kennung. Quelle ist allein der Zustand dieses
+-- Treibers (Clip-Schluessel und Startzeit P[id], dieselbe Uhr wie der Clip selbst) und die OFFLINE aus den GLB gemessene Tabelle B.TAG_POSE
+-- (shared/BanditsNPCBearTagPose.lua). KEIN Engine-Aufruf, keine neue Tabelle je Bild: je Aufruf nur Tabellen-Lesen und Rechnen.
+--   * Clip: Phase "act" -> der gespielte Schluessel (rear, slam, bite ...), "sitdown" / "sit" / "standup" direkt; Schlaf-Phasen (F3b) und
+--     ohne Eintrag -> 1. Modell aus der Sicht: B.LOOKS[...].pose des Kerns, sonst aus Koerper + Familie (std -> "cub"/"big", sonst
+--     "cubgen"/"biggen").
+--   * Stuetzen: u = Zeit / Dauer (Schleifen wie sit mit Rest), linear zwischen zwei Stuetzen; nach dem Clip-Ende die letzte Stuetze (Ende
+--     Hinsetzen = Sitz-Hoehe, Ende Aufrichten = 1,00).
+--   * Steigen sofort (die Tabelle hat 0,2 s Vorlauf), Sinken weich: hoechstens B.CFG.tagPoseDown Faktor-Einheiten je Sekunde (Rueckfall 2,0).
+--     Zustand je Kennung in L (gedeckelt durch die Sicht: U.PoseOnView raeumt). Mehrere Aufrufer im selben Bild (Schild, z Z z, Zeilen)
+--     bekommen denselben Wert (dt = 0).
+--   * B.CFG.tagPoseOn == false -> immer 1 (Stellwert des Kerns, zum Vergleichen abschaltbar).
+-- ---------------------------------------------------------------------------
+local LIFT_DOWN = 2.0           -- Rueckfall fuer B.CFG.tagPoseDown
+local LIFT_DT_MAX = 1000        -- ms: laengere Luecken (Pause, Ladebildschirm) zaehlen wie 1 s
+
+-- Modell-Schluessel der Tabelle fuer einen Sicht-Eintrag (B.LOOKS[...].pose des Kerns; Rueckfall aus Koerper + Familie).
+local function poseModel(v)
+    local body = bodyOf(v)
+    local lk = (type(v) == "table" and type(v.lk) == "string") and v.lk or "std"
+    local k = lk
+    if B.LookFor then
+        local e = B.LookFor(body, lk)
+        if type(e) == "table" then
+            if type(e.pose) == "string" and e.pose ~= "" then return e.pose end
+            if type(e.k) == "string" then k = e.k end
+        end
+    end
+    if k == "std" then return body end
+    return body .. "gen"
+end
+
+-- Faktor aus der Tabelle fuer Modell mk, Clip ck, Zeit t (ms seit Clip-Beginn). nil = keine Stuetzen (-> 1).
+local function sample(mk, ck, t)
+    local tab = B.TAG_POSE
+    local m = type(tab) == "table" and tab[mk] or nil
+    local c = type(m) == "table" and m[ck] or nil
+    if type(c) ~= "table" or type(c.k) ~= "table" then return nil end
+    local k = c.k
+    local n = #k
+    local dur = tonumber(c.dur)
+    if n < 2 or dur == nil or dur <= 0 then return nil end
+    local u = t / (dur * 1000)
+    if u < 0 then u = 0 end
+    local loop = type(B.CLIPS) == "table" and type(B.CLIPS[ck]) == "table" and B.CLIPS[ck].loop == true
+    if u >= 1 then
+        if not loop then return tonumber(k[n]) end
+        u = u - math.floor(u)
+    end
+    local x = u * (n - 1)
+    local i = math.floor(x)
+    local a, b = tonumber(k[i + 1]) or 1, tonumber(k[i + 2]) or tonumber(k[i + 1]) or 1
+    return a + (b - a) * (x - i)
+end
+
+function U.PoseLift(id, now)
+    if id == nil or (B.CFG and B.CFG.tagPoseOn == false) then return 1 end
+    local e = P[id]
+    local target = 1
+    if e ~= nil and type(e.t0) == "number" and type(now) == "number" then
+        local ck = nil
+        if e.ph == "act" then ck = e.act elseif e.ph == "sitdown" or e.ph == "sit" or e.ph == "standup" then ck = e.ph end
+        if ck ~= nil then
+            local cubs = B.View and B.View.cubs
+            local v = type(cubs) == "table" and cubs[id] or nil
+            local s = L[id]
+            if s == nil then
+                s = { k = 1, at = now }
+                L[id] = s
+            end
+            local bd, lk = v and v.bd, v and v.lk
+            if s.mk == nil or s.mbd ~= bd or s.mlk ~= lk then
+                s.mk, s.mbd, s.mlk = poseModel(v), bd, lk
+            end
+            local f = sample(s.mk, ck, now - e.t0)
+            if f ~= nil and f > 1 then target = f end
+        end
+    end
+    local s = L[id]
+    if s == nil then
+        if target <= 1 then return 1 end
+        s = { k = 1, at = now }
+        L[id] = s
+    end
+    local dt = (type(now) == "number" and type(s.at) == "number") and (now - s.at) or 0
+    if dt < 0 then dt = 0 end
+    if dt > LIFT_DT_MAX then dt = LIFT_DT_MAX end
+    s.at = now
+    local k = target
+    if target < s.k then
+        local down = tonumber(B.CFG and B.CFG.tagPoseDown) or LIFT_DOWN
+        if down <= 0 then down = LIFT_DOWN end
+        k = s.k - down * dt / 1000
+        if k < target then k = target end
+    end
+    s.k = k
+    return k
+end
+
 local function onGameStart()
     P = {}
     H = {}
     EAT = {}
+    L = {}
     at = 0
 end
 

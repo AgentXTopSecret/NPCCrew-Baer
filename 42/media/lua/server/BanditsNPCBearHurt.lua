@@ -151,7 +151,8 @@ function B.BearDown(rec, a, why, players)
     if type(s.g) == "table" then s.g.on = nil end
     s.fleeSaid = nil
     s.fstNow, s.fstSent = nil, nil              -- Nachbesserung F2 B5: Sicht fst weg (dn hat Vorrang, Sitz-Pose am Boden)
-    -- F3 (PLAN_F3.md 4.1, 6.3): am Boden gibt es keinen Schlaf (ohne Bild), und ein Mal am Boden kostet Vertrauen (trDown, -5)
+    -- F3 (PLAN_F3.md 4.1, 6.3): am Boden gibt es keinen Schlaf (ohne Bild), und ein Mal am Boden kostet Vertrauen (trDown; K1, Kevin 14.11.
+    -- ~00:00: -10 jedes Mal, mit Meldung UI_BN_Bear_Note_TrustDown aus B.TrustAdd)
     if B.SleepStop then B.SleepStop(rec, "gone", ms, players) end
     if B.TrustAdd then B.TrustAdd(rec, "down", nil, nil, players) end
     B.Commit(rec)

@@ -40,6 +40,8 @@
 --   Die Rueckgabe wird mit :getX() / :getY() gelesen (belegt: B:shared/ZombieActions/ZAPush.lua:38, B:shared/Bandit.lua:1454-1455).
 --   Ob die Vorwaertsrichtung eines ruhenden Tiers der Blickrichtung des Modells entspricht, ist ungespielt (Regler U.ZZ.head = 0 setzt das
 --   z Z z ueber die Tiermitte).
+-- K1 (PLAN_K1.md 3, 6): das z Z z hebt sich mit derselben Pose wie das Schild (U.PoseLift); U.SleepReport meldet im Einzelspieler auch das
+--   VORSPULEN (Spieltempo > 1) als Schlaf des Besitzers -- dann legt sich der Baer ebenfalls hin (Kevin 14.11. ~01:10).
 -- Dazu, ohne Zeichnen (PLAN_F3.md 6.7; Kevin 13.11.2026 Antwort 6d "er legt sich neben den Spieler, wenn der schlaeft"): U.SleepReport(now)
 --   meldet dem Schreiber, wenn der Besitzer einschlaeft bzw. aufwacht -- Bitte "Sleep" { on } ueber B.Ask (Einzelspieler B.Handle direkt,
 --   Mehrspieler sendClientCommand, Rolle user genuegt). Einen belegten Lua-Weg, auf dem der Server den Schlaf eines Spielers erfaehrt,
@@ -164,7 +166,7 @@ local function collect(now)
                         elseif e.endAt ~= nil then
                             e.t0, e.endAt = Z.clock + IN_MS, nil        -- wieder eingeschlafen: von vorn
                         end
-                        e.seen, e.a = true, a
+                        e.seen, e.a, e.id = true, a, id             -- K1: id fuer U.PoseLift je Bild
                         aim(e, a, c, id, headE)
                     end
                 end
@@ -256,7 +258,10 @@ function U.ZzDraw(self, now)
             local fade = 1
             if e.endAt ~= nil then fade = 1 - (clock - e.endAt) / OUT_MS end
             if fade > 0 then
-                local ax, ay, z = a:getX(), a:getY(), a:getZ() + e.lift
+                -- K1 (PLAN_K1.md 3): derselbe Pose-Faktor wie das Schild (U.PoseLift, client/BanditsNPCBearPose.lua) -- ueber dem Schild bleiben
+                local pk = 1
+                if U.PoseLift then pk = tonumber(U.PoseLift(e.id, now)) or 1 end
+                local ax, ay, z = a:getX(), a:getY(), a:getZ() + e.lift * pk
                 local x, y = ax + e.hx, ay + e.hy
                 local sx = math.floor(isoToScreenX(0, x, y, z))
                 -- senkrecht: am Kopf, aber nie tiefer als die Oberkante des Schild-Stapels (der haengt ueber der Tiermitte)
@@ -308,6 +313,20 @@ local function ownBear()
     return false
 end
 
+-- K1 (Lauf baer-k1, PLAN_K1.md 1.3, 6; Kevin 14.11.2026 ~01:10: "wenn der spieler vorspult das spiel dan legt er sich auch zum schlafen hin"):
+-- im EINZELSPIELER zaehlt auch das Vorspulen (Spieltempo > 1) als Schlaf des Besitzers -- dieselbe Bitte "Sleep" { on }, kein neues Netzfeld.
+-- Der Vergleich genau wie V:client/TimedActions/ISTimedActionQueue.lua:302 (UIManager.getSpeedControls():getCurrentGameSpeed() > 1, mit dem
+-- Riegel UIManager.getSpeedControls wie V:client/Foraging/ISBaseIcon.lua:62-63; Aufruf auch V:client/Context/ISMenuContextWorld.lua:37). Im
+-- Mehrspieler gibt es Vorspulen nur, wenn alle schlafen (dann zaehlt isAsleep) -- dort wird das Tempo nicht gefragt.
+local function fastForward()
+    if not (B.IsSP and B.IsSP()) then return false end
+    if not (UIManager and UIManager.getSpeedControls) then return false end
+    local sc = UIManager.getSpeedControls()
+    if not sc then return false end
+    return (tonumber(sc:getCurrentGameSpeed()) or 1) > 1
+end
+U.SleepFastForward = fastForward
+
 -- getSpecificPlayer(0): V:client/Farming/CFarmingSystem.lua:45; playerObj:isAsleep(): V:client/ISUI/ISButtonPrompt.lua:440. Die Tabelle
 -- der Bitte ist nie leer (eine leere kaeme als nil an, S:client/BanditsNPCBearClient.lua sendHello).
 function U.SleepReport(now)
@@ -315,7 +334,7 @@ function U.SleepReport(now)
     O.at = now
     local p = getSpecificPlayer(0)
     if not p or not B.Ask then return end
-    if p:isAsleep() == true then
+    if p:isAsleep() == true or fastForward() then
         if (not O.told or now - O.sentAt >= OWN_RESEND_MS or now < O.sentAt) and ownBear() then
             O.told, O.sentAt = true, now
             B.Ask(p, "Sleep", { on = true })

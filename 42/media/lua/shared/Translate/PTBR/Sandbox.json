@@ -26,7 +26,7 @@
     "Sandbox_BanditsNPC_BearMaxPerPlayer": "Ursos por jogador",
     "Sandbox_BanditsNPC_BearMaxPerPlayer_tooltip": "Quantos ursos domados um jogador pode ter.",
     "Sandbox_BanditsNPC_BearNeedsPercent": "Urso: velocidade das necessidades (porcentagem)",
-    "Sandbox_BanditsNPC_BearNeedsPercent_tooltip": "A rapidez com que um urso domesticado fica com fome, com sede e cansado. 100 = normal, 200 = duas vezes mais rápido. 0 = desligado: fome, sede e cansaço ficam em zero, e ele só dorme ao lado de quem é dono dele, quando essa pessoa está dormindo. A confiança continua funcionando.",
+    "Sandbox_BanditsNPC_BearNeedsPercent_tooltip": "A rapidez com que um urso domesticado fica com fome, com sede e cansado. 100 = normal: a fome e a sede vão de satisfeito a vazio em 16 horas acordado; enquanto ele ou você dormem, nada sobe. 200 = duas vezes mais rápido. 0 = desligado: fome, sede e cansaço ficam em zero, e ele só dorme ao lado de quem é dono dele, quando essa pessoa está dormindo. A confiança continua funcionando.",
     "Sandbox_BanditsNPC_BearSkillAgeCap": "Urso: habilidades limitadas pela idade",
     "Sandbox_BanditsNPC_BearSkillAgeCap_tooltip": "Um filhote aprende até o nível 3, um urso meio crescido até 6, um urso forte até 8; só um urso totalmente crescido chega a 10. A experiência que ele já tem fica. Desligado: sem limite.",
     "Sandbox_BanditsNPC_BearSkillXpPercent": "Urso: velocidade de aprendizado das habilidades (porcentagem)",

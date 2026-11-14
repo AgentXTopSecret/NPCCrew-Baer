@@ -82,11 +82,29 @@ local function refuse(player, pkey, ms, n)
     end
 end
 
--- Grund aus B.BodySwapReady -> Meldung (PLAN_AUSSEHEN.md 5.2 Nr. 16)
+-- K1: Restsekunden einer Sperre der Sitzung (Stempel at + Spanne span, Echtzeit-ms), aufgerundet, mindestens 1. Nur Zahlen (die Uhren setzt
+-- B.BodySwap in server/BanditsNPCBearGrow.lua: s.swapAt / s.swapTryAt).
+local LOCK_OF = { cool = { "swapAt", "swapMinMs", 60000 }, retry = { "swapTryAt", "swapRetryMs", 10000 } }
+
+local function lockLeftS(s, why, ms)
+    local l = LOCK_OF[why]
+    if l == nil or type(s) ~= "table" then return nil end
+    local at = tonumber(s[l[1]])
+    local span = tonumber(B.CFG and B.CFG[l[2]]) or l[3]
+    if at == nil then return nil end
+    local left = math.ceil((at + span - ms) / 1000)
+    if left < 1 then left = 1 end
+    return left
+end
+
+-- Grund aus B.BodySwapReady -> Meldung (PLAN_AUSSEHEN.md 5.2 Nr. 16). K1 (Kevin 13.11. ~22:20: "da steht immer dein baer ist beschaeftigt"):
+-- "cool" (Koerper eben getauscht oder gewachsen, swapMinMs 60 s) und "retry" (Fehlversuch, swapRetryMs) nennen Grund UND Restzeit
+-- (UI_BN_Bear_Why_LookCool, t = "num", v = Sekunden, aufgerundet; Big-Fassung ueber B.NoteBd). Nachbesserung K1 C7: "retry" hat seinen
+-- eigenen Grund (UI_BN_Bear_Why_LookRetry "konnte sich eben nicht veraendern") -- LookCool sagte dort faelschlich "gerade erst gewachsen".
 local READY_WHY = {
     guard = "UI_BN_Bear_Why_LookDanger",
-    busy = "UI_BN_Bear_Why_LookBusy", calm = "UI_BN_Bear_Why_LookBusy", cool = "UI_BN_Bear_Why_LookBusy",
-    retry = "UI_BN_Bear_Why_LookBusy", move = "UI_BN_Bear_Why_LookBusy",
+    busy = "UI_BN_Bear_Why_LookBusy", calm = "UI_BN_Bear_Why_LookBusy", cool = "UI_BN_Bear_Why_LookCool",
+    retry = "UI_BN_Bear_Why_LookRetry", move = "UI_BN_Bear_Why_LookBusy",
     fight = "UI_BN_Bear_Why_LookFight",
     down = "UI_BN_Bear_Why_Down",
     ride = "UI_BN_Bear_Why_Riding",
@@ -180,8 +198,13 @@ function B.HandleLook(player, args)
     local ok, why = B.BodySwapReady(rec, s, ms, have, want)
     if not ok then
         local k = READY_WHY[why] or "UI_BN_Bear_Why_LookBusy"
+        local left = lockLeftS(s, why, ms)
+        local timed = k == "UI_BN_Bear_Why_LookCool" or k == "UI_BN_Bear_Why_LookRetry"
+        if timed and left == nil then k, timed = "UI_BN_Bear_Why_LookBusy", false end
         if k == "UI_BN_Bear_Why_NotOwner" or k == "UI_BN_Bear_Why_LookMissing" then
             refuse(player, pkey, ms, note(k, nil, nil, "bad"))
+        elseif timed then
+            refuse(player, pkey, ms, B.NoteBd(note(k, "num", left, "bad"), rec))
         else
             refuse(player, pkey, ms, B.NoteBd(note(k, nil, nil, "bad"), rec))
         end

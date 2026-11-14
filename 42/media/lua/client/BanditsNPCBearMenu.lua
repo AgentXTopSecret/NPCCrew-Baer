@@ -48,6 +48,9 @@
 -- Mehrspieler: der Server). Die grauen Punkte sind nur eine Vorpruefung mit denselben Regel-Funktionen des Kerns
 -- (B.CheckFeed, B.CheckPet, B.CheckBait) auf der Sicht des Spielers; lehnt der Schreiber trotzdem ab, kommt seine Meldung.
 -- Nichts hier nimmt oder gibt einen Gegenstand. Laeuft nur beim Rechtsklick, nie je Bild.
+-- K1 (Lauf baer-k1, PLAN_K1.md 2.3, 8; Kevin 13./14.11.2026): Vertrauen -100..+100 -- die Zeile "Trust" im Streichel-Tooltip traegt das Vorzeichen
+-- ("Trust +12%" / "Trust -20%"); jede Futterzeile im Fuettern-Menue sagt "Fills it for about x% of its daily need." (Kevin ~02:10 "soll da stehn
+-- mit prozent"; Regel des Kerns B.FoodDayPct mit item:getHungerChange(), V:client/ISUI/Animal/ISAnimalContextMenu.lua:37).
 -- Jeder Engine-Aufruf hat eine Vanilla-Fundstelle (Kommentar daneben). Statisch geprueft, nicht gespielt.
 --
 
@@ -326,9 +329,35 @@ local function tipStatus(option, v, field)
     if v and type(v.tame) == "number" and v.st ~= "tame" then
         name = U.T("UI_BN_Bear_Hud_Taming", math.floor(v.tame))
     elseif v and v.st == "tame" and field ~= nil and NOW_KEY[field] and type(v[field]) == "number" then
-        name = U.T(NOW_KEY[field], math.floor(v[field] + 0.5))
+        local n = math.floor(v[field] + 0.5)
+        if field == "tru" then
+            -- K1: Vertrauen mit Vorzeichen (ganze Zahl, wie der Kopf-Balken)
+            if n > 0 then n = "+" .. string.format("%d", n) elseif n < 0 then n = "-" .. string.format("%d", -n) else n = "0" end
+        end
+        name = U.T(NOW_KEY[field], n)
     end
     setTip(option, name, U.T("UI_BN_Bear_Tip_Mix"))
+end
+
+-- K1 (PLAN_K1.md 8): Text "x" fuer "Fills it for about x%". U.DayPctText(pct): ab 10 ganz, darunter eine Nachkommastelle, nie unter 0,1
+-- (string.format wie U.Kg); nil = nichts. U.FoodDayText(v, hungerChange): so viel Prozent seines Tagesbedarfs macht EIN Stueck mit diesem
+-- Hunger-Wert satt (Regel des Kerns B.FoodDayPct; ohne sie B.MealsOf x B.MealPct mit dem Sicht-Feld meal). Nur Rechnen; auch das Inventar-Fenster.
+function U.DayPctText(pct)
+    pct = tonumber(pct)
+    if pct == nil or pct ~= pct or pct <= 0 then return nil end
+    if pct >= 10 then return string.format("%d", math.floor(pct + 0.5)) end
+    if pct < 0.1 then pct = 0.1 end
+    return string.format("%.1f", math.floor(pct * 10 + 0.5) / 10)
+end
+
+function U.FoodDayText(v, hungerChange)
+    local pct = nil
+    if B.FoodDayPct then
+        pct = tonumber(B.FoodDayPct(v, hungerChange))
+    elseif B.MealsOf and B.MealPct then
+        pct = (tonumber(B.MealsOf(hungerChange)) or 0) * (tonumber(B.MealPct(v)) or 0)
+    end
+    return U.DayPctText(pct)
 end
 
 -- Text einer Futterzeile (Fuettern und Futter hinhalten): Lieblingsfutter / normal / nur ein Happen, dazu die Anzahl.
@@ -365,7 +394,12 @@ local function addFeed(menu, playerObj, animal, v, me, key)
     local sub = ISContextMenu:getNew(menu)                                      -- ISAnimalContextMenu.lua:273
     menu:addSubMenu(feedOpt, sub)                                               -- :274
     for _, row in ipairs(rows) do
-        sub:addOption(foodLabel(row), playerObj, onFeed, animal, row.item)      -- ISAnimalContextMenu.lua:280
+        local opt = sub:addOption(foodLabel(row), playerObj, onFeed, animal, row.item)      -- ISAnimalContextMenu.lua:280
+        -- K1 (PLAN_K1.md 8): "Fills it for about x% of its daily need." je Futter (nur mit Sicht -- fremde / ungezaehmte Baeren ohne Zeile)
+        if v and v.st == "tame" then
+            local txt = U.FoodDayText and U.FoodDayText(v, row.item:getHungerChange())     -- ISAnimalContextMenu.lua:37
+            if txt then setTip(opt, nil, U.T("UI_BN_Bear_Food_DayPct", txt)) end
+        end
     end
 end
 

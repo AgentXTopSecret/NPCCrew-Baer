@@ -166,14 +166,15 @@ function B.CheckFeed(rec, pkey, slots, now)
         local isLocked, days = locked(slots, now)
         if isLocked then return false, "UI_BN_Bear_Why_Locked", days end
     end
-    -- F3 (PLAN_F3.md 5.1): am GEZAEHMTEN Baeren keine Abklingzeit mehr -- er frisst, solange er Hunger hat (ein ausgehungerter
-    -- Erwachsener braucht 8 Mahlzeiten); unter needFull (5 %) ist er satt und lehnt ab (Vanilla bietet "Feed" auch nur bei Hunger an,
+    -- F3 (PLAN_F3.md 5.1): am GEZAEHMTEN Baeren keine Abklingzeit mehr -- er frisst, solange er Hunger hat (K1: die volle Leiste eines
+    -- Erwachsenen sind ~691 Vanilla-Hungerpunkte, ~17 Steaks); unter needFull (Nachbesserung K1 C1: 1 % -- die Sicht zeigt dann 0 %, abgerundet;
+    -- Register und Sicht entscheiden darum gleich) ist er satt und lehnt ab (Vanilla bietet "Feed" auch nur bei Hunger an,
     -- client/ISUI/Animal/ISAnimalContextMenu.lua:30). Hunger aus dem Register (nH) oder der Sicht (hun), B.NeedOf. Ohne Wert (alte
     -- Sicht) oder mit BearNeedsPercent 0 (Hunger aus -- sonst waere er immer satt) gilt die bisherige Abklingzeit.
     if isTame(rec.st) and B.NeedOf ~= nil and B.NeedsOn ~= nil and B.NeedsOn() then
         local hun = B.NeedOf(rec, "hun")
         if hun ~= nil then
-            if hun < fixed("needFull", 5) then return false, "UI_BN_Bear_Why_NotHungry", nil end
+            if hun < fixed("needFull", 1) then return false, "UI_BN_Bear_Why_NotHungry", nil end
             return true, nil, nil
         end
     end
@@ -191,7 +192,7 @@ function B.CheckDrink(rec, pkey)
     if (rec.down ~= nil and rec.down ~= false) or rec.dn == true then return false, "UI_BN_Bear_Why_Down" end
     local thr = nil
     if B.NeedOf ~= nil then thr = B.NeedOf(rec, "thr") end
-    if thr == nil or thr < fixed("needFull", 5) then return false, "UI_BN_Bear_Why_NotThirsty" end
+    if thr == nil or thr < fixed("needFull", 1) then return false, "UI_BN_Bear_Why_NotThirsty" end
     return true, nil
 end
 

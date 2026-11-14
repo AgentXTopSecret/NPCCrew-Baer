@@ -16,6 +16,10 @@ if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: la
 -- Spielers am Server per ObjectModData-Paket, Vanilla selbst bei jedem Hotbar-Wechsel): im MP wird die Kopie WEDER geschrieben NOCH gelesen
 -- (B.CFG.invCopyMP = false); MP-Rest-Luecke = Server-Absturz zwischen Spieler-Speichern (alle 180 s) und Welt-Speichern (BAU_KERN.md, Frage fuer Kevin).
 -- G6: der Spieler-Puffer fasst im SP hoechstens 2 MB -> Byte-Waage ueber alle Kopien eines Spielers (B.CFG.invCopyBytes).
+-- K1 (PLAN_K1.md 5, 7; Kevin 13.11. ~23:50 "nur die 1000 items einstellen zum gleichzeitig verschieben", 14.11. ~00:10 Zahlenfeld, ~00:30 / ~00:50
+-- selbst fressen UND trinken bis 0 %): Geben buendelt k Stueck in EINER Aktion (B.InvPutComplete mit k, der Schreiber sucht die gleichen Stuecke
+-- selbst), Nehmen bis invTakeMax 1000 je Aktion, selbst fressen ab 50 % bis 0 % (kleinstes passendes Stueck zuletzt), selbst trinken
+-- (B.InvDrinkStep) nur Water / TaintedWater -- reine Satz-Rechnung im Register, der Behaelter bleibt, kein Liter geht verloren.
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -521,10 +525,63 @@ function K.insert(rec, s)
     return nr
 end
 
+-- K1 (PLAN_K1.md 5): Anzahl einer gebuendelten Geben-Aktion. Zahl 1..invMaxItems; fehlt / Unsinn / kleiner 1 -> 1 (der Client kann im MP jede Zahl
+-- schicken, der Schreiber glaubt nur die geklemmte).
+function K.putCount(k)
+    local n = num(k)
+    if n == nil then return 1 end
+    n = math.floor(n)
+    if n < 1 then return 1 end
+    local cap = math.floor(cfg("invMaxItems", 1000))
+    if cap < 1 then cap = 1 end
+    if n > cap then n = cap end
+    return n
+end
+
+-- Passt ein weiterer Satz s? kg / n = Last und Stueck MIT allem, was dieser Aufruf schon eingetragen hat (K.sum ist je Fassung r gemerkt und waere
+-- mitten im Aufruf veraltet), bytes0 = Kopie-Bytes vor dem Aufruf, added = seitdem dazu. Rueckgabe nil (passt) oder whyKey, t, v.
+function K.putRoom(rec, s, kg, n, bytes0, added)
+    if n + 1 > cfg("invMaxItems", 1000) then return "UI_BN_Bear_Why_InvCap", "num", cfg("invMaxItems", 1000) end
+    local cap = B.InvCap(rec)
+    if kg + (num(s.w) or 0) > cap + 0.000001 then
+        local left = cap - kg
+        if left < 0 then left = 0 end
+        return "UI_BN_Bear_Why_InvFull", "name", string.format("%.1f", math.floor(left * 10) / 10)
+    end
+    if K.copyOn() and bytes0 + added + B.InvBytes(s) + 16 > cfg("invCopyBytes", 524288) then return "UI_BN_Bear_Why_InvData", nil, nil end
+    return nil, nil, nil
+end
+
+-- K1: die weiteren GLEICHEN Stuecke fuer eine gebuendelte Aktion -- gleicher Volltyp UND gleicher Name wie das Bezugs-Stueck (so gruppiert das
+-- Fenster, client/BanditsNPCBearInvClient.lua U.InvMine), nur aus dem HAUPT-Inventar (Stuecke in Taschen holt der Client vorher mit
+-- transferIfNeeded), nie Favorit / ausgeruestet / angezogen (wie Vanillas "alle dieser Art", V:client/ISUI/InventoryWindow/Handlers/TransferSameType.lua:61).
+-- Erst ALLE Kandidaten in eine Lua-Liste, dann nehmen (die Engine-Liste aendert sich beim Nehmen nicht mit). Hoechstens max Stueck.
+-- getItemsFromFullType(Text) + size()/get(i): V:shared/TimedActions/Animals/ISMilkAnimal.lua:83-85; getName: V:shared/Camping/ISCampingMenu.lua:136;
+-- item:isFavorite() / item:isEquipped(): V:shared/Camping/ISCampingMenu.lua:33.
+function K.sameItems(character, ref, t, name, max)
+    local out = {}
+    if max < 1 then return out end
+    local list = character:getInventory():getItemsFromFullType(t)
+    if list == nil then return out end
+    for i = 0, list:size() - 1 do
+        if #out >= max then break end
+        local it = list:get(i)
+        if it ~= nil and it ~= ref and it:getName() == name and not it:isFavorite() and not it:isEquipped() and not K.worn(character, it) then
+            out[#out + 1] = it
+        end
+    end
+    return out
+end
+
 -- ---------------------------------------------------------------------------
 -- Geben (PLAN_F4.md 6.2). Aus BanditsNPCBearPutAction:complete() -- im MP am Server mit dem Gegenstand des SERVERS. mode "inv" | "bag".
+-- K1 (PLAN_K1.md 5): k = Anzahl (hoechstens B.CFG.invMaxItems; "bag" immer 1). Das Bezugs-Stueck mit allen Pruefungen wie bisher, danach bis k-1
+-- gleiche Stuecke (K.sameItems) -- JE Stueck: lesen (verlustfrei? sonst uebersprungen), Platz (1000 / Gewicht / Kopie; beim ersten Nein Schluss),
+-- nehmen + Gegenprobe (K.takeFrom), sofort eintragen (K.insert) -- zwischen Nehmen und Eintragen kein Engine-Aufruf. Vor dem ersten weiteren Stueck
+-- die neue Fassung (K.bump, wie Nehmen C7), am Ende EIN B.InvCommit und EINE Meldung (alle gegeben: Note_InvPut w; weniger: Note_InvPutSome w / x).
+-- getFullType / getName am Bezugs-Stueck: Fundstellen bei K.sameItems und B.InvRead (shared/BanditsNPCBearInvRules.lua).
 -- ---------------------------------------------------------------------------
-function B.InvPutComplete(character, animal, item, mode)
+function B.InvPutComplete(character, animal, item, mode, k)
     if not B.IsWriter() or not character or not item then return false end
     local rec = K.check(character, animal)
     if not rec then return false end
@@ -555,21 +612,14 @@ function B.InvPutComplete(character, animal, item, mode)
             K.why(character, nil, "UI_BN_Bear_Why_InvCub")
             return false
         end
-    else
-        local kg, n, _ = K.sum(rec)
-        if n + 1 > cfg("invMaxItems", 1000) then
-            K.why(character, rec, "UI_BN_Bear_Why_InvCap", "num", cfg("invMaxItems", 1000))
-            return false
-        end
-        local cap = B.InvCap(rec)
-        if kg + (num(s.w) or 0) > cap + 0.000001 then
-            local left = cap - kg
-            if left < 0 then left = 0 end
-            K.why(character, rec, "UI_BN_Bear_Why_InvFull", "name", string.format("%.1f", math.floor(left * 10) / 10))
-            return false
-        end
-        if not K.copyRoom(rec, s) then
-            K.why(character, rec, "UI_BN_Bear_Why_InvData")
+    end
+    local kg, n, _ = K.sum(rec)
+    local bytes0 = 0
+    if mode ~= "bag" then
+        if K.copyOn() then bytes0 = K.ownerBytes(rec.owner) end
+        local whyK, whyT, whyV = K.putRoom(rec, s, kg, n, bytes0, 0)
+        if whyK ~= nil then
+            K.why(character, rec, whyK, whyT, whyV)
             return false
         end
     end
@@ -581,17 +631,45 @@ function B.InvPutComplete(character, animal, item, mode)
         rec.bag = s
         B.InvCommit(rec, character)
         K.tell(character, rec, "UI_BN_Bear_Note_PacksOn", nil, nil, "good", nil)
-    else
-        K.insert(rec, s)
-        B.InvCommit(rec, character)
-        K.tell(character, nil, "UI_BN_Bear_Note_InvPut", "item", s.t, nil, { w = 1, nm = s.nm })
+        B.Log("inv: " .. tostring(rec.id) .. " got " .. tostring(s.t) .. " (bag)")
+        return true
     end
-    B.Log("inv: " .. tostring(rec.id) .. " got " .. tostring(s.t) .. " (" .. tostring(mode) .. ")")
+    K.insert(rec, s)
+    local want = K.putCount(k)
+    local got, added = 1, B.InvBytes(s) + 16
+    kg, n = kg + (num(s.w) or 0), n + 1
+    if want > 1 then
+        K.bump(rec, character)      -- C7-Form: jeder Teilstand traegt die neue Fassung (wirft die Engine mitten in der Schleife)
+        local more = K.sameItems(character, item, s.t, item:getName(), want - 1)
+        for i = 1, #more do
+            local it = more[i]
+            local s2, _, d2 = B.InvRead(it)
+            if s2 == nil then
+                B.Log("inv: " .. tostring(rec.id) .. " skips one " .. tostring(s.t) .. " (" .. tostring(d2) .. ")")
+            else
+                local whyK, _, _ = K.putRoom(rec, s2, kg, n, bytes0, added)
+                if whyK ~= nil then break end
+                if not K.takeFrom(character, it) then break end
+                -- ab hier ist dieses Stueck weg: sofort eintragen, ohne Engine-Aufruf dazwischen
+                K.insert(rec, s2)
+                got = got + 1
+                added = added + B.InvBytes(s2) + 16
+                kg, n = kg + (num(s2.w) or 0), n + 1
+            end
+        end
+    end
+    B.InvCommit(rec, character)
+    if got < want then
+        K.tell(character, nil, "UI_BN_Bear_Note_InvPutSome", "item", s.t, "bad", { w = got, x = want, nm = s.nm })
+    else
+        K.tell(character, nil, "UI_BN_Bear_Note_InvPut", "item", s.t, nil, { w = got, nm = s.nm })
+    end
+    B.Log("inv: " .. tostring(rec.id) .. " got " .. tostring(got) .. " of " .. tostring(want) .. " x " .. tostring(s.t) .. " (inv)")
     return true
 end
 
 -- ---------------------------------------------------------------------------
--- Nehmen (PLAN_F4.md 6.3). nr = Satz-Nr oder "bag", k = Anzahl (hoechstens invTakeMax je Aktion).
+-- Nehmen (PLAN_F4.md 6.3). nr = Satz-Nr oder "bag", k = Anzahl (hoechstens invTakeMax je Aktion; K1: 1000 = invMaxItems, ein Satz in EINER Aktion).
 -- hasRoomFor(Spieler, Gegenstand): Vanilla client/Foraging/ISBaseIcon.lua:127. AddItem(Gegenstand) + sendAddItemToContainer(inv, Gegenstand):
 -- Vanilla server/Fishing/BuildingObjects/FishingNet.lua:152-153. Ankunft per contains (nie am Rueckgabewert, NPC Crew CLAUDE.md:1685-1690).
 -- ---------------------------------------------------------------------------
@@ -645,7 +723,7 @@ function B.InvTakeKg(animal, nr, k)
     local n = math.floor(num(k) or 1)
     local have = math.floor(num(s.k) or 0)
     if n > have then n = have end
-    if n > cfg("invTakeMax", 50) then n = cfg("invTakeMax", 50) end
+    if n > cfg("invTakeMax", 1000) then n = cfg("invTakeMax", 1000) end
     if n < 1 then return nil end
     return (math.floor((num(s.w) or 0) * 100 + 0.5) / 100) * n
 end
@@ -694,7 +772,7 @@ function B.InvTakeComplete(character, animal, nr, k)
     end
     -- Nachbesserung F4 (Befund C15): ist der Satz inzwischen kleiner (der Baer hat gefressen), nimmt die Aktion den Rest statt ganz abzulehnen
     if want > have then want = have end
-    if want > cfg("invTakeMax", 50) then want = cfg("invTakeMax", 50) end
+    if want > cfg("invTakeMax", 1000) then want = cfg("invTakeMax", 1000) end
     if not K.typeOk(s.t) then
         K.why(character, nil, "UI_BN_Bear_Why_InvUnknown")
         return false
@@ -984,10 +1062,14 @@ function B.InvAddItem(rec, item, why)
 end
 
 -- ---------------------------------------------------------------------------
--- Frisst selbst aus dem Inventar (Kevin Antwort 6; PLAN_F4.md 11): aus B.NeedsSlow je Langsam-Takt. Ab needHungry (50) bis unter needPeckish (25),
--- hoechstens ein Stueck je invEatGapMin Spielminuten; nur Baerenfutter (fc beim Geben, B.FoodClass), nie Verdorbenes (Alter jetzt), Lieblingsfutter zuerst.
+-- Frisst selbst aus dem Inventar (Kevin Antwort 6; PLAN_F4.md 11): aus B.NeedsSlow je Langsam-Takt. Ab needHungry (50) bis 0 (K1, Kevin 14.11.
+-- ~00:50: "isst + trinkt bis er 0% erreicht ... und ab 50% wieder"; invEatStop), hoechstens ein Stueck je invEatGapMin Spielminuten; nur Baerenfutter
+-- (fc beim Geben, B.FoodClass), nie Verdorbenes (Alter jetzt) oder Verbranntes. Wahl (K1, PLAN_K1.md 7): deckt ein Stueck den Rest-Hunger ganz
+-- (Saettigung = Mahlzeiten ml x B.MealPct), das KLEINSTE davon (es verfaellt wenig); sonst Lieblingsfutter zuerst (fav > ok > snack), dann Nr.
+-- Zaehlt NICHT als "satt gefuettert" (Vertrauen nur aus der Hand).
 -- ---------------------------------------------------------------------------
 local RANK = { fav = 1, ok = 2, snack = 3 }
+local ZERO = 0.0005                 -- Rest-Hunger / -Durst / Liter darunter gelten als 0
 
 function B.InvEatStep(rec, now, players)
     if type(rec) ~= "table" or rec.st ~= "tame" or rec.ride ~= nil or rec.down ~= nil then return end
@@ -995,7 +1077,7 @@ function B.InvEatStep(rec, now, players)
     local s = B.Ses(rec.id)
     local hun = num(rec.nH) or 0
     if hun >= cfg("needHungry", 50) then s.invEat = true end
-    if hun < cfg("needPeckish", 25) then s.invEat = nil end
+    if hun <= cfg("invEatStop", 0) + ZERO then s.invEat = nil end
     if not s.invEat then return end
     if not B.InvCan(rec) or B.FindAnimal(rec) == nil then return end
     if B.IsLying and B.IsLying(rec) then return end
@@ -1006,14 +1088,23 @@ function B.InvEatStep(rec, now, players)
     now = num(now) or B.Now()
     local lastAt = num(s.invEatAt)
     if lastAt ~= nil and now >= lastAt and now - lastAt < cfg("invEatGapMin", 10) / 60 - 0.0001 then return end
+    local per = B.MealPct and B.MealPct(rec) or 0
     local best, bestR, bestN = nil, 99, 0
+    local cov, covF, covR, covN = nil, 0, 99, 0
     for nr, x in pairs(rec.inv.it) do
         local r = type(x) == "table" and RANK[x.fc] or nil
         if r ~= nil and (num(x.k) or 0) >= 1 and B.InvFresh(x, now) ~= 2 and x.bu ~= 1 then
             local nn = K.nrNum(nr)
             if r < bestR or (r == bestR and nn < bestN) then best, bestR, bestN = nr, r, nn end
+            local fill = (num(x.ml) or 0) * per
+            if fill > 0 and fill >= hun - ZERO then
+                if cov == nil or fill < covF - 0.000001 or (math.abs(fill - covF) <= 0.000001 and (r < covR or (r == covR and nn < covN))) then
+                    cov, covF, covR, covN = nr, fill, r, nn
+                end
+            end
         end
     end
+    if cov ~= nil then best = cov end
     if best == nil then return end
     local x = rec.inv.it[best]
     local meals = num(x.ml) or 0
@@ -1021,6 +1112,7 @@ function B.InvEatStep(rec, now, players)
     if B.InvTakeUnits(rec, best, 1, "eat") ~= 1 then return end
     s.invEatAt = now
     B.NeedEat(rec, meals, "inv")
+    if (num(rec.nH) or 0) <= cfg("invEatStop", 0) + ZERO then s.invEat = nil end   -- K1: bei 0 fertig (ab needHungry wieder)
     B.InvCommit(rec, nil)
     B._invEatShow[rec.id] = getTimestampMs() + cfg("invEatShowMs", 4000)
     B.Touch(rec)
@@ -1029,6 +1121,114 @@ function B.InvEatStep(rec, now, players)
         s.invEatNoteAt = now
         local p, _ = B.PlayerByKey(rec.owner, players)
         if p then K.tell(p, rec, "UI_BN_Bear_Note_InvAte", "item", t, nil, { w = 1, nm = nm }) end
+    end
+end
+
+-- ---------------------------------------------------------------------------
+-- K1 E (Kevin 14.11. ~00:30 "Ja, ab 50 % Durst", ~00:50 "bis er 0% erreicht", ~00:55 "der darf natuerlich auch dreckiges wasser trinken"):
+-- trinkt selbst aus seinen Behaeltern -- aus B.NeedsSlow neben B.InvEatStep. Ab invDrinkStart (50) bis 0; hoechstens EIN Behaelter je
+-- invDrinkGapMin Spielminuten; nur die Stoffe invDrinkFluids in dieser Reihenfolge ("Water" vor "TaintedWater"; Namen wie Vanilla
+-- V:client/Farming/ISUI/ISFarmingMenu.lua:80 -- nie Benzin, Bleiche, Alkohol, Milch ...); je Stoff zuerst der Satz mit der kleinsten Fuellung
+-- (angebrochene zuerst), dann Nr. Er nimmt nur, was bis 0 fehlt (B.DrinkNeedL), hoechstens was drin ist.
+-- REINE Satz-Rechnung im Register (kein Engine-Aufruf, kein Gegenstand): hat der Satz k > 1, wird EIN Stueck abgespalten (k - 1 bleiben voll),
+-- dessen q sinkt um genau die getrunkene Menge (leer: q = 0, ohne Stoff -- wie ein leer gelesener Behaelter, shared/BanditsNPCBearInvRules.lua
+-- Modul "fluid"), sein Gewicht w um Liter x invKgPerL (Pruef-Tor G-K2; beim Herausnehmen rechnet die Engine selbst); dann zurueck in die Liste
+-- (stapelt mit einem gleichen Satz, K.insert). Stueckzahl je Behaelter bleibt, Summe Liter sinkt um genau die Gutschrift. Nicht liegend, nicht im
+-- Kampf, nicht mitfahrend / am Boden. Zaehlt NICHT als "satt getraenkt". Bild: dasselbe Fress-Bild ("eat" in der Sicht, invEatShowMs).
+-- ---------------------------------------------------------------------------
+local FLUIDS_DEF = { "Water", "TaintedWater" }
+
+function K.drinkPick(rec)
+    local list = B.CFG and B.CFG.invDrinkFluids
+    if type(list) ~= "table" or #list < 1 then list = FLUIDS_DEF end
+    for fi = 1, #list do
+        local want = list[fi]
+        local pick, bestQ, bestN = nil, nil, nil
+        for nr, x in pairs(rec.inv.it) do
+            local q = type(x) == "table" and num(x.q) or nil
+            if q ~= nil and q > ZERO and x.ft == want and (num(x.k) or 0) >= 1 then
+                local nn = K.nrNum(nr)
+                if bestQ == nil or q < bestQ - 0.000001 or (math.abs(q - bestQ) <= 0.000001 and nn < bestN) then pick, bestQ, bestN = nr, q, nn end
+            end
+        end
+        if pick ~= nil then return pick end
+    end
+    return nil
+end
+
+-- take Liter aus EINEM Stueck des Satzes nr (Register). Rueckgabe: wirklich getrunken (Liter; ein Rest unter ZERO wird mitgetrunken).
+function K.sip(rec, nr, take)
+    local inv = K.inv(rec)
+    local x = inv.it[nr]
+    if type(x) ~= "table" then return 0 end
+    local q0 = num(x.q) or 0
+    if take > q0 then take = q0 end
+    if take <= 0 then return 0 end
+    local one
+    local k = math.floor(num(x.k) or 0)
+    if k > 1 then
+        one = B.InvCopy(x)
+        if one == nil then return 0 end          -- nicht kopierbar: nichts geaendert
+        x.k = k - 1
+    else
+        inv.it[nr] = nil
+        one = x
+    end
+    one.k = nil
+    local q = q0 - take
+    if q <= ZERO then
+        take = q0
+        one.q = 0
+        one.ft = nil
+    else
+        one.q = q
+    end
+    local w = (num(one.w) or 0) - take * cfg("invKgPerL", 1.0)
+    if w < 0 then w = 0 end
+    one.w = math.floor(w * 10000 + 0.5) / 10000
+    K.insert(rec, one)
+    return take
+end
+
+function B.InvDrinkStep(rec, now, players)
+    if type(rec) ~= "table" or rec.st ~= "tame" or rec.ride ~= nil or rec.down ~= nil then return end
+    if type(rec.inv) ~= "table" or B.NeedDrink == nil or B.DrinkNeedL == nil or not (B.NeedsOn and B.NeedsOn()) then return end
+    local s = B.Ses(rec.id)
+    local thr = num(rec.nT) or 0
+    if thr >= cfg("invDrinkStart", 50) then s.invDrink = true end
+    if thr <= ZERO then s.invDrink = nil end
+    if not s.invDrink then return end
+    if not B.InvCan(rec) or B.FindAnimal(rec) == nil then return end
+    if B.IsLying and B.IsLying(rec) then return end
+    K.healFirst(rec, nil)           -- C3: erst abgleichen, dann rechnen
+    if type(rec.inv) ~= "table" or type(rec.inv.it) ~= "table" then return end
+    local fs = B.FightState and B.FightState(rec) or nil
+    if fs == "fight" or fs == "retreat" then return end
+    now = num(now) or B.Now()
+    local lastAt = num(s.invDrinkAt)
+    if lastAt ~= nil and now >= lastAt and now - lastAt < cfg("invDrinkGapMin", 10) / 60 - 0.0001 then return end
+    local nr = K.drinkPick(rec)
+    if nr == nil then return end
+    local ft = rec.inv.it[nr].ft
+    local need = B.DrinkNeedL(rec, thr)
+    if need <= 0 then return end
+    local took = K.sip(rec, nr, need)
+    if took <= 0 then return end
+    s.invDrinkAt = now
+    local bowlL = cfg("bowlL", 0.5)
+    if bowlL <= 0 then bowlL = 0.5 end
+    B.NeedDrink(rec, took / bowlL, "inv")
+    if (num(rec.nT) or 0) <= ZERO then s.invDrink = nil end      -- bei 0 fertig (ab invDrinkStart wieder)
+    B.InvCommit(rec, nil)
+    B._invEatShow[rec.id] = getTimestampMs() + cfg("invEatShowMs", 4000)    -- Vanilla server/Foraging/forageServer.lua:456
+    B.Touch(rec)
+    B.Log("inv: " .. tostring(rec.id) .. " drank " .. string.format("%.3f", took) .. " l " .. tostring(ft) .. " (" .. tostring(nr) .. "), thirst "
+        .. tostring(B.Round1(num(rec.nT) or 0)))
+    local noteAt = num(s.invDrinkNoteAt)
+    if noteAt == nil or now < noteAt or now - noteAt >= cfg("needNoteH", 6) then
+        s.invDrinkNoteAt = now
+        local p, _ = B.PlayerByKey(rec.owner, players)
+        if p then K.tell(p, rec, "UI_BN_Bear_Note_InvDrank", "name", string.format("%.2f", took), nil, nil) end
     end
 end
 

@@ -53,6 +53,16 @@
 --   * Deckel: je Schild jetzt hoechstens 25 Zeichenaufrufe (12 wie B1d + 4 Werte je hoechstens 3 + 1 Herz), bei hudMax 6 also 150 je Bild.
 --   * Mit Schlaf-Clips (B.CFG.sleepClips, erst F3b) sitzt der Anker eines schlafenden Baeren um B.CFG.tagSleepK (0,65) tiefer; mit dem
 --     Ersatzbild (Sitzen) bleibt er oben.
+-- K1 (Lauf baer-k1, PLAN_K1.md 2.3, 3, 4; Kevin 13./14.11.2026, baer/begleiter/ENTSCHEIDUNGEN.md ab :583):
+--   * SCHILD FOLGT DER POSE (Kevin ~21:50 "beim roar geht der text nicht hoeher", ~22:00 "der hp balken geht auch nicht hoeher"): der Anker
+--     jedes gezaehmten Baeren ist je Bild a:getZ() + tagZ x zk x U.PoseLift(id, now) (client/BanditsNPCBearPose.lua: Faktor >= 1 aus Clip und
+--     Zeit des Sitz-Treibers, offline gemessene Tabelle) -- Name, Zustand, alle Balken und das Herz heben sich mit dem Kopf. Kein Engine-Aufruf.
+--   * VERTRAUEN -100..+100 (Kevin ~21:40, Nachtrag "negativ rot ... positiv gruen"): der Kopf-Balken "Trust" fuellt (v + 100) / 200, GRUEN bei
+--     positivem, ROT bei negativem, GRAU bei 0; als Zahl "Trust +20%" / "Trust -20%" in derselben Farbe (ganze Zahl, Frage K-F3).
+--   * AUTO-ANZEIGE (Kevin 14.11. I5): Hunger / Durst / Muedigkeit des EIGENEN Baeren ab B.CFG.needAutoAt (75) bekommen einen Balken, auch wenn
+--     ihre Option "Aus" ist -- nur der Wert, der so hoch ist; darunter verschwindet er wieder. Vertrauen nie (Frage K-F5: nur der eigene Baer).
+--   * LEBENSBALKEN je Baer (Kevin ~22:05 "durch einen botton"): U.HpOn(c) (client/BanditsNPCBearTags.lua, Zahnrad-Menue) aus -> keine Leben-Zeile
+--     fuer diesen Baeren; an -> wie die Option TagHealth.
 --
 -- Reine Anzeige: liest nur B.View (die Sicht, die der Schreiber diesem Spieler geschickt hat) und fragt nie den Server.
 -- Einzelspieler und Mehrspieler laufen gleich; im Mehrspieler stammen alle Zahlen vom Server. Der dedizierte Server laedt client/ nicht.
@@ -126,6 +136,15 @@ local HEART_FILES = {
 local HEART_GAP = 1         -- Pixel zwischen Herz und Oberkante der Namens-Zeile
 local TR_HEART = 100        -- Rueckfall fuer B.CFG.trHeart (ab diesem Vertrauen gilt "maximal", wenn die Sicht kein trM traegt)
 local TAG_SLEEP_K = 0.65    -- Rueckfall fuer B.CFG.tagSleepK (Anker eines liegenden Baeren, nur mit Schlaf-Clips)
+local NEED_AUTO = 75        -- K1: Rueckfall fuer B.CFG.needAutoAt (ab hier steht Hunger / Durst / Muedigkeit des eigenen Baeren von selbst da)
+-- K1 (Kevin 13.11. ~21:40 Nachtrag): Vertrauen positiv gruen, negativ rot, 0 grau -- Balken { r, g, b } und Zahl-Text { tr, tg, tb }
+local TRUST_POS = { r = 0.45, g = 0.80, b = 0.35, tr = 0.62, tg = 0.92, tb = 0.52 }
+local TRUST_NEG = { r = 0.88, g = 0.25, b = 0.20, tr = 1.00, tg = 0.55, tb = 0.48 }
+local TRUST_ZERO = { r = 0.55, g = 0.53, b = 0.50, tr = 0.78, tg = 0.78, tb = 0.74 }
+-- Nachbesserung K1 P4 / P3 (wie das Fenster, client/ISUI/BanditsNPCBearWinParts.lua trustNegTrack / trustMid): negativ ist auch der leere Teil
+-- dunkelrot; ein 1-px-Strich in der Mitte (= 0) unterscheidet den Vertrauens-Balken vom Lebensbalken
+local TRUST_NEG_BG = { r = 0.36, g = 0.11, b = 0.09, a = 0.90 }
+local TRUST_MID = { r = 0.92, g = 0.90, b = 0.84, a = 0.85 }
 
 local panel = nil
 local fontH = nil           -- Hoehe UIFont.Small (Zeile 1, Balken-Texte)
@@ -156,7 +175,8 @@ local S = {
     tier = nil,     -- B1c: Groessenstufe der aktuellen Liste (tiers[1..3]); nil = noch keine Liste
     -- B1d: Anzeige-Optionen der aktuellen Liste (einmal je Liste gelesen; EINE Tabelle, nie neu angelegt). F3: nd[i] = Anzeige-Art der
     -- i-ten Zeile aus NEED_ROWS (Vorgabe Aus)
-    md = { tags = true, hp = SHOW_BAR, sta = SHOW_OFF, age = true, nd = { SHOW_OFF, SHOW_OFF, SHOW_OFF, SHOW_OFF } },
+    -- K1: me = mein Spieler-Schluessel (eigener Baer fuer die Auto-Anzeige), auto = needAutoAt
+    md = { tags = true, hp = SHOW_BAR, sta = SHOW_OFF, age = true, nd = { SHOW_OFF, SHOW_OFF, SHOW_OFF, SHOW_OFF }, me = nil, auto = NEED_AUTO },
     heart = {},     -- F3: Kantenlaenge -> Bild des Herzens (false = fehlt); gedeckelt durch HEART_SIZES
     heartErr = false,
 }
@@ -307,17 +327,45 @@ local function growShown(c)
     return hasAge(c) and c.nst ~= nil and ageOn(c)
 end
 
+-- K1: Lebensbalken dieses Baeren an? (U.HpOn, client/BanditsNPCBearTags.lua -- Schalter im Zahnrad-Menue; fehlt die Datei: an)
+local function hpOn(c)
+    local f = U.HpOn
+    if not f then return true end
+    return f(c) ~= false
+end
+
+-- K1: gehoert dieser gezaehmte Baer mir? (wie describeTag: mein Schluessel, im Einzelspieler auch der feste Einzelspieler-Schluessel)
+local function ownOf(c, meKey)
+    if c.owner == nil then return false end
+    if c.owner == meKey then return true end
+    return c.owner == B.SP_KEY and B.IsSP ~= nil and B.IsSP()
+end
+
+-- K1 (Kevin 14.11. I5): Anzeige-Art der Beduerfnis-Zeile i fuer DIESEN Baeren -- die Option; steht sie auf Aus, bekommen Hunger / Durst /
+-- Muedigkeit des EIGENEN Baeren ab md.auto (75) trotzdem eine Zeile. Vertrauen nie (nur nach der Option).
+-- Nachbesserung K1 P5: diese Zeile von selbst als ZAHL mit Wort ("Hunger 80%", UI_BN_Bear_Tag_Hunger / _Thirst / _Tired) statt als
+-- unbeschrifteter Balken -- wer die Farben nicht kennt, sieht so, welches Beduerfnis gemeint ist (Frage fuer Kevin).
+local function needMode(i, c, md)
+    local mode = md.nd[i]
+    if mode ~= SHOW_OFF then return mode end
+    local row = NEED_ROWS[i]
+    if row.f == "tru" then return SHOW_OFF end
+    local val = c[row.f]
+    if isNum(val) and val >= md.auto and ownOf(c, md.me) then return SHOW_NUM end
+    return SHOW_OFF
+end
+
 -- B1d: hat ein gezaehmtes Junges mit den Optionen dieser Liste (md) ueberhaupt eine Zeile? Sonst bekommt es keinen Eintrag.
 -- F1: das Namensschild zaehlt nur, wenn es fuer DIESEN Baeren an ist. F1B: die Alter-Zeile nur, solange er waechst und ihr Schalter
 -- an ist (ein ausgewachsener Baer ohne andere Zeile bekommt keinen leeren Eintrag).
 local function tameShown(c, md)
     if md.tags and tagOn(c) then return true end
-    if md.hp ~= SHOW_OFF and hasHp(c) then return true end
+    if md.hp ~= SHOW_OFF and hasHp(c) and hpOn(c) then return true end      -- K1: Lebensbalken je Baer
     if md.sta ~= SHOW_OFF and hasSta(c) then return true end
     if md.age and growShown(c) then return true end
-    -- F3: eine der vier Beduerfnis-Zeilen ist an und die Sicht traegt ihren Wert
+    -- F3: eine der vier Beduerfnis-Zeilen ist an und die Sicht traegt ihren Wert (K1: oder sie steht von selbst da, needMode)
     for i = 1, #NEED_ROWS do
-        if md.nd[i] ~= SHOW_OFF and isNum(c[NEED_ROWS[i].f]) then return true end
+        if needMode(i, c, md) ~= SHOW_OFF and isNum(c[NEED_ROWS[i].f]) then return true end
     end
     return false
 end
@@ -468,7 +516,7 @@ end
 local function describeValues(e, c, md, t)
     e.showName = md.tags and tagOn(c)
     e.hpFill, e.hpText, e.staFill, e.staText, e.ageLine = nil, nil, nil, nil, nil
-    if md.hp ~= SHOW_OFF and hasHp(c) then
+    if md.hp ~= SHOW_OFF and hasHp(c) and hpOn(c) then                     -- K1: Lebensbalken je Baer (Zahnrad-Menue)
         e.hpFill, e.hpText = valueLine(md.hp, c.hp, c.hpMax, "UI_BN_Bear_Tag_Health", t.barW)
     end
     if md.sta ~= SHOW_OFF and hasSta(c) then
@@ -498,24 +546,50 @@ local function describeValues(e, c, md, t)
     end
     -- F3 (PLAN_F3.md 9): Hunger, Durst, Muedigkeit, Vertrauen ueber Leben -- je Zeile { Zeilen-Daten, Fuellbreite ODER Text, Oberkante }.
     -- Die Liste entsteht je Eintrag beim Listenbau (hoechstens 1 x je Sekunde), nie je Bild; ohne Zeile bleibt e.ndN = 0.
+    -- K1: Farben je Zeile (line.r/g/b Balken, line.tr/tg/tb Zahl) -- die drei Beduerfnisse wie ihre Zeile, Vertrauen nach Vorzeichen;
+    -- Vertrauen fuellt (v + 100) / 200 (-100 leer, 0 halb, +100 voll), die Zahl traegt das Vorzeichen (ganze Zahl, Frage K-F3).
+    -- Nachbesserung K1 C3: Ton und Fuellung nach dem UNGERUNDETEN Wert wie das Fenster (trustRow, client/BanditsNPCBearWinData.lua: grau erst
+    -- unter 0,05), der Betrag symmetrisch gerundet (+0,5 -> "+1", -0,5 -> "-1"); unter 0,5 mit einer Stelle, damit nie "+0" / "-0" dasteht.
     local n = 0
     for i = 1, #NEED_ROWS do
         local row = NEED_ROWS[i]
-        local mode = md.nd[i]
+        local mode = needMode(i, c, md)
         local val = c[row.f]
         if mode ~= SHOW_OFF and isNum(val) then
-            local pct = math.floor(val + 0.5)
-            if pct < 0 then pct = 0 end
-            if pct > 100 then pct = 100 end
+            local line = { row = row }
+            local frac, txt, col = 0, nil, row
+            if row.f == "tru" then
+                local v = val
+                if v < -100 then v = -100 end
+                if v > 100 then v = 100 end
+                frac = (v + 100) / 200
+                local r1 = math.floor(math.abs(v) * 10 + 0.5) / 10
+                local mag = string.format("%d", math.floor(r1 + 0.5))
+                if r1 < 0.5 then mag = string.format("%.1f", r1) end
+                if r1 == 0 then
+                    col, txt = TRUST_ZERO, "0"
+                elseif v > 0 then
+                    col, txt = TRUST_POS, "+" .. mag
+                else
+                    col, txt = TRUST_NEG, "-" .. mag
+                    line.neg = true
+                end
+                line.trust = true
+            else
+                local pct = math.floor(val + 0.5)
+                if pct < 0 then pct = 0 end
+                if pct > 100 then pct = 100 end
+                frac, txt = pct / 100, pct
+            end
+            line.r, line.g, line.b, line.tr, line.tg, line.tb = col.r, col.g, col.b, col.tr, col.tg, col.tb
             n = n + 1
             e.nd = e.nd or {}
-            local line = { row = row }
             if mode == SHOW_BAR then
-                line.fill = math.floor(t.barW * pct / 100)
+                line.fill = math.floor(t.barW * frac)
                 line.y = up + t.barH
                 up = up + t.barH + t.gap2
             else
-                line.text = U.T(row.key, pct)
+                line.text = U.T(row.key, txt)
                 line.y = up + t.h2
                 up = up + t.h2 + 1
             end
@@ -737,6 +811,8 @@ local function rebuild(now)
     md.sta = showMode("TagStamina", SHOW_OFF)
     md.age = ageWanted()
     for i = 1, #NEED_ROWS do md.nd[i] = showMode(NEED_ROWS[i].opt, SHOW_OFF) end      -- F3: Hunger, Durst, Muedigkeit, Vertrauen
+    md.me = view.me and view.me.key                                                     -- K1: eigener Baer (Auto-Anzeige)
+    md.auto = tonumber(B.CFG.needAutoAt) or NEED_AUTO
     local cfg = B.CFG
     local reach = cfg.hudDist or 20
     local max = cfg.hudMax or 6
@@ -796,6 +872,23 @@ local function valueBar(self, sx, top, fill, t, r, g, b)
     self:drawRectBorder(bx - 1, top - 1, bw + 2, bh + 2, 0.9, 0.85, 0.85, 0.80)
 end
 
+-- K1 Nachbesserung P3 / P4: Vertrauens-Balken = valueBar mit dunkelrotem leerem Teil bei negativem Wert und dem Strich bei 0 (Mitte).
+local function trustBar(self, sx, top, line, t)
+    local bw, bh = t.barW, t.barH
+    local bx = sx - bw / 2
+    self:drawRect(bx - 1, top - 1, bw + 2, bh + 2, 0.65, 0, 0, 0)
+    if line.neg then
+        local c = TRUST_NEG_BG
+        self:drawRect(bx, top, bw, bh, c.a, c.r, c.g, c.b)
+    end
+    if line.fill > 0 then
+        self:drawRect(bx, top, line.fill, bh, 0.95, line.r, line.g, line.b)
+    end
+    local m = TRUST_MID
+    self:drawRect(bx + math.floor(bw / 2), top, 1, bh, m.a, m.r, m.g, m.b)
+    self:drawRectBorder(bx - 1, top - 1, bw + 2, bh + 2, 0.9, 0.85, 0.85, 0.80)
+end
+
 -- B1d: das ganze Schild eines gezaehmten Jungen. Die Lagen (e.yState, e.yAge, e.yHp, e.ySta = Oberkante ueber dem Anker) stehen
 -- fertig im Eintrag (describeValues); gezeichnet wird von oben nach unten, damit Name und Zustand wie in B1b/B1c zuerst kommen.
 -- Ohne Werte-Zeilen ist e.yState = t.h2: genau das Schild von B1c.
@@ -825,11 +918,12 @@ local function drawTag(self, e, sx, sy, now, t)
     -- F3: Vertrauen, Muedigkeit, Durst, Hunger (von oben nach unten; die Liste steht von unten nach oben)
     for i = e.ndN or 0, 1, -1 do
         local line = e.nd[i]
-        local row = line.row
-        if line.fill then
-            valueBar(self, sx, sy - line.y, line.fill, t, row.r, row.g, row.b)
+        if line.fill and line.trust then
+            trustBar(self, sx, sy - line.y, line, t)                                         -- Nachbesserung K1 P3 / P4
+        elseif line.fill then
+            valueBar(self, sx, sy - line.y, line.fill, t, line.r, line.g, line.b)          -- K1: Farbe je Zeile (Vertrauen nach Vorzeichen)
         else
-            text(self, line.text, sx, sy - line.y, row.tr, row.tg, row.tb, 0.90, t.f2)
+            text(self, line.text, sx, sy - line.y, line.tr, line.tg, line.tb, 0.90, t.f2)
         end
     end
     if e.hpFill then
@@ -869,18 +963,23 @@ end
 -- drawRect / drawRectBorder (x, y, w, h, a, r, g, b): client/ISUI/ISUIElement.lua:1191 / :1219.
 -- Anker fuer Balken UND Schild: a:getZ() + B.CFG.tagZ (Plan 2.2; je Bild gelesen, damit ein geaenderter Stellwert sofort wirkt).
 -- B1d: beim gezaehmten Jungen mal e.zk = gezeigte Groesse / tagBase (im Listenbau gerechnet; wilde Junge 1).
+-- K1 (PLAN_K1.md 3): beim gezaehmten Baeren dazu mal U.PoseLift(id, now) -- Faktor >= 1 nach Clip und Zeit (client/BanditsNPCBearPose.lua),
+-- je Bild ein Aufruf (nur Tabellen-Lesen und Rechnen); fehlt die Datei: 1.
 local function draw(self, now)
     local cfg = B.CFG
     local lift = tonumber(cfg.tagZ) or TAG_Z
     local small = UIFont.Small
     local t = S.tier or tierOf(1)
+    local poseLift = U.PoseLift
     for i = 1, S.n do
         local e = S.list[i]
         local a = e.a
         if a:isExistInTheWorld() then
             local x = a:getX()
             local y = a:getY()
-            local z = a:getZ() + lift * (e.zk or 1)
+            local pk = 1
+            if e.tag and poseLift then pk = tonumber(poseLift(e.c.id, now)) or 1 end
+            local z = a:getZ() + lift * (e.zk or 1) * pk
             local sx = math.floor(isoToScreenX(0, x, y, z))
             local sy = math.floor(isoToScreenY(0, x, y, z))
             if e.tag then

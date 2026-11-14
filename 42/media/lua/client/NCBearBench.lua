@@ -12,7 +12,11 @@
 --   NCBear_Eat(sek)          Test-Baer: fressen (Vorgabe 30 s). Eigener Baer: der Fress-Clip einmal (U.PoseAct "eat")
 --   NCBear_Huff()            leises Schnauben einmal (playBreedSound "huffsoft"; am Jungen gibt es die Stimme nicht)
 --   NCBear_NextAttack(name)  = NCBear_FightNext(name) (client/NCBearBenchFight.lua): der naechste Angriff DEINES Baeren
---   NCBear_AnimTest(name)    einen Clip einmal spielen (Namen aus B.CLIPS; NCBear_AnimTest() listet sie)
+--   NCBear_AnimTest(name)    einen Clip einmal spielen (Namen aus B.CLIPS; NCBear_AnimTest() listet sie). K1 (Claude 13.11. ~22:25): die acht
+--                            Schlaf-Schluessel (liedown, sleep, wakeup, wakealarm, curlin, sleepcurl, curlout, wakecurl) nur bei
+--                            B.CFG.sleepClips == true -- ihre Clips / Knoten bringt erst F3b; abgespielt stuende der Baer sonst stehend still
+--   NCBear_TagPose(on)       K1 (PLAN_K1.md 10): Schild folgt der Pose an / aus (B.CFG.tagPoseOn; ohne Wert umschalten) und zeigt den
+--                            Faktor U.PoseLift deines Baeren jetzt (client/BanditsNPCBearPose.lua)
 --   NCBear_ZHealth(h, r)     Zombies und feindlichen Banditen (B.FoeIsTarget) in r Kacheln das Leben h geben (Deckel 50)
 --   NCBear_KnockInfo()       Zombies in 6 Kacheln um deinen Baeren: Zustand, liegt, Leben (der Flug-Zaehler der alten Datei ist weg)
 -- Sit, Eat und AnimTest drehen den Baeren beim Beginn zur Kamera (Kevin 08.11.: "in der position wo er zur kamera guckt");
@@ -365,6 +369,14 @@ function NCBear_NextAttack(name)
     end
 end
 
+-- K1: die acht Schlaf-Schluessel von B.CLIPS (shared/BanditsNPCBearFightRules.lua:77-84) -- nur mit Schlaf-Clips (B.CFG.sleepClips, erst F3b)
+local SLEEP_KEYS = { liedown = true, sleep = true, wakeup = true, wakealarm = true, curlin = true, sleepcurl = true, curlout = true,
+    wakecurl = true }
+
+local function sleepClipsOn()
+    return B.CFG ~= nil and B.CFG.sleepClips == true
+end
+
 function NCBear_AnimTest(name)
     if not isSP() then
         say("singleplayer only")
@@ -375,13 +387,22 @@ function NCBear_AnimTest(name)
         say("no clip table B.CLIPS (shared/BanditsNPCBearFightRules.lua not loaded)")
         return
     end
+    -- K1: ohne Schlaf-Clips gibt es die acht Schlaf-Schluessel weder in der Liste noch zum Abspielen
+    local hideSleep = not sleepClipsOn()
+    if name ~= nil and hideSleep and SLEEP_KEYS[name] then
+        say("'" .. tostring(name) .. "' is a sleep clip -- the sleep clips come with F3b (B.CFG.sleepClips is off), nothing played")
+        return
+    end
     if name == nil or clips[name] == nil or name == "zbite" or name == "smack" then
         local keys = {}
         for k in pairs(clips) do
-            if k ~= "zbite" and k ~= "smack" then keys[#keys + 1] = k end   -- zbite / smack sind Zombie-/Banditen-Clips
+            -- zbite / smack sind Zombie-/Banditen-Clips; K1: Schlaf-Schluessel nur mit Schlaf-Clips
+            if k ~= "zbite" and k ~= "smack" and not (hideSleep and SLEEP_KEYS[k]) then keys[#keys + 1] = k end
         end
         table.sort(keys)
-        say("use NCBear_AnimTest(name), names: " .. table.concat(keys, ", "))
+        local tail = ""
+        if hideSleep then tail = " (sleep clips come with F3b)" end
+        say("use NCBear_AnimTest(name), names: " .. table.concat(keys, ", ") .. tail)
         return
     end
     local kind, a, v = target()
@@ -395,6 +416,32 @@ function NCBear_AnimTest(name)
     local ok, why = C.Play(a, name)
     if ok then turn(a) end
     report(ok, why)
+end
+
+-- K1 (PLAN_K1.md 10): Schild folgt der Pose an / aus (B.CFG.tagPoseOn, nur diese Sitzung) und den Faktor deines Baeren zeigen. Ohne Wert
+-- umschalten. Nur Einzelspieler (wie alle Befehle hier).
+function NCBear_TagPose(on)
+    if not isSP() then
+        say("singleplayer only")
+        return
+    end
+    if type(B.CFG) ~= "table" then
+        say("no B.CFG")
+        return
+    end
+    if on == nil then on = (B.CFG.tagPoseOn == false) end
+    B.CFG.tagPoseOn = (on == true)
+    local U = B.UI
+    local msg = "tag follows the pose: " .. ((B.CFG.tagPoseOn ~= false) and "on" or "off")
+    local p = player()
+    if p and U and U.PoseLift then
+        local _, _, v = own(p)
+        if v then
+            local k = U.PoseLift(v.id, getTimestampMs())                -- V:client/Foraging/ISBaseIcon.lua:485
+            msg = msg .. ", your bear now x" .. string.format("%.2f", tonumber(k) or 1) .. " (phase " .. tostring(U.PosePhase(v.id)) .. ")"
+        end
+    end
+    say(msg)
 end
 
 -- Ziel nach der Regel des Kerns (B.FoeIsTarget, shared/BanditsNPCBearFightRules.lua): Zombies und feindliche Banditen, nie Spieler,

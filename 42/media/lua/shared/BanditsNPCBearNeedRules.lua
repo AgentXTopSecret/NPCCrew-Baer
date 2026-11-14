@@ -3,20 +3,23 @@
 -- _arbeit/baer_zaehmen/f3/KEVIN_ANTWORTEN.md -- sie gehen vor dem Plan).
 --
 -- Rein: keine Engine, nur Zahlen, Texte, Tabellen. Dieselben Funktionen rechnen beim Schreiber (Register-Eintrag: nH, nT, nF, tr) und beim
--- Client (Sicht-Eintrag: hun, thr, tir, tru) -- B.NeedOf liest beide. Gelesen werden nur B.CFG (Block "F3", shared/BanditsNPCBear.lua),
+-- Client (Sicht-Eintrag: hun, thr, tir, tru) -- B.NeedOf liest beide. Gelesen werden nur B.CFG (Bloecke "F3" und "K1", shared/BanditsNPCBear.lua),
 -- B.Opt (Sandbox BearNeedsPercent), B.GrowSize (shared/BanditsNPCBearStats.lua) und B.ClipMs (shared/BanditsNPCBearFightRules.lua) zur
 -- Laufzeit.
 --
--- Vier Werte 0..100: Hunger, Durst, Muedigkeit fuellen sich mit dem Druck (0 = gut), Vertrauen mit dem Guten (Start 50).
---   Hunger +50 je Spieltag bei jeder Groesse; eine Mahlzeit (20 Vanilla-Hungerpunkte, ein Honig) senkt um 50 / Mahlzeiten-je-Tag
---   (Kevins Tabelle 1 / 2 / 4 an den Groessen 0,35 / 0,75 / 1,35, dazwischen gerade). Durst +75 je Tag, eine Schale (0,5 l) senkt um
---   75 / Schalen-je-Tag (1 / 2 / 3).
+-- Drei Werte 0..100: Hunger, Durst, Muedigkeit fuellen sich mit dem Druck (0 = gut). Vertrauen -100..+100 (K1, Kevin 13.11. ~21:40: "ich will bei
+-- 0 starten und dann bis 100% und bis -100%"; Start 0).
+--   K1 (Kevin 14.11. ~02:20 "nach 16std von 0 auf 100"): Hunger UND Durst steigen je GEZAEHLTER Wachstunde um needRiseH (6,25) -- bei jeder
+--   Groesse in 16 Wachstunden von 0 auf 100. Die volle Leiste ist die Tagesmenge der Groesse (Kevin ~01:40 / ~01:55, gleitend an statAt
+--   0,35 / 0,75 / 1,35, waechst bis Tag 100): Futter nach Saettigung B.HunDayPts = playerHunDay (55,3 Vanilla-Hungerpunkte) x 1,5 / 4 / 12,5
+--   (83 / 221 / 691 Punkte), Wasser B.WaterDayL = 6 % von 25 / 80 / 250 kg (1,5 / 4,8 / 15 l). Jedes Futter saettigt nach seinem HungerChange.
 --   Muedigkeit steigt wach 2,4 / 2,0 / 1,6 je Spielstunde (ausgewachsen wie die NPC-Crew-Figuren) plus Anstrengung, sinkt im Schlaf
 --   10,5 je Stunde. Kevin 13.11.: ab 90 kaempft er nicht mehr und sagt es; bei 100 schlaeft er von selbst ein und schlaeft, bis er bei
---   0 ist; jeder Befehl weckt ihn mittendrin. KEINE Uhrzeiten (kein Nachtfenster, kein Mittagsschlaf). Die eine Ausnahme: schlaeft der
---   Besitzer und der Baer folgt ihm, legt er sich neben ihn.
---   Vertrauen: viel -> Beduerfnisse bis 20 % langsamer, wenig -> bis 20 % schneller (neutral bei 50); unter trRefuse (15) weigert er sich
---   zu kaempfen; ab trHeart (100) meldet die Sicht trM (das Herz ueber dem Namensschild).
+--   0 ist; jeder Befehl weckt ihn mittendrin. KEINE Uhrzeiten (kein Nachtfenster, kein Mittagsschlaf). K1 (Kevin 14.11. ~01:10): schlaeft
+--   der Besitzer (oder spult er vor), schlaeft der Baer IMMER mit -- aus jedem Modus.
+--   Vertrauen (K1, Kevin ~02:50 "Nur Beduerfnisse"): +100 -> Beduerfnisse 25 % langsamer, -100 -> 25 % schneller (0 = neutral, gerade
+--   dazwischen); UNTER trRefuse (-70) weigert er sich zu kaempfen; ab trHeart (100) meldet die Sicht trM (das Herz ueber dem Namensschild).
+--   Gewinn / Verlust nur noch nach Kevins Regel vom 14.11. ~00:00 (B.TrustDelta; Buchfuehrung je Spieltag beim Schreiber).
 -- Tempo: Sandbox BearNeedsPercent (0 = Hunger, Durst, Muedigkeit aus und auf 0 gehalten).
 --
 -- Ladefolge: shared/ alphabetisch nach ...Bear / ...Crew / ...Defs / ...FightRules / ...Foe / ...Food, vor ...Rules / ...Stats; nichts
@@ -73,10 +76,10 @@ local function lerpList(v, xs, ys)
 end
 
 local STAT_AT_DEF = { 0.35, 0.75, 1.35 }
-local MEALS_DEF = { 1, 2, 4 }
-local BOWLS_DEF = { 1, 2, 3 }
+local FOOD_DEF = { 1.5, 4, 12.5 }           -- K1: Vielfaches des Spieler-Tagesbedarfs je Groesse (Kevin ~01:55 "Mitte")
+local WEIGHT_DEF = { 25, 80, 250 }          -- K1: Koerpergewicht kg je Groesse (Kevin ~01:40, Claudes Annahme aus den Quellen)
 local TIR_DEF = { 2.4, 2.0, 1.6 }
-local TRWORD_DEF = { 20, 40, 60, 80 }
+local TRWORD_DEF = { -70, -20, 20, 70 }
 
 local function statAt()
     return numList(B.CFG and B.CFG.statAt, STAT_AT_DEF)
@@ -113,45 +116,50 @@ end
 -- Feldnamen je Wert: Register / Sicht.
 local FIELD = { hun = { "nH", "hun" }, thr = { "nT", "thr" }, tir = { "nF", "tir" }, tru = { "tr", "tru" } }
 
--- Wert 0..100 aus einem Register- ODER Sicht-Eintrag; fehlt er (oder ist Unsinn): nil. kind = "hun" / "thr" / "tir" / "tru".
+-- Wert aus einem Register- ODER Sicht-Eintrag; fehlt er (oder ist Unsinn): nil. kind = "hun" / "thr" / "tir" (0..100) / "tru" (K1: -100..100).
 function B.NeedOf(e, kind)
     local f = FIELD[kind]
     if type(e) ~= "table" or f == nil then return nil end
     local v = num(e[f[1]])
     if v == nil then v = num(e[f[2]]) end
     if v == nil then return nil end
+    if kind == "tru" then return clamp(v, cfg("trMin", -100), cfg("trMax", 100)) end
     return clamp(v, 0, 100)
 end
 
 -- ---------------------------------------------------------------------------
--- Mahlzeit, Schale, Muedigkeits-Tempo (PLAN_F3.md 2.1, 2.2)
+-- Tagesmengen, Mahlzeit, Schale, Muedigkeits-Tempo (K1: PLAN_K1.md 1.1, 8; vorher PLAN_F3.md 2.1, 2.2)
 -- ---------------------------------------------------------------------------
 
--- Mahlzeiten / Schalen je Spieltag bei dieser Groesse (Register-Eintrag; Kevins Tabelle, fliessend).
-function B.MealsDay(e)
+-- Vanilla-Hungerpunkte, die die VOLLE Leiste (0 -> 100 %) bei dieser Groesse fasst: playerHunDay x foodAt (Junges 83, halbstark 221, ausgewachsen
+-- 691; gleitend). Register-Eintrag (Groesse aus rec.g); Sicht-Eintrag: dessen Feld hd.
+function B.HunDayPts(e)
+    if type(e) == "table" and num(e.hd) ~= nil and num(e.hd) > 0 then return num(e.hd) end
     local c = B.CFG or {}
-    return lerpList(sizeOf(e), statAt(), numList(c.mealsAt, MEALS_DEF))
+    return cfg("playerHunDay", 55.3) * lerpList(sizeOf(e), statAt(), numList(c.foodAt, FOOD_DEF))
 end
 
-function B.BowlsDay(e)
+-- Liter Wasser, die die volle Leiste fasst: waterPct x Koerpergewicht weightAt (1,5 / 4,8 / 15 l; gleitend). Sicht-Eintrag: dessen Feld wl.
+function B.WaterDayL(e)
+    if type(e) == "table" and num(e.wl) ~= nil and num(e.wl) > 0 then return num(e.wl) end
     local c = B.CFG or {}
-    return lerpList(sizeOf(e), statAt(), numList(c.bowlsAt, BOWLS_DEF))
+    return cfg("waterPct", 0.06) * lerpList(sizeOf(e), statAt(), numList(c.weightAt, WEIGHT_DEF))
 end
 
--- So viele Punkte Hunger senkt EINE Mahlzeit (Junges 50, halbstark 25, ausgewachsen 12,5). Sicht-Eintrag: dessen Feld meal.
+-- So viele Punkte Hunger senkt EINE Mahlzeit (mealPts 20 Vanilla-Hungerpunkte; Junges 24,1, halbstark 9,0, ausgewachsen 2,9). Sicht: Feld meal.
 function B.MealPct(e)
     if type(e) == "table" and num(e.meal) ~= nil then return num(e.meal) end
-    local m = B.MealsDay(e)
-    if m <= 0 then m = 1 end
-    return cfg("needHunDay", 50) / m
+    local d = B.HunDayPts(e)
+    if d <= 0 then return 0 end
+    return cfg("mealPts", 20) / d * 100
 end
 
--- So viele Punkte Durst senkt EINE Schale (Junges 75, halbstark 37,5, ausgewachsen 25). Sicht-Eintrag: dessen Feld bowl.
+-- So viele Punkte Durst senkt EINE Schale (bowlL 0,5 l; Junges 33,3, halbstark 10,4, ausgewachsen 3,3). Sicht-Eintrag: Feld bowl.
 function B.BowlPct(e)
     if type(e) == "table" and num(e.bowl) ~= nil then return num(e.bowl) end
-    local b = B.BowlsDay(e)
-    if b <= 0 then b = 1 end
-    return cfg("needThrDay", 75) / b
+    local l = B.WaterDayL(e)
+    if l <= 0 then return 0 end
+    return cfg("bowlL", 0.5) / l * 100
 end
 
 -- Mahlzeiten eines Stuecks Futter: hungerChange = item:getHungerChange() (negativ, Skriptwert / 100: Honig -0,2 -> 1 Mahlzeit,
@@ -164,11 +172,17 @@ function B.MealsOf(hungerChange)
     return -h * 100 / pts
 end
 
--- Liter Wasser, die den Durst thr (Punkte) bei dieser Groesse ganz stillen (Junges von 100: 0,67 l; ausgewachsen: 2,0 l).
+-- Liter Wasser, die den Durst thr (Punkte) bei dieser Groesse ganz stillen (K1: Junges von 100: 1,5 l; ausgewachsen von 50: 7,5 l).
 function B.DrinkNeedL(e, thr)
-    local pct = B.BowlPct(e)
-    if pct <= 0 then return 0 end
-    return (num(thr) or 0) / pct * cfg("bowlL", 0.5)
+    local t = num(thr) or 0
+    if t <= 0 then return 0 end
+    return t / 100 * B.WaterDayL(e)
+end
+
+-- K1 (Kevin 14.11. ~02:05 / ~02:10): so viel Prozent seines Tagesbedarfs deckt EIN Stueck Futter (hungerChange = item:getHungerChange(),
+-- negativ; Steak -0,4 -> Junges 48,2 %, ausgewachsen 5,8 %). Fuer den Tooltip "satt fuer ~x %" (Client: Sicht-Eintrag mit meal).
+function B.FoodDayPct(e, hungerChange)
+    return B.MealsOf(hungerChange) * B.MealPct(e)
 end
 
 -- Muedigkeit je Spielstunde wach bei dieser Groesse (Register-Eintrag), ohne Tempo-Regler und Vertrauen.
@@ -178,77 +192,40 @@ function B.TirRate(e)
 end
 
 -- ---------------------------------------------------------------------------
--- Vertrauen (PLAN_F3.md 4; Kevin 13.11. Antwort 4)
+-- Vertrauen (K1, PLAN_K1.md 2.1; Kevin 13.11. ~21:40, 14.11. ~00:00 und ~02:50)
 -- ---------------------------------------------------------------------------
 
--- Faktor auf das Steigen von Hunger, Durst, Muedigkeit: bei 50 genau 1; darueber gerade bis 1 - trBonus (0,8 bei 100), darunter
--- gerade bis 1 + trMalus (1,2 bei 0). Ohne Wert: 1.
+-- Faktor auf das Steigen von Hunger, Durst, Muedigkeit: bei 0 genau 1; darueber gerade bis 1 - trBonus (0,75 bei +100), darunter
+-- gerade bis 1 + trMalus (1,25 bei -100). Ohne Wert: 1.
 function B.TrustK(e)
     local tr = B.NeedOf(e, "tru")
     if tr == nil then return 1 end
-    if tr >= 50 then return 1 - cfg("trBonus", 0.2) * (tr - 50) / 50 end
-    return 1 + cfg("trMalus", 0.2) * (50 - tr) / 50
+    if tr >= 0 then return 1 - cfg("trBonus", 0.25) * tr / 100 end
+    return 1 + cfg("trMalus", 0.25) * (-tr) / 100
 end
 
--- Punkte einer Handlung aus der Hand: kind = "feed" / "pet" / "drink", class = Futterklasse ("fav" / "ok" / "snack", nur beim Fuettern),
--- last = vorige Handlung (im Wechsel x trMix), used = heute schon vergebene Hand-Punkte (Deckel trHandDay je Spieltag).
--- Rueckgabe: Punkte (>= 0, auf 0,1), mixed.
-function B.TrustGain(kind, class, last, used)
-    local base = 0
-    if kind == "feed" then
-        if class == "fav" then
-            base = cfg("trFeedFav", 4)
-        elseif class == "snack" then
-            base = cfg("trFeedSnack", 1)
-        else
-            base = cfg("trFeedOk", 3)
-        end
-    elseif kind == "pet" then
-        base = cfg("trPet", 2)
-    elseif kind == "drink" then
-        base = cfg("trDrink", 1)
-    else
-        return 0, false
-    end
-    local mixed = false
-    if type(last) == "string" and last ~= kind and (last == "feed" or last == "pet" or last == "drink") then
-        local mix = cfg("trMix", 1.5)
-        if mix > 1 then
-            base = base * mix
-            mixed = true
-        end
-    end
-    local room = cfg("trHandDay", 12) - (num(used) or 0)
-    if room <= 0 then return 0, false end
-    if base > room then base = room end
-    return math.floor(base * 10 + 0.5) / 10, mixed
+-- Aenderung des Vertrauens je Ereignis (Kevins endgueltige Regel 14.11. ~00:00 -- wie oft es zaehlt, entscheidet der Schreiber):
+--   "pet" (gestreichelt) / "feedfull" (Hunger durch Fuettern aus der Hand auf 0 %) / "drinkfull" (Durst durch Traenken aus der Hand auf 0 %)
+--     -> trGain (+0,5; je Quelle hoechstens 1x je Spieltag)
+--   "hun90" / "thr90" (Hunger / Durst erreicht trLossAt 90 %) -> trLossNeed (-5; je Wert 1x je Spieltag)
+--   "down" (am Boden, Todesschutz) -> trDown (-10, jedes Mal)
+--   "weak" (Leben durch Hunger/Durst auf needHpFloor 1 %) -> trLossWeak (-10; 1x je Spieltag)
+--   alles andere -> 0 (auch die alten Arten "feed" / "drink": Punkte je Futter gibt es nicht mehr)
+local TR_DELTA = { pet = { "trGain", 0.5 }, feedfull = { "trGain", 0.5 }, drinkfull = { "trGain", 0.5 },
+                   hun90 = { "trLossNeed", -5 }, thr90 = { "trLossNeed", -5 }, down = { "trDown", -10 }, weak = { "trLossWeak", -10 } }
+
+function B.TrustDelta(kind)
+    local d = TR_DELTA[kind]
+    if d == nil then return 0 end
+    return cfg(d[1], d[2])
 end
 
--- Tagesabschluss (PLAN_F3.md 4.1). d = { h = Hoechst-Hunger, t = Hoechst-Durst, s = Schlafstunden, a = Aufschrecken, c = gezaehlte
--- Stunden } des abgelaufenen Spieltags; needsOn = false: Hunger/Durst zaehlen nicht (BearNeedsPercent 0 -- kein Bonus fuer "gut
--- versorgt", wo es nichts zu versorgen gibt). Rueckgabe: Aenderung des Vertrauens, Kennziffer fuer den Verlauf (0 gut versorgt /
--- 1 einmal hungrig oder durstig / 2 ausgehungert oder ausgetrocknet) -- oder nil, nil, wenn der Tag nicht zaehlt (weniger als trDayMinH
--- gezaehlte Stunden: eingefroren, eben gezaehmt).
-function B.TrustDayClose(d, needsOn)
-    if type(d) ~= "table" or (num(d.c) or 0) < cfg("trDayMinH", 6) then return nil, nil end
-    local delta, code = 0, 0
-    if needsOn ~= false then
-        local hungry, starve = cfg("needHungry", 50), cfg("needStarve", 80)
-        local vals = { num(d.h) or 0, num(d.t) or 0 }
-        for i = 1, 2 do
-            local v = vals[i]
-            if v >= starve then
-                delta = delta + cfg("trDayWorst", -8)
-                code = 2
-            elseif v >= hungry then
-                delta = delta + cfg("trDayBad", -3)
-                if code < 1 then code = 1 end
-            end
-        end
-        if code == 0 then delta = delta + cfg("trDayGood", 3) end
-    end
-    if (num(d.s) or 0) >= cfg("trSleepH", 6) and (num(d.a) or 0) <= 0 then delta = delta + cfg("trDaySleep", 2) end
-    return delta, code
+-- V1 (Kevin 13.11. ~21:40 "Alte Spielstaende umrechnen: neu = (alt - 50) x 2"): alter Wert 0..100 -> neue Skala, geklemmt (44 -> -12,
+-- 0 -> -100, 100 -> +100). Unsinn -> trStart. Einmal je Eintrag (die Marke trV fuehrt der Schreiber).
+function B.TrustMigrate(old)
+    local v = num(old)
+    if v == nil then return cfg("trStart", 0) end
+    return clamp((v - 50) * 2, cfg("trMin", -100), cfg("trMax", 100))
 end
 
 -- ---------------------------------------------------------------------------
@@ -278,7 +255,7 @@ end
 -- "tired" = Muedigkeit ab tirVery (zu muede), sonst nil. "trust" gewinnt. Ob er ueberhaupt kaempfen KANN (Groesse), fragt der Aufrufer.
 function B.NoFight(e)
     local tr = B.NeedOf(e, "tru")
-    if tr ~= nil and tr < cfg("trRefuse", 15) then return "trust" end
+    if tr ~= nil and tr < cfg("trRefuse", -70) then return "trust" end
     if B.NeedsOn() then
         local f = B.NeedOf(e, "tir")
         if f ~= nil and f >= cfg("tirVery", 90) then return "tired" end
@@ -306,7 +283,8 @@ function B.NeedWord(kind, v)
     return 1
 end
 
--- Stufe 1..5 des Vertrauens (0-19 / 20-39 / 40-59 / 60-79 / 80-100; B.CFG.trWordAt).
+-- Stufe 1..5 des Vertrauens (K1, Frage K-F4: unter -70 misstrauisch / -70..-20 scheu / -20..+20 neutral / +20..+70 vertraut / ab +70 ergeben;
+-- B.CFG.trWordAt; die Grenze selbst gehoert zur hoeheren Stufe).
 function B.TrustWord(v)
     local x = num(v) or 0
     local at = numList(B.CFG and B.CFG.trWordAt, TRWORD_DEF)
@@ -323,7 +301,8 @@ end
 
 -- Soll ein WACHER Baer sich jetzt hinlegen? c = { st, mode, nF, needsOn, ownerAsleep, resume, down, ride, fight, guard, danger, come,
 -- stand, busy, lock, calm } (alles Werte; die Wahrheitswerte sammelt der Schreiber aus Register und Sitzung, server/BanditsNPCBearSleep.lua).
--- Rueckgabe: "owner" (er folgt und der Besitzer schlaeft -> neben ihn legen), "tired" (Muedigkeit ab tirCollapse 100 -> wo er steht;
+-- Rueckgabe: "owner" (der Besitzer schlaeft oder spult vor -> neben ihn legen; K1, Kevin 14.11. ~01:10: "wenn ein spieler schlaeft schlaeft
+-- der baer immer mit" -- in JEDEM Modus, nicht nur beim Folgen), "tired" (Muedigkeit ab tirCollapse 100 -> wo er steht;
 -- in Bleiben / Sitz / Frei schon ab tirStaySleep, Vorgabe ebenfalls 100; mit resume -- er schlief schon aus Muedigkeit -- solange sie
 -- ueber tirWake liegt) oder nil.
 -- Nie: nicht gezaehmt, am Boden, mitfahrend, Kampf, Zombie-Wache an, Gefahr in sleepWakeR, Komm her, Aufstehen laeuft, Fuettern /
@@ -334,7 +313,7 @@ function B.SleepWant(c)
         or c.lock == true or c.calm == true then
         return nil
     end
-    if c.mode == "follow" and c.ownerAsleep == true then return "owner" end
+    if c.ownerAsleep == true then return "owner" end
     if c.needsOn == false then return nil end
     local at = cfg("tirCollapse", 100)
     if c.mode ~= "follow" then
@@ -351,14 +330,14 @@ end
 -- Soll ein SCHLAFENDER Baer aufwachen? c = { why ("tired" / "owner"), nF, needsOn, ownerAsleep, mode, danger }.
 -- Rueckgabe: Weck-Grund oder nil, und (zweiter Wert) ein neuer Schlaf-Grund, wenn er aus einem anderen Grund weiterschlaeft:
 --   Gefahr -> "alarm" (Aufschrecken).
---   "tired": bei Muedigkeit <= tirWake (0) -> "rested" -- ausser er folgt und der Besitzer schlaeft noch: dann nil, "owner".
+--   "tired": bei Muedigkeit <= tirWake (0) -> "rested" -- ausser der Besitzer schlaeft noch: dann nil, "owner".
 --            Mit BearNeedsPercent 0 (Muedigkeit aus) ebenso.
---   "owner": der Besitzer schlaeft noch und er folgt -> nil. Sonst: ist er selbst bei >= tirCollapse, schlaeft er weiter (nil, "tired"),
---            sonst "ownerup".
+--   "owner": der Besitzer schlaeft noch -> nil (K1: in jedem Modus). Sonst: ist er selbst bei >= tirCollapse, schlaeft er weiter (nil,
+--            "tired"), sonst "ownerup". c.mode wird nicht mehr gebraucht (bleibt erlaubt).
 function B.SleepKeep(c)
     if type(c) ~= "table" then return "gone", nil end
     if c.danger == true then return "alarm", nil end
-    local withOwner = c.mode == "follow" and c.ownerAsleep == true
+    local withOwner = c.ownerAsleep == true
     local nF = num(c.nF) or 0
     if c.why == "owner" then
         if withOwner then return nil, nil end

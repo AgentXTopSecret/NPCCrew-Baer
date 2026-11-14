@@ -45,6 +45,10 @@ end
 -- Fehlendes als "nicht da", wie B1e body).
 -- F3 (PLAN_F3.md 7): + nH / nT / nF / tr (Hunger, Durst, Muedigkeit, Vertrauen 0..100) -- sonst kaeme ein Baer nach einem Registerverlust
 -- mit den Erst-Werten zurueck. Fassung bleibt B.MARK_V = 2. Nicht im Spiegel: nDay / trD / slpAt (Tagesbuch und Verlauf beginnen neu).
+-- K1 (PLAN_K1.md 2.2): + trV (Fassung der Vertrauens-Skala, 2 = -100..+100). Ein alter Spiegel ohne trV traegt tr auf 0..100 und wird beim
+-- naechsten B.NeedsFix einmal umgerechnet (server/BanditsNPCBearNeeds.lua); ein neuer nie zweimal. Fassung bleibt B.MARK_V = 2.
+-- Nachbesserung K1 C5: + nDd / nDm (Spieltag und Bitmaske der sechs Tages-Marken, B.NeedsDayMark) -- nicht aus rec, sondern in B.MarkOf
+-- aus dem Tagesbuch nDay gerechnet; gelesen nur in B.NeedsFromMark (server/BanditsNPCBearNeeds.lua). Fassung bleibt B.MARK_V = 2.
 local MARK_FIELDS = {
     "u", "id", "nr", "gen", "r", "kind", "src", "st", "finder", "bond", "owner", "tame", "fedN", "petN", "last",
     "feedAt", "petAt", "born", "tamedAt", "mode", "name", "hx", "hy", "hz",
@@ -52,7 +56,7 @@ local MARK_FIELDS = {
     "body", "passive",
     "down", "bndH", "bndR", "kZ", "kB",
     "look",
-    "nH", "nT", "nF", "tr",
+    "nH", "nT", "nF", "tr", "trV",
 }
 
 -- Aussehen (PLAN_AUSSEHEN.md 3): ein Wunsch-Aussehen aus dem Spiegel nur, wenn es eine bekannte Familie ausser "std" ist (B.LOOK_KEYS,
@@ -110,6 +114,10 @@ function B.MarkOf(rec)
         local k = MARK_FIELDS[i]
         local v = rec[k]
         if v ~= nil and plain(v) then mark[k] = v end
+    end
+    if B.NeedsDayMark then                                       -- Nachbesserung K1 C5 (oben)
+        local dd, dm = B.NeedsDayMark(rec)
+        if dd ~= nil then mark.nDd, mark.nDm = dd, dm end
     end
     return mark
 end

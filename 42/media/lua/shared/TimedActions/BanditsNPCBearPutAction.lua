@@ -19,6 +19,12 @@
 -- Die Klasse ist eine GLOBALE Variable mit dem Namen ihres Typs und new() nennt seine Parameter wie die Felder: beides verlangt die Engine fuer
 -- Netz-Aktionen (Form V:shared/TimedActions/Animals/ISFeedAnimalFromHand.lua:3 und :66-74). Nur Spieler, Tier, Gegenstand und Text als
 -- Parameter -- kein nil (F 4.2: PZNetKahluaTableImpl traegt STRING, DOUBLE, InventoryItem, IsoAnimal).
+-- K1 (Lauf baer-k1, PLAN_K1.md 1.4, 5; Kevin 13.11.2026 ~23:50 "nur die 1000 items einstellen zum gleichzeitig verschieben", ~00:10 Zahlenfeld):
+-- GEBUENDELT -- new(character, animal, item, mode, k): k = Anzahl GLEICHER Stuecke in EINER Aktion (Zahl wie k der Take-Aktion; fehlt / Unsinn
+-- -> 1, bei "bag" immer 1, hoechstens B.CFG.invMaxItems). Der Kern nimmt in complete() das Bezugs-Stueck und bis k-1 gleiche (Volltyp + Name)
+-- aus dem HAUPT-Inventar, ohne Favorit / ausgeruestet / angezogen, je Stueck mit Gegenprobe, EIN Commit -- der Server glaubt dem k nur als
+-- Obergrenze (k/schnittstelle.md K4). Stuecke in Taschen holt der Client vorher (transferIfNeeded). Dauer: invPutTime + invPutPerKg x kg x k +
+-- invPutPerPc x (k - 1), Deckel invPutMax (k = 1) bzw. invBundleMax.
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -125,33 +131,50 @@ end
 function BanditsNPCBearPutAction:complete()
     local f = BanditsNPC.Bear.InvPutComplete
     local ok = false
-    if f then ok = f(self.character, self.animal, self.item, self.mode) end
+    if f then ok = f(self.character, self.animal, self.item, self.mode, self.k) end       -- K1: Anzahl k (der Kern klemmt)
     if self.animal then self.animal:getBehavior():setBlockMovement(false) end      -- ISMilkAnimal.lua:196
     if B.BodyBusy then B.BodyBusy(self.animal, false) end
     return ok
 end
 
--- Dauer (f4/schnittstelle.md K2): Packtaschen anlegen bagOnTime; sonst invPutTime + invPutPerKg x kg, hoechstens invPutMax. Gewicht wie der
--- Kern: item:getUnequippedWeight() (V:client/Hotbar/ISHotbar.lua:573). Sofort-Modus wie ISFeedAnimalFromHand.lua:53-58.
+-- K1: Anzahl einer Aktion -- ganze Zahl 1 .. invMaxItems (1000); Unsinn (nil, Text, NaN, 0, negativ) -> 1. Der Kern klemmt selbst noch einmal.
+local function countOf(k)
+    local n = tonumber(k)
+    if n == nil or n ~= n then return 1 end
+    n = math.floor(n)
+    local most = math.floor(cfgNum("invMaxItems", 1000))
+    if n > most then n = most end
+    if n < 1 then n = 1 end
+    return n
+end
+
+-- Dauer (f4/schnittstelle.md K2; K1 k/schnittstelle.md K4): Packtaschen anlegen bagOnTime; sonst invPutTime + invPutPerKg x kg x k +
+-- invPutPerPc x (k - 1), hoechstens invPutMax (ein Stueck) bzw. invBundleMax (gebuendelt). Gewicht wie der Kern: item:getUnequippedWeight()
+-- (V:client/Hotbar/ISHotbar.lua:573). Sofort-Modus wie ISFeedAnimalFromHand.lua:53-58.
 function BanditsNPCBearPutAction:getDuration()
     if self.character:isTimedActionInstant() then
         return 1
     end
     if self.mode == "bag" then return cfgNum("bagOnTime", 300) end
+    local k = countOf(self.k)
     local kg = 0
     if self.item then kg = tonumber(self.item:getUnequippedWeight()) or 0 end
-    local t = cfgNum("invPutTime", 40) + cfgNum("invPutPerKg", 8) * kg
+    if kg ~= kg or kg < 0 then kg = 0 end
+    local t = cfgNum("invPutTime", 40) + cfgNum("invPutPerKg", 8) * kg * k + cfgNum("invPutPerPc", 2) * (k - 1)
     local most = cfgNum("invPutMax", 150)
+    if k > 1 then most = cfgNum("invBundleMax", 600) end
     if t > most then t = most end
     return math.floor(t + 0.5)
 end
 
-function BanditsNPCBearPutAction:new(character, animal, item, mode)
+function BanditsNPCBearPutAction:new(character, animal, item, mode, k)
     local o = ISBaseTimedAction.new(self, character)
     o.animal = animal
     o.item = item
     if mode ~= "bag" then mode = "inv" end                      -- nur diese zwei; ein Unsinn-Wert legt in das Inventar
     o.mode = mode
+    o.k = countOf(k)                                            -- K1: Anzahl (Zahl, im Netz wie k der Take-Aktion)
+    if mode == "bag" then o.k = 1 end
     o.maxTime = o:getDuration()
     o.stopOnWalk = true
     o.stopOnRun = true

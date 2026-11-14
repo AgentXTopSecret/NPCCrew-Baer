@@ -26,7 +26,7 @@
     "Sandbox_BanditsNPC_BearMaxPerPlayer": "Bären je Spieler",
     "Sandbox_BanditsNPC_BearMaxPerPlayer_tooltip": "Wie viele gezähmte Bären ein Spieler haben darf.",
     "Sandbox_BanditsNPC_BearNeedsPercent": "Bär: Bedürfnis-Tempo (Prozent)",
-    "Sandbox_BanditsNPC_BearNeedsPercent_tooltip": "Wie schnell ein gezähmter Bär hungrig, durstig und müde wird. 100 = normal, 200 = doppelt so schnell. 0 = aus: Hunger, Durst und Müdigkeit bleiben auf null, und er schläft nur noch neben seinem schlafenden Besitzer. Das Vertrauen läuft weiter.",
+    "Sandbox_BanditsNPC_BearNeedsPercent_tooltip": "Wie schnell ein gezähmter Bär hungrig, durstig und müde wird. 100 = normal: Hunger und Durst gehen in 16 wachen Stunden von satt bis leer; solange er oder du schläfst, steigt nichts. 200 = doppelt so schnell. 0 = aus: Hunger, Durst und Müdigkeit bleiben auf null, und er schläft nur noch neben seinem schlafenden Besitzer. Das Vertrauen läuft weiter.",
     "Sandbox_BanditsNPC_BearSkillAgeCap": "Bär: Fähigkeiten nach Alter begrenzt",
     "Sandbox_BanditsNPC_BearSkillAgeCap_tooltip": "Ein Junges lernt bis Stufe 3, ein halbstarker Bär bis 6, ein starker Bär bis 8; nur ein ausgewachsener Bär erreicht 10. Schon gesammelte Erfahrung bleibt. Aus: keine Grenze.",
     "Sandbox_BanditsNPC_BearSkillXpPercent": "Bär: Lerntempo der Fähigkeiten (Prozent)",

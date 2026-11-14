@@ -32,6 +32,9 @@
 -- "Coming later") ist weg -- die Beduerfnisse sind echte Zeilen.
 -- F4 (Lauf baer-f4, PLAN_F4.md 8.1): eine Wert-Zeile kann ihren Wert in einer Farbe der Tabelle zeigen (e.col, z. B. "warn" fuer "Load" ueber
 -- der Grenze); die Bausteine benutzt auch das Inventar-Fenster (client/ISUI/BanditsNPCBearInvWindow.lua).
+-- K1 (Lauf baer-k1, PLAN_K1.md 2.3, 4 X; Kevin 13.11.2026 ~21:40 "bei negativ halt in einer negativen farbe und positiv eine positive = gruen ;D
+-- und negativ rot", 14.11. ~00:20 "die damage zahl soll rot werden"): Vertrauens-Balken und -Zahl nach Ton (e.tone "pos" gruen / "neg" rot /
+-- "zero" grau, U.WinTrustColor), Farbe "bad" (roter Wert: Schaden geschwaecht). Weiter nur Rechtecke und fertige Texte je Bild.
 -- Kein Engine-Aufruf ohne Vanilla-Fundstelle. Statisch geprueft, nicht gespielt.
 --
 
@@ -74,6 +77,13 @@ local COL = {
     stSleep = { 0.70, 0.85, 1.00, 1 }, warn = { 1.00, 0.58, 0.28, 1 },
     -- F4 Nachbesserung (Befund P2): ueber der Traglast -- kraeftiger als die Warnfarbe (der schlimmere Zustand darf nicht harmloser aussehen)
     over = { 0.92, 0.27, 0.20, 1 },
+    -- K1: geschwaechter Schaden (rot wie "over"); Vertrauen: Balken gruen / rot / grau und die Zahl daneben in derselben Farbe (heller)
+    bad = { 0.95, 0.36, 0.28, 1 },
+    trustPos = { 0.45, 0.80, 0.35, 1 }, trustNeg = { 0.88, 0.25, 0.20, 1 }, trustZero = { 0.55, 0.53, 0.50, 1 },
+    trustPosText = { 0.62, 0.92, 0.52, 1 }, trustNegText = { 1.00, 0.55, 0.48, 1 }, trustZeroText = { 0.78, 0.76, 0.72, 1 },
+    -- Nachbesserung K1 P4 / P3: bei negativem Vertrauen ist auch der LEERE Teil dunkelrot (-100 = leer, aber rot -- Kevin "negativ rot");
+    -- ein 1-Strich-Mittelzeichen bei 0 macht den Balken als -100..+100 kenntlich (der Lebensbalken hat keins)
+    trustNegTrack = { 0.36, 0.11, 0.09, 1 }, trustMid = { 0.92, 0.90, 0.84, 0.85 },
 }
 U.WIN_COL = COL
 -- F3 (PLAN_F3.md 8, 10.1): die Schlaf-Farbe steht an EINER Stelle (B.CFG.sleepCol des Kerns, gelesen ueber U.SleepColor). Einmal beim
@@ -101,6 +111,14 @@ local RAMP = {
     -- F4 Nachbesserung (Befund P2): Traglast gruen bis 0,6, gelb bei 0,85, voll orange (= warn); UEBER der Grenze zeichnet das Fenster "over" (rot)
     load = { { 0, 0.45, 0.76, 0.32 }, { 0.6, 0.45, 0.76, 0.32 }, { 0.85, 0.95, 0.66, 0.20 }, { 1, 1.00, 0.58, 0.28 } },
 }
+
+-- K1: Farbe des Vertrauens-Balkens nach Ton ("pos" / "neg" / "zero"): r, g, b. Unbekannt -> grau.
+local TRUST_BAR = { pos = "trustPos", neg = "trustNeg", zero = "trustZero" }
+local TRUST_TEXT = { pos = "trustPosText", neg = "trustNegText", zero = "trustZeroText" }
+function U.WinTrustColor(tone)
+    local c = COL[TRUST_BAR[tone] or "trustZero"]
+    return c[1], c[2], c[3]
+end
 
 function U.WinRamp(kind, v)
     local r = RAMP[kind] or RAMP.hp
@@ -231,7 +249,9 @@ local function drawBar(self, m, e)
     local ox, oy = m.ox, m.oy
     local tc = COL.text
     self:drawText(e.label or "", ox, oy, tc[1], tc[2], tc[3], tc[4], m.fBody)
-    self:drawTextRight(e.val or "", self.width - ox, oy, tc[1], tc[2], tc[3], tc[4], m.fBody)
+    local vc = tc
+    if e.tone and TRUST_TEXT[e.tone] then vc = COL[TRUST_TEXT[e.tone]] end     -- K1: Vertrauens-Zahl in der Farbe ihres Balkens
+    self:drawTextRight(e.val or "", self.width - ox, oy, vc[1], vc[2], vc[3], vc[4], m.fBody)
     if e.bnd and e.valW then
         -- F2: Verband-Zeichen (Kreuz, Kantenlaenge = halbe Textzeile) links vor dem Wert; valW misst das Fenster im 1-s-Takt
         local sz = math.floor(m.lb / 2)
@@ -245,12 +265,13 @@ local function drawBar(self, m, e)
     local by = oy + m.lb + m.R4
     local bw = self.width - 2 * ox
     local bh = m.R10
-    rect(self, ox, by, bw, bh, COL.track)
+    rect(self, ox, by, bw, bh, (e.tone == "neg") and COL.trustNegTrack or COL.track)      -- Nachbesserung K1 P4
     local fill = math.floor(bw * e.frac + 0.5)
     if fill > 0 then
         self:drawRect(ox, by, fill, bh, 1, e.r or 1, e.g or 1, e.b or 1)
         rect(self, ox, by, fill, m.t, COL.barHi)
     end
+    if e.tone then rect(self, ox + math.floor(bw / 2), by, m.t, bh, COL.trustMid) end   -- Nachbesserung K1 P3: Mitte = 0
     frame(self, ox, by, bw, bh, m.t, COL.trackBorder)
 end
 

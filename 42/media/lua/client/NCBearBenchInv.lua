@@ -1,6 +1,8 @@
 --
 -- NUR TESTHILFE fuer das Inventar des Baeren (F4, Lauf baer-f4, PLAN_F4.md 14). Wird NIE nach NPC Crew kopiert (NCBearBench*).
--- Kein Kern-Code ruft diese Datei. Sie ist KEIN Gegenstands-Drucker: kein Befehl legt einen Gegenstand an oder loescht einen -- sie liest,
+-- K1 (PLAN_K1.md 10): EIN Befehl legt Gegenstaende an -- NCBear_InvItems(typ, n) gibt DIR n Stueck (nur Einzelspieler, hoechstens 1000), um
+-- grosse Stapel (Geben/Nehmen 1000 auf einmal, Zahlenfeld) zu testen. Alles andere bleibt wie in F4:
+-- Kein Kern-Code ruft diese Datei. Sie ist sonst KEIN Gegenstands-Drucker: kein anderer Befehl legt einen Gegenstand an oder loescht einen -- sie liest,
 -- oeffnet das Fenster und ruft die Werkbank-Wege des Kerns (f4/schnittstelle.md K8: B.InvInfo, B.InvSnap, B.InvSet; Abgleich B.InvHeal;
 -- Kopie weg B.InvCopyOff), jeden hinter einem Existenz-Riegel. Kapazitaet testen: NCBear_CubSet("bagAdd", x) (client/NCBearBenchCub.lua)
 -- und der Sandbox-Regler "Bear: carrying capacity"; Tod mit Inhalt: NCBear_CubKill(); Registerverlust: NCBear_CubForget().
@@ -17,9 +19,12 @@
 --   NCBear_InvCopyOff()   Kopie beim Spieler fuer meinen Baeren entfernen (B.InvCopyOff) -> naechster Abgleich: "Register gewinnt, Kopie neu"
 --   NCBear_InvOpen()      Inventar-Fenster meines naechsten Baeren oeffnen (wie der Knopf "Inventory")
 --   NCBear_InvAsk()       die Liste neu anfordern (Bitte "InvList", wie das offene Fenster)
+--   NCBear_InvItems(typ, n)  K1, nur Einzelspieler: n Stueck (1..1000, Vorgabe 100) des Volltyps typ in DEIN Inventar, z. B.
+--                         NCBear_InvItems("Base.Bullets9mm", 500) oder NCBear_InvItems("Base.WaterBottle", 3); unbekannter Typ -> nur eine Zeile
 --
 -- Engine-Aufrufe (Fundstelle): getSpecificPlayer(0) V:client/Farming/CFarmingSystem.lua:45; player:getX() / getY()
--- V:client/Fishing/TensionUI.lua:11; player:Say(Text) V:client/Entity/ISEntityUI.lua:458.
+-- V:client/Fishing/TensionUI.lua:11; player:Say(Text) V:client/Entity/ISEntityUI.lua:458; K1: ScriptManager.instance:getItem(Text)
+-- V:client/ContextMenuCode.lua:67 (gibt es den Typ?), player:getInventory():AddItems(Text, Zahl) V:client/DebugUIs/Scenarios/AiteronScenario.lua:79.
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -201,4 +206,30 @@ function NCBear_InvAsk()
     end
     if U.InvAskReset then U.InvAskReset(v.id) end
     out("InvList asked: " .. tostring(U.InvAsk(p, v.id)))
+end
+
+-- K1 (PLAN_K1.md 10): n Stueck in DEIN Inventar (nur Einzelspieler, hoechstens 1000) -- nur zum Testen grosser Stapel.
+function NCBear_InvItems(typ, n)
+    if B.IsSP and not B.IsSP() then
+        out("singleplayer only")
+        return
+    end
+    local p = getSpecificPlayer(0)
+    if not p then
+        out("no player yet")
+        return
+    end
+    if type(typ) ~= "string" or typ == "" then
+        out('NCBear_InvItems(typ, n): typ = full type, e.g. "Base.Bullets9mm"; n = 1..1000 (default 100)')
+        return
+    end
+    if ScriptManager.instance:getItem(typ) == nil then
+        out("unknown item type " .. typ)
+        return
+    end
+    local k = math.floor(tonumber(n) or 100)
+    if k < 1 then k = 1 end
+    if k > 1000 then k = 1000 end
+    p:getInventory():AddItems(typ, k)
+    say("added " .. tostring(k) .. " x " .. typ .. " to your inventory (test only)")
 end

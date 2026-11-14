@@ -21,6 +21,16 @@
 -- Takt: Modell hoechstens 1 x je Sekunde und bei neuer Liste / Seite / Klick; je Bild nur fertige Felder zeichnen. Liste: beim Oeffnen, bei
 -- neuer Fassung der Sicht (ivR), alle invKeepMs (30 s) solange offen; ohne Antwort 3 Versuche (U.InvAskState), dann "No answer".
 -- Nur Spieler 0. Esc schliesst. Lage in layout.ini wie das Baeren-Fenster (nur x / y).
+-- K1 (Lauf baer-k1, PLAN_K1.md 5, 8; Kevin 14.11.2026 ~00:10 / ~00:15: Zahlenfeld beim Geben UND Nehmen; ~23:50 "nur die 1000 items einstellen";
+-- ~02:05 / ~02:10 "soll da stehn mit prozent"):
+--   * "Give" bei einer Gruppe mit mehr als einem gebbaren Stueck und "Take" bei einem Satz mit mehr als einem Stueck oeffnen das ZAHLENFELD
+--     (U.AskCount, client/ISUI/BanditsNPCBearCountBox.lua): vorbelegt mit allem, was passt (Geben: U.InvGiveWhy -- Gewicht, 1000; Nehmen: der
+--     ganze Satz bzw. was in DEIN Inventar passt, U.InvFit), OK / Abbrechen. Ein Stueck geht sofort wie bisher. "All" bleibt (ganzer Stapel bis
+--     1000, ohne Feld). Beim OK holt das Fenster die Gruppe / den Satz FRISCH (die Liste kann sich geaendert haben), klemmt und stellt GENAU EINE
+--     Zeitaktion an (U.InvGive / U.InvTake, gebuendelt -- client/BanditsNPCBearInvClient.lua).
+--   * Futter-Tooltip: "Fills it for about x% of its daily need." je Stueck -- Seite des Baeren aus der Zeile des Schreibers (ml Mahlzeiten x Sicht
+--     meal), deine Seite aus item:getHungerChange() (V:client/ISUI/Animal/ISAnimalContextMenu.lua:37) ueber die Regel des Kerns B.FoodDayPct.
+--   * Fusszeile ohne "(up to 50)". Die Zeilen selbst bleiben, wie sie sind (Kevin ~23:50: Zustand im Tooltip).
 -- Jeder Engine-Aufruf hat eine Vanilla-Fundstelle (Kommentar daneben). Statisch geprueft, nicht gespielt.
 --
 
@@ -98,6 +108,7 @@ local function statics()
     s.allTakeTip, s.allGiveTip = U.T("UI_BN_Bear_Inv_AllTakeTip"), U.T("UI_BN_Bear_Inv_AllGiveTip")
     s.wornTip = U.T("UI_BN_Bear_Why_InvWorn")
     s.giveTip, s.takeTip = U.T("UI_BN_Bear_Inv_GiveTip"), U.T("UI_BN_Bear_Inv_TakeTip")
+    s.gone = U.T("UI_BN_Bear_Why_InvGone")                      -- K1: Zahlenfeld OK, aber die Gruppe / der Satz ist weg
     -- breiteste wechselnde Texte (die Breite waechst nur, wenn einer nicht passt)
     s.wideLoad = U.T("UI_BN_Bear_Win_LoadVal", "888.8", "888")
     s.wideThings = U.T("UI_BN_Bear_Inv_Things", 1000, 1000)
@@ -267,7 +278,7 @@ local function btnOf(label, why, tip)
 end
 
 -- Tooltip einer Zeile des Baeren aus den Feldern des Schreibers (f4/schnittstelle.md K4).
-local function bearTip(s, r, name, bd)
+local function bearTip(s, r, name, bd, v)
     local t = TIP_HEAD .. name .. TIP_BODY
     if r.unk then return t .. s.unkTip end
     local kg = U.Kg(r.w)
@@ -287,6 +298,12 @@ local function bearTip(s, r, name, bd)
     -- Nachbesserung F4 (Befund P3): nur, was der Kern wirklich frisst -- nie verdorben (fr 2), nie verbrannt (S:server/BanditsNPCBearInv.lua
     -- B.InvEatStep); Text je Koerper (P10)
     if r.ea and r.fr ~= 2 and not r.bu then t = t .. TIP_LINE .. U.TB("UI_BN_Bear_Inv_TipFood", bd) end
+    -- K1 (Kevin ~02:10 "soll da stehn mit prozent"): Mahlzeiten je Stueck (Zeile ml des Schreibers) x Prozent je Mahlzeit (Sicht meal)
+    local ml, meal = tonumber(r.ml), tonumber(v and v.meal)
+    if ml and meal and ml > 0 and not r.unk then
+        local txt = U.DayPctText and U.DayPctText(ml * meal)           -- client/BanditsNPCBearMenu.lua
+        if txt then t = t .. TIP_LINE .. U.T("UI_BN_Bear_Food_DayPct", txt) end
+    end
     return t
 end
 
@@ -324,7 +341,7 @@ local function bearSide(win, d, m, s, v, e, whyAll)
             local why = whyAll
             if not why and r.unk then why = s.unkTip end
             local x = { name = fitLabel(m.fBody, name, extra, r.k, nameW), kg = U.T("UI_BN_Bear_Inv_Kg", U.Kg(r.w * r.k)), dim = r.unk,
-                tip = bearTip(s, r, name, v.bd), ref = r, tex = (not r.unk) and U.ItemIcon(r.t) or nil, rot = (r.fr == 2) }
+                tip = bearTip(s, r, name, v.bd, v), ref = r, tex = (not r.unk) and U.ItemIcon(r.t) or nil, rot = (r.fr == 2) }
             x.b1 = btnOf(s.take, why, s.takeTip)
             if r.k > 1 then x.b2 = btnOf(s.all, why, U.T("UI_BN_Bear_Inv_AllTake", r.k) .. TIP_LINE .. s.allTakeTip) end
             out[i] = x
@@ -361,6 +378,13 @@ local function youSide(win, d, m, s, v, player, whyAll)
             end
             if g.fav then tip = tip .. TIP_LINE .. s.fav end
             if g.worn then tip = tip .. TIP_LINE .. s.wornTip end
+            -- K1 (PLAN_K1.md 8): Baerenfutter (Regel des Kerns B.FoodClass, shared/BanditsNPCBearFood.lua -- darin instanceof(item, "Food")) ->
+            -- "Fills it for about x%"; item:getHungerChange(): V:client/ISUI/Animal/ISAnimalContextMenu.lua:37
+            local it1 = g.items[1]
+            if it1 and B.FoodClass and B.FoodClass(it1) ~= nil then
+                local txt = U.FoodDayText and U.FoodDayText(v, it1:getHungerChange())     -- client/BanditsNPCBearMenu.lua
+                if txt then tip = tip .. TIP_LINE .. U.T("UI_BN_Bear_Food_DayPct", txt) end
+            end
             local x = { name = fitLabel(m.fBody, g.name, "", n, nameW), kg = U.T("UI_BN_Bear_Inv_Kg", U.Kg(g.kg)), dim = (why ~= nil), tip = tip,
                 ref = g, tex = g.tex }
             x.b1 = btnOf(s.give, why, s.giveTip)
@@ -613,6 +637,70 @@ function Inv:build()
     self.closeB = c
 end
 
+-- K1: Gruppe / Satz FRISCH holen (fuer das OK des Zahlenfelds -- die Liste kann sich inzwischen geaendert haben). Gruppe ueber ihren Schluessel
+-- (Typ + Name [+ angezogen]) aus U.InvMine, Satz ueber Nummer UND Typ aus der fertigen Liste des Schreibers. nil = weg.
+local function freshGroup(player, key)
+    local groups = U.InvMine(player)
+    for i = 1, #groups do
+        if groups[i].key == key then return groups[i] end
+    end
+    return nil
+end
+
+local function freshRow(id, nr, t)
+    local e = U.InvList(id)
+    local rows = e and e.rows
+    if type(rows) ~= "table" then return nil end
+    for i = 1, #rows do
+        if rows[i].nr == nr and rows[i].t == t then return rows[i] end
+    end
+    return nil
+end
+
+-- K1 (PLAN_K1.md 5): "Give" -- mehr als ein gebbares Stueck (U.InvGiveable) und Platz fuer mehr als eins (U.InvGiveWhy) -> Zahlenfeld, vorbelegt mit
+-- allem, was passt; sonst sofort ein Stueck. OK: Baer und Gruppe frisch, U.InvGive klemmt noch einmal und stellt EINE Aktion an.
+local function giveAsk(win, player, v, g)
+    local why, many = U.InvGiveWhy(v, g)
+    if why or many < 2 or #U.InvGiveable(g) < 2 or not U.AskCount then
+        U.InvGive(player, v, g, 1)
+        return
+    end
+    local id, key = v.id, g.key
+    win.countBox = U.AskCount(player, "UI_BN_Bear_Inv_HowMany", v.bd, many, many, function(n)
+        local v2 = (W.win and W.win.v and W.win.v.id == id) and W.win.v or nil
+        local g2 = freshGroup(player, key)
+        if v2 == nil or g2 == nil then
+            HaloTextHelper.addBadText(player, statics().gone)               -- V:client/ISUI/ISWorldObjectContextMenu.lua:1038
+            return
+        end
+        U.InvGive(player, v2, g2, n)
+        if W.win then W.win.dirty = true end
+    end)
+end
+
+-- K1: "Take" -- Satz mit mehr als einem Stueck -> Zahlenfeld, vorbelegt mit dem ganzen Satz bzw. dem, was in DEIN Inventar passt (U.InvFit,
+-- mindestens 1); hoechstens der Satz. OK: Satz frisch (Nummer + Typ), auf seine Zahl klemmen, EINE Take-Aktion.
+local function takeAsk(win, player, v, r)
+    if r.k <= 1 or r.unk or not U.AskCount then
+        U.InvTake(player, v, r, 1)
+        return
+    end
+    local def = r.k
+    local fit = U.InvFit and U.InvFit(player, r.w) or nil
+    if fit ~= nil and fit < def then def = math.max(1, fit) end
+    local id, nr, t = v.id, r.nr, r.t
+    win.countBox = U.AskCount(player, "UI_BN_Bear_Inv_HowManyTake", v.bd, def, r.k, function(n)
+        local v2 = (W.win and W.win.v and W.win.v.id == id) and W.win.v or nil
+        local r2 = freshRow(id, nr, t)
+        if v2 == nil or r2 == nil then
+            HaloTextHelper.addBadText(player, statics().gone)               -- V:client/ISUI/ISWorldObjectContextMenu.lua:1038
+            return
+        end
+        U.InvTake(player, v2, r2, math.min(n, r2.k))
+        if W.win then W.win.dirty = true end
+    end)
+end
+
 -- Klick (ISButton ruft onclick(Ziel, Knopf), V:client/ISUI/ISButton.lua:47): nur Zeitaktionen anstellen bzw. blaettern.
 function Inv:onCmd(button)
     if not button or button.state == "off" then return end
@@ -630,13 +718,13 @@ function Inv:onCmd(button)
         local x = d.rows[button.side] and d.rows[button.side][button.idx]
         if not x then return end
         if cmd == "take1" then
-            U.InvTake(player, v, x.ref, 1)
+            takeAsk(self, player, v, x.ref)                     -- K1: Zahlenfeld bei mehr als einem Stueck
         elseif cmd == "takeAll" then
-            U.InvTake(player, v, x.ref, x.ref.k)
+            U.InvTake(player, v, x.ref, x.ref.k)                -- ganzer Satz in EINER Aktion (bis 1000)
         elseif cmd == "give1" then
-            U.InvGive(player, v, x.ref, false)
+            giveAsk(self, player, v, x.ref)                     -- K1: Zahlenfeld bei mehr als einem Stueck
         elseif cmd == "giveAll" then
-            U.InvGive(player, v, x.ref, true)
+            U.InvGive(player, v, x.ref, true)                   -- alles, was passt, in EINER Aktion
         end
     end
     self.dirty = true
@@ -731,14 +819,21 @@ function Row:onMouseWheel(del)
     return win:flip(self.side, (del > 0) and 1 or -1)
 end
 
--- Esc schliesst (V:client/ISUI/Crafting/ISHandcraftWindow.lua:289-297); nicht, solange der Chat tippt (ISChat.focused, V:client/Chat/ISChat.lua:8).
+-- Esc schliesst (V:client/ISUI/Crafting/ISHandcraftWindow.lua:289-297); nicht, solange der Chat tippt (ISChat.focused, V:client/Chat/ISChat.lua:8)
+-- oder -- K1 -- das Zahlenfeld dieses Fensters offen ist (isReallyVisible, V:client/ISUI/ISUIElement.lua:690; wie das Namensfeld des Baeren-Fensters).
+local function typing(self)
+    if ISChat and ISChat.focused then return true end
+    local box = self.countBox
+    return box ~= nil and box:isReallyVisible()
+end
+
 function Inv:isKeyConsumed(key)
-    if ISChat and ISChat.focused then return false end
+    if typing(self) then return false end
     return key == Keyboard.KEY_ESCAPE
 end
 
 function Inv:onKeyRelease(key)
-    if ISChat and ISChat.focused then return end
+    if typing(self) then return end
     if self:isVisible() and key == Keyboard.KEY_ESCAPE then U.InvClose() end
 end
 

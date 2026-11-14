@@ -47,6 +47,18 @@
 -- halbstark), Zahl der Dinge (ivK von invMaxItems = 1000) und ggf. "zu schwer". Die Felder heissen weiter d.carry / s.tCarry (das Fenster legt die
 -- Zeile unveraendert). Der Knopf "Inventory" ist scharf: ansehen geht immer -- auch von weitem (Kevin Antwort 2); grau nur, wenn das
 -- Inventar-Fenster fehlt (U.InvOpen, client/ISUI/BanditsNPCBearInvWindow.lua). Geben / Nehmen prueft erst das Inventar-Fenster.
+-- K1 (Lauf baer-k1, PLAN_K1.md 2.3, 4, 6, 8; Kevin 13./14.11.2026, baer/begleiter/ENTSCHEIDUNGEN.md ab :583):
+--   * VERTRAUEN -100..+100 (Start 0): Balken fuellt (v + 100) / 200, GRUEN bei positivem, ROT bei negativem, GRAU bei 0; Zahl mit Vorzeichen
+--     und EINER Nachkommastelle, wenn nicht ganz ("+1.5%", Frage K-F3), in derselben Farbe (d.tru.tone -> client/ISUI/BanditsNPCBearWinParts.lua).
+--     Tooltip: neue Regel (+0,5 je Quelle und Tag, -5 / -10, +-25 %, Weigerung unter -70) und "Still possible today: ..." aus dem Sicht-Feld trT
+--     (statt der letzten Tage; Frage K-F11) -- nur, wenn der Kern die neue Regel hat (B.TrustDelta).
+--   * SCHADEN ROT (Kevin ~00:20 / ~00:22 "mit info dann im screen"): solange Hunger / Durst ihn schwaechen (Sicht mdmgK < 1) steht "Melee damage"
+--     in Rot; der Tooltip nennt den Grund mit Stand ("Thirst 100%: 70% of its normal damage."), normal und jetzt, und je Angriff "70 (normally
+--     100)". Muedigkeit senkt den Schaden nicht (Kevin ~00:25 "Nein, so lassen").
+--   * ZAHNRAD (Kevin 14.11. I1): die Schalter Name tag / Health bar (NEU, U.HpOn) / Show damage / Growth line / Nose alerts stehen als d.gear
+--     fuer das Zahnrad-Menue (client/ISUI/BanditsNPCBearWindow.lua); in der Schalter-Reihe bleibt nur Passive.
+--   * BEDUERFNISSE: Tooltips Hunger / Durst mit dem Tagesbedarf seiner Groesse (Sicht hd Punkte, wl Liter) und den neuen Mahlzeit- / Schalen-
+--     Zeilen; "Its needs are resting: ..." solange der Schreiber sie einfriert (Sicht nfz: er schlaeft / du schlaeft / zu weit weg).
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -105,8 +117,13 @@ local WORD_KEY = {
         "UI_BN_Bear_Win_TrustWord5" },
 }
 local WORD_ORDER = { "hun", "thr", "tir", "tru" }
--- Verlauf der letzten Tage (Sicht trW: Text aus Ziffern, aeltester Tag zuerst): Ziffer -> Schluessel
-local DAY_KEY = { ["0"] = "UI_BN_Bear_Win_TrustDay0", ["1"] = "UI_BN_Bear_Win_TrustDay1", ["2"] = "UI_BN_Bear_Win_TrustDay2" }
+-- K1 (PLAN_K1.md 2.3): Quellen des Vertrauens je Spieltag (Sicht trT: Zeichen p / f / d = heute schon erledigt), in dieser Reihenfolge
+local TRUST_SRC = { { c = "p", key = "UI_BN_Bear_Win_TrustSrcPet" }, { c = "f", key = "UI_BN_Bear_Win_TrustSrcFed" },
+    { c = "d", key = "UI_BN_Bear_Win_TrustSrcDrank" } }
+-- K1 (PLAN_K1.md 6): Grund, warum die Beduerfnisse ruhen (Sicht nfz) -> Schluessel
+local PAUSE_KEY = { sleep = "UI_BN_Bear_Win_NeedsPausedSleep", owner = "UI_BN_Bear_Win_NeedsPausedOwner",
+    far = "UI_BN_Bear_Win_NeedsPausedFar" }
+local STEAK_PTS = 40        -- K1: ein Steak = 40 Vanilla-Hungerpunkte (getHungerChange -0,40, S:shared/BanditsNPCBearNeedRules.lua B.MealsOf)
 local NEED_EFFECT = { "UI_BN_Bear_Win_NeedEffect2", "UI_BN_Bear_Win_NeedEffect3", "UI_BN_Bear_Win_NeedEffect4" }
 -- F2 (11.4): Tooltip-Satz je Wachstums-Stufe am Alters-Deckel (ausgeschrieben; ausgewachsen gibt es keinen Deckel unter 10)
 local STAGE_IDX = { cub = 1, half = 2, strong = 3, adult = 4 }
@@ -199,8 +216,12 @@ local function statics()
         s.word[k] = {}
         for j = 1, #WORD_KEY[k] do s.word[k][j] = U.T(WORD_KEY[k][j]) end
     end
-    s.trDay = {}
-    for digit, key in pairs(DAY_KEY) do s.trDay[digit] = U.T(key) end
+    -- K1: Quellen des Vertrauens je Tag und die zwei Saetze dazu
+    s.trSrc = {}
+    for i = 1, #TRUST_SRC do s.trSrc[i] = U.T(TRUST_SRC[i].key) end
+    s.trDone = U.T("UI_BN_Bear_Win_TrustDone")
+    s.pause = {}
+    for k, key in pairs(PAUSE_KEY) do s.pause[k] = U.T(key) end
     s.needEffect = {}
     for i = 1, #NEED_EFFECT do s.needEffect[i] = U.T(NEED_EFFECT[i]) end
     local floorPct = cfgPct("needHpFloor", 0.01)
@@ -209,15 +230,20 @@ local function statics()
     s.sleepHeal = U.T("UI_BN_Bear_Win_SleepHeal")
     s.bodyTired = U.T("UI_BN_Bear_Win_TiredTip", math.floor(cfgNum("tirVery", 90) + 0.5), math.floor(cfgNum("tirCollapse", 100) + 0.5))
         .. TIP_LINE .. s.sleepHeal
-    local bonus = cfgPct("trBonus", 0.2)
-    s.bodyTrust = U.T("UI_BN_Bear_Win_TrustTip", bonus, cfgPct("trMalus", bonus / 100), math.floor(cfgNum("trRefuse", 15) + 0.5))
-        .. TIP_LINE .. U.T("UI_BN_Bear_Win_TrustHeart")
+    -- K1 (Kevin 14.11. ~02:50 "Nur Beduerfnisse": +-25 % bei +-100; Weigerung UNTER -70): Rueckfall = die neuen Werte des Kerns
+    local bonus = cfgPct("trBonus", 0.25)
+    s.bodyTrust = U.T("UI_BN_Bear_Win_TrustTip", bonus, cfgPct("trMalus", bonus / 100), math.floor(cfgNum("trRefuse", -70) + 0.5))
     s.hintSleep, s.hintTired, s.hintNoTrust = U.T("UI_BN_Bear_Win_HintSleep"), U.T("UI_BN_Bear_Win_HintTired"),
         U.T("UI_BN_Bear_Win_HintNoTrust")
     s.nose, s.whyLater = U.T("UI_BN_Bear_Win_Nose"), U.T("UI_BN_Bear_Why_Later")
     s.needsOff = U.T("UI_BN_Bear_Win_NeedsOff")
     s.off = U.T("UI_BN_Bear_MO_Off")                            -- Nachbesserung P3: Wert der drei Zeilen bei Sandbox-Regler 0
     s.widePctNeed = U.T("UI_BN_Bear_Win_Pct", 100)
+    s.wideTrust = U.T("UI_BN_Bear_Win_Pct", "-99.5")              -- K1: breitester Vertrauens-Wert (Vorzeichen + Nachkommastelle)
+    -- K1: Zahnrad-Menue (Titel, Tooltip), Lebensbalken je Baer, roter Schaden
+    s.gear, s.gearTip = U.T("UI_BN_Bear_Win_Gear"), U.T("UI_BN_Bear_Win_GearTip")
+    s.hpBar, s.tipHpBar, s.hpBarOffAll = U.T("UI_BN_Bear_Win_HpBar"), U.T("UI_BN_Bear_Win_HpBarTip"), U.T("UI_BN_Bear_Win_HpBarOffAll")
+    s.dmgRed = U.T("UI_BN_Bear_Win_DmgRedTip")
     -- Breiteste Texte fuer das Legen des Fensters (Breite waechst nur, wenn ein Text nicht passt, PLAN_F1.md 1.1)
     s.wideVal = U.T("UI_BN_Bear_Win_Count", 888, 888)
     s.wideCarry = U.T("UI_BN_Bear_Win_LoadVal", "888.8", 888)             -- F4: "Load 888.8 / 888 kg"
@@ -418,6 +444,17 @@ end
 -- F2 (11.2): Zeile "Melee damage": Hieb je Treffer als Hauptzahl, im Tooltip jeder freigeschaltete Angriff, Anteil aus der Groesse,
 -- Kaempfen-Bonus, Sandbox-Prozent. Junges: "--" mit "A cub does not fight." Die Zahlen rechnet der Kern (B.MeleeDamage, dieselbe Rechnung
 -- wie der Kampf); fehlen sie, "--".
+-- K1 (Kevin 14.11. ~00:20 / ~00:22): schwaechen Hunger / Durst ihn (Sicht mdmgK < 1, in mdmg schon eingerechnet), steht der Wert ROT (e.col
+-- "bad") und der Tooltip sagt WARUM und WIE VIEL: der schlimmere der zwei Werte (wie B.NeedK) mit Stand und Faktor, normal und jetzt (normal =
+-- jetzt / mdmgK), je Angriff "70 (normally 100)". Muedigkeit aendert nichts (Kevin ~00:25).
+local function weakOf(v, s)
+    local k = tonumber(v.mdmgK)
+    if k == nil or k ~= k or k <= 0 or k >= 1 then return nil end
+    local hun, thr = tonumber(v.hun) or 0, tonumber(v.thr) or 0
+    if thr > hun then return k, s.tThirst, thr end
+    return k, s.tHunger, hun
+end
+
 local function meleeRow(v, s)
     local head = TIP_HEAD .. s.tMelee .. TIP_BODY
     local e = { label = s.tMelee, val = s.none, tip = head .. s.meleeTip }
@@ -428,11 +465,23 @@ local function meleeRow(v, s)
     local main = units100(v.mdmg)
     if main == nil then return e end
     e.val = U.T("UI_BN_Bear_Win_MeleeVal", fmt100(main))
-    local t = e.tip .. TIP_LINE .. U.T("UI_BN_Bear_Win_MeleeSwipe", fmt100(main))
+    local wk, whyName, whyVal = weakOf(v, s)
+    -- je Angriff: der Wert von jetzt, geschwaecht dazu der normale ("70 (normally 100)")
+    local function atk(x)
+        if wk == nil then return fmt100(x) end
+        return U.T("UI_BN_Bear_Win_MeleeWas", fmt100(x), fmt100(x / wk))
+    end
+    local t = e.tip
+    if wk ~= nil then
+        e.col = "bad"
+        t = head .. s.dmgRed .. TIP_LINE .. U.T("UI_BN_Bear_Win_MeleeWeak", whyName, pctOf(whyVal), math.floor(wk * 100 + 0.5))
+            .. TIP_LINE .. U.T("UI_BN_Bear_Win_MeleeNormal", fmt100(main / wk), fmt100(main)) .. TIP_LINE .. s.meleeTip
+    end
+    t = t .. TIP_LINE .. U.T("UI_BN_Bear_Win_MeleeSwipe", atk(main))
     local bite = units100(v.mdmgB)
-    if bite then t = t .. TIP_LINE .. U.T("UI_BN_Bear_Win_MeleeBite", fmt100(bite)) end
+    if bite then t = t .. TIP_LINE .. U.T("UI_BN_Bear_Win_MeleeBite", atk(bite)) end
     local maul = units100(v.mdmgM)
-    if maul then t = t .. TIP_LINE .. U.T("UI_BN_Bear_Win_MeleeMaul", fmt100(maul)) end
+    if maul then t = t .. TIP_LINE .. U.T("UI_BN_Bear_Win_MeleeMaul", atk(maul)) end
     if isNum(v.mdmgS) then
         local pct = v.mdmgS
         if pct <= 1.5 then pct = pct * 100 end                  -- Anteil 0..1 -> Prozent eines ausgewachsenen Baeren
@@ -624,7 +673,11 @@ local function needLevel(kind, v)
         if L ~= nil and L >= 1 then return math.floor(L) end
     end
     if kind == "tru" then
-        if v >= 80 then return 5 elseif v >= 60 then return 4 elseif v >= 40 then return 3 elseif v >= 20 then return 2 end
+        -- K1 (Frage K-F4): -100..+100 an trWordAt { -70, -20, 20, 70 } (misstrauisch / scheu / neutral / vertraut / ergeben)
+        local at = B.CFG and B.CFG.trWordAt
+        local a, b, c, d = -70, -20, 20, 70
+        if type(at) == "table" then a, b, c, d = tonumber(at[1]) or a, tonumber(at[2]) or b, tonumber(at[3]) or c, tonumber(at[4]) or d end
+        if v >= d then return 5 elseif v >= c then return 4 elseif v >= b then return 3 elseif v >= a then return 2 end
         return 1
     end
     local a, b, c = cfgNum("needPeckish", 25), cfgNum("needHungry", 50), cfgNum("needStarve", 80)
@@ -654,14 +707,57 @@ local function needRow(label, pct, kind, ramp, s, off)
     return e
 end
 
--- F3: Tooltip eines Beduerfnis-Balkens -- Kopf, "Now: <Wort> (n%)", Erklaerung (body), dazu bis zu zwei Zeilen (was gerade wirkt).
-local function needTip(title, e, body, extra1, extra2)
+-- K1 (PLAN_K1.md 2.3; Kevin 13.11. ~21:40 + Nachtrag): Vertrauens-Zeile -100..+100. Fuellung (v + 100) / 200 (-100 leer, 0 halb, +100 voll),
+-- Ton "pos" / "neg" / "zero" (gruen / rot / grau -- Balken UND Zahl, client/ISUI/BanditsNPCBearWinParts.lua), Zahl mit Vorzeichen und EINER
+-- Nachkommastelle, wenn nicht ganz ("+1.5%"; Frage K-F3); e.pctTxt fuer "Now: <Wort> (+1.5%)". Fehlt der Wert: "--" ohne Balken (nie geraten).
+local function trustRow(label, val, s)
+    local e = { label = label, val = s.none }
+    if not isNum(val) then return e end
+    local v = clamp(val, -100, 100)
+    local r = math.floor(math.abs(v) * 10 + 0.5) / 10
+    local num = string.format("%d", math.floor(r))
+    if r ~= math.floor(r) then num = string.format("%.1f", r) end
+    local txt = num
+    if r == 0 then
+        e.tone, txt = "zero", "0"
+    elseif v > 0 then
+        e.tone, txt = "pos", "+" .. num
+    else
+        e.tone, txt = "neg", "-" .. num
+    end
+    e.frac = (v + 100) / 200
+    e.pct = v
+    e.pctTxt = txt
+    e.val = U.T("UI_BN_Bear_Win_Pct", txt)
+    e.word = s.word.tru[needLevel("tru", v)] or ""
+    if U.WinTrustColor then e.r, e.g, e.b = U.WinTrustColor(e.tone) end
+    return e
+end
+
+-- K1 (PLAN_K1.md 2.3, Frage K-F11): was heute noch Vertrauen bringt -- "Still possible today: petting, feeding it full" bzw. "Today's trust is
+-- earned." aus dem Sicht-Feld trT (p / f / d = erledigt; fehlt = nichts erledigt). Nur mit der neuen Regel des Kerns (B.TrustDelta) -- ein
+-- alter Kern kennt keine Tages-Quellen.
+local function trustToday(v, s)
+    if B.TrustDelta == nil then return nil end
+    local done = (type(v.trT) == "string") and v.trT or ""
+    local open = {}
+    for i = 1, #TRUST_SRC do
+        if not string.find(done, TRUST_SRC[i].c, 1, true) then open[#open + 1] = s.trSrc[i] end
+    end
+    if #open == 0 then return s.trDone end
+    return U.T("UI_BN_Bear_Win_TrustOpen", table.concat(open, ", "))
+end
+
+-- F3: Tooltip eines Beduerfnis-Balkens -- Kopf, "Now: <Wort> (n%)", Erklaerung (body), dazu Zeilen (was gerade wirkt). K1: beliebig viele
+-- Zeilen als Liste mit Luecken (n = Laenge), Vertrauen mit Vorzeichen (e.pctTxt).
+local function needTip(title, e, body, extra, n)
     local t = TIP_HEAD .. title .. TIP_BODY
-    if e.pct ~= nil then t = t .. U.T("UI_BN_Bear_Win_NeedNow", e.word, e.pct) .. TIP_LINE end
+    if e.pct ~= nil then t = t .. U.T("UI_BN_Bear_Win_NeedNow", e.word, e.pctTxt or e.pct) .. TIP_LINE end
     t = t .. body
-    if extra1 then t = t .. TIP_LINE .. extra1 end
-    if extra2 then t = t .. TIP_LINE .. extra2 end
-    return t                                                    -- extra1 / extra2 duerfen einzeln fehlen
+    for i = 1, (n or 0) do
+        if extra[i] then t = t .. TIP_LINE .. extra[i] end
+    end
+    return t
 end
 
 -- F3 (PLAN_F3.md 3.1): was Hunger bzw. Durst GERADE bewirkt (Satz fuer den Tooltip) oder nil -- ab needHungry langsamer / schwaecher,
@@ -685,24 +781,28 @@ local function noFight(v)
     local f = v.nof
     if f == "tired" or f == "trust" then return f end
     if f ~= nil or B.NoFight ~= nil then return nil end
-    if isNum(v.tru) and v.tru < cfgNum("trRefuse", 15) then return "trust" end
+    if isNum(v.tru) and v.tru < cfgNum("trRefuse", -70) then return "trust" end         -- K1: Weigerung UNTER -70
     if isNum(v.tir) and v.tir >= cfgNum("tirVery", 90) then return "tired" end
     return nil
 end
 
--- F3 (PLAN_F3.md 4.1): Verlauf der letzten (bis zu drei) Tage als Tooltip-Zeile aus dem Sicht-Feld trW (Text aus Ziffern, aeltester Tag
--- zuerst: 0 gut versorgt, 1 hungrig oder durstig, 2 ausgehungert oder ausgetrocknet). Kein Text oder nur Unbekanntes: nil.
-local function trustDays(w, s)
-    if type(w) ~= "string" or w == "" then return nil end
-    local parts = {}
-    local n = string.len(w)
-    if n > 3 then n = 3 end
-    for i = 1, n do
-        local word = s.trDay[string.sub(w, i, i)]
-        if word then parts[#parts + 1] = word end
-    end
-    if #parts == 0 then return nil end
-    return U.T("UI_BN_Bear_Win_TrustDays", table.concat(parts, ", "))
+-- K1 (PLAN_K1.md 8, Abschnitt 1.1): Tagesbedarf bei seiner Groesse (Sicht hd Punkte je volle Leiste, wl Liter) als Tooltip-Zeile -- Steaks
+-- zu 40 Punkten auf halbe gerundet ("about 17.5 steaks"). Fehlt eins: nil.
+local function needDay(v)
+    if not isNum(v.hd) or not isNum(v.wl) or v.hd <= 0 then return nil end
+    local st = math.floor(v.hd / STEAK_PTS * 2 + 0.5) / 2
+    if st < 0.5 then st = 0.5 end
+    local stTxt = string.format("%d", math.floor(st))
+    if st ~= math.floor(st) then stTxt = string.format("%.1f", st) end
+    return U.T("UI_BN_Bear_Win_NeedDay", math.floor(v.hd + 0.5), stTxt, string.format("%.1f", math.floor(v.wl * 10 + 0.5) / 10))
+end
+
+-- K1 (PLAN_K1.md 6): ruhen seine Beduerfnisse gerade (Sicht nfz vom Schreiber: er schlaeft / du schlaefst oder spulst vor / zu weit weg)? Satz
+-- oder nil.
+local function pausedLine(v, s)
+    local why = v.nfz and s.pause[v.nfz]
+    if not why then return nil end
+    return U.T("UI_BN_Bear_Win_NeedsPaused", why)
 end
 
 -- Zustand nach Vorrang (PLAN_F1.md 1.4): vermisst > faehrt mit > ausser Reichweite > versteckt > kommt > Modus.
@@ -897,22 +997,20 @@ function U.WinModel(v, player, nowMs)
     d.hun = needRow(s.tHunger, v.hun, "hun", "need", s, needsOff)
     d.thr = needRow(s.tThirst, v.thr, "thr", "need", s, needsOff)
     d.tir = needRow(s.tTired, v.tir, "tir", "need", s, needsOff)
-    d.tru = needRow(s.tTrust, v.tru, "tru", "trust", s)           -- das Vertrauen laeuft auch bei Regler 0 weiter
-    -- Sicht mdmgK (nur wenn < 1): Schaden-Faktor durch Hunger / Durst, in mdmg schon eingerechnet -- der Tooltip nennt ihn
-    if isNum(v.mdmgK) and v.mdmgK > 0 and v.mdmgK < 1 then
-        d.melee.tip = d.melee.tip .. TIP_LINE .. U.T("UI_BN_Bear_Win_MeleeWeak", math.floor(v.mdmgK * 100 + 0.5))
-    end
+    d.tru = trustRow(s.tTrust, v.tru, s)                         -- K1: -100..+100, gruen / rot / grau; laeuft auch bei Regler 0 weiter
     -- Sicht meal / bowl: so viele Prozent senkt EINE Mahlzeit / ein halber Liter bei dieser Groesse (wahlfrei); Sandbox-Regler auf 0
-    -- (B.NeedsOn() == false): die drei Beduerfnisse stehen still -- der Tooltip sagt es
+    -- (B.NeedsOn() == false): die drei Beduerfnisse stehen still -- der Tooltip sagt es. K1: dazu der Tagesbedarf (hd / wl) und ob sie ruhen (nfz).
     local mealLine, bowlLine, offLine = nil, nil, nil
     if isNum(v.meal) and v.meal > 0 then mealLine = U.T("UI_BN_Bear_Win_MealLine", fmt100(v.meal)) end
     if isNum(v.bowl) and v.bowl > 0 then bowlLine = U.T("UI_BN_Bear_Win_BowlLine", fmt100(v.bowl)) end
     if needsOff then offLine = s.needsOff end
+    local dayLine, pause = needDay(v), pausedLine(v, s)
+    if needsOff then dayLine, pause = nil, nil end
     d.tips = { hp = hpTip, sta = s.tipStamina, carry = loadTip(v, s), melee = d.melee.tip, kills = d.kills.tip,
-        hun = needTip(s.tHunger, d.hun, s.bodyHunger, firstOf(offLine, mealLine), needEffect(d.hun, s)),
-        thr = needTip(s.tThirst, d.thr, s.bodyThirst, firstOf(offLine, bowlLine), needEffect(d.thr, s)),
-        tir = needTip(s.tTired, d.tir, s.bodyTired, offLine, nof == "tired" and s.hintTired or nil),
-        tru = needTip(s.tTrust, d.tru, s.bodyTrust, trustDays(v.trW, s), nof == "trust" and s.hintNoTrust or nil) }
+        hun = needTip(s.tHunger, d.hun, s.bodyHunger, { pause, firstOf(offLine, mealLine), dayLine, needEffect(d.hun, s) }, 4),
+        thr = needTip(s.tThirst, d.thr, s.bodyThirst, { pause, firstOf(offLine, bowlLine), dayLine, needEffect(d.thr, s) }, 4),
+        tir = needTip(s.tTired, d.tir, s.bodyTired, { pause, offLine, nof == "tired" and s.hintTired or nil }, 3),
+        tru = needTip(s.tTrust, d.tru, s.bodyTrust, { trustToday(v, s), nof == "trust" and s.hintNoTrust or nil }, 2) }
     d.skills = skillsOf(v, s)
     -- Befehle (PLAN_F1.md 1.6): Vorpruefung aus der Sicht, entscheiden tut der Schreiber
     local ride = (v.ride == true)
@@ -958,7 +1056,7 @@ function U.WinModel(v, player, nowMs)
     d.care = careBtn(v, player, s, whyRide, whyAway)                -- F2: "Bandage" / am Boden "Help up"
     d.ordersInfo = ""
     if act == "roam" then d.ordersInfo = U.T("UI_BN_Bear_Win_RoamInfo", radius) end
-    -- Schalter: Passiv (Register, Sicht pas) und Namensschild (je Spieler, client/BanditsNPCBearTags.lua)
+    -- Schalter: Passiv (Register, Sicht pas; in der Schalter-Reihe) und -- K1 im Zahnrad-Menue -- Namensschild (je Spieler, client/BanditsNPCBearTags.lua)
     local tagOn = true
     if U.TagOn then tagOn = U.TagOn(v) ~= false end
     local tagTip = TIP_HEAD .. s.tag .. TIP_BODY .. s.tipTag
@@ -972,11 +1070,23 @@ function U.WinModel(v, player, nowMs)
     -- F2 (11.1): Schalter "Show damage" -- je Spieler fuer ALLE seine Baeren (U.DmgOn, client/BanditsNPCBearTags.lua), Vorgabe an
     local dmgOn = true
     if U.DmgOn then dmgOn = U.DmgOn() ~= false end
-    d.toggles = { pas = (v.pas == true), tag = tagOn, pasLabel = s.passive, tagLabel = s.tag,
-        pasTip = TIP_HEAD .. s.passive .. TIP_BODY .. s.tipPassive, tagTip = tagTip,
-        age = ageOn, ageShow = isNum(v.day) and v.nst ~= nil, ageLabel = s.growth, ageTip = ageTip,
-        dmg = dmgOn, dmgLabel = s.showDmg, dmgTip = TIP_HEAD .. s.showDmg .. TIP_BODY .. s.tipShowDmg,
-        -- F3 (PLAN_F3.md 10.2): Schalter "Nose alerts" (F5) als grauer Platzhalter
-        nose = false, noseOff = true, noseLabel = s.nose, noseTip = TIP_HEAD .. s.nose .. TIP_BODY .. s.whyLater }
+    -- K1 (Kevin 13.11. ~22:05): Lebensbalken ueber diesem Baeren (U.HpOn, je Spieler); Hinweis, wenn die Option "Health over the bear" Aus ist
+    local hpOn = true
+    if U.HpOn then hpOn = U.HpOn(v) ~= false end
+    local hpBarTip = TIP_HEAD .. s.hpBar .. TIP_BODY .. s.tipHpBar
+    if U.Opt and tonumber(U.Opt("TagHealth", 2)) == 1 then hpBarTip = hpBarTip .. TIP_LINE .. s.hpBarOffAll end
+    d.toggles = { pas = (v.pas == true), pasLabel = s.passive, pasTip = TIP_HEAD .. s.passive .. TIP_BODY .. s.tipPassive }
+    -- K1 (Kevin 14.11. I1, "zahnrad menue ... fuer unnoetige ausblendungknoepfe"): die Ausblend-Schalter im Zahnrad-Menue des Fensters, je Punkt
+    -- { key, label, on, tip, off (grau, kein Klick), hide (gar nicht im Menue) }. Reihenfolge: was wirkt zuerst, der graue Platzhalter zuletzt.
+    -- Platz fuer die spaetere Futterliste: weitere Punkte haengen sich einfach an (Kevin 14.11. I1/I8, eigener Lauf).
+    d.gear = {
+        { key = "tag", label = s.tag, on = tagOn, tip = tagTip },
+        { key = "hp", label = s.hpBar, on = hpOn, tip = hpBarTip },
+        { key = "showdmg", label = s.showDmg, on = dmgOn, tip = TIP_HEAD .. s.showDmg .. TIP_BODY .. s.tipShowDmg },
+        { key = "growth", label = s.growth, on = ageOn, tip = ageTip, hide = not (isNum(v.day) and v.nst ~= nil) },
+        -- F3 (PLAN_F3.md 10.2): "Nose alerts" (F5) bleibt ein grauer Platzhalter
+        { key = "nose", label = s.nose, on = false, off = true, tip = TIP_HEAD .. s.nose .. TIP_BODY .. s.whyLater },
+    }
+    d.gearTip = TIP_HEAD .. s.gear .. TIP_BODY .. s.gearTip
     return d
 end

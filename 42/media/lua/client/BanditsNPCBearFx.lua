@@ -23,6 +23,8 @@
 --
 -- Zeichnen: je Bild NUR aus der fertigen Liste (keine Suche, kein getText): U.FloatDraw(el, now) wird vom Anzeige-Element gerufen
 -- (client/ISUI/BanditsNPCBearHud.lua prerender). Deckel: 16 Zeilen ueber Baeren, 24 Schadenszahlen (die aelteste faellt heraus).
+-- K1 (Lauf baer-k1, PLAN_K1.md 3): "DODGE" / "down" ueber dem Baeren heben sich mit derselben Pose wie das Schild (U.PoseLift(id, now),
+-- client/BanditsNPCBearPose.lua; die Kennung steht dafuer im Eintrag) -- kein Engine-Aufruf.
 -- Engine-Aufrufe (Fundstelle):
 --   animal:playBreedSound(Text): V:shared/TimedActions/Animals/ISKillAnimalInInventory.lua:19 ("pain"), :41 ("death"); die Stimmen der
 --     Rasse des grossen Koerpers (pain, death, huff, huffsoft, growl1-3) traegt shared/BanditsNPCBearDefs.lua (KERN)
@@ -117,7 +119,7 @@ function U.HudFloat(id, what)
     if a == nil then return false end
     local lift = 0.18
     if U.TagLift then lift = U.TagLift(viewOf(id)) end
-    tags[#tags + 1] = { obj = a, lift = lift, text = text, c = c, t0 = getTimestampMs(), font = floatFont() }
+    tags[#tags + 1] = { obj = a, id = id, lift = lift, text = text, c = c, t0 = getTimestampMs(), font = floatFont() }   -- K1: id fuer U.PoseLift
     cap(tags, TAG_MAX)
     return true
 end
@@ -264,7 +266,10 @@ function U.FloatDraw(el, now)
             keep = keep + 1
             tags[keep] = e
             local frac = dt / TAG_MS
-            local x, y, z = a:getX(), a:getY(), a:getZ() + e.lift           -- ISContextualActions.lua:100
+            -- K1 (PLAN_K1.md 3): derselbe Pose-Faktor wie das Schild (U.PoseLift, client/BanditsNPCBearPose.lua), sonst 1
+            local pk = 1
+            if U.PoseLift then pk = tonumber(U.PoseLift(e.id, now)) or 1 end
+            local x, y, z = a:getX(), a:getY(), a:getZ() + e.lift * pk      -- ISContextualActions.lua:100
             local sx = math.floor(isoToScreenX(0, x, y, z))                 -- TensionUI.lua:11
             local sy = math.floor(isoToScreenY(0, x, y, z)) - TAG_UP - math.floor(TAG_RISE * frac)
             drawLine(el, e.text, sx, sy, e.c, alpha(frac), e.font)
