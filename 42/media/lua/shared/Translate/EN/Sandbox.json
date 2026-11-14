@@ -31,6 +31,10 @@
     "Sandbox_BanditsNPC_BearSkillAgeCap_tooltip": "A cub learns up to level 3, a half-grown bear up to 6, a strong bear up to 8; only a full-grown bear reaches 10. Experience it already has stays. Off: no limit.",
     "Sandbox_BanditsNPC_BearSkillXpPercent": "Bear: skill learning speed (percent)",
     "Sandbox_BanditsNPC_BearSkillXpPercent_tooltip": "How fast a tamed bear learns its skills. 100 = normal: a skill needs at least about 18 hours of real play time to reach level 10, and with the age limit it stays at 8 or below until the bear is full-grown. 200 = twice as fast.",
+    "Sandbox_BanditsNPC_BearTalentReset": "Bear: perk reset allowed",
+    "Sandbox_BanditsNPC_BearTalentResetDays": "Bear: days between perk resets",
+    "Sandbox_BanditsNPC_BearTalentResetDays_tooltip": "In-game days between two perk resets of the same bear. 1 = at most once per in-game day, 0 = any time. Only matters when perk resets are allowed.",
+    "Sandbox_BanditsNPC_BearTalentReset_tooltip": "Lets the owner take back all perks of a tamed bear at once in the bear window (Perks tab) and spend the perk points again. Off (default): perks stay for good.",
     "Sandbox_BanditsNPC_BearTamePercent": "Taming: speed (percent)",
     "Sandbox_BanditsNPC_BearTamePercent_tooltip": "How fast a cub learns to trust you. 100 = normal, 200 = twice as many points per feeding and petting. It still needs at least 3 feedings with a wait in between."
 }

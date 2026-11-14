@@ -187,7 +187,11 @@ function B.DownSlow(rec, now, players)
         rec.down = now
         return
     end
-    if now - t < cfg("downedHours", 12) then return end           -- Sandbox-Kuerzung (PLAN_AUSSEHEN.md 9.3): fester Wert
+    -- Sandbox-Kuerzung (PLAN_AUSSEHEN.md 9.3): fester Wert; Lauf baer-talente: B.DownHours (Talent Zaeh x talDownK: 12 -> 6 h, shared/
+    -- BanditsNPCBearTalentRules.lua) -- dieselbe Zahl wie die Sicht dnH unten
+    local downH = cfg("downedHours", 12)
+    if B.DownHours ~= nil then downH = B.DownHours(rec) end
+    if now - t < downH then return end
     rec.down = nil
     local alone = cfg("downSelfHp", 0.15)
     if (num(rec.hp) or 0) < alone then rec.hp = alone end
@@ -254,7 +258,9 @@ function B.DownView(rec, t, now)
     if d == nil then return end
     now = num(now) or B.Now()
     t.dn = true
-    local left = cfg("downedHours", 12) - (now - d)
+    local downH = cfg("downedHours", 12)
+    if B.DownHours ~= nil then downH = B.DownHours(rec) end               -- Lauf baer-talente: wie B.DownSlow (Talent Zaeh)
+    local left = downH - (now - d)
     if left < 0 then left = 0 end
     t.dnH = B.Round1(left)
 end

@@ -31,6 +31,10 @@
     "Sandbox_BanditsNPC_BearSkillAgeCap_tooltip": "Una cría aprende hasta el nivel 3, un oso a medio crecer hasta 6, un oso fuerte hasta 8; solo un oso crecido del todo llega a 10. La experiencia que ya tiene se queda. Desactivado: sin límite.",
     "Sandbox_BanditsNPC_BearSkillXpPercent": "Oso: velocidad de aprendizaje de habilidades (porcentaje)",
     "Sandbox_BanditsNPC_BearSkillXpPercent_tooltip": "Lo rápido que un oso domado aprende sus habilidades. 100 = normal: una habilidad necesita al menos unas 18 horas de juego real para llegar al nivel 10, y con el límite de edad se queda en 8 o menos hasta que el oso esté crecido del todo. 200 = el doble de rápido.",
+    "Sandbox_BanditsNPC_BearTalentReset": "Oso: reiniciar talentos permitido",
+    "Sandbox_BanditsNPC_BearTalentResetDays": "Oso: días entre reinicios de talentos",
+    "Sandbox_BanditsNPC_BearTalentResetDays_tooltip": "Días de juego entre dos reinicios de talentos del mismo oso. 1 = como mucho una vez por día de juego, 0 = en cualquier momento. Solo cuenta si reiniciar talentos está permitido.",
+    "Sandbox_BanditsNPC_BearTalentReset_tooltip": "El dueño puede deshacer todos los talentos de un oso domado de una vez en la ventana del oso (pestaña Talentos) y gastar los puntos de talento otra vez. Desactivado (por defecto): los talentos se quedan para siempre.",
     "Sandbox_BanditsNPC_BearTamePercent": "Doma: velocidad (porcentaje)",
     "Sandbox_BanditsNPC_BearTamePercent_tooltip": "Lo rápido que una cría aprende a confiar en ti. 100 = normal, 200 = el doble de puntos por comida y caricia. Aun así necesita al menos 3 comidas con una espera entre ellas."
 }

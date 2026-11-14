@@ -55,7 +55,9 @@ local RANK = { cub = 0, half = 1, strong = 2, adult = 3 }
 local STAGE_LOG = { half = "half-grown", strong = "strong", adult = "full-grown" }
 
 -- Alle B1d-Felder des Eintrags (an anderen Zustaenden nil). B1e: + body. Aussehen (PLAN_AUSSEHEN.md 3): + look.
-local FIELDS = { "g", "gF", "gFd", "gFn", "gAt", "hp", "hpB", "xAgi", "xVit", "xCon", "xFgt", "xFsh", "xNos", "body", "look" }
+-- Lauf baer-talente: + tal / talR / talN (gelernte Talente, Spieltag des letzten Resets, gemeldete Punkte; server/BanditsNPCBearTalent.lua).
+local FIELDS = { "g", "gF", "gFd", "gFn", "gAt", "hp", "hpB", "xAgi", "xVit", "xCon", "xFgt", "xFsh", "xNos", "body", "look",
+    "tal", "talR", "talN" }
 
 -- ---------------------------------------------------------------------------
 -- Kleine Helfer
@@ -223,6 +225,9 @@ function B.GrowFix(rec, now, log)
             rec.look = nil
         end
     end
+    -- Lauf baer-talente (shared/BanditsNPCBearTalentRules.lua): gelernte Talente bereinigen (nur bekannte, keine Doppelten, hoechstens talMax --
+    -- die ersten bleiben; eine Fehlerzeile bei Unsinn). Existenz-Riegel.
+    if B.TalentFix ~= nil then B.TalentFix(rec) end
 end
 
 -- ---------------------------------------------------------------------------
@@ -540,7 +545,10 @@ local function stamina(rec, s, cx, cy, ms)
         -- so schnell (B.NeedK, shared/BanditsNPCBearNeedRules.lua); ohne jene Datei wie vor F3
         local needK = 1
         if B.NeedK then needK = num(B.NeedK(rec).sta) or 1 end
-        sta = sta + cfg("staRegen", 2) * dts * (1 + cfg("conPerLv", 0.05) * st.lv.con) * needK / staMax
+        -- Lauf baer-talente (Talent Ausdauernd): Erholung x talStaRegK (1,5); das Maximum staMax ist schon x 1,3 (B.StatsOf). Existenz-Riegel.
+        local regK = 1
+        if B.TalentK ~= nil then regK = B.TalentK(rec, "stamina", "talStaRegK", 1) end
+        sta = sta + cfg("staRegen", 2) * dts * (1 + cfg("conPerLv", 0.05) * st.lv.con) * needK * regK / staMax
     end
     if sta <= 0 then
         sta = 0
@@ -798,6 +806,9 @@ function B.GrowSlow(rec, dt, online, now, players)
         -- "schlafender", entladener Baer 15-mal so schnell wie wach und wachte nie auf
         local asleep = B.IsAsleep ~= nil and B.IsAsleep(rec) and B.FindAnimal(rec) ~= nil
         rate = B.HealRate(asleep) * (needK and num(needK.heal) or 1)
+        -- Lauf baer-talente (Talent Zaeh, Kevin 02:50 "heilt doppelt so schnell"): Selbstheilung x talHealK (wach 2 %/h, Schlaf 30 %/h bei 100 %
+        -- Heil-Tempo); der Verband unten bleibt gleich. Existenz-Riegel.
+        if B.TalentK ~= nil then rate = rate * B.TalentK(rec, "tough", "talHealK", 1) end
     end
     if B.MendRateOf then
         local mend = B.MendRateOf(rec, now)

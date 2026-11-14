@@ -31,6 +31,10 @@
     "Sandbox_BanditsNPC_BearSkillAgeCap_tooltip": "Ein Junges lernt bis Stufe 3, ein halbstarker Bär bis 6, ein starker Bär bis 8; nur ein ausgewachsener Bär erreicht 10. Schon gesammelte Erfahrung bleibt. Aus: keine Grenze.",
     "Sandbox_BanditsNPC_BearSkillXpPercent": "Bär: Lerntempo der Fähigkeiten (Prozent)",
     "Sandbox_BanditsNPC_BearSkillXpPercent_tooltip": "Wie schnell ein gezähmter Bär seine Fähigkeiten lernt. 100 = normal: Eine Fähigkeit braucht mindestens etwa 18 Stunden echte Spielzeit bis Stufe 10, und mit der Altersgrenze bleibt sie bei 8 oder darunter, bis der Bär ausgewachsen ist. 200 = doppelt so schnell.",
+    "Sandbox_BanditsNPC_BearTalentReset": "Bär: Talente zurücksetzen erlaubt",
+    "Sandbox_BanditsNPC_BearTalentResetDays": "Bär: Tage zwischen zwei Talent-Resets",
+    "Sandbox_BanditsNPC_BearTalentResetDays_tooltip": "Spieltage zwischen zwei Resets der Talente desselben Bären. 1 = höchstens einmal je Spieltag, 0 = jederzeit. Gilt nur, wenn das Zurücksetzen erlaubt ist.",
+    "Sandbox_BanditsNPC_BearTalentReset_tooltip": "Der Besitzer kann im Bärenfenster (Reiter Talente) alle Talente seines gezähmten Bären auf einmal zurücknehmen und die Talentpunkte neu verteilen. Aus (Vorgabe): Talente bleiben für immer.",
     "Sandbox_BanditsNPC_BearTamePercent": "Zähmen: Tempo (Prozent)",
     "Sandbox_BanditsNPC_BearTamePercent_tooltip": "Wie schnell ein Junges dir vertraut. 100 = normal, 200 = doppelt so viele Punkte je Füttern und Streicheln. Es braucht trotzdem mindestens 3 Fütterungen mit Pause dazwischen."
 }

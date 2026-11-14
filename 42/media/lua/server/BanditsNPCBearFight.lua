@@ -864,12 +864,34 @@ local function strike(rec, a, f, st, ms)
     if #hits == 0 then return 0, wall end
     local kmode = B.FightKnockMode(act)
     local kpct = num(allow.knockPct) or 0
+    -- Lauf baer-talente (shared/BanditsNPCBearTalentRules.lua; Existenz-Riegel): Schwere Pranke -- Prankenhieb / Doppelschlag (Umwerf-Art "back")
+    -- wirft mit mindestens talPawKnock % um (Kevin 02:50 "wirft jeden Zombie um"; ab halbstark, sonst erst ab kraeftig) und der Flug ist
+    -- talPawPush x so weit (Kevin ~10:20 "Fliegen doppelt so weit"; kp im Fx "hit", B.FoeHurt beim Zombie-Rechner). Biss bleibt, wie er ist.
+    local kp = nil
+    if kmode == "back" and B.TalentK ~= nil and B.TalentOn ~= nil and B.TalentOn(rec, "paw") then
+        local tk = B.TalentK(rec, "paw", "talPawKnock", 0)
+        if tk > kpct then kpct = tk end
+        kp = B.TalentK(rec, "paw", "talPawPush", 1)
+    end
+    local crit = B.TalentOn ~= nil and B.TalentCrit ~= nil and B.TalentOn(rec, "crit")
     local kk = nil
     if kmode ~= nil and kpct > 0 then kk = kmode end
     for i = 1, #hits do
         local h = hits[i]
         local dmg = md[DMG_MAIN[act]]
         if not h.main then dmg = md[DMG_SIDE[act] or DMG_MAIN[act]] end
+        -- Kritischer Treffer (Kevin 05:05 "+25% krit chance fuegt doppelten schaden aus"): je getroffenem Ziel ein Wurf ZombRand(100) beim
+        -- Schreiber (V:shared/TimedActions/Animals/ISMilkAnimal.lua:25, wie der Umwerf-Wurf unten) -- Faktor talCritK auf den schon
+        -- geschwaechten Schaden (Hunger / Durst); Fx "hit" traegt crit = true (die OBERFLAECHE zeigt die Zahl gross in Gold). Kills und
+        -- Erfahrung zaehlen wie jeder Treffer.
+        local isCrit = nil
+        if crit then
+            local ck = B.TalentCrit(rec, ZombRand(100))
+            if ck > 1 then
+                dmg = (num(dmg) or 0) * ck
+                isCrit = true
+            end
+        end
         local knock = nil
         if kk ~= nil and ZombRand(100) < kpct then knock = kk end
         local snd = nil
@@ -878,7 +900,10 @@ local function strike(rec, a, f, st, ms)
             if not h.main and DMG_SIDE[act] ~= nil then snd = SND_SIDE end
         end
         B.Fx("hit", { id = rec.id, oid = h.oid, zx = h.o:getX(), zy = h.o:getY(), zz = bz, bx = bx, by = by, dmg = r2(num(dmg) or 0),
-                      knock = knock, kk = kk, main = h.main, snd = snd, kind = h.kind }, bx, by)
+                      knock = knock, kk = kk, main = h.main, snd = snd, kind = h.kind, crit = isCrit, kp = kp }, bx, by)
+        if isCrit and logOn() then
+            logE("crit:" .. tostring(rec.id), "fight: " .. tostring(rec.id) .. " critical hit " .. tostring(r2(num(dmg) or 0)) .. " (" .. act .. ")")
+        end
         killNote(h.o, rec.id, h.kind, ms)
     end
     B.OnHitDealt(rec, ms)

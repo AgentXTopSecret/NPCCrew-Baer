@@ -876,10 +876,14 @@ end
 -- Traglast (PLAN_F4.md 3; Kevin Antwort 4 + 5 und die Aenderung waehrend des Laufs): carry (Groesse, B.StatsOf) x BearCarryPercent / 100, Packtaschen
 -- +bagAdd (150 kg, NICHT mit dem Regler multipliziert) ab halbstark -- ausgewachsen 100 + 150 = 250 kg, hoechstens 250 + 150 = 400.
 -- Rein: carry, pct, bagOn (Taschen an), half (Stufe >= halbstark).
+-- Lauf baer-talente: extra = Zuschlag in kg (Talent Lasttier +talMuleKg 50, der Aufrufer fragt B.TalentK), wie bagAdd NICHT mit dem Regler
+-- multipliziert; fehlt / Unsinn / negativ -> 0.
 -- ---------------------------------------------------------------------------
-function B.InvCapOf(carry, pct, bagOn, half)
+function B.InvCapOf(carry, pct, bagOn, half, extra)
     local c = (num(carry) or 0) * (num(pct) or 100) / 100
     if bagOn and half then c = c + cfg("bagAdd", 150) end
+    local x = num(extra) or 0
+    if x > 0 then c = c + x end
     if c < 0 then c = 0 end
     return c
 end

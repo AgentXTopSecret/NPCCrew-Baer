@@ -55,6 +55,14 @@
 -- Nose alerts (grau bis F5); Haken = an. Die Punkte kommen fertig aus dem Modell (d.gear, client/BanditsNPCBearWinData.lua). Reihe 3 der
 -- Befehle traegt nur noch "Passive" (Zelle 1; der Rest bleibt frei fuer spaeter); Fensterhoehe unveraendert, nichts springt. Pfeile bei
 -- mehreren Baeren ruecken um ein Zahnrad nach links.
+-- TALENTE (Lauf baer-talente, PLAN_TALENTE.md 5.1; Kevin 14.11.2026 "im skilltree auf einen extra tab kann man die skillpunkte aisgeben",
+-- ~10:20 "Freie Wahl"): unter dem Kopf eine REITERLEISTE "Overview" | "Perks" (U.WinBtn Stil "tab", am zweiten ein Honig-Abzeichen mit der Zahl
+-- freier Talentpunkte). "Overview" zeigt alles wie bisher; "Perks" zeigt EINE Karte mit 3 x 3 Kacheln, Kopf- und Fusszeile und dem Knopf
+-- "Reset" (client/ISUI/BanditsNPCBearTalentTab.lua, Modell client/BanditsNPCBearTalentData.lua). Beide Reiter sind gleich hoch (die
+-- Talent-Karte nimmt genau die Flaeche der drei Karten + Befehle), das Fenster wird um eine Reiterzeile hoeher (1080p: 29 px). Wechsel: offene
+-- Tooltips abmelden (hideTip), dann setVisible je Kind (V:client/ISUI/ISButton.lua:9). Der gewaehlte Reiter gilt nur in dieser Sitzung.
+-- Die Leiste gibt es nur, wenn der Kern die Talente kennt (B.TALENTS / B.TalentCan) und die Kachel-Datei geladen ist -- sonst ist das Fenster
+-- genau wie vorher. Lernen / Zuruecksetzen erst nach Vanillas Ja/Nein-Fenster, dann eine Bitte an den Schreiber (U.TalentAsk).
 -- Jeder Engine-Aufruf hat eine Vanilla-Fundstelle (Kommentar daneben). Statisch geprueft, nicht gespielt.
 --
 
@@ -166,7 +174,14 @@ local function metrics(f, d, n, sw, sh, idx)
     m.th = math.max(R(30), lb + R(10))
     -- F3: Befehle in fuenf Spalten -- Reihe Befehle, Reihe Handgriffe, Reihe Schalter
     m.ordH = R(10) + lb + R(8) + m.bh + R(8) + m.bh + R(10) + m.th + R(12)
-    m.y1 = m.headH + R(16)
+    -- Lauf baer-talente: Reiterleiste zwischen Kopf und Karten (nur mit Talenten; d.tal setzt das Modell)
+    m.tal = (d ~= nil and d.tal ~= nil and U.TalentLayout ~= nil and U.TalentNeedW ~= nil)
+    m.tabH = 0
+    if m.tal then
+        m.tabY = m.headH + R(8)
+        m.tabH = lb + R(10)
+    end
+    m.y1 = m.headH + R(16) + m.tabH
     m.y2 = m.y1 + m.cardH + R(16)
     m.y3 = m.y2 + m.ordH + R(10)
     m.H = m.y3 + ls + R(14)
@@ -229,6 +244,7 @@ local function metrics(f, d, n, sw, sh, idx)
         footW = math.max(footW, tw(m.fSmall, txt))
     end
     grow(2 * P + footW)
+    if m.tal then grow(U.TalentNeedW(m)) end              -- Lauf baer-talente: Kacheln, Kopf- und Fusszeile, Reiter
     m.needStatic = need
     local dyn, nameW, countW = dynNeed(m, d, n)
     m.nameW, m.countW = nameW, countW
@@ -240,6 +256,12 @@ local function metrics(f, d, n, sw, sh, idx)
     m.ow = m.W - 2 * P
     m.bw = math.floor((m.ow - R(24) - 4 * R(8)) / 5)
     m.lx, m.mx, m.rx = P, P + m.CW + R(16), P + 2 * (m.CW + R(16))
+    if m.tal then
+        -- Lauf baer-talente: Lage der Talent-Karte; braucht sie mehr Hoehe, wird die Befehls-Karte hoeher (beide Reiter gleich hoch)
+        U.TalentLayout(m)
+        m.y3 = m.y2 + m.ordH + R(10)
+        m.H = m.y3 + ls + R(14)
+    end
     return m
 end
 
@@ -313,6 +335,7 @@ local function place(win, m)
     cell(win.care, 5, by1, m.bh)                                                -- F2: "Bandage" / am Boden "Help up"
     local ty0 = by1 + m.bh + m.R8 + m.R2
     cell(win.tick.pas, 1, ty0, m.th)                    -- Reihe 3: nur noch "Passive" (K1: die anderen Schalter im Zahnrad-Menue)
+    if m.tal and win.talTiles and U.TalentPlace then U.TalentPlace(win, m) end     -- Lauf baer-talente: Reiter, Kacheln, Reset
 end
 
 -- Auf den Bildschirm klemmen: mindestens 40 x f px sichtbar, Oberkante nie ueber dem Bild (PLAN_F1.md 1.1 "Lage").
@@ -437,6 +460,15 @@ function Win:build()
     self:addChild(g)
     self.kids[#self.kids + 1] = g
     self.gearB = g
+    -- Lauf baer-talente: Reiter, 9 Kacheln (U.WinTalent, client/ISUI/BanditsNPCBearTalentTab.lua) und "Reset" -- nur mit den Regeln des Kerns
+    if U.WinTalent and U.TalentOn and U.TalentOn() then
+        self.tabMainB = kid(self, U.WinBtn, "tabMain", "tab")
+        self.tabTalB = kid(self, U.WinBtn, "tabTal", "tab")
+        self.talTiles = {}
+        for i = 1, #B.TALENTS do self.talTiles[i] = kid(self, U.WinTalent, "talent", nil) end
+        self.talReset = kid(self, U.WinBtn, "talReset", "cmd")
+        self.tab = "main"
+    end
 end
 
 -- Offenen Tooltip EINES Kindes abmelden (wie ISButton:updateTooltip selbst: V:client/ISUI/ISButton.lua:341-343). F1B: auch fuer den
@@ -453,6 +485,36 @@ end
 local function hideTips(win)
     if not win.kids then return end
     for i = 1, #win.kids do hideTip(win.kids[i]) end
+end
+
+-- Lauf baer-talente: ist der Reiter "Perks" gerade sichtbar?
+local function talActive(win)
+    return win.talTiles ~= nil and win.tab == "tal" and win.m ~= nil and win.m.tal == true
+end
+
+-- Sichtbarkeit nur bei einem Wechsel setzen, den Tooltip vorher abmelden (wie der Knopf "Look"; ISButton:setVisible V:client/ISUI/ISButton.lua:9,
+-- getIsVisible :34).
+local function setVis(el, want)
+    if el and el:getIsVisible() ~= want then
+        if not want then hideTip(el) end
+        el:setVisible(want)
+    end
+end
+
+-- Lauf baer-talente: Kinder je Reiter zeigen / verbergen. Ohne Talente (keine Kacheln) tut es nichts.
+local function showTab(win)
+    if not win.talTiles then return end
+    local tal = talActive(win)
+    for _, r in pairs(win.rows) do setVis(r, not tal) end
+    for _, b in pairs(win.btn) do setVis(b, not tal) end
+    setVis(win.tick.pas, not tal)
+    setVis(win.care, not tal)
+    setVis(win.look, (not tal) and win.model ~= nil and win.model.look ~= nil)
+    for i = 1, #win.talTiles do setVis(win.talTiles[i], tal) end
+    setVis(win.talReset, tal)
+    local on = win.m ~= nil and win.m.tal == true
+    setVis(win.tabMainB, on)
+    setVis(win.tabTalB, on)
 end
 
 -- Modell anwenden: Texte, Zustaende, Tooltips der Kinder; Breiten, die je Sekunde wechseln (Chip, Prozent). Nur im 1-s-Takt.
@@ -493,11 +555,14 @@ local function apply(win, d)
         lb.label, lb.state, lb.tooltip = le.label, le.state, le.tip
         lb.enable = (le.state ~= "off")                             -- ISButton.lua:45
     end
-    local showLook = (le ~= nil)
+    local showLook = (le ~= nil) and not talActive(win)             -- Lauf baer-talente: im Reiter "Perks" verborgen
     if lb:getIsVisible() ~= showLook then
         if not showLook then hideTip(lb) end
         lb:setVisible(showLook)
     end
+    -- Lauf baer-talente: Kacheln, Reset, Reiter-Texte; dann Sichtbarkeit je Reiter
+    if win.talTiles and U.TalentApply then U.TalentApply(win, d) end
+    showTab(win)
 end
 
 -- Neu legen noetig? Option, Bildschirm, Zahl der Baeren, Name (Lage des Umbenennen-Knopfs) oder ein Text, der nicht mehr passt.
@@ -507,6 +572,7 @@ local function layoutStale(win, d)
     local sw, sh = screen()
     if sw ~= m.sw or sh ~= m.sh or sizeIdx() ~= m.idx then return true end
     if (win.n > 1) ~= (m.n > 1) then return true end
+    if (d.tal ~= nil) ~= (m.tal == true) then return true end         -- Lauf baer-talente: Reiterleiste kam / ging
     local dyn, nameW, countW = dynNeed(m, d, win.n)
     if nameW ~= m.nameW or countW ~= m.countW then return true end
     return math.max(m.needStatic, dyn) ~= m.need
@@ -534,6 +600,7 @@ function Win:refresh(now)
     local v = list[idx]
     self.idx, self.sel, self.n, self.v = idx, v.id, #list, v
     local d = U.WinModel(v, player, now)
+    if not self.talTiles then d.tal = nil end                       -- Lauf baer-talente: ohne Kacheln keine Reiterleiste
     if #list > 1 then d.count = U.T("UI_BN_Bear_Win_Count", idx, #list) end
     self.model = d
     if layoutStale(self, d) then U.WinLayout() end
@@ -673,8 +740,27 @@ function Win:onCmd(button)
         end
         return
     end
+    if cmd == "tabMain" or cmd == "tabTal" then
+        -- Lauf baer-talente: Reiter wechseln (nur diese Sitzung); offene Tooltips weg, dann Sichtbarkeit je Reiter
+        local want = (cmd == "tabTal") and "tal" or "main"
+        if self.tab ~= want then
+            self.tab = want
+            hideTips(self)
+            if U.TalentApply then U.TalentApply(self, self.model) end
+            showTab(self)
+        end
+        return
+    end
     local v = self.v
     if not v or v.id == nil then return end
+    if cmd == "talent" then
+        -- Lauf baer-talente: waehlbare Kachel -> Vanillas Ja/Nein-Fenster; die Bitte geht erst nach "Ja" (client/ISUI/BanditsNPCBearTalentTab.lua)
+        if U.TalentAsk then U.TalentAsk(self, button) end
+        return
+    elseif cmd == "talReset" then
+        if U.TalentResetAsk then U.TalentResetAsk(self) end
+        return
+    end
     if cmd == "follow" or cmd == "stay" or cmd == "sit" or cmd == "roam" then
         B.Ask(player, "Mode", { id = v.id, mode = cmd })
     elseif cmd == "come" then
@@ -768,10 +854,14 @@ function Win:prerender()
     U.WinRect(self, 0, 0, m.W, m.R3, col("accent"))
     drawHead(self, m, d)
     U.WinRect(self, m.P, m.headH + m.R4, m.W - 2 * m.P, m.t, col("divider"))
-    card(self, m, m.lx, m.y1, m.CW, m.cardH, d.tCond)
-    card(self, m, m.mx, m.y1, m.CW, m.cardH, d.tNeeds)                              -- F3 (Variante B): eigene Karte "Needs"
-    card(self, m, m.rx, m.y1, m.CW, m.cardH, d.tSkills)
-    card(self, m, m.P, m.y2, m.ow, m.ordH, d.tOrders, d.ordersInfo)
+    if talActive(self) and U.TalentDraw then
+        U.TalentDraw(self, m, d)                                                    -- Lauf baer-talente: Karte "Perks"
+    else
+        card(self, m, m.lx, m.y1, m.CW, m.cardH, d.tCond)
+        card(self, m, m.mx, m.y1, m.CW, m.cardH, d.tNeeds)                          -- F3 (Variante B): eigene Karte "Needs"
+        card(self, m, m.rx, m.y1, m.CW, m.cardH, d.tSkills)
+        card(self, m, m.P, m.y2, m.ow, m.ordH, d.tOrders, d.ordersInfo)
+    end
     -- Fusszeile; F3: in Warnfarbe, wenn der Baer nicht kaempft (zu muede / kein Vertrauen -- d.footerCol aus dem Modell)
     local c = col(d.footerCol or "dim")
     self:drawText(d.footer or "", m.P, m.y3, c[1], c[2], c[3], c[4], m.fSmall)

@@ -266,6 +266,9 @@ function B.SleepStop(rec, why, ms, players)
         s.slpLock, s.slpLockSpan = ms + lock, lock
         local woke = hold + cfg("wokeFleeMs", 5000)
         s.wokeUntil, s.wokeSpan = ms + woke, woke
+        -- Lauf baer-talente (Talent Wachsam: "nie schlaftrunken"): kein Wegrennen nach dem Aufschrecken (B.FightDecide "woke" entfaellt);
+        -- der Aufsteh-Halt s.wkUntil oben und die Sperre slpLock bleiben
+        if B.TalentOn ~= nil and B.TalentOn(rec, "alert") then s.wokeUntil, s.wokeSpan = nil, nil end
         local d = rec.nDay
         if type(d) == "table" and lay then d.a = (num(d.a) or 0) + 1 end
     elseif why == "order" or why == "hand" then
@@ -332,7 +335,14 @@ end
 local function dangerNear(rec, a)
     local z = B._zed and B._zed[rec.id] or nil
     if type(z) ~= "table" or num(z.x) == nil or num(z.y) == nil then return false end
-    return B.DistXY(a:getX(), a:getY(), z.x, z.y) <= cfg("sleepWakeR", 8)
+    -- Lauf baer-talente (Talent Wachsam): Weite x talAlertK (8 -> 12), hoechstens zedSense (weiter reicht B._zed nicht)
+    local r = cfg("sleepWakeR", 8)
+    if B.TalentK ~= nil then
+        r = r * B.TalentK(rec, "alert", "talAlertK", 1)
+        local sense = cfg("zedSense", 12)
+        if r > sense then r = sense end
+    end
+    return B.DistXY(a:getX(), a:getY(), z.x, z.y) <= r
 end
 
 -- Zuschlag mit der Koerperlaenge (nur grosser Koerper; shared/BanditsNPCBearStats.lua). Mehrfachrueckgabe erst in Locals.

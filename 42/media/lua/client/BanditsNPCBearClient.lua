@@ -15,6 +15,8 @@
 -- B.OnInv, client/BanditsNPCBearInvClient.lua) und Meldungs-Typ "item" (v = voller Typ, w / x = Anzahl; Name ueber U.ItemName).
 -- K1 (Lauf baer-k1, PLAN_K1.md 2, 4, 5, 8; Kevin 13./14.11.2026): 38 neue und 22 geaenderte Texte (Vertrauen -100..+100, Zahnrad-Menue, roter
 -- Schaden, Tagesbedarf, Einfrieren, Zahlenfeld, Meldungen des Kerns zu Vertrauen / Look-Sperre / Buendeln / Selbst-Trinken) -- U.EN wortgleich EN.
+-- TALENTE (Lauf baer-talente, PLAN_TALENTE.md 5, 7; Kevin 14.11.2026): 68 neue Texte (Reiter Perks / Talente, Kacheln, Ja/Nein-Fenster, Meldungen
+-- und Ablehnungen des Kerns) -- U.EN wortgleich EN; Meldungs-Typ "talent" (v = Schluessel des Talents -> Name ueber die Liste TALENT_KEY).
 --
 -- Laeuft im Einzelspieler und auf jedem MP-Client (der dedizierte Server laedt client/ nicht). Diese Datei entscheidet NICHTS:
 -- sie nimmt die Sicht ("Sync") und die Meldungen ("Note") des Schreibers an, zeigt Meldungen ueber der Figur und bittet beim
@@ -664,6 +666,76 @@ U.EN = {
     UI_BN_Bear_Note_InvPutSome = "Packed %2 of %3 %1 - it can't carry more.",
     UI_BN_Bear_Note_InvDrank = "Your cub drank %1 l of the water it was carrying.",
     UI_BN_Bear_Note_InvDrankBig = "Your bear drank %1 l of the water it was carrying.",
+    -- Lauf baer-talente (PLAN_TALENTE.md; Kevin 14.11.2026): Reiter Perks / Talente, Kacheln, Ja/Nein-Fenster, Meldungen des Kerns --
+    -- wortgleich mit Translate/EN/UI.json (Quelle _arbeit/baer_zaehmen/tal/werkzeug_ober/texte_tal_daten.py).
+    UI_BN_Bear_Win_TabMain = "Overview",
+    UI_BN_Bear_Win_TabTalents = "Perks",
+    UI_BN_Bear_Win_TabTalentsTip = "Perks: one perk point at 10%% growth, one at half-grown and one when fully grown - 3 in all. Spend them on any perks you like.",
+    UI_BN_Bear_Win_TalentLine = "Perk %1: %2",
+    UI_BN_Bear_Talent_Points = "%1 perk point(s) free - %2 of %3 used",
+    UI_BN_Bear_Talent_PointsAll = "All %1 perks chosen",
+    UI_BN_Bear_Talent_HintFree = "Click a perk to learn it - it stays for good.",
+    UI_BN_Bear_Talent_HintNext = "Next perk point in about %1 day(s).",
+    UI_BN_Bear_Talent_HintDone = "All perk points are spent.",
+    UI_BN_Bear_Talent_HintWait = "Perk points come as it grows: at 10%% growth, at half-grown and fully grown.",
+    UI_BN_Bear_Talent_StOn = "Active",
+    UI_BN_Bear_Talent_StFree = "Available",
+    UI_BN_Bear_Talent_StLocked = "Locked",
+    UI_BN_Bear_Talent_StSoon = "Coming later",
+    UI_BN_Bear_Talent_TipLearn = "Click to learn - you will be asked once more.",
+    UI_BN_Bear_Talent_TipOn = "Learned - active for good.",
+    UI_BN_Bear_Talent_TipMax = "All %1 perk points are used.",
+    UI_BN_Bear_Talent_TipPoint = "No free perk point right now.",
+    UI_BN_Bear_Talent_TipSoon = "Comes with fishing in a later version.",
+    UI_BN_Bear_Talent_FurNow = "Now %1 health, with it %2.",
+    UI_BN_Bear_Talent_Reset = "Reset",
+    UI_BN_Bear_Talent_ResetTip = "Makes all learned perks free again, all at once. Only if the sandbox options allow it.",
+    UI_BN_Bear_Talent_ResetOff = "off (sandbox)",
+    UI_BN_Bear_Talent_ResetWait = "in %1",
+    UI_BN_Bear_Talent_LearnAsk = "Learn the perk %2 for %1?",
+    UI_BN_Bear_Talent_LearnAsk2 = "It stays active for good (%1 of %2 perk points used).",
+    UI_BN_Bear_Talent_ResetAsk = "Reset all perks of %1?",
+    UI_BN_Bear_Talent_ResetAsk2 = "All %1 perk points become free again.",
+    UI_BN_Bear_Talent_ResetAskDays = "The next reset is possible in %1 day(s).",
+    UI_BN_Bear_Talent_ResetAskAny = "You can reset again at any time.",
+    UI_BN_Bear_Note_TalentPoint = "Your cub earned a perk point! %1 free - bear window, tab Perks.",
+    UI_BN_Bear_Note_TalentPointBig = "Your bear earned a perk point! %1 free - bear window, tab Perks.",
+    UI_BN_Bear_Note_TalentLearned = "Perk learned: %1.",
+    UI_BN_Bear_Note_TalentReset = "All perks reset - %1 perk point(s) free.",
+    UI_BN_Bear_Why_TalentMax = "All perk points are already used.",
+    UI_BN_Bear_Why_TalentHave = "It already has this perk.",
+    UI_BN_Bear_Why_TalentSoon = "This perk comes in a later version.",
+    UI_BN_Bear_Why_TalentPoint = "No free perk point.",
+    UI_BN_Bear_Why_TalentResetOff = "Resetting perks is switched off in the sandbox options.",
+    UI_BN_Bear_Why_TalentNone = "No perk learned yet.",
+    UI_BN_Bear_Why_TalentResetWait = "Perks can be reset again in %1.",
+    UI_BN_Bear_Talent_Frugal = "Frugal",
+    UI_BN_Bear_Talent_Frugal_Short = "Full for %1 h, not %2 h",
+    UI_BN_Bear_Talent_Frugal_Tip = "Hunger and thirst rise more slowly: from 0 to 100%% in %1 waking hours instead of %2. It needs less food and water each day.",
+    UI_BN_Bear_Talent_Fur = "Thick Fur",
+    UI_BN_Bear_Talent_Fur_Short = "+%1 health",
+    UI_BN_Bear_Talent_Fur_Tip = "+%1 health for good. The health bar stays just as full: the percentage is kept when it learns this.",
+    UI_BN_Bear_Talent_Stamina = "Enduring",
+    UI_BN_Bear_Talent_Stamina_Short = "+%1%% stamina",
+    UI_BN_Bear_Talent_Stamina_Tip = "+%1%% stamina, and it recovers %2x as fast. It can fight longer before it has to catch its breath.",
+    UI_BN_Bear_Talent_Paw = "Heavy Paw",
+    UI_BN_Bear_Talent_Paw_Short = "Zombies fly %1x as far",
+    UI_BN_Bear_Talent_Paw_Tip = "Zombies it hits fly %1x as far. From half-grown on, its paw swipes and double strikes knock them down (%2%%).",
+    UI_BN_Bear_Talent_Mule = "Pack Animal",
+    UI_BN_Bear_Talent_Mule_Short = "+%1 kg carry weight",
+    UI_BN_Bear_Talent_Mule_Tip = "+%1 kg carry weight for good - on top of the packs, not changed by the sandbox carry setting.",
+    UI_BN_Bear_Talent_Alert = "Alert",
+    UI_BN_Bear_Talent_Alert_Short = "Spots foes %1%% farther",
+    UI_BN_Bear_Talent_Alert_Tip = "Spots enemies %1%% farther: when it looks for a fight, when danger wakes it and when a cub hides. Never groggy after waking up.",
+    UI_BN_Bear_Talent_Tough = "Tough",
+    UI_BN_Bear_Talent_Tough_Short = "Heals %1x as fast",
+    UI_BN_Bear_Talent_Tough_Tip = "Heals %1x as fast on its own. When it goes down, it gets up by itself after %2 instead of %3 hours.",
+    UI_BN_Bear_Talent_Crit = "Critical Hit",
+    UI_BN_Bear_Talent_Crit_Short = "%1%% chance: %2x damage",
+    UI_BN_Bear_Talent_Crit_Tip = "Every hit has a %1%% chance to deal %2x damage. With Show damage on, that number appears big and gold.",
+    UI_BN_Bear_Talent_Fisher = "Angler",
+    UI_BN_Bear_Talent_Fisher_Short = "%1 fish per catch",
+    UI_BN_Bear_Talent_Fisher_Tip = "Catches %1 fish each time it catches one while fishing.",
 }
 
 local KEY_HEAD = "UI_BN_Bear_"
@@ -674,6 +746,12 @@ local DIRS = { N = true, NE = true, E = true, SE = true, S = true, SW = true, W 
 local STAGE_KEY = { half = "UI_BN_Bear_Stage_Half", strong = "UI_BN_Bear_Stage_Strong", adult = "UI_BN_Bear_Stage_Adult" }
 local SKILL_KEY = { agi = "UI_BN_Bear_Skill_Agi", vit = "UI_BN_Bear_Skill_Vit", con = "UI_BN_Bear_Skill_Con",
     fgt = "UI_BN_Bear_Skill_Fgt", fsh = "UI_BN_Bear_Skill_Fsh", nos = "UI_BN_Bear_Skill_Nos" }
+-- Lauf baer-talente (tal/schnittstelle.md K5): Meldung t "talent", v = Schluessel des Talents -> Name. Nur diese neun Schluessel (B.TALENTS
+-- des Kerns), ausgeschrieben; alles andere wird "?". Das Baeren-Fenster liest dieselbe Liste (U.TALENT_KEY).
+local TALENT_KEY = { frugal = "UI_BN_Bear_Talent_Frugal", fur = "UI_BN_Bear_Talent_Fur", stamina = "UI_BN_Bear_Talent_Stamina",
+    paw = "UI_BN_Bear_Talent_Paw", mule = "UI_BN_Bear_Talent_Mule", alert = "UI_BN_Bear_Talent_Alert", tough = "UI_BN_Bear_Talent_Tough",
+    crit = "UI_BN_Bear_Talent_Crit", fisher = "UI_BN_Bear_Talent_Fisher" }
+U.TALENT_KEY = TALENT_KEY
 
 -- ---------------------------------------------------------------------------
 -- Texte
@@ -771,6 +849,13 @@ function U.NoteText(note)
             if type(v) == "string" and U.ItemName then name = U.ItemName(v) end
         end
         return U.T(key, name, math.floor(tonumber(note.w) or 1), math.floor(tonumber(note.x) or 0))
+    elseif t == "talent" then
+        -- Lauf baer-talente (tal/schnittstelle.md K5): v = Schluessel des Talents ("crit") -> sein Name; nie ein Text des Schreibers
+        local tk = nil
+        if type(v) == "string" then tk = TALENT_KEY[v] end
+        local tName = "?"
+        if tk ~= nil then tName = U.T(tk) end
+        return U.T(key, tName)
     end
     return U.T(key)
 end

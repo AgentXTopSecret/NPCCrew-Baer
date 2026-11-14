@@ -121,3 +121,19 @@ option BanditsNPC.BearSkillAgeCap
 	page = BanditsNPC,
 	translation = BanditsNPC_BearSkillAgeCap,
 }
+
+/* Perks (Kevin 14.11.2026: reset only by sandbox, off by default, all perks at once): the owner may reset all perks of a tamed bear in the bear window and spend the 3 perk points again. */
+option BanditsNPC.BearTalentReset
+{
+	type = boolean, default = false,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearTalentReset,
+}
+
+/* In-game days between two perk resets of the same bear (Kevin 14.11.2026: 0 to 30, default 1 = at most once per in-game day; 0 = any time). */
+option BanditsNPC.BearTalentResetDays
+{
+	type = integer, min = 0, max = 30, default = 1,
+	page = BanditsNPC,
+	translation = BanditsNPC_BearTalentResetDays,
+}

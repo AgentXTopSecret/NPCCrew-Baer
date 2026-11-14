@@ -34,6 +34,14 @@
 --   isoToScreenX/Y(0, x, y, z): V:client/Fishing/TensionUI.lua:11-12; el:drawTextCentre(Text, x, y, r, g, b, a, Schrift):
 --     V:client/ISUI/ISUIElement.lua:1280 (UIFont.Medium V:client/ISUI/ISFitnessUI.lua:204, UIFont.Large V:client/Chat/ISAlert.lua:35)
 --   getSpecificPlayer(0): V:client/Farming/CFarmingSystem.lua:45; player:getZ(): V:client/Fishing/TensionUI.lua:11
+-- Lauf baer-talente (tal/schnittstelle.md K6; Kevin 14.11.2026 ~05:05 "+25% krit chance fuegt doppelten schaden aus", Zahl "gross in Gold"): traegt
+-- das Ereignis "hit" crit = true (der Schreiber hat gewuerfelt, dmg ist SCHON verdoppelt), steht die Zahl in UIFont.Large (V:client/Chat/
+-- ISAlert.lua:35), Gold, zweimal 1 px versetzt (fett wie der Name im Fenster), mit "!" dahinter und steigt 1,3 x so hoch. Nur mit "Show damage"
+-- und nur fuer den eigenen Baeren -- wie jede Schadenszahl. Nachbesserung C1: Large ist die groesste Stufe derselben Schrift (EN 1x lineHeight 33
+-- gegen Medium 29, 2x 40 gegen 33 -- media/fonts/EN/1x|2x/zomboidLarge.fnt / zomboidMedium.fnt); bei Option TagSize >= 125 ist die normale Zahl
+-- schon Large, dann trennen nur Gold, fett und "!". Groesser waeren in Vanilla-Lua nur Zierschriften (UIFont.Intro "Constantine" 37 px ohne
+-- 2x-Stufe, V:client/ISUI/ISRichTextPanel.lua:135; UIFont.Cred1 V:client/ISUI/PlayerStats/ISPlayerStatsUI.lua:44, EN-Datei nicht in media/fonts)
+-- oder drawTextZoomed (V:client/ISUI/ISUIElement.lua:1260, aber kein Aufruf in Vanilla oder Bandits -> nicht benutzt, Frage an Kevin).
 -- Laeuft im Einzelspieler und auf jedem MP-Client (der dedizierte Server laedt client/ nicht). Statisch geprueft, nicht gespielt.
 --
 
@@ -62,6 +70,8 @@ local C_DOWN = { 0.95, 0.35, 0.30 }
 local C_MAIN = { 1.00, 0.62, 0.18 }
 local C_KNOCK = { 1.00, 0.80, 0.30 }
 local C_SIDE = { 1.00, 0.45, 0.40 }
+local C_CRIT = { 1.00, 0.84, 0.25 }      -- Lauf baer-talente: Kritischer Treffer (Gold)
+local CRIT_RISE = 1.3                    -- ... steigt so viel hoeher
 
 local painAt = {}               -- id -> ms des letzten Schmerzlauts
 local painN = 0
@@ -142,7 +152,7 @@ U.DmgText = dmgText
 -- (zx, zy); Ebene zz = die des Baeren (der Schreiber trifft nur auf gleicher Ebene, PLAN_F2.md 2.2.4). Prueft NICHT, wem der Baer gehoert --
 -- das tut U.FightFx vorher.
 -- ---------------------------------------------------------------------------
-function U.DmgFloat(oid, zx, zy, zz, dmg, knock, main)
+function U.DmgFloat(oid, zx, zy, zz, dmg, knock, main, crit)
     local x, y, z = tonumber(zx), tonumber(zy), tonumber(zz)
     if x == nil or y == nil or z == nil then return false end
     local text = dmgText(dmg)
@@ -153,7 +163,12 @@ function U.DmgFloat(oid, zx, zy, zz, dmg, knock, main)
     elseif main == true then
         c = C_MAIN
     end
-    dmgs[#dmgs + 1] = { x = x, y = y, z = math.floor(z) + DMG_LIFT, text = text, c = c, t0 = getTimestampMs(), font = floatFont() }
+    local font, big = floatFont(), nil
+    if crit == true then
+        -- Lauf baer-talente: Kritischer Treffer gross in Gold mit "!" (fett, hoeher steigend)
+        c, font, big, text = C_CRIT, UIFont.Large, true, text .. "!"
+    end
+    dmgs[#dmgs + 1] = { x = x, y = y, z = math.floor(z) + DMG_LIFT, text = text, c = c, t0 = getTimestampMs(), font = font, big = big }
     cap(dmgs, DMG_MAX)
     return true
 end
@@ -207,7 +222,7 @@ function U.FightFx(kind, t)
     if kind == "hit" then
         if dmgOn() and mine(id) then
             -- Ebene: zz traegt der Schreiber mit (die des Baeren, server/BanditsNPCBearFight.lua); fehlt sie, die der Kopie / des Spielers
-            U.DmgFloat(t.oid, t.zx, t.zy, tonumber(t.zz) or levelFor(id), t.dmg, t.knock, t.main == true)
+            U.DmgFloat(t.oid, t.zx, t.zy, tonumber(t.zz) or levelFor(id), t.dmg, t.knock, t.main == true, t.crit == true)
         end
         return
     end
@@ -253,9 +268,11 @@ local function alpha(frac)
     return a
 end
 
-local function drawLine(el, s, sx, sy, c, a, font)
+local function drawLine(el, s, sx, sy, c, a, font, bold)
     el:drawTextCentre(s, sx + 1, sy + 1, 0, 0, 0, 0.7 * a, font)        -- ISUIElement.lua:1280
+    if bold then el:drawTextCentre(s, sx + 2, sy + 1, 0, 0, 0, 0.7 * a, font) end
     el:drawTextCentre(s, sx, sy, c[1], c[2], c[3], a, font)
+    if bold then el:drawTextCentre(s, sx + 1, sy, c[1], c[2], c[3], a, font) end    -- Lauf baer-talente: Krit fett (zweimal 1 px versetzt)
 end
 
 function U.FloatDraw(el, now)
@@ -288,8 +305,10 @@ function U.FloatDraw(el, now)
             dmgs[keep] = e
             local frac = dt / DMG_MS
             local sx = math.floor(isoToScreenX(0, e.x, e.y, e.z))
-            local sy = math.floor(isoToScreenY(0, e.x, e.y, e.z)) - math.floor(DMG_RISE * frac)
-            drawLine(el, e.text, sx, sy, e.c, alpha(frac), e.font)
+            local rise = DMG_RISE
+            if e.big then rise = DMG_RISE * CRIT_RISE end
+            local sy = math.floor(isoToScreenY(0, e.x, e.y, e.z)) - math.floor(rise * frac)
+            drawLine(el, e.text, sx, sy, e.c, alpha(frac), e.font, e.big)
         end
     end
     for i = #dmgs, keep + 1, -1 do dmgs[i] = nil end

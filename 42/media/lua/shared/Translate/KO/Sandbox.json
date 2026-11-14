@@ -31,6 +31,10 @@
     "Sandbox_BanditsNPC_BearSkillAgeCap_tooltip": "새끼 곰은 3레벨, 반쯤 자란 곰은 6레벨, 튼튼한 곰은 8레벨까지 배우고, 다 자란 곰만 10레벨에 이릅니다. 이미 쌓은 경험치는 그대로입니다. 끄면: 한계 없음.",
     "Sandbox_BanditsNPC_BearSkillXpPercent": "곰: 기술 배우는 속도 (퍼센트)",
     "Sandbox_BanditsNPC_BearSkillXpPercent_tooltip": "길들인 곰이 기술을 배우는 속도입니다. 100 = 보통: 기술 하나가 10레벨에 이르려면 실제 플레이 시간으로 최소 약 18시간이 걸리고, 나이 한계가 있으면 다 자라기 전에는 8레벨 이하에 머뭅니다. 200 = 두 배 빠름.",
+    "Sandbox_BanditsNPC_BearTalentReset": "곰: 재능 초기화 허용",
+    "Sandbox_BanditsNPC_BearTalentResetDays": "곰: 재능 초기화 사이의 일수",
+    "Sandbox_BanditsNPC_BearTalentResetDays_tooltip": "같은 곰의 재능을 두 번 초기화하는 사이의 게임 일수입니다. 1 = 게임 하루에 최대 한 번, 0 = 언제든지. 재능 초기화가 허용될 때만 적용됩니다.",
+    "Sandbox_BanditsNPC_BearTalentReset_tooltip": "주인이 곰 창(재능 탭)에서 길들인 곰의 재능을 한 번에 모두 되돌리고 재능 포인트를 다시 쓸 수 있습니다. 끄면(기본값): 재능은 영구히 남습니다.",
     "Sandbox_BanditsNPC_BearTamePercent": "길들이기: 속도 (퍼센트)",
     "Sandbox_BanditsNPC_BearTamePercent_tooltip": "새끼 곰이 당신을 믿게 되는 속도입니다. 100 = 보통, 200 = 먹이 주기와 쓰다듬기 1회당 점수 두 배. 그래도 사이에 기다림이 있는 먹이 주기가 최소 3번 필요합니다."
 }

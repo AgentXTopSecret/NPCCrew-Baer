@@ -347,7 +347,18 @@ function B.GuardStep(rec, a, env, ms, players)
         local bd, bsz = B.BodyNow(rec)          -- Nachbesserung B1e A3: Mehrfachrueckgabe erst in Locals (CLAUDE.md 5)
         gap = B.BodyGap(bd, bsz)
     end
-    local d = B.GuardDecide({ x = cx, y = cy, z = rec.z, st = rec.st, gap = gap }, o, zz, g, ms)
+    -- Lauf baer-talente (Talent Wachsam, shared/BanditsNPCBearTalentRules.lua): Gefahr ab zedHide x talAlertK (6 -> 9), sicher erst ab zedSafe x
+    -- talAlertK, hoechstens zedSense (9 -> 12: weiter liefert die Suche B._zed nicht); ohne Talent nil = zedHide / zedSafe wie bisher
+    local hideR, safeR = nil, nil
+    if B.TalentK ~= nil then
+        local ak = B.TalentK(rec, "alert", "talAlertK", 1)
+        if ak ~= 1 then
+            hideR, safeR = cfg.zedHide * ak, cfg.zedSafe * ak
+            if safeR > cfg.zedSense then safeR = cfg.zedSense end
+            if hideR > safeR then hideR = safeR end
+        end
+    end
+    local d = B.GuardDecide({ x = cx, y = cy, z = rec.z, st = rec.st, gap = gap, hideR = hideR, safeR = safeR }, o, zz, g, ms)
     -- F1 (PLAN_F1.md 5.3): Wache an/aus -> die Sicht (hide) geht neu hinaus; ein sitzender Baer steht dafuer auf (Sitz-Treiber der Clients)
     if (g.on == true) ~= wasOn then B.Touch(rec) end
     if d.act == "none" then

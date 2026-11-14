@@ -35,6 +35,8 @@
 -- K1 (Lauf baer-k1, PLAN_K1.md 2.3, 4 X; Kevin 13.11.2026 ~21:40 "bei negativ halt in einer negativen farbe und positiv eine positive = gruen ;D
 -- und negativ rot", 14.11. ~00:20 "die damage zahl soll rot werden"): Vertrauens-Balken und -Zahl nach Ton (e.tone "pos" gruen / "neg" rot /
 -- "zero" grau, U.WinTrustColor), Farbe "bad" (roter Wert: Schaden geschwaecht). Weiter nur Rechtecke und fertige Texte je Bild.
+-- Lauf baer-talente (PLAN_TALENTE.md 5.1): Knopf-Stil "tab" (Reiter "Overview" / "Perks": gewaehlt = Kartengrund mit accent-Rahmen, Text in
+-- Titelfarbe; Abzeichen mit der Zahl freier Talentpunkte als Honig-Kaestchen) und Farben fuer die Kacheln (client/ISUI/BanditsNPCBearTalentTab.lua).
 -- Kein Engine-Aufruf ohne Vanilla-Fundstelle. Statisch geprueft, nicht gespielt.
 --
 
@@ -84,6 +86,10 @@ local COL = {
     -- Nachbesserung K1 P4 / P3: bei negativem Vertrauen ist auch der LEERE Teil dunkelrot (-100 = leer, aber rot -- Kevin "negativ rot");
     -- ein 1-Strich-Mittelzeichen bei 0 macht den Balken als -100..+100 kenntlich (der Lebensbalken hat keins)
     trustNegTrack = { 0.36, 0.11, 0.09, 1 }, trustMid = { 0.92, 0.90, 0.84, 0.85 },
+    -- Lauf baer-talente (PLAN_TALENTE.md 5.1/5.2): Reiter (aktiv = Kartengrund mit accent-Rahmen), Abzeichen freie Punkte (Honig mit dunkler
+    -- Zahl), Kachel aktiv (warmer Grund) und waehlbar (Honigrahmen); gesperrt nimmt btnOff*
+    tabOnBg = { 0.115, 0.105, 0.095, 1 }, badgeBg = { 1.00, 0.72, 0.32, 1 }, badgeText = { 0.10, 0.06, 0.02, 1 },
+    talOnBg = { 0.30, 0.18, 0.06, 1 }, talFreeBorder = { 0.80, 0.58, 0.26, 1 },
 }
 U.WIN_COL = COL
 -- F3 (PLAN_F3.md 8, 10.1): die Schlaf-Farbe steht an EINER Stelle (B.CFG.sleepCol des Kerns, gelesen ueber U.SleepColor). Einmal beim
@@ -205,7 +211,9 @@ function Btn:prerender()
     local w, h = self.width, self.height
     local st = self.state
     local bg, bd = COL.btnBg, COL.btnBorder
-    if st == "off" then
+    if self.style == "tab" and st == "active" then
+        bg, bd = COL.tabOnBg, COL.accent                -- Lauf baer-talente: gewaehlter Reiter
+    elseif st == "off" then
         bg, bd = COL.btnOffBg, COL.btnOffBorder
     elseif st == "active" then
         bg, bd = COL.btnActBg, COL.accent
@@ -234,6 +242,24 @@ function Btn:render()
         c = COL.btnActText
     end
     local fh = self.fh or 0
+    if self.style == "tab" then
+        -- Lauf baer-talente: Reiter -- gewaehlt in Titelfarbe; mit Abzeichen (freie Talentpunkte) Text + Honig-Kaestchen mittig. labelW / badgeW
+        -- setzt das Fenster beim Legen bzw. im 1-s-Takt (kein MeasureStringX je Bild).
+        c = COL.text2
+        if self.state == "active" then c = COL.title elseif self.mouseOver then c = COL.text end
+        local m = self.win and self.win.m
+        if self.badge and self.labelW and self.badgeW and m then
+            local x0 = math.floor((self.width - self.labelW - m.R6 - self.badgeW) / 2)
+            local ty = math.floor((self.height - fh) / 2)
+            self:drawText(label, x0, ty, c[1], c[2], c[3], c[4], self.font or UIFont.Small)
+            local bx, bh = x0 + self.labelW + m.R6, m.ls + m.R2
+            local by = math.floor((self.height - bh) / 2)
+            rect(self, bx, by, self.badgeW, bh, COL.badgeBg)
+            local bc = COL.badgeText
+            self:drawTextCentre(self.badge, bx + self.badgeW / 2, by + math.floor((bh - m.ls) / 2), bc[1], bc[2], bc[3], bc[4], m.fSmall)
+            return
+        end
+    end
     self:drawTextCentre(label, self.width / 2, math.floor((self.height - fh) / 2), c[1], c[2], c[3], c[4], self.font or UIFont.Small)
 end
 

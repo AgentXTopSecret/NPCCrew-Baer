@@ -31,6 +31,10 @@
     "Sandbox_BanditsNPC_BearSkillAgeCap_tooltip": "Um filhote aprende até o nível 3, um urso meio crescido até 6, um urso forte até 8; só um urso totalmente crescido chega a 10. A experiência que ele já tem fica. Desligado: sem limite.",
     "Sandbox_BanditsNPC_BearSkillXpPercent": "Urso: velocidade de aprendizado das habilidades (porcentagem)",
     "Sandbox_BanditsNPC_BearSkillXpPercent_tooltip": "A rapidez com que um urso domesticado aprende suas habilidades. 100 = normal: uma habilidade precisa de pelo menos umas 18 horas de jogo real para chegar ao nível 10, e com o limite de idade fica em 8 ou menos até o urso estar totalmente crescido. 200 = duas vezes mais rápido.",
+    "Sandbox_BanditsNPC_BearTalentReset": "Urso: redefinir talentos permitido",
+    "Sandbox_BanditsNPC_BearTalentResetDays": "Urso: dias entre redefinições de talentos",
+    "Sandbox_BanditsNPC_BearTalentResetDays_tooltip": "Dias de jogo entre duas redefinições de talentos do mesmo urso. 1 = no máximo uma vez por dia de jogo, 0 = a qualquer momento. Só vale quando redefinir talentos é permitido.",
+    "Sandbox_BanditsNPC_BearTalentReset_tooltip": "O dono pode desfazer todos os talentos de um urso domado de uma vez na janela do urso (aba Talentos) e gastar os pontos de talento de novo. Desligado (padrão): os talentos ficam para sempre.",
     "Sandbox_BanditsNPC_BearTamePercent": "Domar: velocidade (porcentagem)",
     "Sandbox_BanditsNPC_BearTamePercent_tooltip": "A rapidez com que um filhote aprende a confiar em você. 100 = normal, 200 = o dobro de pontos por alimentação e carinho. Ele ainda precisa de pelo menos 3 alimentações com uma pausa entre elas."
 }

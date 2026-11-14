@@ -27,6 +27,8 @@
 -- Einfrieren, Mitschlafen, Inventar 1000 auf einmal, selbst trinken -- Stellwerte im Block "K1" am Ende von B.CFG; B.LOOKS[...].pose (Schild-Hoehe).
 -- Lauf baer-kampf (kampf/PLAN_KAMPF.md 3; Kevin 13.11. ~23:00 Kampf-Fehler 1-7): Kampf-Stellwerte (rearChance 100, fightArrive 0, maulReach 1,4,
 -- fightLeash 25, lureMax 8 an ihrer Stelle; neue Werte am Ende von B.CFG) und B.LogEvery (gedrosselte Diagnose-Zeile, K8).
+-- Lauf baer-talente (baer/plaene/PLAN_TALENTE.md 2.5, 7.1; Kevins Antworten 14.11.2026 ~10:20): Block "Talente" am Ende von B.CFG, ZWEI neue
+-- Sandbox-Regler BearTalentReset / BearTalentResetDays -> 16 Optionen.
 --
 -- Laeuft ohne NPC Crew und ohne Bandits. Am Ende kopiert das Uebernahme-Skript diese Datei unveraendert nach NPC Crew.
 -- Deshalb: auf Dateiebene wird kein fremdes Modul eingefangen; jeder Griff nach BanditsNPC.X passiert zur Laufzeit und
@@ -382,6 +384,19 @@ B.CFG = B.CFG or {
     -- Baeren in lureR, geht er zu ihm (Manhattan in lureR ist hoechstens 14,2); nur ein Spieler bis lurePlayerKeep / ein Bandit behaelt ihn.
     -- Kleinere Werte (z. B. 4) = nur, wenn der Baer hoechstens so viel weiter weg ist als der Spieler (Frage F3).
     lureGrab = 2.0, lureBias = 99, lurePlayerKeep = 2.0, lureBanditKeep = 3.5, lureHoldMs = 700, lureLogMs = 2000,
+    -- Talente (Lauf baer-talente, baer/plaene/PLAN_TALENTE.md 2.5 + Kevins Antworten 14.11.2026 ~10:20 "Freie Wahl", "So wie besprochen";
+    -- Regeln shared/BanditsNPCBearTalentRules.lua, Schreiber server/BanditsNPCBearTalent.lua). Punkt 1 ab talG1 Wachstum (Kevin "10 %"), 2 bei
+    -- halbstark, 3 bei ausgewachsen; hoechstens talMax gelernt (Kevin "genau 3"). Werte (Kevin 02:50 / 05:05): Genuegsam Hunger/Durst-Anstieg x
+    -- talFrugalK (16 / 24: 0 -> 100 in 24 statt 16 Wachstunden); Dickes Fell + talFurHp Leben (nach dem Vitalitaets-Bonus, Anteil bleibt);
+    -- Ausdauernd Ausdauer x (1 + talStaPct), Erholung x talStaRegK; Schwere Pranke: Prankenhieb / Doppelschlag wirft mit talPawKnock % um (ab
+    -- halbstark; 0 = nur die Stufen-Chance) und der Flug ist talPawPush x so weit (Kevin ~10:20 "Fliegen doppelt so weit"); Lasttier + talMuleKg
+    -- (nicht mit BearCarryPercent multipliziert, wie bagAdd); Wachsam: Kampf-Suche, Wecken, Verstecken x talAlertK (Wecken / Sicher hoechstens
+    -- zedSense), nie schlaftrunken; Zaeh: Selbstheilung x talHealK, am Boden downedHours x talDownK; Kritischer Treffer: talCritPct % je Treffer
+    -- x talCritK; Angler: talFishK Fische je Fang, gesperrt bis F5 talFishOn = true setzt. talGlowMs: eine Leucht-Welle je so viele ms (OBERFLAECHE).
+    talG1 = 0.10, talMax = 3,
+    talFrugalK = 16 / 24, talFurHp = 250, talStaPct = 0.30, talStaRegK = 1.5, talPawKnock = 100, talPawPush = 2.0, talMuleKg = 50,
+    talAlertK = 1.5, talHealK = 2.0, talDownK = 0.5, talCritPct = 25, talCritK = 2.0, talFishK = 2, talFishOn = false,
+    talGlowMs = 2000,
 }
 
 -- F1 (PLAN_F1.md 0.3, 6.1): die vier Modi eines gezaehmten Baeren. Jeder andere Wert (auch nil) gilt als "stay" (B.ModeOf).
@@ -423,6 +438,11 @@ B.OPTS = B.OPTS or {
     -- Wachsen und Faehigkeiten. Multipliziert NUR die Groessen-Traglast (10 / 40 / 100, B.CFG.carryAt); die Packtaschen bleiben +bagAdd (150)
     -- -> hoechstens 250 + 150 = 400 kg. -> VIERZEHN Optionen.
     BearCarryPercent = { def = 100, min = 50, max = 250 },
+    -- Talente (Lauf baer-talente; Kevin 14.11.2026: "skill reset ist erlaubt pro sandbox setting, nur 1x taeglich auch per sandbox einstellbar"
+    -- -- "standardmaessig aber nicht erlaubt"; ~10:20 "Alle auf einmal", Tage 0-30, Vorgabe 1) -- Wachsen und Faehigkeiten: Reset erlaubt /
+    -- Spieltage zwischen zwei Resets (1 = hoechstens einmal je Spieltag, 0 = jederzeit). -> SECHZEHN Optionen.
+    BearTalentReset = { def = false },
+    BearTalentResetDays = { def = 1, min = 0, max = 30 },
 }
 
 -- Waldzonen (Vanilla shared/Foraging/forageZones.lua:3,27,72,79,91,98,110,122,129,140).

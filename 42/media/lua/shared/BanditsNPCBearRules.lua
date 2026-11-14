@@ -708,15 +708,21 @@ end
 -- Versteck halten), "flee" (23, vom Zombie weg), "keep" (24, Nachlauf: war gefaehrdet, jetzt weiter als zedSafe, noch nicht
 -- zedCalmMs lang). Gefahr beginnt bei z.d <= zedHide und haelt, solange z.d <= zedSafe (Hysterese).
 -- B1e (PLAN_B1E.md 1.5, 6.3): c.gap (Zuschlag mit der Koerperlaenge, nur grosser Koerper) kommt auf hideGap; fehlt er: 0.
+-- Lauf baer-talente (Talent Wachsam): c.hideR / c.safeR ersetzen zedHide / zedSafe fuer DIESES Junge (der Aufrufer rechnet sie, server/
+-- BanditsNPCBearGuard.lua); fehlen sie (oder Unsinn), gelten zedHide / zedSafe wie bisher.
 function B.GuardDecide(c, o, z, g, ms)
     local cfg = B.CFG
     g = g or {}
     local zd = z and tonumber(z.d) or nil
+    local hideR = c and tonumber(c.hideR) or nil
+    local safeR = c and tonumber(c.safeR) or nil
+    if hideR == nil or hideR ~= hideR then hideR = cfg.zedHide end
+    if safeR == nil or safeR ~= safeR then safeR = cfg.zedSafe end
     local danger
     if g.on == true then
-        danger = zd ~= nil and zd <= cfg.zedSafe
+        danger = zd ~= nil and zd <= safeR
     else
-        danger = zd ~= nil and zd <= cfg.zedHide
+        danger = zd ~= nil and zd <= hideR
     end
     if not danger then
         if g.on ~= true then return { act = "none", rule = 20 } end

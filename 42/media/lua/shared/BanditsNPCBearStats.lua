@@ -379,6 +379,12 @@ function B.StatsOf(rec)
     local xs = numList(c.statAt, STAT_AT_DEF)
     local hpMax = lerpList(s, xs, numList(c.hpAt, HP_DEF)) * (1 + cfg("vitPerLv", 0.05) * lv.vit)
     local staMax = lerpList(s, xs, numList(c.staAt, STA_DEF)) * (1 + cfg("conPerLv", 0.05) * lv.con)
+    -- Talente (Lauf baer-talente, shared/BanditsNPCBearTalentRules.lua; Existenz-Riegel): Dickes Fell + talFurHp NACH dem Vitalitaets-Bonus
+    -- (Leben ist ein Anteil rec.hp -> der Balken bleibt gleich voll: 200/400 -> 325/650, Kevin ~10:20 "Prozent bleibt"); Ausdauernd x (1 + talStaPct)
+    if B.TalentK ~= nil then
+        hpMax = hpMax + B.TalentK(rec, "fur", "talFurHp", 0)
+        staMax = staMax * (1 + B.TalentK(rec, "stamina", "talStaPct", 0))
+    end
     local carry = lerpList(s, xs, numList(c.carryAt, CARRY_DEF))
     local fightBonus = cfg("fightBonusMax", 70) * lv.fgt / 10       -- Sandbox-Kuerzung: fester Wert (vorher BearFightBonusMax)
     local dmg = lerpList(s, xs, numList(c.dmgAt, DMG_DEF)) * (1 + fightBonus / 100)

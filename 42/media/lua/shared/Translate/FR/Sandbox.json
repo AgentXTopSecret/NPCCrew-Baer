@@ -31,6 +31,10 @@
     "Sandbox_BanditsNPC_BearSkillAgeCap_tooltip": "Un ourson apprend jusqu'au niveau 3, un ours à moitié grand jusqu'à 6, un ours fort jusqu'à 8 ; seul un ours adulte atteint 10. L'expérience déjà acquise reste. Désactivé : aucune limite.",
     "Sandbox_BanditsNPC_BearSkillXpPercent": "Ours : vitesse d'apprentissage des compétences (pourcentage)",
     "Sandbox_BanditsNPC_BearSkillXpPercent_tooltip": "La vitesse à laquelle un ours apprivoisé apprend ses compétences. 100 = normal : une compétence demande au moins environ 18 heures de jeu réel pour atteindre le niveau 10, et avec la limite d'âge elle reste à 8 ou moins tant que l'ours n'est pas adulte. 200 = deux fois plus vite.",
+    "Sandbox_BanditsNPC_BearTalentReset": "Ours : réinitialiser les talents autorisé",
+    "Sandbox_BanditsNPC_BearTalentResetDays": "Ours : jours entre deux réinitialisations des talents",
+    "Sandbox_BanditsNPC_BearTalentResetDays_tooltip": "Jours de jeu entre deux réinitialisations des talents du même ours. 1 = au plus une fois par jour de jeu, 0 = à tout moment. Ne compte que si la réinitialisation des talents est autorisée.",
+    "Sandbox_BanditsNPC_BearTalentReset_tooltip": "Le propriétaire peut retirer d'un coup tous les talents d'un ours apprivoisé dans la fenêtre de l'ours (onglet Talents) et dépenser à nouveau les points de talent. Désactivé (par défaut) : les talents restent pour toujours.",
     "Sandbox_BanditsNPC_BearTamePercent": "Apprivoisement : vitesse (pourcentage)",
     "Sandbox_BanditsNPC_BearTamePercent_tooltip": "La vitesse à laquelle un ourson apprend à vous faire confiance. 100 = normal, 200 = deux fois plus de points par repas et par caresse. Il lui faut quand même au moins 3 repas, avec une attente entre chacun."
 }

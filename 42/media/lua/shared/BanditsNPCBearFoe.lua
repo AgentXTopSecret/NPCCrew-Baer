@@ -221,15 +221,21 @@ local function clearBehind(z, rx, ry)
     return true, nil
 end
 
-local function addPush(z, rx, ry, ms)
+-- Lauf baer-talente (Talent Schwere Pranke, Kevin ~10:20 "Fliegen doppelt so weit"): kp = Faktor fuer Weg UND Frist (knockPush x kp Kacheln in
+-- pushMs x kp -- sonst schnitte die Frist bei 30 Bildern/s den laengeren Weg ab), geklemmt 1..4; fehlt kp: 1 wie bisher. Der Weg wird je neue
+-- Kachel weiter geprueft (flyOk in B.FoePushTick) -- hinter einer Wand endet der Flug dort.
+local function addPush(z, rx, ry, ms, kp)
     for i = 1, #P do
         if P[i].z == z then
             table.remove(P, i)
             break
         end
     end
+    local k = num(kp) or 1
+    if k < 1 then k = 1 end
+    if k > 4 then k = 4 end
     if #P >= math.floor(cfg("pushMax", 8)) then table.remove(P, 1) end
-    P[#P + 1] = { z = z, rx = rx, ry = ry, left = cfg("knockPush", 0.7), t0 = ms, zl = math.floor(z:getZ()) }
+    P[#P + 1] = { z = z, rx = rx, ry = ry, left = cfg("knockPush", 0.7) * k, t0 = ms, zl = math.floor(z:getZ()), span = cfg("pushMs", 600) * k }
 end
 
 -- Umwerfen (gespielt T:shared/NCBearFight.lua:845-905, Kevin 08.11. "umwerfen hat geklappt"). mode "back" / "down". bear = Baer-Kopie
@@ -239,7 +245,7 @@ end
 -- z:getForwardDirection() + :getX()/:getY(): B:shared/ZombieActions/ZAPush.lua:36-37; z:testDotSide(Figur): ZAPush.lua:42 (IsoGameCharacter
 -- als Argument; der Baer ist IsoPlayer); z:setHitFromBehind(b): ZAPush.lua:41; z:knockDown(b): V:client/DebugUIs/DebugContextMenu.lua:664;
 -- z:setPlayerAttackPosition(Text): ZAPush.lua:42.
-local function knock(z, mode, bear, bx, by, ms)
+local function knock(z, mode, bear, bx, by, ms, kp)
     local awayX, awayY = z:getX() - bx, z:getY() - by
     local awayLen = math.sqrt(awayX * awayX + awayY * awayY)
     local behind = false
@@ -270,17 +276,18 @@ local function knock(z, mode, bear, bx, by, ms)
     z:knockDown(fromBehind)
     if fly then
         z:setPlayerAttackPosition(side)
-        if cfg("knockPush", 0.7) > 0 then addPush(z, rx, ry, ms) end
+        if cfg("knockPush", 0.7) > 0 then addPush(z, rx, ry, ms, kp) end
     end
     return mode
 end
 
 -- Treffer: dmg Zombie-Leben, knock "back"/"down"/nil (vom Schreiber gewuerfelt), kk = Umwerf-Art auch fuer den toedlichen Treffer
 -- (knockKill, nur wo die Stufe umwerfen darf), snd = Treffer-Ton oder nil. Rueckgabe "kill" / "hit" / nil (nicht gerechnet).
+-- Lauf baer-talente: kp = Rueckstoss-Faktor (Talent Schwere Pranke, Fx "hit" kp) oder nil (= 1).
 -- z:isAlive(): B:server/BanditSave.lua:52; z:getHealth()/z:setHealth(Zahl): B:client/BanditUpdate.lua:2392/:2397; z:Kill(nil): :2386;
 -- z:splatBlood(3, 0.3), z:splatBloodFloorBig(): B:shared/BanditCompatibility.lua:130/:132; z:playSound(Text): B:client/BanditUpdate.lua:1665,
 -- Ton "HeadSmash" V:media/scripts/generated/sounds/zombies/sounds_zombie_foley.txt (gespielt T:shared/NCBearFight.lua:910-927).
-function B.FoeHurt(z, dmg, knockMode, bx, by, id, snd, kk)
+function B.FoeHurt(z, dmg, knockMode, bx, by, id, snd, kk, kp)
     if z == nil or not hasAuth(z) or not z:isAlive() then return nil end
     dmg = num(dmg) or 0
     bx, by = num(bx), num(by)
@@ -297,13 +304,13 @@ function B.FoeHurt(z, dmg, knockMode, bx, by, id, snd, kk)
     if h <= 0 then
         z:splatBloodFloorBig()
         if snd ~= nil then z:playSound("HeadSmash") end
-        if cfg("knockKill", 1) >= 1 and standing and (kk == "back" or kk == "down") then knock(z, kk, bear, bx, by, ms) end
+        if cfg("knockKill", 1) >= 1 and standing and (kk == "back" or kk == "down") then knock(z, kk, bear, bx, by, ms, kp) end
         z:Kill(nil)
         return "kill"
     end
     z:setHealth(h)
     if type(snd) == "string" then z:playSound(snd) end
-    if standing and (knockMode == "back" or knockMode == "down") then knock(z, knockMode, bear, bx, by, ms) end
+    if standing and (knockMode == "back" or knockMode == "down") then knock(z, knockMode, bear, bx, by, ms, kp) end
     return "hit"
 end
 
@@ -318,7 +325,8 @@ function B.FoePushTick()
     while i <= #P do
         local p = P[i]
         local z = p.z
-        local drop = p.left <= 0 or ms - p.t0 > span or ms - p.t0 < 0 or z:getCurrentSquare() == nil or math.floor(z:getZ()) ~= p.zl
+        local drop = p.left <= 0 or ms - p.t0 > (num(p.span) or span) or ms - p.t0 < 0 or z:getCurrentSquare() == nil
+            or math.floor(z:getZ()) ~= p.zl
         if not drop then
             local step = p.left
             if step > stepMax then step = stepMax end
@@ -1049,7 +1057,7 @@ local function onHit(t)
     local z = B.FoeFind(t.oid, t.zx, t.zy)
     if z == nil then return end
     if hasAuth(z) then
-        B.FoeHurt(z, t.dmg, t.knock, t.bx, t.by, t.id, t.snd, t.kk)
+        B.FoeHurt(z, t.dmg, t.knock, t.bx, t.by, t.id, t.snd, t.kk, t.kp)
     elseif type(t.snd) == "string" then
         z:playSound(t.snd)                           -- B:client/BanditUpdate.lua:1665
     end

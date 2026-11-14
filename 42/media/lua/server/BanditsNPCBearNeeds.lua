@@ -539,7 +539,11 @@ function B.NeedsSlow(rec, dt, online, now, players)
         local d = rec.nDay
         d.c = clamp(d.c + dt, 0, 24)
         local k = pct / 100 * B.TrustK(rec)
-        local rise = cfg("needRiseH", 6.25) * k * dt
+        -- Lauf baer-talente (Talent Genuegsam, Kevin 02:45 "statt 16 std dann 24"): Hunger UND Durst steigen x talFrugalK (16 / 24) -- mit
+        -- Vertrauen +100 multipliziert (6,25 x 0,75 x 0,667 = 3,1 je Wachstunde). Muedigkeit unten bleibt. Existenz-Riegel.
+        local frugal = 1
+        if B.TalentK ~= nil then frugal = B.TalentK(rec, "frugal", "talFrugalK", 1) end
+        local rise = cfg("needRiseH", 6.25) * k * dt * frugal
         rec.nH = clamp(rec.nH + rise, 0, 100)
         rec.nT = clamp(rec.nT + rise, 0, 100)
         local add = B.TirRate(rec) * k * dt

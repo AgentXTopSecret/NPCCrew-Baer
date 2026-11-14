@@ -690,6 +690,8 @@ local function viewEntry(rec, pkey, ms)
         if B.SleepView then B.SleepView(rec, t, ms) end
         -- F4 (PLAN_F4.md 4.3): ivW ivC ivN ivK ivR ivX bag nur fuer den Besitzer, eat fuer alle (server/BanditsNPCBearInv.lua)
         if B.InvView then B.InvView(rec, t, pkey, ms) end
+        -- Lauf baer-talente (PLAN_TALENTE.md 4.4): tal / talE / talNx / talRo / talRw / talRd nur fuer den Besitzer (server/BanditsNPCBearTalent.lua)
+        if B.TalentView then B.TalentView(rec, t, pkey, now) end
     end
     return t
 end

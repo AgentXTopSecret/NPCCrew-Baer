@@ -49,6 +49,8 @@ end
 -- naechsten B.NeedsFix einmal umgerechnet (server/BanditsNPCBearNeeds.lua); ein neuer nie zweimal. Fassung bleibt B.MARK_V = 2.
 -- Nachbesserung K1 C5: + nDd / nDm (Spieltag und Bitmaske der sechs Tages-Marken, B.NeedsDayMark) -- nicht aus rec, sondern in B.MarkOf
 -- aus dem Tagesbuch nDay gerechnet; gelesen nur in B.NeedsFromMark (server/BanditsNPCBearNeeds.lua). Fassung bleibt B.MARK_V = 2.
+-- Lauf baer-talente (PLAN_TALENTE.md 4.3): + tal / talR / talN (gelernte Talente als Text, Spieltag des letzten Resets, gemeldete Punkte) --
+-- gelesen nur in B.TalentFromMark (server/BanditsNPCBearTalent.lua: bereinigt, auf die verdienten Punkte gekuerzt). Fassung bleibt B.MARK_V = 2.
 local MARK_FIELDS = {
     "u", "id", "nr", "gen", "r", "kind", "src", "st", "finder", "bond", "owner", "tame", "fedN", "petN", "last",
     "feedAt", "petAt", "born", "tamedAt", "mode", "name", "hx", "hy", "hz",
@@ -57,6 +59,7 @@ local MARK_FIELDS = {
     "down", "bndH", "bndR", "kZ", "kB",
     "look",
     "nH", "nT", "nF", "tr", "trV",
+    "tal", "talR", "talN",
 }
 
 -- Aussehen (PLAN_AUSSEHEN.md 3): ein Wunsch-Aussehen aus dem Spiegel nur, wenn es eine bekannte Familie ausser "std" ist (B.LOOK_KEYS,
@@ -342,6 +345,9 @@ function B.Restore(o, mark, players)
     if st ~= "tame" then rec.mode = nil end
     -- B1d (PLAN_B1D.md 2.4 "restore"): Wachstum und Erfahrung aus dem Spiegel, geklemmt; im Mehrspieler g gedeckelt (Grow.lua)
     if st == "tame" and B.GrowFromMark then B.GrowFromMark(rec, mark, "restore") end
+    -- Lauf baer-talente (PLAN_TALENTE.md 4.3): Talente aus dem Spiegel NACH dem Wachstum -- gekuerzt auf das, was das (im Mehrspieler gedeckelte)
+    -- Wachstum verdient (R2: ein veraenderter Spiegel bringt nie mehr Talente)
+    if st == "tame" and B.TalentFromMark then B.TalentFromMark(rec, mark, "restore") end
     B.InsertRec(rec, o)
     B.Err("heal: entry " .. tostring(id) .. " (" .. st .. ", owner " .. tostring(owner) .. ") restored from the mark on the animal")
     -- F4 (PLAN_F4.md 2.4, 10 "Registerverlust"): der Spiegel traegt KEIN Inventar (faelschbar) -- der Inhalt kommt aus der Kopie beim Besitzer
@@ -471,6 +477,8 @@ function B.TakeNewerMark(rec, mark)
     B.Err("heal: entry " .. id .. " updated from a newer mark on the animal (" .. tostring(was) .. " -> " .. st .. ")")
     -- B1d (PLAN_B1D.md 2.4 "newer"): g und Erfahrung = das Groessere, Fuetter-Bonus aus dem Spiegel (Grow.lua)
     if st == "tame" and B.GrowFromMark then B.GrowFromMark(rec, mark, "newer") end
+    -- Lauf baer-talente: der neuere Spiegel ist auch fuer die Talente die Wahrheit (bereinigt, gekuerzt; server/BanditsNPCBearTalent.lua)
+    if st == "tame" and B.TalentFromMark then B.TalentFromMark(rec, mark, "newer") end
     -- F4 (PLAN_F4.md 2.4): das Inventar folgt nie dem Spiegel, nur der Kopie beim Besitzer (server/BanditsNPCBearInv.lua)
     if st == "tame" and B.InvHealRec then B.InvHealRec(rec, nil) end
     B.Touch(rec)

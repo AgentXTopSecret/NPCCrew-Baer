@@ -486,6 +486,16 @@ function B.Handle(player, command, args)
         if B.HandleInvList then B.HandleInvList(player, args) end
         return
     end
+    -- Lauf baer-talente (PLAN_TALENTE.md 4.1): "Talent" { id, k } (nach dem Ja im Vanilla-Ja/Nein-Fenster) und "TalentReset" { id } pruefen die
+    -- Bitten selbst (server/BanditsNPCBearTalent.lua) -- geglaubt wird nur die Benennung, nie eine Punktzahl
+    if command == "Talent" then
+        if B.HandleTalent then B.HandleTalent(player, args) end
+        return
+    end
+    if command == "TalentReset" then
+        if B.HandleTalentReset then B.HandleTalentReset(player, args) end
+        return
+    end
 end
 
 -- Events.OnClientCommand.Add(function(module, command, player, args)): Vanilla server/ClientCommands.lua:1357; Filter auf das
@@ -687,6 +697,14 @@ local function slowTickBody()
         for i = 1, #list do
             local rec = list[i]
             if reg.cubs[rec.id] == rec then B.NeedsSlow(rec, dt, online, now, players) end
+        end
+    end
+    -- Lauf baer-talente (PLAN_TALENTE.md 4.2): Talentpunkt-Meldung (genau einmal je Punkt) und Reset-Uhr der Sicht (server/BanditsNPCBearTalent.lua)
+    -- -- eigene Schleife NACH B.NeedsSlow, aus demselben Grund wie dort
+    if B.TalentSlow then
+        for i = 1, #list do
+            local rec = list[i]
+            if reg.cubs[rec.id] == rec then B.TalentSlow(rec, now, players) end
         end
     end
     B.FlushViews(players)

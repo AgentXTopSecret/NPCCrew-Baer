@@ -31,6 +31,10 @@
     "Sandbox_BanditsNPC_BearSkillAgeCap_tooltip": "小熊最多学到3级，半大的熊6级，强壮的熊8级，只有成年的熊能到10级。已经有的经验会保留。关闭: 没有限制。",
     "Sandbox_BanditsNPC_BearSkillXpPercent": "熊: 技能学习速度 (百分比)",
     "Sandbox_BanditsNPC_BearSkillXpPercent_tooltip": "驯服的熊学习技能有多快。100 = 正常: 一个技能至少需要大约18小时的实际游戏时间才能到10级，有年龄上限时，熊成年之前最多8级。200 = 快一倍。",
+    "Sandbox_BanditsNPC_BearTalentReset": "熊: 允许重置天赋",
+    "Sandbox_BanditsNPC_BearTalentResetDays": "熊: 两次重置天赋之间的天数",
+    "Sandbox_BanditsNPC_BearTalentResetDays_tooltip": "同一只熊两次重置天赋之间的游戏天数。1 = 每个游戏日最多一次，0 = 随时。只在允许重置天赋时有效。",
+    "Sandbox_BanditsNPC_BearTalentReset_tooltip": "主人可以在熊窗口(天赋页)一次收回驯服的熊的全部天赋，重新分配天赋点。关闭(默认): 天赋永久保留。",
     "Sandbox_BanditsNPC_BearTamePercent": "驯服: 速度 (百分比)",
     "Sandbox_BanditsNPC_BearTamePercent_tooltip": "小熊多快学会信任你。100 = 正常，200 = 每次喂食和抚摸的点数翻倍。它仍然至少需要喂食3次，每次之间要等一段时间。"
 }

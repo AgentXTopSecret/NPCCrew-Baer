@@ -59,6 +59,9 @@
 --     fuer das Zahnrad-Menue (client/ISUI/BanditsNPCBearWindow.lua); in der Schalter-Reihe bleibt nur Passive.
 --   * BEDUERFNISSE: Tooltips Hunger / Durst mit dem Tagesbedarf seiner Groesse (Sicht hd Punkte, wl Liter) und den neuen Mahlzeit- / Schalen-
 --     Zeilen; "Its needs are resting: ..." solange der Schreiber sie einfriert (Sicht nfz: er schlaeft / du schlaeft / zu weit weg).
+-- TALENTE (Lauf baer-talente, PLAN_TALENTE.md 5.4): d.tal = Modell des Reiters "Perks" (U.TalentModel, client/BanditsNPCBearTalentData.lua; nil
+-- ohne Talente im Kern); je gelerntem Talent EINE Zusatzzeile "Perk <Name>: <Wirkung>" in den Tooltips Leben / Ausdauer / Last / Nahkampfschaden /
+-- Hunger / Durst (U.TalentLines) -- die alten Texte bleiben, wie sie sind.
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -788,13 +791,19 @@ end
 
 -- K1 (PLAN_K1.md 8, Abschnitt 1.1): Tagesbedarf bei seiner Groesse (Sicht hd Punkte je volle Leiste, wl Liter) als Tooltip-Zeile -- Steaks
 -- zu 40 Punkten auf halbe gerundet ("about 17.5 steaks"). Fehlt eins: nil.
+-- Nachbesserung C6 (Lauf baer-talente): mit dem Talent Genuegsam steigen Hunger und Durst nur x talFrugalK (16 / 24, server/BanditsNPCBearNeeds.lua)
+-- -- der Bedarf je Tag (16 Wachstunden) ist dann 2/3 der vollen Leiste. Nur diese Anzeige rechnet so; hd / wl bleiben "volle Leiste" (daraus
+-- rechnen Mahlzeit, Schale und Futter-Prozent). B.TalentK ist rein (shared/BanditsNPCBearTalentRules.lua) und liest das Sicht-Feld tal.
 local function needDay(v)
     if not isNum(v.hd) or not isNum(v.wl) or v.hd <= 0 then return nil end
-    local st = math.floor(v.hd / STEAK_PTS * 2 + 0.5) / 2
+    local k = 1
+    if B.TalentK ~= nil then k = tonumber(B.TalentK(v, "frugal", "talFrugalK", 1)) or 1 end
+    local hd, wl = v.hd * k, v.wl * k
+    local st = math.floor(hd / STEAK_PTS * 2 + 0.5) / 2
     if st < 0.5 then st = 0.5 end
     local stTxt = string.format("%d", math.floor(st))
     if st ~= math.floor(st) then stTxt = string.format("%.1f", st) end
-    return U.T("UI_BN_Bear_Win_NeedDay", math.floor(v.hd + 0.5), stTxt, string.format("%.1f", math.floor(v.wl * 10 + 0.5) / 10))
+    return U.T("UI_BN_Bear_Win_NeedDay", math.floor(hd + 0.5), stTxt, string.format("%.1f", math.floor(wl * 10 + 0.5) / 10))
 end
 
 -- K1 (PLAN_K1.md 6): ruhen seine Beduerfnisse gerade (Sicht nfz vom Schreiber: er schlaeft / du schlaefst oder spulst vor / zu weit weg)? Satz
@@ -1088,5 +1097,13 @@ function U.WinModel(v, player, nowMs)
         { key = "nose", label = s.nose, on = false, off = true, tip = TIP_HEAD .. s.nose .. TIP_BODY .. s.whyLater },
     }
     d.gearTip = TIP_HEAD .. s.gear .. TIP_BODY .. s.gearTip
+    -- Lauf baer-talente: Modell des Reiters "Perks" und die Zusatzzeilen gelernter Talente in den Tooltips
+    if U.TalentModel then d.tal = U.TalentModel(v) end
+    local tl = U.TalentLines and U.TalentLines(v)
+    if tl then
+        for k, line in pairs(tl) do
+            if d.tips[k] then d.tips[k] = d.tips[k] .. TIP_LINE .. line end
+        end
+    end
     return d
 end

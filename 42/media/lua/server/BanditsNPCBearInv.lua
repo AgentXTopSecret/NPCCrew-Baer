@@ -139,11 +139,18 @@ function K.half(rec)
     return (num(B.StatsOf(rec).s) or 0) >= edge - 0.000001
 end
 
--- Kapazitaet in kg (PLAN_F4.md 3): Groessen-Traglast x Sandbox BearCarryPercent / 100, +bagAdd mit Packtaschen ab halbstark.
+-- Lauf baer-talente: Talent Lasttier -> + talMuleKg (50) kg, sonst 0 (shared/BanditsNPCBearTalentRules.lua; Existenz-Riegel). Beide Rechnungen
+-- der Kapazitaet (B.InvCap und die Packtaschen-Probe in B.InvTakeComplete) reichen es an B.InvCapOf durch -- eine Zahl, zwei gleiche Wege.
+function K.mule(rec)
+    if B.TalentK == nil then return 0 end
+    return B.TalentK(rec, "mule", "talMuleKg", 0)
+end
+
+-- Kapazitaet in kg (PLAN_F4.md 3): Groessen-Traglast x Sandbox BearCarryPercent / 100, +bagAdd mit Packtaschen ab halbstark, + Lasttier.
 function B.InvCap(rec)
     if type(rec) ~= "table" or B.StatsOf == nil then return 0 end
     local carry = num(B.StatsOf(rec).carry) or 0
-    return B.InvCapOf(carry, B.Opt("BearCarryPercent"), rec.bag ~= nil, K.half(rec))
+    return B.InvCapOf(carry, B.Opt("BearCarryPercent"), rec.bag ~= nil, K.half(rec), K.mule(rec))
 end
 
 function B.InvLoad(rec)
@@ -810,7 +817,7 @@ function B.InvTakeComplete(character, animal, nr, k)
             return false
         end
         local kg, _, _ = K.sum(rec)
-        local capNo = B.InvCapOf(num(B.StatsOf(rec).carry) or 0, B.Opt("BearCarryPercent"), false, false)
+        local capNo = B.InvCapOf(num(B.StatsOf(rec).carry) or 0, B.Opt("BearCarryPercent"), false, false, K.mule(rec))   -- + Lasttier
         if kg > capNo + 0.000001 then
             K.why(character, rec, "UI_BN_Bear_Why_InvPacks")
             return false

@@ -132,15 +132,17 @@ local function sortIn(t, e, cap)
 end
 
 -- Einen Zombie / Banditen an (x, y, zl) den Baeren zuordnen, in deren Kreis er steht. Bandit? erst, wenn er in einem Kreis steht (isBandit).
-local function take(per, points, rz, rb, z, x, y, zl, light)
+-- Lauf baer-talente (Talent Wachsam): jeder Punkt traegt seine eigenen Weiten p.rz / p.rb (fightRadius / fightBanditRadius x talAlertK).
+local function take(per, points, z, x, y, zl, light)
     local c = nil
     local capZ = math.floor(cfg("foeCandZ", 24))
     local capB = math.floor(cfg("foeCandB", 8))
-    local rr = rz
-    if rb > rr then rr = rb end
     for i = 1, #points do
         local p = points[i]
         if math.floor(zl) == p.z then
+            local rz, rb = p.rz, p.rb
+            local rr = rz
+            if rb > rr then rr = rb end
             local dx, dy = x - p.x, y - p.y
             local d2 = dx * dx + dy * dy
             if d2 <= rr * rr then
@@ -156,7 +158,7 @@ local function take(per, points, rz, rb, z, x, y, zl, light)
     end
 end
 
-local function lightCands(per, points, rz, rb, tab, x0, x1, y0, y1, cap)
+local function lightCands(per, points, tab, x0, x1, y0, y1, cap)
     local bz = BanditZombie
     local seen = 0
     for id, light in pairs(tab) do
@@ -166,18 +168,22 @@ local function lightCands(per, points, rz, rb, tab, x0, x1, y0, y1, cap)
             local lx, ly = num(light.x), num(light.y)
             if lx ~= nil and ly ~= nil and lx >= x0 and lx <= x1 and ly >= y0 and ly <= y1 then
                 local z = bz.GetInstanceById(id)
-                if z ~= nil then take(per, points, rz, rb, z, lx, ly, num(light.z) or 0, light) end
+                if z ~= nil then take(per, points, z, lx, ly, num(light.z) or 0, light) end
             end
         end
     end
     return seen
 end
 
-local function cands(points, rz, rb)
+local function cands(points)
     local per = {}
-    for i = 1, #points do per[i] = { z = {}, b = {} } end
-    local r = rz
-    if rb > r then r = rb end
+    local r = 0
+    for i = 1, #points do
+        per[i] = { z = {}, b = {} }
+        local p = points[i]
+        if p.rz > r then r = p.rz end
+        if p.rb > r then r = p.rb end
+    end
     local x0, x1, y0, y1 = points[1].x - r, points[1].x + r, points[1].y - r, points[1].y + r
     for i = 2, #points do
         local p = points[i]
@@ -189,8 +195,8 @@ local function cands(points, rz, rb)
     local cap = math.floor(cfg("foeScanMax", 1500))
     local bz = BanditZombie
     if B.IsSP() and type(bz) == "table" and bz.GetInstanceById and type(bz.CacheLightZ) == "table" then
-        local n = lightCands(per, points, rz, rb, bz.CacheLightZ, x0, x1, y0, y1, 4 * cap)
-        if type(bz.CacheLightB) == "table" then n = n + lightCands(per, points, rz, rb, bz.CacheLightB, x0, x1, y0, y1, 4 * cap) end
+        local n = lightCands(per, points, bz.CacheLightZ, x0, x1, y0, y1, 4 * cap)
+        if type(bz.CacheLightB) == "table" then n = n + lightCands(per, points, bz.CacheLightB, x0, x1, y0, y1, 4 * cap) end
         if n > 0 then return per end
     end
     local cell = getCell()
@@ -211,7 +217,7 @@ local function cands(points, rz, rb)
         local z = list:get(idx)
         if z ~= nil then
             local zx, zy = z:getX(), z:getY()
-            if zx >= x0 and zx <= x1 and zy >= y0 and zy <= y1 then take(per, points, rz, rb, z, zx, zy, z:getZ(), nil) end
+            if zx >= x0 and zx <= x1 and zy >= y0 and zy <= y1 then take(per, points, z, zx, zy, z:getZ(), nil) end
         end
     end
     local nxt = start + count
@@ -248,17 +254,21 @@ function B.FoeScan(live, ms, force)
     local out, total = {}, 0
     local points = {}
     local n = type(live) == "table" and #live or 0
+    local rz0, rb0 = cfg("fightRadius", 10), cfg("fightBanditRadius", 12)
     for i = 1, n do
         local e = live[i]
         local rec, a = e.rec, e.a
         local s = B._s[rec.id]
         if rec.st == "tame" and rec.ride == nil and s ~= nil and s.obj == a and a:isExistInTheWorld() and not a:isDead() then
-            points[#points + 1] = { id = rec.id, x = a:getX(), y = a:getY(), z = math.floor(a:getZ()) }
+            -- Lauf baer-talente (Talent Wachsam, shared/BanditsNPCBearTalentRules.lua): dieser Baer sucht talAlertK x so weit (10 / 12 -> 15 / 18,
+            -- unter der Leine fightLeash 25); ohne Talent 1
+            local ak = 1
+            if B.TalentK ~= nil then ak = B.TalentK(rec, "alert", "talAlertK", 1) end
+            points[#points + 1] = { id = rec.id, x = a:getX(), y = a:getY(), z = math.floor(a:getZ()), rz = rz0 * ak, rb = rb0 * ak }
         end
     end
     if #points > 0 then
-        local rz, rb = cfg("fightRadius", 10), cfg("fightBanditRadius", 12)
-        local per = cands(points, rz, rb)
+        local per = cands(points)
         for i = 1, #points do
             local p = points[i]
             for pass = 1, 2 do
