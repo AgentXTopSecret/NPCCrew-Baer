@@ -827,3 +827,10 @@ Geordnet (Claude):
     Unstuck, Koerper-Tausch, Absturz); eigener Reiter mit Skill-Baum, Punkt ausgeben per Knopf MIT Bestaetigung, Skill leuchtet, permanent aktiv; nach 2 aktiven Skills
     gesperrt, selbst wenn ein Fehler mehr Punkte gaebe. Beispiele: Futter/Trinken haelt +50 % (24 statt 16 h), +250 Leben. Reset: Sandbox-Schalter (Vorgabe AUS),
     hoechstens 1x je Tag (auch Sandbox). Eigene gezeichnete Icons je Skill. Kevin laedt zu Fragen ein.
+Kevins Antworten ~02:50 (Auswahl-Dialog): I3 Vertrauen -> *"Nur Beduerfnisse"* (+-25 % aufs Beduerfnis-Tempo bei +-100, statt +-20 %). I2 Bett-Buff -> *"Nur Ausdauer"*,
+   Staerke *"+20 %"* (voller Buff bei Schlaf 100 -> 0 % Muedigkeit im Baerenbett, anteilig bei kuerzerem Schlaf, haelt bis zum naechsten Schlaf). I9 -> *"8 Skills"*
+   zur Auswahl (2 aktivierbar); Claude schlaegt Namen und Wirkung vor, Kevin waehlt.
+   I5 Annahme (Claude): die automatische Anzeige zeigt NUR den Wert, der >= 75 % ist, und erscheint auch, wenn die Ueber-Kopf-Option auf "Aus" steht.
+Claudes Skill-Vorschlag (8, an Kevin): 1 Genuegsam (Hunger/Durst halten +50 %: 24 statt 16 Wachstunden) | 2 Dickes Fell (+250 Leben) | 3 Ausdauernd (+30 % Ausdauer,
+   erholt sich schneller) | 4 Schwere Pranke (Prankenhieb wirft jeden Zombie um) | 5 Lasttier (+50 kg Traglast) | 6 Wachsam (erkennt Gegner 50 % weiter, nie schlaftrunken)
+   | 7 Angler (faengt doppelt so viel Fisch, F5) | 8 Zaeh (heilt doppelt so schnell, steht vom Boden schneller auf).
