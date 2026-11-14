@@ -20,7 +20,8 @@ if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: la
 -- bist). K1 (Kevin 14.11. ~01:05 "beim schlafen/ausgelogt/nicht geladen in der welt weit out of range duerfen seine beduerfnisse nie
 -- steigen", ~01:15 MP-Vorschlag bestaetigt): AUCH eingefroren, solange er liegt (nur die Muedigkeit sinkt weiter), sein Besitzer schlaeft
 -- bzw. vorspult (Bitte "Sleep") oder er weiter als needFreezeR (70) Kacheln vom Besitzer ist. Eingefroren: kein Anstieg, kein Leben-Abzug,
--- kein Vertrauens-Verlust, keine gezaehlte Stunde; kein Nachholen (dt je Takt, gedeckelt auf maxDtH).
+-- kein Vertrauens-Verlust aus Hunger / Durst (am Boden kostet es trotzdem -10, fix1 R3), keine gezaehlte Stunde; kein Nachholen (dt je Takt,
+-- gedeckelt auf maxDtH).
 -- Sandbox BearNeedsPercent 0: Hunger, Durst, Muedigkeit stehen auf 0.
 -- Folgen: B.NeedK (shared) an je EINER Stelle (Ausdauer-Erholung, Wachsen, Selbstheilung in server/BanditsNPCBearGrow.lua, Schaden in
 -- shared/BanditsNPCBearFightRules.lua B.MeleeDamage); Leben bei Hunger / Durst 100 hier ueber B.BodyHurt -- Kevin 13.11.: "geht sein
@@ -224,13 +225,15 @@ end
 
 -- ---------------------------------------------------------------------------
 -- Zaehlen die Beduerfnisse dieses Eintrags gerade? (PLAN_F3.md 2.1; K1 PLAN_K1.md 6) Rueckgabe: zaehlt, grund.
--- Nein ohne Grund (wie F3): nicht gezaehmt (vermisst), Besitzer nicht im Spiel, kein Koerper in der Welt und nicht mitfahrend.
+-- Nein ohne Grund (wie F3): nicht gezaehmt (vermisst), Besitzer nicht im Spiel.
 -- Nein MIT Grund (K1, Kevin 14.11. ~01:05 / ~01:15; Grund fuer die Sicht nfz): "sleep" -- er liegt (Hinlegen oder Schlaf; nur die Muedigkeit
 -- sinkt weiter), "owner" -- sein Besitzer schlaeft bzw. spult vor (Bitte "Sleep", B.OwnerAsleep in server/BanditsNPCBearSleep.lua), "far" --
 -- weiter als needFreezeR (70) Kacheln vom naechsten seiner Spieler (im Mehrspieler kann ihn ein ANDERER Spieler geladen halten).
+-- fix1 (R5, k1/GEGEN.md 7): auch "far", wenn sein Koerper nicht in der Welt ist und er nicht mitfaehrt (nicht geladen = weiter weg als die
+-- geladene Gegend um jeden Spieler; das Fenster zeigt dann "ausser Reichweite") -- vorher ohne Grund, der Satz "ruhen" fehlte.
 -- Mitfahrend zaehlt der Abstand nicht (er sitzt beim Besitzer). getX / getY am Tier: Vanilla shared/Definitions/animal/ButcheringUtil.lua:575-576;
--- die Spieler-Lage kommt fertig aus B.Players() (e.x / e.y, server/BanditsNPCBearWorld.lua). Nachbesserung K1 C2: steht VOR B.TrustAdd,
--- weil auch "am Boden" (V3) dieser Sperre folgt.
+-- die Spieler-Lage kommt fertig aus B.Players() (e.x / e.y, server/BanditsNPCBearWorld.lua). fix1 (R3): "am Boden" folgt dieser Sperre NICHT
+-- mehr (B.TrustAdd).
 -- ---------------------------------------------------------------------------
 local function ownerDist(rec, a, players)
     players = players or B.Players()
@@ -252,7 +255,7 @@ local function counts(rec, online, players)
     local a = nil
     if rec.ride == nil then
         a = B.FindAnimal(rec)
-        if a == nil then return false, nil end
+        if a == nil then return false, "far" end        -- fix1 (R5): nicht geladen -> Grund fuer die Sicht
     end
     if B.IsLying ~= nil and B.IsLying(rec) then return false, "sleep" end
     if B.OwnerAsleep ~= nil and B.OwnerAsleep(rec.owner) then return false, "owner" end
@@ -268,9 +271,9 @@ end
 --   "pet" (gestreichelt) / "feedfull" (Hunger durch Fuettern aus der Hand auf 0 %) / "drinkfull" (Durst durch Traenken aus der Hand auf 0 %):
 --     je Quelle hoechstens 1x je Spieltag +trGain (0,5) -- die Marke gp / gf / gd im Tagesbuch; Meldung UI_BN_Bear_Note_TrustUp*.
 --     Den Fall "auf 0 gebracht" entscheidet der Aufrufer (B.FeedComplete, B.DrinkComplete); selbst gefressen / getrunken ruft nie.
---   "down": am Boden (Todesschutz), JEDES Mal trDown (-10), Meldung UI_BN_Bear_Note_TrustDown. Nachbesserung K1 C2 (K1-Liste F: "Leben-Abzug
---     bei 100 % und V3 folgen derselben Sperre"): nur, solange er zaehlt (counts) -- schlaeft der Besitzer, ist er offline oder weiter als
---     needFreezeR, kostet es nichts (Frage fuer Kevin).
+--   "down": am Boden (Todesschutz), JEDES Mal trDown (-10), Meldung UI_BN_Bear_Note_TrustDown. fix1 (R3; Kevin 14.11. ~00:00 woertlich
+--     "wenn der baer down (todesschutz) geht verliert er -10"): auch, wenn seine Beduerfnisse gerade ruhen -- die Sperre der Nachbesserung
+--     K1 C2 (nur solange er zaehlt) ist zurueckgenommen; so stimmt der Tooltip "jedes Mal".
 --   jede andere Art (auch die alten "feed" / "drink"): nichts.
 -- Das dritte Argument (frueher die Futterklasse) wird nicht mehr gebraucht. Rueckgabe: die wirkliche Aenderung. Festschreiben: der Aufrufer.
 -- ---------------------------------------------------------------------------
@@ -279,15 +282,7 @@ function B.TrustAdd(rec, kind, _, now, players)
     now = num(now) or B.Now()
     B.NeedsFix(rec, now)
     if kind == "down" then
-        players = players or B.Players()
-        local online = {}
-        for i = 1, #players do online[players[i].key] = true end
-        local go, why = counts(rec, online, players)
-        if not go then
-            B.Log("trust: " .. tostring(rec.id) .. " down while needs rest (" .. tostring(why) .. "), no loss")
-            return 0
-        end
-        return trustLoss(rec, "down", "UI_BN_Bear_Note_TrustDown", players)
+        return trustLoss(rec, "down", "UI_BN_Bear_Note_TrustDown", players)     -- fix1 (R3): jedes Mal, ohne Einfrier-Sperre
     end
     local g = GAIN[kind]
     if g == nil then return 0 end

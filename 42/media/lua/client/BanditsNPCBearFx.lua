@@ -126,11 +126,14 @@ end
 
 -- Zahl -> Text in der Einheit von CombatText (Zombie-Leben x 100, siehe Kopf): ab 10 ganze Zahl, darunter eine Nachkommastelle; "-" davor.
 -- string.format("%d"): S:shared/BanditsNPCBear.lua argText; "%.1f": V:client/ISUI/ISDebugAvatarUI.lua:224.
+-- fix1 (R4): die Nachkommastelle mit dem Dezimalzeichen der Sprache (B.DecText, wie jede Zahl in den Texten -- "-8,5" im Deutschen).
 local function dmgText(dmg)
     local v = (tonumber(dmg) or 0) * 100
     if v ~= v or v <= 0 then return nil end
     if v >= 10 then return "-" .. string.format("%d", math.floor(v + 0.5)) end
-    return "-" .. string.format("%.1f", v)
+    local txt = "-" .. string.format("%.1f", v)
+    if B.DecText then txt = B.DecText(txt) end
+    return txt
 end
 U.DmgText = dmgText
 

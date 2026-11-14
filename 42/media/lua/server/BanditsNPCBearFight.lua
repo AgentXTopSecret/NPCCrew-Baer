@@ -908,6 +908,9 @@ local function enterAct(rec, a, s, f, act, ms, sz, d)
     end
     f.lgUsed = (num(f.lgLeft) or 0) > 0             -- Nachbesserung C1: verfehlt dieser Hieb, Ausfall eine Weile aus (tickBear)
     f.ordAt, f.spAt = nil, nil
+    -- fix1 (G-R3, kampf/GEGEN.md 6): Abstand beim Ausholen merken -- der erste Lauf-Takt danach (approach) laesst die Uhr "steckt fest" neu
+    -- beginnen, wenn das Ziel waehrend des Hiebs weggelaufen ist (siehe dort)
+    f.actD = d
     if logOn() then
         logE("act:" .. tostring(rec.id), "fight: " .. tostring(rec.id) .. " act " .. tostring(act) .. " at d " .. tostring(r1(d)) .. " (hit-d "
             .. tostring(r1(f.lastDH)) .. ", " .. tostring(f.lastPst or "up") .. ", lunge " .. tostring(r1(f.lgLeft)) .. ")")
@@ -1195,6 +1198,15 @@ local function approach(rec, a, s, f, st, ms, ax, ay, leash)
     -- nach dem Hieb weg), nicht mehr allein, weil er in Weite steht -- in Weite ohne Treffer und ohne Fortschritt wird das Ziel gesperrt.
     local hl = num(f.hitLast)
     local hitRecent = hl ~= nil and ms - hl >= 0 and ms - hl < cfg("fightStuckMs", 3000)
+    -- fix1 (G-R3, kampf/GEGEN.md 6): erster Lauf-Takt nach einem Hieb. Ist das Ziel waehrend des Ausholens um mindestens fightStuckGain weiter
+    -- weg (es floh, waehrend er stand), beginnt die Uhr neu -- der Hieb war kein Lauf ohne Fortschritt; sonst kam nach einem verfehlten Hieb
+    -- gegen ein fliehendes Ziel sofort die Sperre, obwohl er aufholt. Blieb das Ziel, wo es war (Ausfall am Hindernis gestoppt), laeuft die Uhr
+    -- weiter wie bisher (Nachbesserung C1: sonst Hieb um Hieb in die Luft, jeder Hieb setzte die Uhr zurueck -- attrappe/kampf_nach N1d).
+    local actD = num(f.actD)
+    if actD ~= nil then
+        f.actD = nil
+        if d - actD >= cfg("fightStuckGain", 0.5) then f.stuckAt = nil end
+    end
     if f.stuckAt == nil or ms - f.stuckAt < 0 or hitRecent then
         f.stuckAt, f.stuckD = ms, d
     elseif ms - f.stuckAt >= cfg("fightStuckMs", 3000) then

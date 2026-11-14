@@ -58,7 +58,7 @@
 --     jedes gezaehmten Baeren ist je Bild a:getZ() + tagZ x zk x U.PoseLift(id, now) (client/BanditsNPCBearPose.lua: Faktor >= 1 aus Clip und
 --     Zeit des Sitz-Treibers, offline gemessene Tabelle) -- Name, Zustand, alle Balken und das Herz heben sich mit dem Kopf. Kein Engine-Aufruf.
 --   * VERTRAUEN -100..+100 (Kevin ~21:40, Nachtrag "negativ rot ... positiv gruen"): der Kopf-Balken "Trust" fuellt (v + 100) / 200, GRUEN bei
---     positivem, ROT bei negativem, GRAU bei 0; als Zahl "Trust +20%" / "Trust -20%" in derselben Farbe (ganze Zahl, Frage K-F3).
+--     positivem, ROT bei negativem, GRAU bei 0; als Zahl "Trust +20%" / "Trust -0.5%" in derselben Farbe (fix1 R2: Form wie das Fenster).
 --   * AUTO-ANZEIGE (Kevin 14.11. I5): Hunger / Durst / Muedigkeit des EIGENEN Baeren ab B.CFG.needAutoAt (75) bekommen einen Balken, auch wenn
 --     ihre Option "Aus" ist -- nur der Wert, der so hoch ist; darunter verschwindet er wieder. Vertrauen nie (Frage K-F5: nur der eigene Baer).
 --   * LEBENSBALKEN je Baer (Kevin ~22:05 "durch einen botton"): U.HpOn(c) (client/BanditsNPCBearTags.lua, Zahnrad-Menue) aus -> keine Leben-Zeile
@@ -547,9 +547,10 @@ local function describeValues(e, c, md, t)
     -- F3 (PLAN_F3.md 9): Hunger, Durst, Muedigkeit, Vertrauen ueber Leben -- je Zeile { Zeilen-Daten, Fuellbreite ODER Text, Oberkante }.
     -- Die Liste entsteht je Eintrag beim Listenbau (hoechstens 1 x je Sekunde), nie je Bild; ohne Zeile bleibt e.ndN = 0.
     -- K1: Farben je Zeile (line.r/g/b Balken, line.tr/tg/tb Zahl) -- die drei Beduerfnisse wie ihre Zeile, Vertrauen nach Vorzeichen;
-    -- Vertrauen fuellt (v + 100) / 200 (-100 leer, 0 halb, +100 voll), die Zahl traegt das Vorzeichen (ganze Zahl, Frage K-F3).
+    -- Vertrauen fuellt (v + 100) / 200 (-100 leer, 0 halb, +100 voll), die Zahl traegt das Vorzeichen (fix1 R2: Form wie das Fenster).
     -- Nachbesserung K1 C3: Ton und Fuellung nach dem UNGERUNDETEN Wert wie das Fenster (trustRow, client/BanditsNPCBearWinData.lua: grau erst
     -- unter 0,05), der Betrag symmetrisch gerundet (+0,5 -> "+1", -0,5 -> "-1"); unter 0,5 mit einer Stelle, damit nie "+0" / "-0" dasteht.
+    -- fix1 (R2, k1/GEGEN.md 7): die Zahl GENAU wie das Fenster (trustRow): auf 0,1 gerundet, ganz ohne Stelle, sonst mit einer ("+0.5", "+1.5").
     local n = 0
     for i = 1, #NEED_ROWS do
         local row = NEED_ROWS[i]
@@ -564,8 +565,8 @@ local function describeValues(e, c, md, t)
                 if v > 100 then v = 100 end
                 frac = (v + 100) / 200
                 local r1 = math.floor(math.abs(v) * 10 + 0.5) / 10
-                local mag = string.format("%d", math.floor(r1 + 0.5))
-                if r1 < 0.5 then mag = string.format("%.1f", r1) end
+                local mag = string.format("%d", math.floor(r1))
+                if r1 ~= math.floor(r1) then mag = string.format("%.1f", r1) end
                 if r1 == 0 then
                     col, txt = TRUST_ZERO, "0"
                 elseif v > 0 then

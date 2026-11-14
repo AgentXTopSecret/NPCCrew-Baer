@@ -556,14 +556,51 @@ function B.Round1(v)
     return math.floor(v * 10 + 0.5) / 10
 end
 
--- Zahl als Text ohne ".0" (Java formatiert 21.0 sonst als "21.0").
+-- fix1 (R4, k1/GEGEN.md 7): Dezimalzeichen der Sprache. Steht als eigener Text UI_BN_Bear_Num_Dec in jeder UI.json ("." EN / KO / CN,
+-- "," DE / FR / ES / PTBR / RU -- wie die Texte selbst schreiben, z. B. "+0,5 Vertrauen"); gelesen ueber B.T (getText, Fundstelle dort), einmal
+-- je Sitzung (die Sprache wechselt nur mit Neustart). Alles ausser "," gilt als ".". Nur Rechnen, kein neuer Engine-Aufruf.
+local DEC = nil
+local DIGIT = { ["0"] = true, ["1"] = true, ["2"] = true, ["3"] = true, ["4"] = true, ["5"] = true, ["6"] = true, ["7"] = true, ["8"] = true,
+    ["9"] = true }
+
+local function decSep()
+    if DEC == nil then
+        DEC = "."
+        if B.T("UI_BN_Bear_Num_Dec", ".") == "," then DEC = "," end
+    end
+    return DEC
+end
+
+-- Eine REINE Dezimalzahl als Text ("12.5", "+0.5", "-3.25") mit dem Dezimalzeichen der Sprache; alles andere (ganze Zahlen, Namen, "Base.Nails",
+-- "1e-05", "12.5 kg") bleibt, wie es ist. Zeichenweise, ohne Muster (Kahlua ist kein echtes Lua 5.1, wie fill unten).
+function B.DecText(s)
+    if type(s) ~= "string" then return s end
+    local n = string.len(s)
+    local dot = 0
+    for i = 1, n do
+        local ch = string.sub(s, i, i)
+        if ch == "." then
+            if dot ~= 0 then return s end
+            dot = i
+        elseif not DIGIT[ch] and not (i == 1 and (ch == "+" or ch == "-")) then
+            return s
+        end
+    end
+    if dot <= 1 or dot >= n or not DIGIT[string.sub(s, dot - 1, dot - 1)] or not DIGIT[string.sub(s, dot + 1, dot + 1)] then return s end
+    local sep = decSep()
+    if sep == "." then return s end
+    return string.sub(s, 1, dot - 1) .. sep .. string.sub(s, dot + 1)
+end
+
+-- Zahl als Text ohne ".0" (Java formatiert 21.0 sonst als "21.0"). fix1 (R4): Dezimalzahlen (Zahl ODER fertiger Zahl-Text wie "4.5" aus
+-- string.format) mit dem Dezimalzeichen der Sprache (B.DecText) -- so stehen sie wie die Texte ("+0,5" neben "+0,5%").
 local function argText(a)
     if a == nil then return "" end
     if type(a) == "number" then
         if a == math.floor(a) then return string.format("%d", a) end
-        return tostring(a)
+        return B.DecText(tostring(a))
     end
-    return tostring(a)
+    return B.DecText(tostring(a))
 end
 
 -- Ersatztext fuellen: %1..%3 einsetzen, %% wird %. Zeichenweise, ohne Muster (Kahlua ist kein echtes Lua 5.1).

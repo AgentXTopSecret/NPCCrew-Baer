@@ -20,6 +20,10 @@ if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: la
 -- selbst fressen UND trinken bis 0 %): Geben buendelt k Stueck in EINER Aktion (B.InvPutComplete mit k, der Schreiber sucht die gleichen Stuecke
 -- selbst), Nehmen bis invTakeMax 1000 je Aktion, selbst fressen ab 50 % bis 0 % (kleinstes passendes Stueck zuletzt), selbst trinken
 -- (B.InvDrinkStep) nur Water / TaintedWater -- reine Satz-Rechnung im Register, der Behaelter bleibt, kein Liter geht verloren.
+-- fix1 (R1, k1/GEGEN.md 7): der Abgleich verknuepft IMMER, auch den leeren Baeren, und zwar VOR der ersten Aenderung (auch ein erst in dieser
+-- Sitzung gezaehmter Baer, K.linkFirst); leer verknuepft traegt das Register die Marke e0 (Fassung) + e0c (Stempel des Charakters, K.stamp).
+-- Kennt die Spieler-Datei desselben Charakters die Kopie nicht, ist sie aelter als diese Verknuepfung -> der leere Stand gilt (wie "Kopie
+-- gewinnt"). Ein leerer Baer, der endet, hinterlaesst einen Grabstein statt einer Waise.
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -210,6 +214,30 @@ function K.copyOn()
     return B.CFG.invCopyMP == true
 end
 
+-- fix1 (R1): Stempel des CHARAKTERS in seiner ModData (Text "c<ms>n<Zahl>", einmal je Charakter, gesetzt beim ersten Abgleich B.InvHeal --
+-- lange bevor er einen Baeren zaehmen kann). getTimestampMs = Wanduhr (Vanilla server/Foraging/forageServer.lua:456); die Zahl zaehlt das
+-- Register hoch (reg.invSt), zwei Stempel sind also nie gleich. Er steht im selben Speicher-Puffer wie Inventar und Kopie (PLAN_F4.md 2.2) und
+-- unterscheidet beim Abgleich "alte Datei DIESES Charakters" (gleicher Stempel) von "neuer Charakter" (anderer oder kein Stempel).
+-- player:getModData(): wie K.copyRoot. Schluessel 14.11.: frei in NPC Crew, Vanilla, Bandits.
+B.INV_ID = "BanditsNPCBearInvId"
+
+function K.stamp(player)
+    if not player then return nil end
+    local md = player:getModData()
+    if type(md) ~= "table" then return nil end
+    local st = md[B.INV_ID]
+    if type(st) == "string" and st ~= "" then return st end
+    local reg = B.Reg()
+    local n = 1
+    if type(reg) == "table" then
+        n = math.floor(num(reg.invSt) or 0) + 1
+        reg.invSt = n
+    end
+    st = "c" .. string.format("%.0f", getTimestampMs()) .. "n" .. string.format("%d", n)
+    md[B.INV_ID] = st
+    return st
+end
+
 -- Kopie (neu) verknuepfen: dieselben Tabellen wie im Register (kein Kopieren je Aenderung; beim Speichern schreibt die Engine je Wurzel
 -- eine eigene Fassung -- der Spieler-Puffer also immer den Stand, der zu SEINEM Inventar passt, PLAN_F4.md 2.2).
 function K.link(rec, player)
@@ -226,11 +254,25 @@ end
 -- Register (Absturz nach dem Spieler-Speichern); K.link wuerde sie durch das alte Register ersetzen -> Gegenstand weg. Jeder Weg, der das
 -- Inventar aendert (Geben/Nehmen ueber K.check, Fressen, F5, Tod), ruft das VOR seiner Aenderung; B.InvCommit ruft es noch einmal als Netz
 -- (dann ist es ein Leerlauf). owner = Spieler-Objekt des Besitzers oder nil (B.PlayerByKey: im Einzelspieler der erste lokale Spieler).
-function K.healFirst(rec, owner)
+-- fix1 (R1): dazu K.linkFirst -- ein Baer ohne Kopie (erst in dieser Sitzung gezaehmt) wird VOR der Aenderung verknuepft. after = true nur aus
+-- B.InvCommit (die Aenderung ist schon geschehen; die Aufrufer haben vorher verknuepft).
+function K.healFirst(rec, owner, after)
     if not K.copyOn() or type(rec) ~= "table" or rec.owner == nil then return end
     if owner == nil then owner = B.PlayerByKey(rec.owner) end
     if owner == nil then return end
     if B._invHealed[rec.owner] ~= owner then B.InvHeal(owner) end
+    if after ~= true then K.linkFirst(rec, owner) end
+end
+
+-- fix1 (R1): hat dieser gezaehmte Baer noch keine Kopie beim Besitzer, jetzt abgleichen (B.InvHealRec verknuepft, leer mit Marke e0).
+-- Nur Lesen, wenn sie schon da ist (eine Tabelle; ein Grabstein behandelt B.InvHeal nach dem Laden).
+function K.linkFirst(rec, owner)
+    if not isTame(rec.st) then return end
+    local key = K.ukey(rec.u)
+    if key == nil then return end
+    local root = K.copyRoot(owner, false)
+    if root ~= nil and type(root[key]) == "table" then return end
+    B.InvHealRec(rec, owner)
 end
 
 -- Nachbesserung F4 (Befund C7): Fassung + 1 und Kopie neu verknuepfen, BEVOR ein Weg Stueck fuer Stueck baut und austraegt (Nehmen, Tod). Wirft
@@ -249,7 +291,7 @@ end
 function B.InvCommit(rec, owner)
     if type(rec) ~= "table" then return end
     if owner == nil and rec.owner ~= nil then owner = B.PlayerByKey(rec.owner) end
-    K.healFirst(rec, owner)         -- Netz (C3); die Aufrufer haben vor ihrer Aenderung schon abgeglichen
+    K.healFirst(rec, owner, true)   -- Netz (C3); die Aufrufer haben vor ihrer Aenderung schon abgeglichen (fix1: und verknuepft)
     local inv = K.inv(rec)
     inv.r = inv.r + 1
     if owner ~= nil then K.link(rec, owner) end
@@ -279,8 +321,35 @@ function B.InvHealRec(rec, player)
     local inv = K.inv(rec)
     if not K.copyOn() then return end
     if type(c) ~= "table" then
-        -- keine Kopie (neuer Charakter, erste Aenderung nach F4): das Register gilt, Kopie (neu) schreiben
-        if K.hasStuff(rec) then K.link(rec, player) end
+        -- fix1 (R1): gleicher Charakter (Stempel = e0c), aber seine Datei kennt die Kopie nicht -> sie ist AELTER als die erste Verknuepfung,
+        -- und damals war der Baer leer (Marke e0). Alles danach kam ueber B.InvCommit, also nach dieser Datei: wie "Kopie gewinnt" gilt der
+        -- leere Stand (was er seitdem bekam, liegt in dieser Datei noch beim Spieler; was er seitdem herausgab, liegt dort noch nicht).
+        -- Pruefer fix1 (Haertung): nur, wenn die Kopie wirklich FEHLT (c == nil) -- ein unlesbarer Eintrag (keine Tabelle) heisst nicht "Datei
+        -- aelter", dort gilt wie bei einer unlesbaren Kopie das Register (unten; K.link ersetzt den Eintrag)
+        local st = K.stamp(player)
+        local e0 = num(inv.e0)
+        if c == nil and e0 ~= nil and st ~= nil and inv.e0c == st and (inv.r ~= e0 or K.hasStuff(rec)) then
+            local _, n0, _ = K.sum(rec)
+            B.Err("inv: " .. tostring(rec.id) .. " owner's save predates its first link (empty then) -- " .. tostring(n0)
+                .. " later thing(s) stay with the owner (r " .. tostring(e0) .. " -> " .. tostring(inv.r) .. ")")
+            -- neue Fassung (r + 1): auch dieser Wechsel ist eine Aenderung -- sonst hielte ein Absturz mit DIESEM Spieler-Stand (leere Kopie, r)
+            -- und dem alten Register (Inhalt, gleiches r) beide fuer gleich, und das Register gaelte (doppelt)
+            rec.inv = { v = 1, r = inv.r + 1, n = inv.n, it = {}, e0 = inv.r + 1, e0c = st }
+            rec.bag = nil
+            K.link(rec, player)
+            B.Commit(rec)
+            B.InvPushSoon(rec)
+            return
+        end
+        -- keine Kopie (neuer Charakter, erste Aenderung nach F4, erst in dieser Sitzung gezaehmt): das Register gilt, Kopie (neu) schreiben.
+        -- fix1 (R1): IMMER verknuepfen, auch den leeren Baeren (vorher nur mit Inhalt; ohne Kopie war das erste Geben + Absturz zwischen vollem
+        -- Speichern und Spieler-Speichern doppelt). Leer: Marke e0 = Fassung jetzt, e0c = Stempel des Charakters.
+        if K.hasStuff(rec) then
+            inv.e0, inv.e0c = nil, nil
+        else
+            inv.e0, inv.e0c = inv.r, st
+        end
+        K.link(rec, player)
         return
     end
     local cr = num(c.r) or 0
@@ -327,6 +396,7 @@ function B.InvHeal(player, force)
     if main ~= player then return end
     if not force and B._invHealed[pkey] == player then return end
     B._invHealed[pkey] = player
+    if K.copyOn() then K.stamp(player) end   -- fix1 (R1): Stempel schon beim ersten Abgleich (ohne Baeren), damit er gespeichert ist, bevor es zaehlt
     local live = {}
     for _, rec in pairs(reg.cubs) do
         if rec.owner == pkey and isTame(rec.st) then
@@ -489,6 +559,7 @@ function K.check(character, animal)
         return nil
     end
     B.InvHeal(character)            -- vor jeder Aenderung: ist der Abgleich nach dem Laden schon gelaufen?
+    if K.copyOn() then K.linkFirst(rec, character) end   -- fix1 (R1): und ist DIESER Baer schon verknuepft (erst heute gezaehmt)?
     return rec
 end
 
@@ -854,7 +925,19 @@ function B.InvDrop(rec, how)
     if type(rec) ~= "table" then return end
     -- C3: erst abgleichen (eine neuere Kopie beim Besitzer gehoert mit auf den Boden; sonst schriebe der Grabstein sie weg)
     if isTame(rec.st) then K.healFirst(rec, nil) end
-    if not K.hasStuff(rec) then return end
+    if not K.hasStuff(rec) then
+        -- fix1 (R1): seit der Abgleich auch den leeren Baeren verknuepft, liegt auch fuer ihn eine Kopie beim Besitzer -> Grabstein wie unten
+        -- (B.InvHeal raeumt ihn nach dem naechsten Laden weg); sonst bliebe eine leere Waise mit Fehlerzeile je Sitzung
+        local owner0 = rec.owner and B.PlayerByKey(rec.owner) or nil
+        local root0 = (owner0 and K.copyOn()) and K.copyRoot(owner0, false) or nil
+        local ukey0 = K.ukey(rec.u)
+        if root0 ~= nil and ukey0 ~= nil and type(root0[ukey0]) == "table" and root0[ukey0].dead ~= true then
+            local inv0 = K.inv(rec)
+            inv0.r = inv0.r + 1
+            root0[ukey0] = { u = rec.u, id = rec.id, dead = true, r = inv0.r, at = B.Now() }
+        end
+        return
+    end
     local reg = B.Reg()
     local s = B._s[rec.id]
     local a = s and s.obj or nil
@@ -1305,6 +1388,9 @@ function B.InvCopyOff(player, rec)
     local key = K.ukey(rec.u)
     if root == nil or key == nil or root[key] == nil then return false end
     root[key] = nil
+    -- fix1 (R1): auch die Marke "leer verknuepft" weg -- sonst hielte der Abgleich die (lebende) Spieler-Datei ohne Kopie fuer eine alte und
+    -- leerte den Baeren; so gilt wie beschrieben das Register (Kopie neu)
+    if type(rec.inv) == "table" then rec.inv.e0, rec.inv.e0c = nil, nil end
     return true
 end
 
