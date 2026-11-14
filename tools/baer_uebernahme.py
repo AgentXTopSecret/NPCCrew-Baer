@@ -152,6 +152,13 @@ Talentpunkte (10 % Wachstum / halbstark / ausgewachsen), freie Wahl aus 9 Talent
     (shared/BanditsNPCBearTalentRules.lua) -- jeder andere Schreiber waere ein Weg an der Punkt-Pruefung vorbei.
   * Sandbox: ZWEI neue Regler BearTalentReset / BearTalentResetDays (Kevins Ausnahme) -> 16 Optionen; plan_sandbox prueft sie wie die anderen.
 
+Lauf baer-hp-b (14.11.2026; Kevin ~12:25 "B rollenspiel ist geil", Vorgabe _arbeit/baer_hp_entwurf/B/): Lebensanzeige Vorlage B ueber dem Baeren.
+  * Neue Lua-Datei client/ISUI/BanditsNPCBearHpBar.lua deckt LUA_BEAR von selbst; Werkbank client/NCBearBenchHp.lua (BENCH_ANY, nie kopiert).
+  * Bilder 42/media/textures/BanditsNPCBear_Hp_<badge|hunger|thirst|bandage>_<NN>.png (27, eigener Name): UI_ASSET deckt jetzt auch
+    textures/BanditsNPCBear_Hp_; die Lua nennt jeden Namen ausgeschrieben (Tabelle FILES), also gilt die alte Regel "jedes genannte Bild wird
+    kopiert, jedes kopierte genannt" ohne Ausnahme. Deckel UI_MAX_PX 512 wie das Herz (groesstes Bild 64 x 64).
+  * Server: ein neues Feld pts im Ereignis "hurt" (server/BanditsNPCBearHurt.lua) -- eigene Datei, keine Naht. Keine neuen Texte.
+
 Grundregel (Werkstatt-CLAUDE.md Abschnitt 0, Kevin 08.11.2026): alles wird FUER NPC Crew gebaut und soll am Ende "einfach copy paste"
 hinueber; keine Cheat- oder Testmenues kommen mit. Plan: _arbeit/baer_zaehmen/PLAN_ZAEHMEN.md Abschnitt 12 (B1b: PLAN_B1B.md 7),
 Naehte: baer/NAEHTE.md.
@@ -296,7 +303,7 @@ SANDBOX = "42/media/sandbox-options.txt"
 # dem Kampf nach NPC Crew, und was B5a umbenennt, muesste dort sonst geloescht werden.
 CUB_ASSET = re.compile(r"^42/media/(models_X/Skinned/NCBearCub\.glb|textures/Body/NCBearCub\.png|scripts/nc_bear_cub\.txt)$")
 # B1c (PLAN_B1C.md 10c): Bilder der Oberflaeche (Kevins Baeren-Symbol fuer Bildschirm-Markierung und Karte), nur im eigenen Namensraum
-UI_ASSET = re.compile(r"^42/media/(ui/BanditsNPCBear|textures/BanditsNPCBear_?Talent_)[A-Za-z0-9_]*\.png$")   # Talente: + textures/
+UI_ASSET = re.compile(r"^42/media/(ui/BanditsNPCBear|textures/BanditsNPCBear_?Talent_|textures/BanditsNPCBear_Hp_)[A-Za-z0-9_]*\.png$")   # Talente: + textures/; hp-b: + Hp_
 UI_TALENT = re.compile(r"^42/media/(ui|textures)/BanditsNPCBear_?Talent_[A-Za-z0-9_]*\.png$")                   # Lauf baer-talente
 UI_MAX_PX = 512                                                    # Deckel fuer ein Oberflaechen-Bild (Kevins Symbol: 96 x 96)
 BANDITS_MEDIA = [os.path.normpath(r"C:/Program Files (x86)/Steam/steamapps/workshop/content/108600/3268487204/mods/Bandits/" + v
@@ -1342,7 +1349,8 @@ def form_check(final, copy_lua, copy_asset, rep):
     named = set()
     for rel in copy_lua:
         code = "\n".join(c for c, _ in lua_split_lines(final[rel].decode("latin-1")))
-        named.update("42/" + m for m in re.findall(r"[\"'](media/(?:ui/BanditsNPCBear|textures/BanditsNPCBear_?Talent_)[A-Za-z0-9_]*\.png)[\"']",
+        named.update("42/" + m for m in re.findall(r"[\"'](media/(?:ui/BanditsNPCBear|textures/BanditsNPCBear_?Talent_|textures/BanditsNPCBear_Hp_)"
+                                                   r"[A-Za-z0-9_]*\.png)[\"']",
                                                    code))
         # Lauf baer-talente: der Name je Talent wird zur Laufzeit zusammengesetzt (TEX_DIR "media/textures/BanditsNPCBear_Talent_" .. k ..
         # ".png", client/ISUI/BanditsNPCBearTalentTab.lua) -- nennt die Lua den Anfang, gelten alle kopierten Talent-Bilder dieses Ordners als genannt

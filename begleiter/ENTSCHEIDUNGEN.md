@@ -887,3 +887,10 @@ Kevin ~12:25 nach dem Vergleichsblatt (plaene/hp_entwurf/KEVIN_hp_vorlagen.png/.
 Geprueft: der Baer nutzt keins von attackTime/ZAPush/ZADestroy/ZAShoot/GetGameMode/BanditUpdatePart/Banditize/Zombify/BanditPlayer. Betroffen nur unsere eigene Bandits-Aufgabe
 BNBearSmack (shared/BanditsNPCBearFoe.lua): sie spielt die zsattack*-Bilder, die jetzt BanditHit=true setzen; Bandits setzt es nur in seinen eigenen Aufgaben zurueck -> der naechste
 echte Hieb des Banditen haette sofort beim Ausholen getroffen. Fix: smackDone setzt BanditHit false (Beleg ZASmack.lua:601), Test-Mod-Commit nach 4123393, auch im HP-B-Staging.
+
+### 14.11.2026 ~13:10 -- "Passiv" wird "Fliehen" (Kevin, woertlich)
+*"achso noch eine kleine aenderung im baerentab steht doch passiv das macht ja das er nicht kaempft aber macht es auch das er weggrennt? wenn ja ist das gut und das soll auch sein er rennt immer vor zombies weg aber es waere dann besser du nennst es Fliehen statt passiv weil in anderen spielen bedeutet passiv einfach stehn bleiben und sich toeten lassen"*
+Heute (Code + Text UI_BN_Bear_Win_PassiveTip): Passiv = kaempft nicht und kommt zu dir zurueck; er rennt NICHT weg (Kampf-Lauf FK2: lockt keine Zombies, weicht nicht aus).
+-> **Fest (naechster kleiner Funktions-Lauf nach HP-B, gleiche Text-Dateien):** Schalter heisst **"Fliehen"** (EN "Flee", 8 Sprachen), Wirkung: kaempft nicht UND rennt vor Zombies
+   (und feindlichen Banditen) weg -- weg vom Gegner, aber in Richtung/Naehe des Besitzers (Leine wie im Kampf), sobald einer naeher als ~8 Kacheln kommt; zieht keine Zombies an.
+   Tooltip neu. Interner Schluessel/Registerwert darf bleiben (Spielstaende), nur Text und Verhalten.
