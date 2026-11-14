@@ -158,6 +158,9 @@ Lauf baer-hp-b (14.11.2026; Kevin ~12:25 "B rollenspiel ist geil", Vorgabe _arbe
     textures/BanditsNPCBear_Hp_; die Lua nennt jeden Namen ausgeschrieben (Tabelle FILES), also gilt die alte Regel "jedes genannte Bild wird
     kopiert, jedes kopierte genannt" ohne Ausnahme. Deckel UI_MAX_PX 512 wie das Herz (groesstes Bild 64 x 64).
   * Server: ein neues Feld pts im Ereignis "hurt" (server/BanditsNPCBearHurt.lua) -- eigene Datei, keine Naht. Keine neuen Texte.
+  * Nachbesserung (hp/NACHBESSERUNG.md): nur Aenderungen IN den drei Client-Dateien (HpBar: Ausloeser C1-C4; Hud: own + Breite der Zeile
+    ueber dem Block; Fx: "DODGE" / "down" ueber dem Schild-Stapel) -- keine neue Datei, kein neues Bild, kein neuer Text, keine neue Naht;
+    neue Engine-Aufrufe nur mit Vanilla-Fundstelle (MeasureStringX V:client/ISUI/ISButton.lua:450, getFontHeight ISAddSafeZoneUI.lua:8).
 
 Grundregel (Werkstatt-CLAUDE.md Abschnitt 0, Kevin 08.11.2026): alles wird FUER NPC Crew gebaut und soll am Ende "einfach copy paste"
 hinueber; keine Cheat- oder Testmenues kommen mit. Plan: _arbeit/baer_zaehmen/PLAN_ZAEHMEN.md Abschnitt 12 (B1b: PLAN_B1B.md 7),

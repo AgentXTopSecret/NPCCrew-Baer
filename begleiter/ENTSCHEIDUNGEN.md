@@ -894,3 +894,9 @@ Heute (Code + Text UI_BN_Bear_Win_PassiveTip): Passiv = kaempft nicht und kommt 
 -> **Fest (naechster kleiner Funktions-Lauf nach HP-B, gleiche Text-Dateien):** Schalter heisst **"Fliehen"** (EN "Flee", 8 Sprachen), Wirkung: kaempft nicht UND rennt vor Zombies
    (und feindlichen Banditen) weg -- weg vom Gegner, aber in Richtung/Naehe des Besitzers (Leine wie im Kampf), sobald einer naeher als ~8 Kacheln kommt; zieht keine Zombies an.
    Tooltip neu. Interner Schluessel/Registerwert darf bleiben (Spielstaende), nur Text und Verhalten.
+
+### 14.11.2026 ~13:25 -- Fenster: Fischen-Knopf woanders, Text "Genuegsam" (Kevin nach den Bildern KEVIN_talente_DE_1080 / KEVIN_fenster_k1_DE_1080)
+Woertlich: *"gut das du mir das gezeigt hast ich hab schon einen schoenheitsfehler gesehn erstens das fischen vom baeren machste woanders hin an einer stelle das unten das menue nicht extra eine reihe mehr hat nur fuer den einen knopf, das soll wo anders hin du kannst mir ja mal vorschlagen wo es am besten aussehn wuerde, ausserdem gehfaellt mir die uebersetzung nicht "genuegsam" 24 statt 16 h satt damit wird niemand viel anfangen koennen xD das ist eher unser insider xD"*
+-> (1) Befehle nur noch 2 Reihen; Fliehen (heute Passiv) bekommt den frei werdenden Platz; Fischen an eine bessere Stelle -- Entwurfs-Lauf baer-fenster-entwurf `wf_5c821e5c-382`
+   zeichnet drei Varianten (V1 Knopf "Angeln" in der Faehigkeiten-Zeile Fischen, V2 Fischen als Modus in Reihe 1 + Fliehen im Kopf, V3 6 Spalten); Kevin waehlt.
+   (2) Kachel-Text Genuegsam (Auswahl): *"haelt 50 % laenger satt"* (statt "24 statt 16 h satt"); Tooltip: Hunger und Durst steigen ein Drittel langsamer. Kommt mit dem Fliehen-Lauf (8 Sprachen).
