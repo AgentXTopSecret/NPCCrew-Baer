@@ -1,5 +1,9 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **14.11. ~14:20: LEBENSANZEIGE B EINGEBAUT** (Test-Mod 8f7710b; 27 Hp-Bilder von Hand mit MD5 nachkopiert wie bei den Talenten; Bericht `spiel/hp_gegen_bericht.md`, Test
+> `spiel/anleitung_hp.md`). Davor Bandits-Fix 4f26f0a. **LAUFEND:** Funktion baer-fliehen-fenster `wf_501911a5-ae6` (Passiv -> Fliehen, Befehle 2 Reihen, Aussehen ins Zahnrad,
+> Talent Ueberlebenskuenstler; Staging ../_arbeit/baer_zaehmen/mod_flieh/), Modell baer-maul-2 `wf_a6e35c8f-ff3`. Offene Kevin-Frage: Schrift der Zahnrad-Liste ans Fenster angleichen?
+
 > **14.11. ~12:45: TALENTE + GENERATOR-REAR/BAUCHFELL EINGEBAUT** (Test-Mod b8329ee Talente inkl. 60 Icons -- die Icons hat einbau_tal.py wegen der textures-Regel
 > uebersprungen, von Hand mit MD5 nachkopiert; 4123393 NCBearGen.glb 8fe40125 + NCBear.png 3493a5e6 + Schild-Tabelle biggen.rear). Berichte `spiel/talente_gegen_bericht.md`,
 > `spiel/genrear_bauch_gegen_bericht.md`, Blatt `spiel/KEVIN_gen_rear_bauch.png`, Wiederholen `spiel/WIEDERHOLEN_genrear_bauch.md`. Woche wurde zurueckgesetzt (3 %).
