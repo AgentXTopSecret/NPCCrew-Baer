@@ -5,3 +5,4 @@
 - [UI-Vorschau aus echtem Code](ui-vorschau-aus-echtem-code.md) — Fenster-Bilder per Zeichen-Mitschrift des echten Lua-Codes + echte Spielschriften, nie frei malen
 - [CPU voll nutzen ist ok](cpu-voll-nutzen-ok.md) — Kevin 13.11.: Laeufe duerfen die CPU voll auslasten, nicht deckeln
 - [Rezept-Syntax pruefen](rezept-syntax-pruefen.md) — craftRecipe-Eingaben in [ ]; ein Skriptfehler laesst das ganze Spiel nicht laden (F4, 13.11.)
+- [Bis zum Limit weiterbauen](bis-limit-weiterbauen.md) — Kevin 14.11.: Laeufe ohne Pause bis zum Limit-Abbruch; danach bei seiner naechsten Nachricht abgebrochenen Workflow per resumeFromRunId fortsetzen
