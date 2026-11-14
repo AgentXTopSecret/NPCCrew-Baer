@@ -51,6 +51,7 @@
 --   * U.TagTop(id) = Hoehe des ganzen Schild-Stapels ueber seinem Anker (Pixel, 0 ohne Schild) -- darueber beginnt das z Z z
 --     (client/ISUI/BanditsNPCBearZz.lua, gerufen aus prerender nach U.FloatDraw, hinter Existenz-Riegel).
 --   * Deckel: je Schild jetzt hoechstens 25 Zeichenaufrufe (12 wie B1d + 4 Werte je hoechstens 3 + 1 Herz), bei hudMax 6 also 150 je Bild.
+--     (Lauf baer-hp-b: mit dem Lebens-Rahmen der Vorlage B hoechstens 96 je Schild, Kopf unten.)
 --   * Mit Schlaf-Clips (B.CFG.sleepClips, erst F3b) sitzt der Anker eines schlafenden Baeren um B.CFG.tagSleepK (0,65) tiefer; mit dem
 --     Ersatzbild (Sitzen) bleibt er oben.
 -- K1 (Lauf baer-k1, PLAN_K1.md 2.3, 3, 4; Kevin 13./14.11.2026, baer/begleiter/ENTSCHEIDUNGEN.md ab :583):
@@ -63,6 +64,14 @@
 --     ihre Option "Aus" ist -- nur der Wert, der so hoch ist; darunter verschwindet er wieder. Vertrauen nie (Frage K-F5: nur der eigene Baer).
 --   * LEBENSBALKEN je Baer (Kevin ~22:05 "durch einen botton"): U.HpOn(c) (client/BanditsNPCBearTags.lua, Zahnrad-Menue) aus -> keine Leben-Zeile
 --     fuer diesen Baeren; an -> wie die Option TagHealth.
+-- Lauf baer-hp-b (14.11.2026; Kevin ~12:25 "B rollenspiel ist geil", Vorgabe _arbeit/baer_hp_entwurf/B/BESCHREIBUNG.md): steht das Leben als
+-- BALKEN (TagHealth 2), zeichnet die Leben-Zeile jetzt Vorlage B -- Bronze-Plakette mit Pfote, Rahmen mit 10 Segmenten, Zahl "352/400", Farbe in
+-- Stufen, Effekte Heilen / Treffer / Hunger-Durst / fast leer (client/ISUI/BanditsNPCBearHpBar.lua: U.HpBarPrep beim Listenbau, U.HpBarDraw je
+-- Bild). Die Zeile ist hoch wie der Block (max(Plakette, Rahmen), waechst mit u = Zeile-1-Schrift / 19). Fehlt die Datei, bleibt der alte
+-- schmale Balken (Existenz-Riegel). "Number" (TagHealth 3) bleibt die Zahl-Zeile, "Off" nichts; eigene und fremde gezaehmte Baeren gleich.
+-- Deckel jetzt: je Schild hoechstens 96 Zeichenaufrufe (Herz 1, Name 2, Zustand 2, Alter 2, Hunger / Durst / Muedigkeit je 3, Vertrauen 5,
+-- Ausdauer 3, Lebens-Rahmen hoechstens 72 -- ruhig 25 + Bilder), bei hudMax 6 also hoechstens 576 je Bild, nur waehrend Effekte; ruhig mit
+-- Name und Zustand 29 (Attrappe attrappe/hp_bau/run.lua: gemessen hoechstens 94 bei allen Zeilen und allen Effekten zugleich).
 --
 -- Reine Anzeige: liest nur B.View (die Sicht, die der Schreiber diesem Spieler geschickt hat) und fragt nie den Server.
 -- Einzelspieler und Mehrspieler laufen gleich; im Mehrspieler stammen alle Zahlen vom Server. Der dedizierte Server laedt client/ nicht.
@@ -519,6 +528,10 @@ local function describeValues(e, c, md, t)
     if md.hp ~= SHOW_OFF and hasHp(c) and hpOn(c) then                     -- K1: Lebensbalken je Baer (Zahnrad-Menue)
         e.hpFill, e.hpText = valueLine(md.hp, c.hp, c.hpMax, "UI_BN_Bear_Tag_Health", t.barW)
     end
+    -- Lauf baer-hp-b: Balken = Vorlage B (client/ISUI/BanditsNPCBearHpBar.lua); e.hpRow = Hoehe der Zeile, nil = alter Balken
+    e.hpRow = nil
+    -- Nachbesserung C4: own = gehoert mir (fremde Baeren zeigen die Keule erst nach einem gesehenen Hunger-Sinken)
+    if e.hpFill and U.HpBarPrep and U.HpBarDraw then e.hpRow = U.HpBarPrep(e, c, t, S.listAt, ownOf(c, md.me)) end
     if md.sta ~= SHOW_OFF and hasSta(c) then
         e.staFill, e.staText = valueLine(md.sta, c.sta, c.staMax, "UI_BN_Bear_Tag_Stamina", t.barW)
     end
@@ -537,7 +550,10 @@ local function describeValues(e, c, md, t)
         e.ySta = up + t.h2
         up = up + t.h2 + 1
     end
-    if e.hpFill then
+    if e.hpRow then
+        e.yHp = up + e.hpRow                                                   -- Lauf baer-hp-b: Block der Vorlage B
+        up = up + e.hpRow + t.gap2
+    elseif e.hpFill then
         e.yHp = up + t.barH
         up = up + t.barH + t.gap2
     elseif e.hpText then
@@ -615,6 +631,21 @@ local function describeValues(e, c, md, t)
                 e.top = e.top + HEART_GAP + t.heart
             end
         end
+    end
+    -- Lauf baer-hp-b, Nachbesserung P2: Breite der Zeile direkt UEBER dem Lebens-Block (Bedarf-Zeile, Alter oder Zustand) -- breiter als der
+    -- Block, laufen Heil-Kreuze und schwebende Zahlen sonst ueber ihren Text (U.HpBarDraw). Einmal je Liste gemessen, nie je Bild.
+    -- getTextManager():MeasureStringX(Schrift, Text): V:client/ISUI/ISButton.lua:450.
+    e.hpAboveW = 0
+    if e.hpRow then
+        local s = nil
+        if n > 0 then
+            if e.nd[1].fill then e.hpAboveW = t.barW + 2 else s = e.nd[1].text end
+        elseif e.ageLine then
+            s = e.ageLine
+        elseif e.showName then
+            s = e.line2
+        end
+        if type(s) == "string" then e.hpAboveW = tonumber(getTextManager():MeasureStringX(t.f2, s)) or 0 end
     end
 end
 
@@ -736,6 +767,7 @@ local function rebuild(now)
         forget(S.prev, cubs)
         forget(S.flash, cubs)
         forget(S.ldPrev, cubs)
+        if U.HpBarForget then U.HpBarForget(cubs) end                          -- Lauf baer-hp-b: Effekt-Zustaende der Lebensanzeige
         S.scanMiss = 0
     end
 
@@ -927,7 +959,9 @@ local function drawTag(self, e, sx, sy, now, t)
             text(self, line.text, sx, sy - line.y, line.tr, line.tg, line.tb, 0.90, t.f2)
         end
     end
-    if e.hpFill then
+    if e.hpRow then
+        U.HpBarDraw(self, e, sx, sy - e.yHp, now)                               -- Lauf baer-hp-b: Vorlage B (BanditsNPCBearHpBar.lua)
+    elseif e.hpFill then
         valueBar(self, sx, sy - e.yHp, e.hpFill, t, 0.85, 0.20, 0.20)
     elseif e.hpText then
         text(self, e.hpText, sx, sy - e.yHp, 0.96, 0.64, 0.62, 0.90, t.f2)

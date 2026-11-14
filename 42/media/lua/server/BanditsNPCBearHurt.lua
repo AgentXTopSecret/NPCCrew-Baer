@@ -102,6 +102,7 @@ function B.BearHurt(rec, a, pts, src, foe)
     local hp1 = B.BodyHurt(rec, a, pts / hpMax)
     B.OnHitTaken(rec, pts, ms)
     fx.dodge = false
+    fx.pts = pts                        -- Lauf baer-hp-b: Lebenspunkte des Treffers fuer die Lebensanzeige ("-28", client/ISUI/BanditsNPCBearHpBar.lua)
     B.Fx("hurt", fx, bx, by)
     local players = B.Players()
     local fleeHp = B.FleeHp(B.FoeKinds(rec.id))

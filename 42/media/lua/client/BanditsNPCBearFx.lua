@@ -42,6 +42,12 @@
 -- schon Large, dann trennen nur Gold, fett und "!". Groesser waeren in Vanilla-Lua nur Zierschriften (UIFont.Intro "Constantine" 37 px ohne
 -- 2x-Stufe, V:client/ISUI/ISRichTextPanel.lua:135; UIFont.Cred1 V:client/ISUI/PlayerStats/ISPlayerStatsUI.lua:44, EN-Datei nicht in media/fonts)
 -- oder drawTextZoomed (V:client/ISUI/ISUIElement.lua:1260, aber kein Aufruf in Vanilla oder Bandits -> nicht benutzt, Frage an Kevin).
+-- Lauf baer-hp-b (14.11.2026, Lebensanzeige Vorlage B): ein Treffer ohne Ausweichen ("hurt", dodge false) geht zusaetzlich an U.HpBarHurt(id, pts)
+-- (client/ISUI/BanditsNPCBearHpBar.lua): Wackeln, Blitz und "-28" am Lebensbalken; pts = Lebenspunkte des Treffers (neues Feld des Ereignisses).
+-- Nachbesserung baer-hp-b P1: "DODGE" / "down" stehen jetzt UEBER dem ganzen Schild-Stapel (U.TagTop beim Ausloesen, client/ISUI/BanditsNPCBearHud.lua:
+-- Werte-Zeilen, Zustand, Name, Herz) statt fest TAG_UP ueber dem Anker -- der Lebens-Block ist bei Schrift 4x 48 px hoch, das Wort lag sonst quer
+-- ueber Balken und Zahl. Ohne Schild (TagTop 0) wie bisher TAG_UP. getTextManager():getFontHeight(UIFont.Medium / UIFont.Large):
+-- V:client/ISUI/AdminPanel/ISAddSafeZoneUI.lua:8 / ISAdminTicketsUI.lua:6 (einmal je Zeile, nicht je Bild).
 -- Laeuft im Einzelspieler und auf jedem MP-Client (der dedizierte Server laedt client/ nicht). Statisch geprueft, nicht gespielt.
 --
 
@@ -55,7 +61,8 @@ local PAIN_MS = 800             -- Schmerzlaut je Baer hoechstens so oft (PLAN_F
 local PAIN_KEEP = 32            -- Deckel der Drossel-Tabelle (sonst geleert)
 local TAG_MS = 1200             -- "DODGE" / "down" steht so lange (PLAN_F2.md 3.2)
 local TAG_RISE = 12             -- ... und steigt so viele Pixel
-local TAG_UP = 40               -- Abstand ueber dem Anker des Namensschilds (Pixel, damit er ueber dem Schild steht)
+local TAG_UP = 40               -- Abstand ueber dem Anker des Namensschilds (Pixel), wenn der Baer gerade kein Schild hat (U.TagTop 0)
+local TAG_GAP = 2               -- Nachbesserung baer-hp-b P1: Luft zwischen Schild-Stapel und "DODGE" / "down" (Pixel)
 local TAG_MAX = 16              -- Deckel Zeilen ueber Baeren
 local DMG_MS = 1500             -- Schadenszahl steht so lange (11.1 "steigt ~1,5 s und blendet aus")
 local DMG_RISE = 30             -- ... und steigt so viele Pixel
@@ -129,7 +136,16 @@ function U.HudFloat(id, what)
     if a == nil then return false end
     local lift = 0.18
     if U.TagLift then lift = U.TagLift(viewOf(id)) end
-    tags[#tags + 1] = { obj = a, id = id, lift = lift, text = text, c = c, t0 = getTimestampMs(), font = floatFont() }   -- K1: id fuer U.PoseLift
+    local font = floatFont()
+    -- Nachbesserung baer-hp-b P1: Unterkante der Zeile TAG_GAP ueber dem Schild-Stapel (Oberkante = Anker - Stapel - TAG_GAP - Schrifthoehe)
+    local up = TAG_UP
+    local top = 0
+    if U.TagTop then top = tonumber(U.TagTop(id)) or 0 end
+    if top > 0 then
+        local fh = tonumber(getTextManager():getFontHeight(font)) or 0    -- ISAddSafeZoneUI.lua:8 / ISAdminTicketsUI.lua:6
+        up = top + TAG_GAP + fh
+    end
+    tags[#tags + 1] = { obj = a, id = id, lift = lift, text = text, c = c, t0 = getTimestampMs(), font = font, up = up }   -- K1: id fuer U.PoseLift
     cap(tags, TAG_MAX)
     return true
 end
@@ -234,6 +250,9 @@ function U.FightFx(kind, t)
         if mine(id) then U.HudFloat(id, "dodge") end       -- Nachbesserung F2 B8: nur ueber dem EIGENEN Baeren (Option TagDodge)
         return
     end
+    -- Lauf baer-hp-b: Treffer an der Lebensanzeige (Wackeln, Blitz, "-pts"; client/ISUI/BanditsNPCBearHpBar.lua) -- jeder gezaehmte Baer, dessen
+    -- Balken gerade steht (eigen und fremd, wie die Anzeige); pts traegt der Schreiber mit (server/BanditsNPCBearHurt.lua B.BearHurt)
+    if kind == "hurt" and U.HpBarHurt then U.HpBarHurt(id, t.pts) end
     local a = obj(id)
     if a == nil then return end                                   -- keine lebende Kopie: Baeren-Seite still
     local big = isBig(id, t)
@@ -291,7 +310,7 @@ function U.FloatDraw(el, now)
             if U.PoseLift then pk = tonumber(U.PoseLift(e.id, now)) or 1 end
             local x, y, z = a:getX(), a:getY(), a:getZ() + e.lift * pk      -- ISContextualActions.lua:100
             local sx = math.floor(isoToScreenX(0, x, y, z))                 -- TensionUI.lua:11
-            local sy = math.floor(isoToScreenY(0, x, y, z)) - TAG_UP - math.floor(TAG_RISE * frac)
+            local sy = math.floor(isoToScreenY(0, x, y, z)) - (e.up or TAG_UP) - math.floor(TAG_RISE * frac)   -- P1: ueber dem Stapel
             drawLine(el, e.text, sx, sy, e.c, alpha(frac), e.font)
         end
     end
