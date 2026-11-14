@@ -1,5 +1,10 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **14.11. ~11:05 Kevin: *"bau noch weiter ohne pause und ganz normal wie immer einfach bis es abbricht ..."*** -> keine 98-%-Grenze mehr, zwei Spuren laufen bis das Limit
+> abbricht; bricht ein Lauf ab: bei Kevins naechster Nachricht mit resumeFromRunId fortsetzen (Gedaechtnis bis-limit-weiterbauen). LAUFENDE LAEUFE:
+> Funktionen baer-talente `wf_8f661724-5a2` (Skript workflows/scripts/baer-talente-wf_8f661724-5a2.js); Modell baer-gen-rear-bauch `wf_7fd71653-057`
+> (Generator bekommt das neue Rear, Klassisch-Bauch nur Textur; Arbeitsordner ../_arbeit/baer_modell_1114/; danach Schild-Faktor Generator-Rear in B.CFG nachziehen).
+
 > **14.11. ~10:50: TALENTE-LAUF GESTARTET** (Kevin: *"Talente bauen"*): baer-talente `wf_8f661724-5a2` (7 Agenten; Staging `../_arbeit/baer_zaehmen/mod_tal/` = Test-Mod
 > 93ba693, Berichte `../_arbeit/baer_zaehmen/tal/`). Woche bei Start ~92 %. Bei 98 %: Lauf stoppen, hier notieren, Fortsetzen mit resumeFromRunId (Sitzung cccbd9d6).
 
