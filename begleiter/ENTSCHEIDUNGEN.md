@@ -905,3 +905,6 @@ Kevin ~13:30: *"nein ein warte das haelt 50 % laenger satt soll die erklaerung d
    Interner Schluessel des Talents bleibt (Spielstaende). Kommt mit dem Fliehen-Lauf, 8 Sprachen.
 Kevin ~13:35 zum Tooltip, woertlich: *"nein schreib einfach sowas wie essen und trinken halten 50% laenger satt"* -> Tooltip Ueberlebenskuenstler: "Essen und Trinken halten 50 % laenger satt."
    (keine Drittel-Angabe, keine Stunden).
+Kevin ~13:40, woertlich: *"auchso das aussehen also die model wahl gehoert eigtl ins zahnrad menue das ist nichts was man immer druecken wuerde"* -> **Aussehen-Wahl (Look) ins Zahnrad-Menue**
+   (Untermenue mit den Aussehen wie heute, Sperren/Wartezeit wie heute, grau mit Grund). Damit wird in Reihe 2 ein Platz frei: Fliehen kann dorthin, und Fischen koennte bleiben
+   -> an Kevin gefragt (zusammen mit den drei Fischen-Varianten).
