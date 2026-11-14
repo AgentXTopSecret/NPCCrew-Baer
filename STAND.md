@@ -4,6 +4,7 @@
 > abbricht; bricht ein Lauf ab: bei Kevins naechster Nachricht mit resumeFromRunId fortsetzen (Gedaechtnis bis-limit-weiterbauen). LAUFENDE LAEUFE:
 > Funktionen baer-talente `wf_8f661724-5a2` (Skript workflows/scripts/baer-talente-wf_8f661724-5a2.js); Modell baer-gen-rear-bauch `wf_7fd71653-057`
 > (Generator bekommt das neue Rear, Klassisch-Bauch nur Textur; Arbeitsordner ../_arbeit/baer_modell_1114/; danach Schild-Faktor Generator-Rear in B.CFG nachziehen).
+> Dazu Entwurfs-Lauf baer-hp-entwurf `wf_4b56a453-e34` (3 Vorlagen Lebensanzeige mit Heil-/Schaden-Effekt, Kevin waehlt; ../_arbeit/baer_hp_entwurf/).
 
 > **14.11. ~10:50: TALENTE-LAUF GESTARTET** (Kevin: *"Talente bauen"*): baer-talente `wf_8f661724-5a2` (7 Agenten; Staging `../_arbeit/baer_zaehmen/mod_tal/` = Test-Mod
 > 93ba693, Berichte `../_arbeit/baer_zaehmen/tal/`). Woche bei Start ~92 %. Bei 98 %: Lauf stoppen, hier notieren, Fortsetzen mit resumeFromRunId (Sitzung cccbd9d6).

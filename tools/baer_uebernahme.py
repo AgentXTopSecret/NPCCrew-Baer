@@ -138,6 +138,20 @@ Verstecken des grossen Baeren, Leine 25 mit Sprint zurueck, Kampf-Log.
   * Nachbesserung (_arbeit/baer_zaehmen/kampf/NACHBESSERUNG.md): nur Stellwerte und Logik in denselben vier Kern-Dateien (Fight, FightRules, Foe,
     BanditsNPCBear.lua) -- keine neue Datei, kein neuer Engine-Aufruf, keine neue Regel; Trockenlauf + --probe gruen.
 
+Lauf baer-talente (baer/plaene/PLAN_TALENTE.md 7; Kevins Antworten baer/begleiter/ENTSCHEIDUNGEN.md 14.11.2026 ~10:20): Reiter "Talente", 3
+Talentpunkte (10 % Wachstum / halbstark / ausgewachsen), freie Wahl aus 9 Talenten, Reset nur per Sandbox.
+  * Neue Lua-Dateien deckt LUA_BEAR von selbst: shared/BanditsNPCBearTalentRules.lua (reine Regeln), server/BanditsNPCBearTalent.lua (Bitten
+    "Talent" / "TalentReset", Langsam-Takt, Sicht, Spiegel) und die der OBERFLAECHE. Werkbank client/NCBearBenchTalent.lua (BENCH_ANY).
+  * Bilder der Talente: UI_ASSET deckt jetzt auch 42/media/textures/BanditsNPCBear_Talent_*.png bzw. ...BanditsNPCBearTalent_*.png (eigener
+    Name, Auftrag "neue Icon-PNGs unter 42/media/textures/"); nennt die Lua nur den Anfang "media/textures/BanditsNPCBear_Talent_" (Name je
+    Talent zur Laufzeit zusammengesetzt), gelten alle kopierten Talent-Bilder dieses Ordners als genannt. Deckel UI_MAX_PX 512 wie das Herz.
+  * setXY + put in client/ISUI/BanditsNPCBearTalentTab.lua (UI-Element, wie BanditsNPCBearWindow.lua put).
+  * probeweg + TalentForce / TalentWipe (Talente ohne Punkte setzen / Reset ohne Sandbox -- nur die Werkbank), TIER_DEF + beide.
+  * Neue Tier-Regel talentSet: das Register-Feld rec.tal (gelernte Talente) schreiben nur B.HandleTalent, B.HandleTalentReset,
+    B.TalentFromMark, B.TalentForce, B.TalentWipe (server/BanditsNPCBearTalent.lua) und B.TalentFix / B.TalentCut
+    (shared/BanditsNPCBearTalentRules.lua) -- jeder andere Schreiber waere ein Weg an der Punkt-Pruefung vorbei.
+  * Sandbox: ZWEI neue Regler BearTalentReset / BearTalentResetDays (Kevins Ausnahme) -> 16 Optionen; plan_sandbox prueft sie wie die anderen.
+
 Grundregel (Werkstatt-CLAUDE.md Abschnitt 0, Kevin 08.11.2026): alles wird FUER NPC Crew gebaut und soll am Ende "einfach copy paste"
 hinueber; keine Cheat- oder Testmenues kommen mit. Plan: _arbeit/baer_zaehmen/PLAN_ZAEHMEN.md Abschnitt 12 (B1b: PLAN_B1B.md 7),
 Naehte: baer/NAEHTE.md.
@@ -282,7 +296,8 @@ SANDBOX = "42/media/sandbox-options.txt"
 # dem Kampf nach NPC Crew, und was B5a umbenennt, muesste dort sonst geloescht werden.
 CUB_ASSET = re.compile(r"^42/media/(models_X/Skinned/NCBearCub\.glb|textures/Body/NCBearCub\.png|scripts/nc_bear_cub\.txt)$")
 # B1c (PLAN_B1C.md 10c): Bilder der Oberflaeche (Kevins Baeren-Symbol fuer Bildschirm-Markierung und Karte), nur im eigenen Namensraum
-UI_ASSET = re.compile(r"^42/media/ui/BanditsNPCBear[A-Za-z0-9_]*\.png$")
+UI_ASSET = re.compile(r"^42/media/(ui/BanditsNPCBear|textures/BanditsNPCBear_?Talent_)[A-Za-z0-9_]*\.png$")   # Talente: + textures/
+UI_TALENT = re.compile(r"^42/media/(ui|textures)/BanditsNPCBear_?Talent_[A-Za-z0-9_]*\.png$")                   # Lauf baer-talente
 UI_MAX_PX = 512                                                    # Deckel fuer ein Oberflaechen-Bild (Kevins Symbol: 96 x 96)
 BANDITS_MEDIA = [os.path.normpath(r"C:/Program Files (x86)/Steam/steamapps/workshop/content/108600/3268487204/mods/Bandits/" + v
                                   + "/media") for v in ("42.22", "common")]   # nur lesen: gleicher ui-Dateiname verdeckte Bandits' Bild
@@ -507,9 +522,20 @@ TIER_RULES = [
     # F2 (PLAN_F2.md 4.3, 7.3): + B.FightForce (der naechste Angriff von Hand, NCBear_FightNext) -- ebenfalls nur die Werkbank
     # F3 (PLAN_F3.md 13, 17.1): + B.NeedsSet (Hunger / Durst / Muedigkeit / Vertrauen von Hand setzen) -- ebenfalls nur die Werkbank
     # F4 (PLAN_F4.md 14, 17.1 Nr. 4): + B.InvSet / B.InvSnap (Register-Inventar zuruecksetzen = Absturz nachstellen) -- nur die Werkbank
-    ("probeweg", re.compile(r"\bGrowSetG\b|\bGrowSetHp\b|\bSkillSet\b|\bFightForce\b|\bNeedsSet\b|\bInvSet\b|\bInvSnap\b"), set(),
-     "B.GrowSetG / B.GrowSetHp / B.SkillSet / B.FightForce / B.NeedsSet / B.InvSet / B.InvSnap nur aus der Werkbank (im kopierten Code nur "
-     "die Definition)"),
+    # Lauf baer-talente: + B.TalentForce / B.TalentWipe (Talente ohne Punkte setzen / Reset ohne Sandbox und Uhr) -- nur die Werkbank
+    ("probeweg", re.compile(r"\bGrowSetG\b|\bGrowSetHp\b|\bSkillSet\b|\bFightForce\b|\bNeedsSet\b|\bInvSet\b|\bInvSnap\b"
+                            r"|\bTalentForce\b|\bTalentWipe\b"), set(),
+     "B.GrowSetG / B.GrowSetHp / B.SkillSet / B.FightForce / B.NeedsSet / B.InvSet / B.InvSnap / B.TalentForce / B.TalentWipe nur aus der "
+     "Werkbank (im kopierten Code nur die Definition)"),
+    # Lauf baer-talente (PLAN_TALENTE.md 7.2): die gelernten Talente (Register-Feld rec.tal) schreiben nur die Bitten, das Bereinigen und der
+    # Spiegel -- jede andere Schreibstelle waere ein Weg an der Punkt-Pruefung (B.TalentCan) vorbei. Lesen (B.TalentList) ist frei.
+    ("talentSet", re.compile(r"\brec\.tal\s*(?:=(?!=)|,)"),
+     {("42/media/lua/server/BanditsNPCBearTalent.lua", "B.HandleTalent"), ("42/media/lua/server/BanditsNPCBearTalent.lua", "B.HandleTalentReset"),
+      ("42/media/lua/server/BanditsNPCBearTalent.lua", "B.TalentFromMark"), ("42/media/lua/server/BanditsNPCBearTalent.lua", "B.TalentForce"),
+      ("42/media/lua/server/BanditsNPCBearTalent.lua", "B.TalentWipe"), ("42/media/lua/shared/BanditsNPCBearTalentRules.lua", "B.TalentFix"),
+      ("42/media/lua/shared/BanditsNPCBearTalentRules.lua", "B.TalentCut")},
+     "gelernte Talente (rec.tal) schreiben nur B.HandleTalent / B.HandleTalentReset / B.TalentFromMark / B.TalentFix / B.TalentCut (und die "
+     "Probewege B.TalentForce / B.TalentWipe)"),
     # F3 (PLAN_F3.md 3.1, 17.1; Kevin ENT "Schaden nur von Zombies, Banditen, Hunger, Durst"): das Register-Leben senkt nur B.BodyHurt, und
     # das rufen nur der Treffer (B.BearHurt) und der Langsam-Takt der Beduerfnisse (B.NeedsSlow: Hunger / Durst 100, bis 1 %, nie Tod)
     # K1 (PLAN_K1.md 2.1, 8, 9): die alten Vertrauens- und Mengen-Regeln sind ENTFALLEN -- wer sie noch ruft oder ihre Stellwerte liest, rechnet
@@ -548,7 +574,9 @@ TIER_RULES = [
       ("42/media/lua/client/ISUI/BanditsNPCBearMarker.lua", "U.MarkerLayout"),
       ("42/media/lua/client/ISUI/BanditsNPCBearWindow.lua", "put"), ("42/media/lua/client/ISUI/BanditsNPCBearWindow.lua", "clampPos"),
       ("42/media/lua/client/ISUI/BanditsNPCBearWindow.lua", "Win:RestoreLayout"),
-      ("42/media/lua/client/ISUI/BanditsNPCBearWindow.lua", "U.WinOpen")},
+      ("42/media/lua/client/ISUI/BanditsNPCBearWindow.lua", "U.WinOpen"),
+      # Lauf baer-talente: Kacheln des Reiters "Talente" (ISUIElement:setX/setY wie BanditsNPCBearWindow.lua put)
+      ("42/media/lua/client/ISUI/BanditsNPCBearTalentTab.lua", "put")},
      "Lage setzen (setX / setY) am Baeren nur in moveBear (Kampf-Lauf), am Zombie nur in B.FoePushTick, sonst nur an UI-Elementen"),
     # F3 (Kevin 13.11.2026, Antwort 6c: KEINE Uhrzeiten -- kein Nachtfenster, kein Mittagsschlaf): die Tagesstunde fragt niemand
     # F4: einzige Ausnahme ist die WECKZEIT eines Weckers, der im Baeren-Inventar reist (INV.alarmRead, shared/BanditsNPCBearInvRules.lua)
@@ -657,9 +685,9 @@ def mo_text_hits(code_text):
 
 
 TIER_DEF = re.compile(r"^function\s+B\.(CreateCub|AppearFor|RemoveCub|GrowSetG|GrowSetHp|SkillSet|PlaceCub|FightForce|BodySwap"
-                      r"|CallUnstamp|NeedsSet|BodyHurt|InvSet|InvSnap)\s*\(")   # F4: + InvSet, InvSnap; B1d:
+                      r"|CallUnstamp|NeedsSet|BodyHurt|InvSet|InvSnap|TalentForce|TalentWipe)\s*\(")   # F4: + InvSet, InvSnap; B1d:
 # + die drei Probe-Wege; F1: + PlaceCub; F2: + FightForce; Aussehen: + BodySwap; Nachbesserung Aussehen B1: + CallUnstamp;
-# F3: + NeedsSet, BodyHurt
+# F3: + NeedsSet, BodyHurt; Lauf baer-talente: + TalentForce, TalentWipe
 # Ausnahmen einzeln mit Grund: Datei, Regel, ein Text im Code-Teil der Zeile. Greift eine nicht mehr, warnt das Skript.
 CHEAT_ALLOWED = [
     # F4 (PLAN_F4.md 5, 6.3, 10): Neubau aus einem Satz, der vorher als ECHTER Gegenstand vom Spieler genommen wurde (B.InvPutComplete) bzw. den
@@ -1314,7 +1342,12 @@ def form_check(final, copy_lua, copy_asset, rep):
     named = set()
     for rel in copy_lua:
         code = "\n".join(c for c, _ in lua_split_lines(final[rel].decode("latin-1")))
-        named.update("42/" + m for m in re.findall(r"[\"'](media/ui/BanditsNPCBear[A-Za-z0-9_]*\.png)[\"']", code))
+        named.update("42/" + m for m in re.findall(r"[\"'](media/(?:ui/BanditsNPCBear|textures/BanditsNPCBear_?Talent_)[A-Za-z0-9_]*\.png)[\"']",
+                                                   code))
+        # Lauf baer-talente: der Name je Talent wird zur Laufzeit zusammengesetzt (TEX_DIR "media/textures/BanditsNPCBear_Talent_" .. k ..
+        # ".png", client/ISUI/BanditsNPCBearTalentTab.lua) -- nennt die Lua den Anfang, gelten alle kopierten Talent-Bilder dieses Ordners als genannt
+        for pre in re.findall(r"[\"']media/(ui|textures)/BanditsNPCBear_?Talent_[\"']", code):
+            named.update(r for r in copy_asset if UI_TALENT.match(r) and r.startswith("42/media/%s/" % pre))
     ui = [r for r in copy_asset if UI_ASSET.match(r)]
     for rel in ui:
         data = final[rel]

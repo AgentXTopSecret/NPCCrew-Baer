@@ -872,3 +872,8 @@ Kevin ~05:07, woertlich: *"genau also am ende genau 3 punkte zum verteilen"* -> 
  F5-4 *"Wach und in deiner Naehe"*. F5-5 Fangmenge: *"Immer 2x so stark"* (auch fuer den Vorrat). F5-6 *"Knopf "Fischen""* (geht zum naechsten Wasser bis 20 Kacheln,
     fischt bis zum naechsten Befehl). F5-7 *"Legt sich ans Ufer"*. F5-8 *"Eigener Modell-Lauf"* (Fisch-Clip zusammen mit dem Trink-Clip; bis dahin Ersatz-Bewegungen).
 -> Alle drei Plaene (Talente, Troege, F5) sind entschieden. Bau-Reihenfolge-Vorschlag: nach Kevins K1-/Kampf-/Fix1-Test; Wochenlimit ~93 % (Reset 20.11.).
+
+### 14.11.2026 ~11:15 -- Lebensanzeige ueber dem Baeren schoener (Kevin, woertlich)
+*"achso die hp anzeige ueber den baeren soll schoener werden erstell mir da bitte 3 vorlagen die ich aussuchen kann auch in farbe je nachdem wie viel hp der baer noch hat und wenn geht gerne uach mit heil effekt oder dmg effekt bei der anzeige das man sieht was grad passiert ob er geheitl wird oder schaden bekommt weil er am verhungern ist z.b"*
+-> Entwurfs-Lauf baer-hp-entwurf `wf_4b56a453-e34` (4 Agenten): drei Vorlagen A Schlicht-Klar / B Rollenspiel / C Modern-Rund, Farbe nach Leben, Effekte Heilen / Treffer /
+   Hunger-Durst / fast leer als Bildfolge und GIF, ueber Kevins Spielbild, echte Spielschriften, "ENTWURF". Ergebnis `../_arbeit/baer_hp_entwurf/KEVIN_hp_vorlagen.png/.gif`. Kevin waehlt.
