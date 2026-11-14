@@ -857,3 +857,11 @@ Kevin ~05:07, woertlich: *"genau also am ende genau 3 punkte zum verteilen"* -> 
  4 Angler: *"Gesperrt bis F5"* (danach 2 Fische je Fang). 5 Werte: *"So wie besprochen"*. 6 Reset: *"Alle auf einmal"* (Sandbox Reset Vorgabe aus, Tage 0-30, Vorgabe 1).
  7 Dickes Fell: *"Prozent bleibt"*. 8 Bestaetigen: *"Ja/Nein-Fenster"* (Vanilla ISModalDialog).
 -> Plan TALENTE damit fertig entschieden (freie Wahl statt Reihen-Baum: Fenster zeigt 9 Kacheln, 3 Punkte frei verteilbar; Punkte kommen bei 10 % / halbstark / ausgewachsen).
+
+### 14.11.2026 ~10:30 -- Kevins Antworten zum Plan TROEGE (plaene/PLAN_TROEGE.md, Auswahl-Dialog)
+ T-1 Ohne Basis: *"Bis 40 Kacheln"*. T-2 Befehle: *"Folgen, Frei, Bleiben"* (Bleiben: danach zurueck an die Stelle; Sitz nie).
+ T-3 Reihenfolge (Freitext): *"erst endlosquellen dann trog dann inventar"* -> 1. Fluss/See (unendlich), 2. markierter Trog, 3. sein Inventar.
+ T-4 Tempo (Freitext): *"trinken und essen je eine halbe spielstunde  von 0 bis 100%"* -> volle Leiste (100 -> 0 %) in 30 Spielminuten, also 50 -> 0 % in ~15 Spielminuten,
+    fuer Fressen und Trinken am Trog/Fluss gleich.
+ T-5 *"Erst Fress-Clip, Trink-Clip spaeter"*. T-6 *"Vanilla-Flusston leiser"*. T-7 Futterliste: *"Untermenue im Zahnrad"* (je Klick eine Art umschalten).
+ T-8 Fluss/See: *"Bis 20 Kacheln"*.
