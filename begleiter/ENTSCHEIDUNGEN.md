@@ -903,3 +903,5 @@ Woertlich: *"gut das du mir das gezeigt hast ich hab schon einen schoenheitsfehl
 Kevin ~13:30: *"nein ein warte das haelt 50 % laenger satt soll die erklaerung dadrunter sein"* -- *"aber ist fettreserver gut wenns ums essen+ trinken geht"* -> Auswahl:
    **Talent heisst "Ueberlebenskuenstler"** (EN Vorschlag "Survivor"), Zeile darunter **"haelt 50 % laenger satt"**, Tooltip: Hunger und Durst steigen ein Drittel langsamer.
    Interner Schluessel des Talents bleibt (Spielstaende). Kommt mit dem Fliehen-Lauf, 8 Sprachen.
+Kevin ~13:35 zum Tooltip, woertlich: *"nein schreib einfach sowas wie essen und trinken halten 50% laenger satt"* -> Tooltip Ueberlebenskuenstler: "Essen und Trinken halten 50 % laenger satt."
+   (keine Drittel-Angabe, keine Stunden).
