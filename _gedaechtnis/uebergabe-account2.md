@@ -15,3 +15,5 @@ Stand 13.11.2026 ~15:20 (Sitzung cccbd9d6, erster Account, Woche frisch): Kevin 
 **Why:** `resumeFromRunId` gilt nur in der Sitzung, die den Lauf gestartet hat; ein neuer Account muss mit Fortsetzungs-Skripten weitermachen (Vorbild `baer/spiel/f2_fortsetzung.js`).
 
 **How to apply:** Neue Sitzung: zuerst STAND.md oben, dann UEBERGABE_ACCOUNT2.md, dann ENTSCHEIDUNGEN.md unten. Kevins "mach weiter" (13.11.) hat den Halt vom 12.11. aufgehoben; es gilt wieder [[zwei-spuren-immer-weiter]]. Fragen an Kevin einzeln per Auswahl-Dialog stellen (er aendert Empfehlungen gern im Freitext). Siehe [[ui-vorschau-aus-echtem-code]].
+
+Stand 14.11.2026 ~10:00 (Nachtauftrag, Sitzung cccbd9d6): K1, Kampf-Lauf und Fix 1 gebaut und in NCBearTest eingebaut (main 93ba693, ungespielt); Plaene Talente/Troege/F5 in baer/plaene/. Woche ~93 %. Naechstes: Kevins Test + Antworten, dann Modell-Laeufe. Einzelheiten STAND.md oben.
