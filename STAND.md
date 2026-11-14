@@ -1,5 +1,11 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **14.11. ~12:45: TALENTE + GENERATOR-REAR/BAUCHFELL EINGEBAUT** (Test-Mod b8329ee Talente inkl. 60 Icons -- die Icons hat einbau_tal.py wegen der textures-Regel
+> uebersprungen, von Hand mit MD5 nachkopiert; 4123393 NCBearGen.glb 8fe40125 + NCBear.png 3493a5e6 + Schild-Tabelle biggen.rear). Berichte `spiel/talente_gegen_bericht.md`,
+> `spiel/genrear_bauch_gegen_bericht.md`, Blatt `spiel/KEVIN_gen_rear_bauch.png`, Wiederholen `spiel/WIEDERHOLEN_genrear_bauch.md`. Woche wurde zurueckgesetzt (3 %).
+> Kevin muss den leeren Ordner `C:\plan` (4 leere Unterordner, Panne des Modell-Plans: relative Blender-Pfade) selbst loeschen -- die Sicherheitspruefung liess mich nicht.
+> **LAUFEND:** Funktion baer-hp-b `wf_78343db8-05d` (Lebensanzeige B; Staging ../_arbeit/baer_zaehmen/mod_hp/), Modell baer-maul-2 `wf_a6e35c8f-ff3` (../_arbeit/baer_maul/bau2/).
+
 > **14.11. ~11:05 Kevin: *"bau noch weiter ohne pause und ganz normal wie immer einfach bis es abbricht ..."*** -> keine 98-%-Grenze mehr, zwei Spuren laufen bis das Limit
 > abbricht; bricht ein Lauf ab: bei Kevins naechster Nachricht mit resumeFromRunId fortsetzen (Gedaechtnis bis-limit-weiterbauen). LAUFENDE LAEUFE:
 > Funktionen baer-talente `wf_8f661724-5a2` (Skript workflows/scripts/baer-talente-wf_8f661724-5a2.js); Modell baer-gen-rear-bauch `wf_7fd71653-057`
