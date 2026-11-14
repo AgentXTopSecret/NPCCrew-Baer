@@ -839,3 +839,9 @@ Kevin ~02:55, woertlich: *"die icon sollen aber recht gut sichtbar sein also wie
    Rollenspielen; vor dem Bau ein ENTWURF-Bild mit echten Spielschriften (Regel UI-Bilder).
    Nachtrag ~02:56, woertlich: *"hochaufloesend und huebsch aussehen"* -> Icons hochaufloesend (Vorschlag: 128 px Quelle, im 4K-Fenster gestochen scharf; Vorbild Kevins
    Herz-Entwurf "Goldrand" aus F3), sauber gezeichnet, nicht pixelig.
+Kevin ~03:00, woertlich: *"achso und der gespuersinn von den baeren soll machen wenn moeglich das zombies in der naehe die der spieler nicht sehn kann weil in gebaeuden oder hinter ihn mit wallhack (esp) angezeigt werden"*
+-> **Spuernase-Paket (F5 Nase):** Zombies in Nasen-Weite (heute noseBase 12 Kacheln + noseStep 1,5 je Spuernase-Stufe, T `shared/BanditsNPCBear.lua:185`), die DU nicht
+   siehst (im Gebaeude, hinter dir), werden fuer den Besitzer angezeigt. Wege: (a) Umriss am Zombie -- Vanilla `character:setOutlineHighlight(true)` +
+   `setOutlineHighlightCol(r, g, b, a)` V:`client/DebugUIs/ISDebugAnimationTextUI.lua:36-37` (ob der Umriss DURCH WAENDE bzw. bei unsichtbaren Zombies gezeichnet wird:
+   ungeprueft, im Lauf testen); (b) sicher: eigene Marker auf dem Bildschirm an der Zombie-Stelle (Weg wie Bandits `client/BanditProjectile.lua` ToScreen/renderPoly,
+   CLAUDE.md 8). Nur auf dem Bildschirm des Besitzers, nur solange der Baer wach und in der Naehe ist; Schalter "Nasen-Warnung" im Fenster/Zahnrad. MP: nur Client-Anzeige.
