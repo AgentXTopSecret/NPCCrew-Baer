@@ -1,5 +1,10 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **14.11. ~08:15 (Woche 91 %):** Plan-Lauf fertig -> `plaene/PLAN_TALENTE.md`, `plaene/PLAN_TROEGE.md`, `plaene/PLAN_F5.md` + Entwuerfe `plaene/bilder/` (je mit
+> Frageliste fuer Kevin; Talente: Baum in 3 Reihen empfohlen, Schwere Pranke braucht neue Wirkung, 2 neue Sandbox-Regler fuer Reset). Bau erst nach Kevins K1-/Kampf-Test.
+> **FIX-LAUF baer-fix1** `wf_54ec828a-899` (3 Agenten; Staging `../_arbeit/baer_zaehmen/mod_fix1/`, Berichte `../_arbeit/baer_zaehmen/fix1/`): R1 Doppel nach Absturz
+> beim ersten Geben (rote Linie), R2 Kopf-Vertrauen +0.5, R3 am Boden -10 immer, R4 Dezimalzeichen, R5/R6 Texte, Kampf G-R3 Steckt-fest-Uhr.
+
 > **14.11. ~07:50 (Woche 90 %): PLAN-LAUF baer-plaene-1114** `wf_4b7d9217-a8c` (3 Agenten, nur Plaene + Entwurfsbilder unter `../_arbeit/baer_zaehmen/plaene_1114/`):
 > PLAN_TALENTE.md, PLAN_TROEGE.md (Troege + Futterliste + Wasser in der Welt), PLAN_F5.md (Spuernase-ESP + Fischen) -- je mit Frageliste fuer Kevin. Gebaut wird erst nach seinen Antworten.
 
