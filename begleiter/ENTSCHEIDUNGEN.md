@@ -804,3 +804,26 @@ Kevin ~02:25, woertlich: *"aber der muss eine futter und trinken einstellung bek
    (sauber/ungekocht), Milch und alles andere nie -- steht schon (00:45).
 Kevin ~02:30 (Auswahl "Ist der Vorschlag mit markierten Troegen und Futterliste so gut?"): *"Ja, so"* -> (1) nur markierte Troege, (2) Futterliste frisst/nie im Fenster, (3) nur Wasser: FEST.
 Kevin ~02:31, woertlich: *"aber mehrer troege sind erlaubt zu zuweisen"* -> beliebig viele Troege markierbar (Futter und Wasser je Trog); Deckel nur gegen Missbrauch (Vorschlag 32 je Baer).
+
+### 14.11.2026 ~02:45 -- Kevins neue Ideen (eingefuegt aus seinen Handy-Notizen 01:27-01:46, woertlich)
+*"zahnrad menue einbauen in baeren ui fuer mehr platz im ui fuer unnoetige ausblendungknoepfe, im baeren bett bringt einen buff staerker jemehr muedigkeit er abgebaut hat , buff haelt bis zum naechsten schlafen zb mehr ausdauer oder dmg, vertrauen bringt bis zu +-25% bei +-100 vertrauen, fischen vom baeren staerker machen weil er soviel frisst, ueber den baeren 🐻 geht eine anzeige automatisch auf wenn seine beduerfnisse auf +75% steigen sprich , essen, trinken, muedigkeit und die anzeige verschwinden wieder wenn es unter 75 ist"*
+*"rausfinden wie viel naehrwert der baer essen muss zb wie viele fische noetig baeren damit er satt wird am tag"*
+*"rausfinden welche rolle ausdauer genau spielt und wie sie wieder steigt"*
+*"essens/trinken regel auch im zahnrad menue das oben in die baeren ui kommen soll wie bei unserer npc crew mod"*
+*"neue idee: skill tab  pro baerenstuge baby zu kampfberreit und kampfberreit zu max gross = 1 skill punkt (2maxinal moeglich) im skilltree auf einen extra tab kann man die skillpunkte aisgeben und per knopf altivieten dann leuchtet der skill hell und ist permanent altiv und der skillpunkt ist verbraucht, zb fuer essen/trinken  haelt + 50% laenger statt 16 std dann 24 , oder +250 leben etc (man darf niemals mehr als 2 skill punkte bekommen duerfen nicht durch ein model wecksel unstuck etc)"*
+*"das aktivieren 2 skills sperrt es einen neuen skill zu lernen selbst wenn man durch bugs mehr haette"*
+*"skill reset ist erlaubt pro sandbox setting, nur 1x taeglich auch per sandbox einstellbar"* -- *"standardmaessig aber nicht erlaubt"* -- *"skills vergeben muss bestaetigt werden beim  klicken"*
+*"die skills die wir uns ausdenken bekommen eigene gezeichnete icons und wenn du fragen hast zu meinen ideen stell sie"*
+Geordnet (Claude):
+ I1 Zahnrad-Menue oben im Baerenfenster (wie NPC Crew): dorthin die Schalter (Passiv? Nasen-Warnung, Namensschild, Schaden zeigen, Lebensbalken) UND die Futter-/Trink-Regeln (Futterliste, Troege).
+ I2 Baeren-Bett: Schlaf darin gibt einen Buff, je mehr Muedigkeit abgebaut desto staerker, haelt bis zum naechsten Schlaf (z. B. Ausdauer oder Schaden). (tirSleepBed 15 steht schon im Code, "Bett kommt spaeter".)
+ I3 Vertrauen wirkt bis +-25 % bei +-100 (heute +-20 % aufs Beduerfnis-Tempo) -- WORAUF: Frage an Kevin.
+ I4 Fischen (F5) staerker, weil er so viel frisst.
+ I5 Ueber-Kopf-Anzeige geht AUTOMATISCH auf, sobald Hunger, Durst oder Muedigkeit >= 75 %, und wieder zu unter 75 %.
+ I6 Forschung: Naehrwert -- wie viele Fische am Tag macht ihn satt (B42-Fischwerte).
+ I7 Forschung: Rolle der Ausdauer und wie sie wieder steigt.
+ I8 = I1 (Futter-/Trink-Regel im Zahnrad-Menue).
+ I9 SKILL-TAB: je Stufen-Sprung (Junges -> halbstark/kampfbereit, halbstark -> ausgewachsen) 1 Skillpunkt, HOECHSTENS 2, nie mehr (auch nicht durch Aussehen-Wechsel,
+    Unstuck, Koerper-Tausch, Absturz); eigener Reiter mit Skill-Baum, Punkt ausgeben per Knopf MIT Bestaetigung, Skill leuchtet, permanent aktiv; nach 2 aktiven Skills
+    gesperrt, selbst wenn ein Fehler mehr Punkte gaebe. Beispiele: Futter/Trinken haelt +50 % (24 statt 16 h), +250 Leben. Reset: Sandbox-Schalter (Vorgabe AUS),
+    hoechstens 1x je Tag (auch Sandbox). Eigene gezeichnete Icons je Skill. Kevin laedt zu Fragen ein.
