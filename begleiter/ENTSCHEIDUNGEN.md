@@ -900,3 +900,6 @@ Woertlich: *"gut das du mir das gezeigt hast ich hab schon einen schoenheitsfehl
 -> (1) Befehle nur noch 2 Reihen; Fliehen (heute Passiv) bekommt den frei werdenden Platz; Fischen an eine bessere Stelle -- Entwurfs-Lauf baer-fenster-entwurf `wf_5c821e5c-382`
    zeichnet drei Varianten (V1 Knopf "Angeln" in der Faehigkeiten-Zeile Fischen, V2 Fischen als Modus in Reihe 1 + Fliehen im Kopf, V3 6 Spalten); Kevin waehlt.
    (2) Kachel-Text Genuegsam (Auswahl): *"haelt 50 % laenger satt"* (statt "24 statt 16 h satt"); Tooltip: Hunger und Durst steigen ein Drittel langsamer. Kommt mit dem Fliehen-Lauf (8 Sprachen).
+Kevin ~13:30: *"nein ein warte das haelt 50 % laenger satt soll die erklaerung dadrunter sein"* -- *"aber ist fettreserver gut wenns ums essen+ trinken geht"* -> Auswahl:
+   **Talent heisst "Ueberlebenskuenstler"** (EN Vorschlag "Survivor"), Zeile darunter **"haelt 50 % laenger satt"**, Tooltip: Hunger und Durst steigen ein Drittel langsamer.
+   Interner Schluessel des Talents bleibt (Spielstaende). Kommt mit dem Fliehen-Lauf, 8 Sprachen.
