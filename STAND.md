@@ -1,5 +1,8 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **14.11. ~07:50 (Woche 90 %): PLAN-LAUF baer-plaene-1114** `wf_4b7d9217-a8c` (3 Agenten, nur Plaene + Entwurfsbilder unter `../_arbeit/baer_zaehmen/plaene_1114/`):
+> PLAN_TALENTE.md, PLAN_TROEGE.md (Troege + Futterliste + Wasser in der Welt), PLAN_F5.md (Spuernase-ESP + Fischen) -- je mit Frageliste fuer Kevin. Gebaut wird erst nach seinen Antworten.
+
 > **14.11. ~07:45: KAMPF-LAUF FERTIG UND EINGEBAUT** (baer-kampf wf_e4deb121-276, 7 Agenten; Gegenpruefer: bereit fuer SP-Test, kein Blocker). `tools/einbau_kampf.py`:
 > 10 Dateien ueberschrieben (inkl. mod.info), keine Modell-Datei; Zips `NCBearTest_vor_kampf_2026-11-14_074315.zip` / `_mit_`. Test `spiel/anleitung_kampf.md`
 > (mit NCBear_FightLog(true)), Bericht `spiel/kampf_gegen_bericht.md` mit 15 Fragen an Kevin (FK1 Bruellen mit Sprintern fast nie, F1 Fuesse gleiten im Sprint,
