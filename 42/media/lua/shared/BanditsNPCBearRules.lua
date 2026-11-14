@@ -650,6 +650,10 @@ function B.FollowDecide(c, o, f, ms)
     if dt == nil or dt <= 0 then dt = tonumber(cfg.brainMs) or 1500 end
     local speed = ml / (dt / 1000)
     local walk = B.DistXY(c.x, c.y, tx, ty) <= (tonumber(cfg.walkDist) or 0) and speed <= walkSpeed
+    -- Lauf baer-kampf (PLAN_KAMPF.md 2.4, 2.7; Kevin 13.11. ~23:00 Punkte 4 und 7): c.calm = eben aus dem Kampf -> ruhig zurueck (gehen bis
+    -- fightCalmWalkMax Kacheln Reststrecke, weiter weg rennen); c.sprint = Leinen-Sprint zum Besitzer -> nie gehen. Fehlen beide: wie B1e.
+    if c.calm == true and B.DistXY(c.x, c.y, tx, ty) <= (tonumber(cfg.fightCalmWalkMax) or 8) then walk = true end
+    if c.sprint == true then walk = false end
     local grow = lastD ~= nil and d - lastD >= (tonumber(cfg.followFleeGrow) or 2)
     local age = nil
     if f.orderAt ~= nil and ms - f.orderAt >= 0 then age = ms - f.orderAt end

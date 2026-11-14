@@ -25,6 +25,8 @@
 -- server/BanditsNPCBearInv.lua.
 -- K1 (PLAN_K1.md 9; Korrektur-Lauf nach F4, Kevins Worte ab 13.11.2026 ~21:40): Vertrauen -100..+100 (Start 0), Hunger/Durst nach Groesse,
 -- Einfrieren, Mitschlafen, Inventar 1000 auf einmal, selbst trinken -- Stellwerte im Block "K1" am Ende von B.CFG; B.LOOKS[...].pose (Schild-Hoehe).
+-- Lauf baer-kampf (kampf/PLAN_KAMPF.md 3; Kevin 13.11. ~23:00 Kampf-Fehler 1-7): Kampf-Stellwerte (rearChance 100, fightArrive 0, maulReach 1,4,
+-- fightLeash 25, lureMax 8 an ihrer Stelle; neue Werte am Ende von B.CFG) und B.LogEvery (gedrosselte Diagnose-Zeile, K8).
 --
 -- Laeuft ohne NPC Crew und ohne Bandits. Am Ende kopiert das Uebernahme-Skript diese Datei unveraendert nach NPC Crew.
 -- Deshalb: auf Dateiebene wird kein fremdes Modul eingefangen; jeder Griff nach BanditsNPC.X passiert zur Laufzeit und
@@ -212,13 +214,16 @@ B.CFG = B.CFG or {
     reviveMs = 60000, reviveGapMs = 50000,
     -- F2 Kampf (PLAN_F2.md 2.2, 4.5): Zeiten ms, Weiten Kacheln (x sz, wo genannt), Winkel Grad
     fightTickMs = 100, foeScanMs = 500, fxDist = 40, fightMax = 4,
-    fightRadius = 10, fightBanditRadius = 12, fightBanditBias = 3, fightLeash = 14, fightLeashRoamPad = 2,
+    -- Lauf baer-kampf (PLAN_KAMPF.md 2.7, Kevin 13.11. ~23:00 Punkt 7 "25 Kacheln"): fightLeash 14 -> 25
+    fightRadius = 10, fightBanditRadius = 12, fightBanditBias = 3, fightLeash = 25, fightLeashRoamPad = 2,
     fightMaxMs = 90000, fightRestMs = 20000, fightSeekMs = 3000, fightRepathMs = 750,
     fightStuckMs = 3000, fightStuckGain = 0.5, fightBlockMs = 20000, fightBlockMax = 32, fightStuckMax = 3,
-    fightPauseMs = 350, fightFristMs = 1000, fightArrive = 1.1,
-    swipeReach = 1.4, swipeHalf = 55, biteReach = 1.4, biteHalf = 30, maulReach = 1.1, maulHalf = 30, slamReach = 1.5, slamHalf = 80,
+    -- Lauf baer-kampf (PLAN_KAMPF.md 2.2, K2/K3): fightArrive 1,1 -> 0 (Anlauf AUF die vorhergesagte Lage), maulReach 1,1 -> 1,4 (wie Biss)
+    fightPauseMs = 350, fightFristMs = 1000, fightArrive = 0,
+    swipeReach = 1.4, swipeHalf = 55, biteReach = 1.4, biteHalf = 30, maulReach = 1.4, maulHalf = 30, slamReach = 1.5, slamHalf = 80,
     dmgMain = 1.0, dmgSide = 0.6, dmgSlam = 0.9, dmgBite = 1.2, dmgMaul = 1.8, sideMax = 3, slamMax = 5, hitCap = 6, sightMax = 12,
-    wSwipe = 25, wBite = 30, wMaul = 70, wSlam = 40, rearCdMs = 120000, rearChance = 50, rearDist = 2.5, slamCdMs = 10000,
+    -- Lauf baer-kampf (PLAN_KAMPF.md 2.1, K1, Kevin 13.11. ~23:00 Punkt 1): rearChance 50 -> 100 (IMMER beim ersten Kontakt, Pause bleibt)
+    wSwipe = 25, wBite = 30, wMaul = 70, wSlam = 40, rearCdMs = 120000, rearChance = 100, rearDist = 2.5, slamCdMs = 10000,
     knockMinPct = 30, knockPush = 0.7, knockKill = 1, pushStep = 0.05, pushMs = 600, pushMax = 8, knockStep = 0.45, knockSamples = 4,
     staAttackCost = 3, staRestBelow = 0.05, staResume = 0.30, fightRestMaxMs = 30000, xpConFight = 1, staViewMsFight = 1000, hpCommitMs = 2000,
     huffMinS = 90, huffSpreadS = 150, standPadMs = 1000,  -- fleeHysteresis entfaellt (PLAN_F2.md 11.7: Hysterese = 1 Treffer, B.FleeHp)
@@ -231,7 +236,8 @@ B.CFG = B.CFG or {
     -- F2 Gegner (2.1)
     foeReachPad = 0.35, foeBanditReach = 1.2, foeMaxCub = 2, foeMaxBig = 4, foeListMax = 8, foePendMax = 64, foeScanMax = 1500,
     zBiteCdMs = 1600, bSmackCdMs = 2200, foePlayerNear = 1.5,
-    lureMs = 500, lureR = 10, lureNear = 3, lureMax = 6, lureTrackMax = 32, lureRepathMs = 1000,
+    -- Lauf baer-kampf (PLAN_KAMPF.md 2.5, K5): lureMax 6 -> 8 (je Baer)
+    lureMs = 500, lureR = 10, lureNear = 3, lureMax = 8, lureTrackMax = 32, lureRepathMs = 1000,
     -- F2 Am Boden / Verband (2.4, 2.5)
     downFloor = 0.05, helpUpHp = 0.45, downSelfHp = 0.15, helpTime = 250, mendTime = 200, mendRefuseFull = 0.995,
     -- Sandbox-Kuerzung (Kevin 12.11.2026: "ja du hast komplett uebertrieben da muss so einiges rausfliegen"; Lauf baer-aussehen,
@@ -338,6 +344,44 @@ B.CFG = B.CFG or {
     sleepGoR = 25,
     -- S (OBERFLAECHE liest): Schild folgt der Pose an / Sinken hoechstens so viele Faktor-Einheiten je s
     tagPoseOn = true, tagPoseDown = 2.0,
+    -- Lauf baer-kampf (PLAN_KAMPF.md 3; Kevins Worte begleiter/ENTSCHEIDUNGEN.md "Kevin 13.11. ~23:00, Kampf-Fehler" Punkte 1-7 gehen vor).
+    -- K3 Einholen: neuer Laufbefehl im Anlauf nur, wenn die Zielkachel um fightRepathDist wanderte oder der letzte fightRenewMs alt ist;
+    -- Vorhalt hoechstens fightLeadMs; Ausfallschritt im Schlag bis fightLunge x Groesse, je Bild hoechstens fightLungeStep (nur SP);
+    -- Zielwechsel erst, wenn ein anderer fightSwitchGain Kacheln naeher ist; nach einem Kill fightKillPauseMs Pause (kein Zappeln).
+    fightRepathDist = 1.0, fightRenewMs = 2000, fightLeadMs = 800, fightLunge = 0.5, fightLungeStep = 0.06,
+    fightSwitchGain = 2.0, fightKillPauseMs = 800,
+    -- Bauer KAMPF (BAU_KAMPF.md, Frage F6): flieht das Ziel, folgt der Ausfallschritt ihm in der Ausholzeit mit fightLungeChase x seinem Tempo vom
+    -- Baeren weg (hoechstens so weit, wie der Baer in der Ausholzeit rennt); 0 = nur der kurze Ausfall fightLunge.
+    -- Nachbesserung (kampf/NACHBESSERUNG.md C3): Vorgabe 0 -- Kevin "kurzer Ausfallschritt im Schlag", "realistisch"; bis 2,8 Kacheln Gleiten im
+    -- stehenden Hieb waere der Sprung-Hieb ohne Clip (Punkt 8, nicht in diesem Lauf). Frage F6 bleibt (1 = mitgleiten).
+    fightLungeChase = 0,
+    -- Nachbesserung (C1): verfehlt ein Hieb aus dem Ausfall (Ziel nicht erreicht), kein Ausfall fuer fightLungeOffMs -- er laeuft hin statt
+    -- in die Luft zu schlagen (sonst Hieb um Hieb vor einem Hindernis, das nur den Koerper aufhaelt)
+    fightLungeOffMs = 3000,
+    -- Nachbesserung (C1): sperrt er DASSELBE Ziel wieder (Zaun / steckt fest), doppelt so lange wie zuletzt, hoechstens fightBlockLongMs; nach
+    -- fightBlockForgetMs ohne Sperre zaehlt er neu; beisst ihn das Ziel, faellt jede Sperre weg (B.FightUnmiss)
+    fightBlockLongMs = 120000, fightBlockForgetMs = 300000,
+    -- Nachbesserung (S1/S2, Frage FK1): vor dem Aufrichten schaut er rearLookMs (Tempo der Gegner aus zwei Lagen); erreicht ein Gegner ihn (bis
+    -- rearDist) oder den Besitzer (bis rearOwnerPad) in rearSafeS Sekunden (= Aufricht-Clip), oder liegt / faellt das erste Ziel, richtet er
+    -- sich NICHT auf (Knurren und sofort los). rearSafeS 0 = nur die alten Regeln.
+    rearLookMs = 400, rearSafeS = 3.0, rearOwnerPad = 2.0,
+    -- Nachbesserung (S4, Frage FK3): ein Gegner bis fightOwnerNear am Besitzer zaehlt bei Zielwahl und Zielwechsel fightOwnerBias Kacheln naeher
+    -- (er hilft zuerst dem Besitzer; 0 = aus). Wie fightBanditBias, nur Abstaende, kein Engine-Aufruf.
+    fightOwnerNear = 2.0, fightOwnerBias = 3,
+    -- K4 Tempo (Kevin Punkt 4 "schneller ... soll jz aber auch nicht permanent rumrennen"): Sprint NUR im Anlauf und beim Leinen-Sprint;
+    -- fightSprint = Kacheln/s im Sprint (0 = aus; gemessen: grosser Baer 3,17, Sprinter 3,63, kampf/werkzeug_plan/tempo_ausgabe.txt), je Bild
+    -- hoechstens sprintStepMax Zusatzweg; nach dem Kampf fightCalmBackMs ruhig zurueck (gehen bis fightCalmWalkMax Kacheln); Leinen-Sprint
+    -- hoechstens fightLeashRunMs (Kevin Punkt 7 "in fullspeed zu mir sprinten"). Schub und Ausfall nur im Einzelspieler (PLAN_KAMPF.md 6).
+    fightSprint = 4.6, sprintStepMax = 0.08, fightCalmBackMs = 8000, fightCalmWalkMax = 8, fightLeashRunMs = 20000,
+    -- K8 Kampf-Log: je Schluessel hoechstens je fightLogMs eine Zeile (B.LogEvery, nur mit dem Diagnose-Schalter B.LogActive)
+    fightLogMs = 1500,
+    -- K5 Locken (liest ZOMBIES, shared/BanditsNPCBearFoe.lua; kampf/schnittstelle.md "KAMPF"): am Baeren bis lureGrab immer; sieht ein Zombie ihn
+    -- und ist er hoechstens lureBias Kacheln weiter als der naechste Spieler; ein Spieler bis lurePlayerKeep / Bandit bis lureBanditKeep am
+    -- Zombie behaelt ihn; ein Entscheid gilt lureHoldMs; Log je lureLogMs.
+    -- Nachbesserung (kampf/NACHBESSERUNG.md C2, Kevin K5 "Zombies, die den Baeren sehen ... greifen IHN an"): lureBias 2 -> 99 = sieht ein Zombie den
+    -- Baeren in lureR, geht er zu ihm (Manhattan in lureR ist hoechstens 14,2); nur ein Spieler bis lurePlayerKeep / ein Bandit behaelt ihn.
+    -- Kleinere Werte (z. B. 4) = nur, wenn der Baer hoechstens so viel weiter weg ist als der Spieler (Frage F3).
+    lureGrab = 2.0, lureBias = 99, lurePlayerKeep = 2.0, lureBanditKeep = 3.5, lureHoldMs = 700, lureLogMs = 2000,
 }
 
 -- F1 (PLAN_F1.md 0.3, 6.1): die vier Modi eines gezaehmten Baeren. Jeder andere Wert (auch nil) gilt als "stay" (B.ModeOf).
@@ -475,6 +519,28 @@ function B.ErrEvery(key, ms, msg)
     end
     B._errAt[key] = now
     B.Err(msg)
+end
+
+-- Lauf baer-kampf (PLAN_KAMPF.md 2.8, K8): Diagnose-Zeile an einer Stelle, die oft laeuft -- nur hinter dem Schalter (B.LogActive), je
+-- Schluessel hoechstens einmal je ms, Deckel 64 Schluessel (wie B.ErrEvery). Ohne Schalter kein Uhr-Aufruf, keine Tabelle. Rueckgabe: true,
+-- wenn gedruckt. Wer die Zeile teuer baut, fragt vorher B.LogActive(). getTimestampMs: Vanilla server/Foraging/forageServer.lua:456.
+B._logAt = B._logAt or {}
+B._logN = B._logN or 0
+function B.LogEvery(key, ms, msg)
+    if not B.LogActive() then return false end
+    local now = getTimestampMs()
+    local last = B._logAt[key]
+    if last and now - last >= 0 and now - last < (tonumber(ms) or 0) then return false end
+    if last == nil then
+        B._logN = B._logN + 1
+        if B._logN > 64 then
+            B._logAt = {}
+            B._logN = 1
+        end
+    end
+    B._logAt[key] = now
+    B.Log(msg)
+    return true
 end
 
 -- ---------------------------------------------------------------------------

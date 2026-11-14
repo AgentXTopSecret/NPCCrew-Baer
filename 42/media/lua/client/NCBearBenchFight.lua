@@ -8,7 +8,10 @@
 -- Konsole:
 --   NCBear_FightZed(n, dist)  n Zombies (1..12, Vorgabe 1) dist Kacheln (2..20, Vorgabe 5) hinter DEINEM Baeren (von dir aus gesehen), damit
 --                             sie ihm naeher sind als dir (sonst gehoeren sie Vanilla, PLAN_F2.md 2.1.2 Nr. 2)
---   NCBear_FightLog(on)       Kampf-/Diagnose-Zeilen [TC-BEAR] an/aus (B.LogOn)
+--   NCBear_FightLog(on)       Kampf-/Diagnose-Zeilen [TC-BEAR] an/aus (B.LogOn); Lauf baer-kampf: je Entscheidung eine Zeile (Ziel, Grund ohne
+--                             Ziel, Aufrichten ja/nein, Angriff, Treffer/Fehlschlag, Lauf mit Tempo, Leine; "lure: ..." vom Locken)
+--   NCBear_FightSpeed()       Lauf baer-kampf: gemessenes Tempo der letzten Anlaeufe (Kacheln/s) neben Sollwert und Zombie-Tempi
+--   NCBear_Lure()             Lauf baer-kampf: Lenk-Zustand der Zombies (B.FoeLureInfo)
 --   NCBear_FightInfo()        Kampf deines Baeren: Phase, Ziel, gemerkte Gegner (B._foes), laufende Angriffe auf ihn (B._fa), Ausdauer,
 --                             Leben, am Boden, Verband
 --   NCBear_FightNext(name)    der naechste Angriff deines Baeren ist name (swipeL, swipeR, bite, maul, slam, rear), einmal (B.FightForce)
@@ -194,6 +197,66 @@ function NCBear_FightInfo()
         end
     end
     if n == 0 then out("  no attack on it running") end
+    -- Lauf baer-kampf (K1/K4/K7): Aufrichten-Entscheid, Sprint-Faktor, gemessenes Tempo, Leinen-Sprint / ruhig zurueck
+    if type(f) == "table" then
+        out("  rear wanted " .. tostring(f.rearWant) .. ", sprint +" .. fix((tonumber(f.sprK) or 0) * 100, 0) .. "%, speed "
+            .. fix(tonumber(f.spV) or 0, 2) .. " t/s, hits " .. tostring(f.hitN or 0))
+    end
+    local ms = getTimestampMs()                         -- V:client/Foraging/ISBaseIcon.lua:485
+    if tonumber(s.leashRun) and s.leashRun > ms then out("  leash run for " .. fix((s.leashRun - ms) / 1000, 1) .. " s") end
+    if tonumber(s.calmBack) and s.calmBack > ms then out("  calm back for " .. fix((s.calmBack - ms) / 1000, 1) .. " s") end
+end
+
+-- Lauf baer-kampf (PLAN_KAMPF.md 2.4, schnittstelle.md "KAMPF"): gemessenes Tempo der letzten Anlaeufe (B._spd, server/BanditsNPCBearFight.lua;
+-- Weg je >= 1 s im Anlauf) neben den Sollwerten (fightSprint, runSpeedBig; Zombie-Tempi kampf/werkzeug_plan/tempo_ausgabe.txt).
+function NCBear_FightSpeed()
+    if not sp() then
+        out("singleplayer only")
+        return
+    end
+    local t = B._spd
+    local c = B.CFG or {}
+    out("speed: target " .. fix(tonumber(c.fightSprint) or 0, 2) .. " t/s in a charge (0 = off), clip " .. fix(tonumber(c.runSpeedBig) or 0, 2)
+        .. " t/s; zombies: sprinter 3.63, fast shambler 1.05-1.46, shambler 0.42-0.64")
+    if type(t) ~= "table" or #t == 0 then
+        out("  no charge measured yet (NCBear_FightZed(1, 8) and let your bear run)")
+        return
+    end
+    local ms = getTimestampMs()                         -- V:client/Foraging/ISBaseIcon.lua:485
+    for i = 1, #t do
+        local e = t[i]
+        out("  " .. tostring(e.id) .. ": " .. fix(e.v, 2) .. " t/s (sprint +" .. fix((tonumber(e.k) or 0) * 100, 0) .. "%), "
+            .. fix((ms - (tonumber(e.at) or ms)) / 1000, 0) .. " s ago")
+    end
+end
+
+-- Lauf baer-kampf (K5, schnittstelle.md "ZOMBIES"): Lenk-Zustand der Zombies (B.FoeLureInfo, shared/BanditsNPCBearFoe.lua), falls vorhanden.
+function NCBear_Lure()
+    if not sp() then
+        out("singleplayer only")
+        return
+    end
+    if not B.FoeLureInfo then
+        out("B.FoeLureInfo is missing (shared/BanditsNPCBearFoe.lua without the lure info)")
+        return
+    end
+    local i = B.FoeLureInfo()
+    if type(i) ~= "table" then
+        out("lure: no info")
+        return
+    end
+    out("lure: " .. tostring(i.n) .. " entries, " .. tostring(i.win) .. " steered to a bear, " .. tostring(i.flips) .. " flips back, "
+        .. tostring(i.holds or 0) .. " re-held, hook " .. tostring(i.hook == true))
+    local last = i.last
+    if type(last) == "table" then
+        for k = 1, #last do
+            local e = last[k]
+            if type(e) == "table" then
+                out("  z " .. tostring(e.oid) .. " -> " .. tostring(e.id) .. " (" .. tostring(e.why) .. ", d " .. fix(tonumber(e.d) or -1, 1)
+                    .. ", target " .. tostring(e.tgt) .. ")")
+            end
+        end
+    end
 end
 
 function NCBear_FightNext(name)

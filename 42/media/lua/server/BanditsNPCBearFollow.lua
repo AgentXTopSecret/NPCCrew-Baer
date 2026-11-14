@@ -10,6 +10,8 @@ if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: la
 -- eigene Engine-Aufrufe hier nur player:getVehicle, getX/getY und getTimestampMs (Fundstelle je am Aufruf), sonst Register und Regeln.
 -- Der Name lebt nur im Register (Plan 0.3): kein Vanilla-Tiername am Tier.
 -- F1 (PLAN_F1.md 2.1-2.5, 7.2): vier Modi in B.SetMode / B.HandleMode, "Komm her" endet ueber B.ComeCheck (server/BanditsNPCBearOrder.lua).
+-- Lauf baer-kampf (PLAN_KAMPF.md 2.4, 2.7): B.FollowStep reicht c.sprint (Leinen-Sprint, s.leashRun) und c.calm (nach dem Kampf ruhig zurueck,
+-- s.calmBack) an B.FollowDecide; ein neuer Befehl (B.SetMode) beendet den Leinen-Sprint. Kein neuer Engine-Aufruf.
 --
 -- Ladefolge: diese Datei laedt VOR ...Registry / ...Server / ...World (alphabetisch). Deshalb wird auf Dateiebene nichts
 -- eingefangen; jede fremde Funktion wird zur Laufzeit ueber B.X geholt.
@@ -127,6 +129,8 @@ function B.SetMode(rec, mode, why, players)
     s.chk = nil
     s.come = nil
     s.roam = nil
+    -- Lauf baer-kampf (K7): ein neuer Befehl beendet den Leinen-Sprint zum Besitzer (server/BanditsNPCBearFight.lua)
+    s.leashRun = nil
     -- Nachbesserung F1 B4: ein noch laufender eigener Weg (Folgen, Komm her, Frei) gilt nach dem Wechsel auf Bleiben/Sitz/Frei nicht mehr
     -- (B.OrderStep, server/BanditsNPCBearOrder.lua ownLive) -- sonst liefe er bis stayBack weiter und kehrte dann um. s.ownUntil bleibt
     -- stehen (die Laerm-Wache haelt einen Lauf ohne eigenen Befehl sonst fuer eine Flucht, server/BanditsNPCBearGuard.lua).
@@ -195,8 +199,26 @@ function B.FollowStep(rec, a, env, ms, players)
     if B.BodyNum then walkSpeed = B.BodyNum(body, "walkSpeed", 0.52, look) end
     -- getX/getY am Tier: Vanilla shared/Definitions/animal/ButcheringUtil.lua:575-576
     local c = { x = a:getX(), y = a:getY(), z = rec.z, gap = gap, walkSpeed = walkSpeed }
+    -- Lauf baer-kampf (PLAN_KAMPF.md 2.4, 2.7; Kevin 13.11. ~23:00 Punkte 4 und 7): Leinen-Sprint (s.leashRun, gesetzt beim Leinen-Abbruch in
+    -- server/BanditsNPCBearFight.lua; der Schub selbst laeuft dort je Bild, nur SP) bis in Folge-Naehe (followStart + gap), dann ruhiger Gang;
+    -- nach einem Kampf fightCalmBackMs ruhig zurueck (s.calmBack). Beides mit Frist (nichts haengt).
+    local lr = tonumber(s.leashRun)
+    local sprint = lr ~= nil and lr - ms > 0 and lr - ms <= (tonumber(B.CFG.fightLeashRunMs) or 20000)
+    if lr ~= nil and not sprint then s.leashRun = nil end
+    local cb = tonumber(s.calmBack)
+    local calm = cb ~= nil and cb - ms > 0 and cb - ms <= (tonumber(B.CFG.fightCalmBackMs) or 8000)
+    if cb ~= nil and not calm then s.calmBack = nil end
+    c.sprint = sprint
+    c.calm = calm and not sprint
     local wasStuck = f.stuck == true
     local d = B.FollowDecide(c, env and env.owner or nil, f, ms)
+    if sprint then
+        local od = env and env.owner and tonumber(env.owner.dist) or nil
+        if (d.act ~= "run" and d.act ~= "keep") or (od ~= nil and od <= (tonumber(B.CFG.followStart) or 4.5) + gap) then
+            s.leashRun = nil
+            B.Log("follow: " .. tostring(rec.id) .. " leash run over (owner at " .. tostring(od and B.Round1(od) or "?") .. ")")
+        end
+    end
     if d.act == "ride" then
         -- B1c (PLAN_B1C.md 1.4, 6.3): Besitzer im Fahrzeug und nah genug -> einsteigen (Koerper verschwindet); geht das nicht
         -- (Definition fehlt), wie B1b "Bleiben" mit Meldung

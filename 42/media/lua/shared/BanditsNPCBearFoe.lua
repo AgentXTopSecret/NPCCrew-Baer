@@ -5,16 +5,23 @@
 -- (H, "not z:getVariableBoolean('bClient')", FG 4). Auf dem dedizierten Server tut die Datei nichts (kein Takt, B.OnFx kehrt sofort um).
 -- Der Schreiber (server/BanditsNPCBearFight*.lua, ...Hurt.lua) ENTSCHEIDET alles, was zaehlt (wer beisst, Treffer, Schaden am Baeren);
 -- diese Datei zeigt nur und wirkt am Zombie:
---   1 Locken (B.FoeLureTick, je lureMs): ein Zombie in lureR eines gezaehmten Baeren laeuft hin -- SP spotted/setTarget bzw. CanSee ->
---     pathToCharacter (Kevins Probe ENT:60 "laeuft hin"), MP pathToLocationF (das Ziel reist im MP als Spieler-Id, FG 0.3). Nur, wenn der Baer
---     dem Zombie NAEHER ist als jeder Spieler und jeder Bandit (keine NPC-Crew-Figur wird gestoert, FG 1.6).
+--   1 Locken (B.FoeLureTick, je lureMs): ein Zombie in lureR eines gezaehmten Baeren greift IHN an (Kampf-Lauf K5, Kevin 13.11. ~23:00
+--     ENT:664-669 "die sind sehr fixiert auf mich ... ansonsten wird der total ignoriert"). SP: Entscheid je Takt (lureDecide: bis lureGrab
+--     immer, sonst wer den Baeren sieht und ihn hoechstens lureBias Kacheln weiter hat als den naechsten Spieler), Lenken setTarget +
+--     spotted(Baer, true) (+ fern CanSee -> pathToCharacter) und HALTEN JEDES BILD ueber Events.OnZombieUpdate (nur solange gelenkt wird).
+--     MP-Client wie bisher: nur Zombies ohne Ziel, pathToLocationF (das Ziel reist im MP als Spieler-Id, FG 0.3), nur wenn der Baer naeher ist
+--     als jeder Spieler / Bandit. Nie: Zombies mit Ziel Bandit, Zombies mit einem Banditen naeher oder bis lureBanditKeep (NPC-Crew-Figuren
+--     und Bandits' eigene Lenkung bleiben unberuehrt, FG 1.6), Zombies mit einem Spieler bis lurePlayerKeep und naeher als der Baer.
 --   2 Biss-Pose (Fx "zbite"): eigener Knoten AnimSets/zombie/bumped/BanditsNPCBearZBite*.xml ueber setBumpType (Weg der Bandits, ohne Bandits
 --     mit eigenem Knoten, PLAN_F2.md 0.3).
 --   3 Banditen-Hieb (Fx "smack"): eigene Bandits-Aufgabe ZombieActions.BNBearSmack (in OnGameBoot, nur mit Bandits).
 --   4 Treffer des Baeren am Zombie (Fx "hit", B.FoeHurt): Leben, Blut, Ton, Umwerfen mit Zurueckfliegen, eigenes Schieben (B.FoePushTick).
 -- Buchfuehrung nur in Lua-Listen dieser Datei (L Locken <= lureTrackMax, P Schieben <= pushMax), nie in z:getModData() (Bandits loescht
 -- brain an Nicht-Banditen jedes Update, FG 1.5).
--- Jeder Engine-Aufruf mit Fundstelle am Aufruf (Vanilla 42.22 media/lua = V:, Bandits 42.22 media/lua = B:). Ohne Bandits laeuft alles (keine
+-- Jeder Engine-Aufruf mit Fundstelle am Aufruf (Vanilla 42.22 media/lua = V:; Bandits media/lua = B: -- die F2-Zeilen in
+-- client/BanditUpdate.lua, shared/BanditUtils.lua, client/BanditPlayer.lua stehen so in Bandits 42.21 (in 42.22 verschoben), die des
+-- Kampf-Laufs heissen B22: = Bandits 42.22; J: = Jar 42.22, mit Vineflower nach _arbeit/baer_zaehmen/kampf/jar/dec entpackt, NUR als Beleg
+-- fuer das Verhalten, kein Jar-only-Aufruf). Ohne Bandits laeuft alles (keine
 -- Banditen, Zombies ueber die Zellenliste). Ladefolge: shared, nach ...Bear / ...Crew / ...Defs / ...FightRules; fremde Funktionen nur zur
 -- Laufzeit ueber B.X.
 -- Statisch geprueft, nicht gespielt.
@@ -28,10 +35,17 @@ B.ZBITE = "BNBearZBite"             -- Bump-Wert und Knoten-Name (Name ewig stab
 B.ZBITE_LOW = "BNBearZBiteLow"      -- Biss gegen das kleine Junge (Clip Zombie_BiteLow_Success)
 B.SMACK = "BNBearSmack"             -- Bandits-Aufgabe des Banditen-Hiebs
 
-local L = {}            -- Locken: { z, id, obj, at, pAt, px, py } (Deckel lureTrackMax)
+local L = {}            -- Locken: { z, id, obj, at, pAt, px, py; SP: win, winTo, d, code, val, kind, flips, holds, logF } (Deckel lureTrackMax)
+local LZ = {}           -- Zombie -> sein Eintrag in L (Nachschlag je Bild ohne Engine-Aufruf; Lua-Tabelle mit dem Objekt als Schluessel wie
+                        -- V:client/Context/ISMenuContextWorld.lua:102-104 _data.contains[obj]). Immer gleich mit L gepflegt (lureAdd / lureDrop).
 local P = {}            -- Schieben: { z, rx, ry, left, t0, zl } (Deckel pushMax)
 local lureAt = nil      -- Echtzeit des letzten Locken-Takts
 local lureFrom = 0      -- rollender Anfang in der Zellenliste
+local hooked = false    -- Halte-Haken an Events.OnZombieUpdate gerade an? (nur SP, nur solange ein Eintrag gelenkt wird)
+local holdNow = 0       -- Echtzeit des letzten OnTick (Frist im Haken ohne Uhr-Aufruf je Zombie)
+local holdKeep = 2.0    -- lurePlayerKeep, je Takt aus B.CFG (der Haken liest keine Tabelle je Bild)
+local flipsAll, holdsAll = 0, 0     -- Haken: Ziel zurueck vom Spieler / nach dem Vergessen (seit dem Laden, fuer das Log)
+local lastInfo = {}     -- die letzten Entscheide (<= 8) fuer B.FoeLureInfo
 
 local FALL_PREFIX = { "falldown", "staggerback-knockeddown", "knockeddown", "onground", "getup", "getdown", "falling",
     "hitreaction-onfloor", "vehicleCollision-onground", "fakedead" }
@@ -70,6 +84,13 @@ local function posture(z)
         if string.sub(st, 1, string.len(pre)) == pre then return "falling", st end
     end
     return "up", st
+end
+
+-- Kampf-Lauf (schnittstelle.md ZOMBIES): Haltung fuer den Kampf-Entscheid (K2 liegend / fallend -> Maul). Rueckgabe pst, st: "up" /
+-- "falling" / "down" und der Zustandsname. Am MP-Server ein Grenzfall (der Zustand wird dort nicht gerechnet) -> KAMPF ruft es nur im SP.
+function B.FoePosture(z)
+    if z == nil then return "up", "" end
+    return posture(z)
 end
 
 -- ---------------------------------------------------------------------------
@@ -148,6 +169,32 @@ local function flyOk(a, b)
     if a:isBlockedTo(b) then return false, "wall or door" end
     if a:isWindowTo(b) then return false, "window" end
     return true, nil
+end
+
+-- Kampf-Lauf (schnittstelle.md ZOMBIES, PLAN_KAMPF.md 2.3/2.4): darf ein Koerper (der Baer im Ausfallschritt / Sprint-Schub) von der Kachel
+-- floor(x0, y0) nach floor(x1, y1) auf Ebene zl? Gleiche Kachel -> true. Weiter als eine Kachel je Schritt -> false (kein Sprung durch
+-- Waende). Sonst dieselbe Frage wie der Flug (flyOk); schraeg zusaetzlich beide Nachbar-Kacheln (sonst durch eine Wandecke). Kachel nicht
+-- geladen -> false. getCell():getGridSquare(x, y, z): V:server/Animal/ISPickDungCursor.lua:104.
+function B.FoeStepOk(x0, y0, x1, y1, zl)
+    x0, y0, x1, y1, zl = num(x0), num(y0), num(x1), num(y1), num(zl)
+    if x0 == nil or y0 == nil or x1 == nil or y1 == nil or zl == nil then return false end
+    local ax, ay, bx, by = math.floor(x0), math.floor(y0), math.floor(x1), math.floor(y1)
+    if ax == bx and ay == by then return true end
+    local dx, dy = bx - ax, by - ay
+    if dx > 1 or dx < -1 or dy > 1 or dy < -1 then return false end
+    local cell = getCell()
+    if cell == nil then return false end
+    local l = math.floor(zl)
+    local a = cell:getGridSquare(ax, ay, l)
+    local b = cell:getGridSquare(bx, by, l)
+    if a == nil or b == nil or not flyOk(a, b) then return false end
+    if dx ~= 0 and dy ~= 0 then
+        local n1 = cell:getGridSquare(bx, ay, l)
+        local n2 = cell:getGridSquare(ax, by, l)
+        if n1 == nil or n2 == nil then return false end
+        if not flyOk(a, n1) or not flyOk(n1, b) or not flyOk(a, n2) or not flyOk(n2, b) then return false end
+    end
+    return true
 end
 
 -- Hinter dem Zombie (Richtung rx, ry) frei? knockSamples Punkte je knockStep. getCell():getGridSquare(x, y, z): V:server/Animal/
@@ -294,8 +341,22 @@ function B.FoePushTick()
 end
 
 -- ---------------------------------------------------------------------------
--- Locken (2.1.2): je lureMs, nur auf SP / MP-Client. Baeren aus der Sicht (B.View.cubs: tame, ld, nicht ride, nicht dn), Objekt ueber
--- U.CubObj (F1-Hud; ohne OBERFLAECHE nichts).
+-- Locken (2.1.2; Kampf-Lauf K5, PLAN_KAMPF.md 2.5): je lureMs, nur auf SP / MP-Client. Baeren aus der Sicht (B.View.cubs: tame, ld, nicht
+-- ride, nicht dn), Objekt ueber U.CubObj (F1-Hud; ohne OBERFLAECHE nichts).
+-- Warum die Zombies den Baeren bisher ignorierten (Kevin ENT:664-669; aus dem Code, J nur gelesen):
+--   a) die alte Ziel-Sperre liess jeden Zombie mit einem Ziel (Kevin) in Ruhe, dazu "nur, wenn der Baer naeher ist als JEDER Spieler";
+--   b) ein Zombie, der nie Fleisch gesehen hat, hat timeSinceSeenFlesh 100000 (J:characters/IsoZombie.java:225, :4431): unser setTarget galt
+--      genau EIN Bild -- am Ende desselben update() loescht das Gedaechtnis das Ziel wieder (:3451, memory 25..1250 :3927-3940);
+--      spotted(.., true) setzt timeSinceSeenFlesh NICHT zurueck (nur ohne bForced, :2346-2347);
+--   c) nach dem Ereignis ruft die Engine spotted(spottedLast, true) (:3384-3386): spottedLast war der Spieler -> Ziel zurueck, sobald er
+--      naeher ist (Manhattan, :2206-2211); WalkToward folgt jedes Bild dem Ziel (J:ai/states/WalkTowardState.java:65-70).
+-- Darum (nur SP): Entscheid je Takt (lureDecide), Lenken setTarget(Baer) + spotted(Baer, true) (spottedLast = Baer :2370, zuletzt gesehene
+-- Kachel :2329 -- die steuert WalkToward an, wenn die Lage nicht "bekannt" ist, WalkTowardState.java:87-88), fern mit Sicht pathToCharacter,
+-- und HALTEN JEDES BILD ueber Events.OnZombieUpdate wie Bandits (B22:client/BanditUpdate.lua:2588-2589): das Ereignis kommt in
+-- IsoZombie.update VOR spotted(spottedLast) und VOR der Zustands-Maschine (J:characters/IsoZombie.java:3367 vor :3384 und super.update
+-- :3392). Der Haken haengt nur, solange ein Eintrag gelenkt wird (hookSync), sonst kostet er nichts.
+-- MP-Client (Hoheit ueber den Zombie): wie bisher (lureMP). Der dedizierte Server lenkt nie (die Engine rechnet Zombies beim Hoheits-Client),
+-- er ENTSCHEIDET aber den Kampf (Biss, Treffer: server/BanditsNPCBearFight*.lua).
 -- ---------------------------------------------------------------------------
 
 -- Ziel freigeben, wenn es noch dieser Baer ist. z:getTarget(): B:client/BanditUpdate.lua:1647; z:setTarget(nil): :421 (IsoZombie, nil;
@@ -305,22 +366,111 @@ local function letGo(e)
     if z ~= nil and e.obj ~= nil and z:getTarget() == e.obj then z:setTarget(nil) end
 end
 
+-- L und LZ immer zusammen pflegen.
+local function lureAdd(e)
+    L[#L + 1] = e
+    LZ[e.z] = e
+end
+
+local function lureDrop(i, release)
+    local e = L[i]
+    if release then letGo(e) end
+    if e.z ~= nil and LZ[e.z] == e then LZ[e.z] = nil end
+    table.remove(L, i)
+end
+
+local function lureDropE(e, release)
+    for i = 1, #L do
+        if L[i] == e then
+            lureDrop(i, release)
+            return
+        end
+    end
+end
+
+-- Halten je Bild (nur SP; Haken an Events.OnZombieUpdate, Bandits haelt seine Zombies genauso jedes Bild, B22:client/BanditUpdate.lua:
+-- 1579-1786 aus :2588-2589). Ohne Eintrag fuer diesen Zombie: EINE Tabellen-Abfrage. Mit gelenktem Eintrag nur, wenn das Ziel nicht mehr
+-- der Baer ist:
+--   Ziel nil (das Gedaechtnis hat es am Ende des letzten Bildes geloescht, J:characters/IsoZombie.java:3451) -> setTarget(Baer) ("holds");
+--   Ziel ein Bandit -> loslassen (NPC-Crew-Figuren / Bandits' Lenkung gehen vor); Ziel ein Spieler bis lurePlayerKeep und naeher als der
+--   Baer -> loslassen (der naechste Takt gibt ihn frei); sonst (die Engine hat den Spieler wieder gesichtet) setTarget(Baer) +
+--   spotted(Baer, true) ("flips": spottedLast wieder der Baer, sonst nimmt :3384-3386 im selben Bild den Spieler zurueck).
+-- Waehrend unseres Bisses (Bump-Wert) nichts. z:getTarget(): B22:client/BanditUpdate.lua:1584; getVariableBoolean("Bandit") am Ziel: :1585;
+-- z:getBumpType(): :1595; z:spotted(Figur, true): :1769; z:setTarget(Figur): :1771; getX/getY am Zombie: B:client/BanditZombie.lua:69-71,
+-- am Ziel / Tier: V:client/TimedActions/ISContextualActions.lua:100.
+local function holdZombie(z)
+    local e = LZ[z]
+    if e == nil or e.win ~= true then return end
+    local obj = e.obj
+    local tgt = z:getTarget()
+    if tgt == obj or holdNow > e.winTo then return end
+    local bt = z:getBumpType()
+    if bt == B.ZBITE or bt == B.ZBITE_LOW then return end
+    if tgt == nil then
+        z:setTarget(obj)
+        e.holds = e.holds + 1
+        holdsAll = holdsAll + 1
+        return
+    end
+    if tgt:getVariableBoolean("Bandit") == true then
+        e.win, e.code, e.val = false, "bandittgt", nil
+        return
+    end
+    local zx, zy = z:getX(), z:getY()
+    local px, py = tgt:getX() - zx, tgt:getY() - zy
+    local bx, by = obj:getX() - zx, obj:getY() - zy
+    local dp2 = px * px + py * py
+    if dp2 <= holdKeep * holdKeep and dp2 < bx * bx + by * by then
+        e.win, e.code, e.val = false, "player", math.sqrt(dp2)
+        return
+    end
+    z:setTarget(obj)
+    z:spotted(obj, true)
+    e.flips = e.flips + 1
+    flipsAll = flipsAll + 1
+end
+
+-- Haken an, solange (nur SP) ein Eintrag gelenkt wird, sonst ab. Events.OnZombieUpdate.Add/Remove(Funktion): B22:client/BanditUpdate.lua:
+-- 2588-2589. Remove gibt es in der Engine immer; die Abfrage "ev.Remove" haelt nur die alten Engine-Attrappen (ohne Remove) am Leben --
+-- dort bleibt der Haken dann an (ohne Eintrag eine Tabellen-Abfrage je Zombie).
+local function hookSync()
+    local want = false
+    if B.IsSP() then
+        for i = 1, #L do
+            if L[i].win == true then
+                want = true
+                break
+            end
+        end
+    end
+    if want == hooked then return end
+    local ev = Events.OnZombieUpdate
+    if want then
+        ev.Add(holdZombie)
+        hooked = true
+    elseif ev.Remove then
+        ev.Remove(holdZombie)
+        hooked = false
+    end
+end
+
 function B.FoeRelease(id)
     if id == nil then return end
     local i = 1
     while i <= #L do
         if L[i].id == id then
-            letGo(L[i])
-            table.remove(L, i)
+            lureDrop(i, true)
         else
             i = i + 1
         end
     end
+    hookSync()
 end
 
 -- Spieler dieses Rechners bzw. des Spiels. SP: getNumActivePlayers() (V:client/Fishing/FishingHandler.lua:6) + getSpecificPlayer(i)
 -- (V:server/BuildingObjects/ISBuildingObject.lua:183); MP-Client: getOnlinePlayers() :size() / :get(i) (B:client/BanditPlayer.lua:24).
--- getX/getY am Spieler: B:server/BanditServerSpawner.lua:179. isDead am Spieler: V:server/XpSystem/XpUpdate.lua:298.
+-- getX/getY am Spieler: B:server/BanditServerSpawner.lua:179; getZ am Spieler: V:client/Context/ISMenuContextWorld.lua:73. isDead am
+-- Spieler: V:server/XpSystem/XpUpdate.lua:298.
 local function playerSpots()
     local out = {}
     if isClient() then
@@ -328,19 +478,20 @@ local function playerSpots()
         if online then
             for i = 0, online:size() - 1 do
                 local p = online:get(i)
-                if p and not p:isDead() and #out < 64 then out[#out + 1] = { x = p:getX(), y = p:getY() } end
+                if p and not p:isDead() and #out < 64 then out[#out + 1] = { x = p:getX(), y = p:getY(), z = p:getZ() } end
             end
         end
         return out
     end
     for i = 0, getNumActivePlayers() - 1 do
         local p = getSpecificPlayer(i)
-        if p and not p:isDead() then out[#out + 1] = { x = p:getX(), y = p:getY() } end
+        if p and not p:isDead() then out[#out + 1] = { x = p:getX(), y = p:getY(), z = p:getZ() } end
     end
     return out
 end
 
--- Lagen der Banditen (nur mit Bandits): BanditZombie.CacheLightB (B:client/BanditZombie.lua:16, Felder x / y aus :68-69), Deckel 64.
+-- Lagen der Banditen (nur mit Bandits): BanditZombie.CacheLightB (B:client/BanditZombie.lua:16, Felder x / y aus :68-69, z wie
+-- B22:client/BanditUpdate.lua:1710), Deckel 64.
 local function banditSpots()
     local out = {}
     local bz = BanditZombie
@@ -348,12 +499,14 @@ local function banditSpots()
     if type(tab) ~= "table" then return out end
     for _, light in pairs(tab) do
         if #out >= 64 then break end
-        if type(light) == "table" and num(light.x) ~= nil and num(light.y) ~= nil then out[#out + 1] = { x = light.x, y = light.y } end
+        if type(light) == "table" and num(light.x) ~= nil and num(light.y) ~= nil then
+            out[#out + 1] = { x = light.x, y = light.y, z = num(light.z) or 0 }
+        end
     end
     return out
 end
 
--- Ist der Baer (Abstand d) dem Zombie naeher als jeder Spieler / Bandit?
+-- MP: ist der Baer (Abstand d) dem Zombie naeher als jeder Spieler / Bandit? (wie bisher)
 local function nearestIsBear(zx, zy, d, spots)
     for i = 1, #spots do
         local s = spots[i]
@@ -363,17 +516,37 @@ local function nearestIsBear(zx, zy, d, spots)
     return true
 end
 
-local function tracked(z)
-    for i = 1, #L do
-        if L[i].z == z then return L[i] end
+-- SP: naechster Punkt (gleiche Ebene) einer Lagen-Liste -- kleinster Abstand und kleinste Manhattan-Weite (die Engine vergleicht Ziele
+-- nach Manhattan, J:characters/IsoZombie.java:2206-2211); nil ohne Punkt.
+local function nearestOn(spots, x, y, zl)
+    local best2, bestM = nil, nil
+    for i = 1, #spots do
+        local s = spots[i]
+        if math.floor(s.z or 0) == zl then
+            local dx, dy = s.x - x, s.y - y
+            local d2 = dx * dx + dy * dy
+            local m = math.abs(dx) + math.abs(dy)
+            if best2 == nil or d2 < best2 then best2 = d2 end
+            if bestM == nil or m < bestM then bestM = m end
+        end
     end
-    return nil
+    if best2 == nil then return nil, nil end
+    return math.sqrt(best2), bestM
 end
 
 local function countFor(id)
     local n = 0
     for i = 1, #L do
         if L[i].id == id then n = n + 1 end
+    end
+    return n
+end
+
+local function countWin(id)
+    local n = 0
+    for i = 1, #L do
+        local e = L[i]
+        if e.id == id and e.win == true then n = n + 1 end
     end
     return n
 end
@@ -481,27 +654,90 @@ local function lureCands(bears, r)
     return out
 end
 
--- Einen Zombie zum Baeren schicken. SP: Ziel nil oder schon dieser Baer -> fern (d > lureNear) z:CanSee(Baer) -> z:pathToCharacter(Baer)
--- (B:client/BanditUpdate.lua:1812-1813, Argument IsoGameCharacter; am Baeren gespielt T:client/NCBearAttackProbe.lua:137-138), nah
--- z:spotted(Baer, true) + z:setTarget(Baer) (:1832, :1834; gespielt T:client/NCBearAttackProbe.lua:134-135; nie spotted(.., false), FG 1.1).
--- MP (nur H): nur Zombies OHNE Ziel, z:pathToLocationF(x, y, z) (B:shared/ZombieActions/ZAGoTo.lua:42), hoechstens je lureRepathMs oder
--- wenn der Baer weiter als 1,5 Kacheln zog. Waehrend unseres Bisses (Bump-Wert) nichts: bumped/to_pathfind.xml bricht sonst den Biss ab.
-local function steerZombie(e, b, d, ms)
-    local z = e.z
-    local bt = z:getBumpType()                   -- B:client/BanditUpdate.lua:1890
-    if bt == B.ZBITE or bt == B.ZBITE_LOW then return end
-    local obj = b.obj
-    if B.IsSP() then
-        local tgt = z:getTarget()
-        if tgt ~= nil and tgt ~= obj then return end
-        if d > cfg("lureNear", 3) then
-            if z:CanSee(obj) then z:pathToCharacter(obj) end
-        else
-            z:spotted(obj, true)
-            z:setTarget(obj)
-        end
-        return
+-- Naechster Baer (gleiche Ebene, bis r) zu einem Kandidaten.
+local function nearestBear(c, bears, r)
+    local best, bestD = nil, nil
+    for k = 1, #bears do
+        local b = bears[k]
+        local d = B.DistXY(c.x, c.y, b.x, b.y)
+        if d <= r and math.floor(c.zl) == math.floor(b.z) and (bestD == nil or d < bestD) then best, bestD = b, d end
     end
+    return best, bestD
+end
+
+-- Zustaende, in denen Bandits einen Zombie nie lenkt (B22:client/BanditUpdate.lua:1656), dazu liegend (:1659).
+local SKIP_STATE = { bumped = true, onground = true, climbfence = true, getup = true, turnalerted = true }
+
+-- Entscheid je Zombie (SP; PLAN_KAMPF.md 2.5 Schritt 1-2). Rueckgabe win, code, val, kind, sees:
+--   win true = der Baer bekommt ihn; code/val = Grund (whyText); kind = Ziel vorher ("none" / "ours" =
+--   dieser Baer / "player" / "animal" / "bandit");
+--   sees = CanSee schon gefragt (true / false) oder nil.
+-- Auslassen: Bandits' Ausnahme-Zustaende, liegend, Ziel Bandit, ein Bandit naeher als der Baer oder bis lureBanditKeep, ein Spieler bis
+-- lurePlayerKeep und naeher als der Baer. In unserem Biss (Bump-Wert): gelenkt lassen, aber nichts tun ("biting"). Baer gewinnt: bis lureGrab
+-- immer (Kevin "~2 Kacheln"); Ziel schon der Baer; ohne Ziel mit Sicht oder bis lureNear (wie bisher); Ziel Spieler: Sicht UND
+-- Manhattan zum Baeren hoechstens lureBias mehr als zum naechsten Spieler (Frage F3). z:getBumpType(): B22:client/BanditUpdate.lua:1595;
+-- z:getActionStateName(): :1593; z:isProne(): :1659; z:getTarget(): :1584; getVariableBoolean("Bandit") am Ziel: :1585; z:CanSee(Figur):
+-- :1749; instanceof(Ziel, "IsoAnimal"): V:server/BuildingObjects/ISAnimalPickMateCursor.lua:14.
+local function lureDecide(z, c, b, d, players, bandits)
+    local bt = z:getBumpType()
+    if bt == B.ZBITE or bt == B.ZBITE_LOW then return true, "biting", nil, "ours", nil end
+    local st = z:getActionStateName()
+    if type(st) == "string" and SKIP_STATE[st] then return false, "state", st, nil, nil end
+    if z:isProne() then return false, "state", "prone", nil, nil end
+    local obj = b.obj
+    local tgt = z:getTarget()
+    local kind = "none"
+    if tgt == obj then
+        kind = "ours"
+    elseif tgt ~= nil then
+        if tgt:getVariableBoolean("Bandit") == true then return false, "bandittgt", nil, "bandit", nil end
+        if instanceof(tgt, "IsoAnimal") then kind = "animal" else kind = "player" end
+    end
+    local zl = math.floor(c.zl)
+    local db = nearestOn(bandits, c.x, c.y, zl)
+    if db ~= nil and (db <= cfg("lureBanditKeep", 3.5) or db < d) then return false, "bandit", db, kind, nil end
+    local dp, mp = nearestOn(players, c.x, c.y, zl)
+    if dp ~= nil and dp <= cfg("lurePlayerKeep", 2.0) and dp < d then return false, "player", dp, kind, nil end
+    if d <= cfg("lureGrab", 2.0) then return true, "near", d, kind, nil end
+    if kind == "ours" then return true, "kept", d, kind, nil end
+    local sees = z:CanSee(obj)
+    if kind ~= "player" then
+        if sees then return true, "sees", d, kind, true end
+        if d <= cfg("lureNear", 3) then return true, "free", d, kind, false end
+        return false, "nosight", nil, kind, false
+    end
+    if not sees then return false, "nosight", nil, kind, false end
+    -- Nachbesserung (kampf/NACHBESSERUNG.md C2): Vorgabe lureBias 99 (B.CFG) = wer den Baeren in lureR sieht, geht zu ihm (Kevin K5)
+    local mb = math.abs(c.x - b.x) + math.abs(c.y - b.y)
+    if mp == nil or mb <= mp + cfg("lureBias", 99) then return true, "sees", d, kind, true end
+    return false, "closer", mb - mp, kind, true
+end
+
+-- Lenken (SP): setTarget ZUERST (sonst verwirft spotted den Baeren, solange der alte Ziel-Spieler naeher ist, Manhattan
+-- J:characters/IsoZombie.java:2206-2211), dann spotted(Baer, true) (spottedLast, zuletzt gesehene Kachel und -- wenn allowRepathDelay 0 --
+-- der Weg mit allowRepathDelay 480, :2329, :2370, :2396-2401), fern (d > lureNear) mit Sicht zusaetzlich pathToCharacter wie Bandits
+-- (B22:client/BanditUpdate.lua:1749-1750; die Engine verwirft ihn bei allowRepathDelay > 0 in PathFind/WalkToward,
+-- J:characters/IsoZombie.java:1181-1187 -- kein neuer Weg je Takt). Waehrend unseres Bisses (Bump-Wert) nichts: bumped/to_pathfind.xml
+-- bricht sonst den Biss ab. Gespielt am Baeren (F2): spotted(Baer, true) + setTarget(Baer) T:client/NCBearAttackProbe.lua:134-135,
+-- CanSee -> pathToCharacter :137-138 (30 Anstoesse in 15 s, ENT:60).
+local function steerSP(e, b, d, sees)
+    local z, obj = e.z, b.obj
+    local bt = z:getBumpType()                   -- B22:client/BanditUpdate.lua:1595
+    if bt == B.ZBITE or bt == B.ZBITE_LOW then return end
+    z:setTarget(obj)                             -- B22:client/BanditUpdate.lua:1771
+    z:spotted(obj, true)                         -- B22:client/BanditUpdate.lua:1769
+    if d > cfg("lureNear", 3) then
+        if sees == nil then sees = z:CanSee(obj) end     -- B22:client/BanditUpdate.lua:1749
+        if sees then z:pathToCharacter(obj) end          -- B22:client/BanditUpdate.lua:1750
+    end
+end
+
+-- MP (nur H, wie bisher): nur Zombies OHNE Ziel, z:pathToLocationF(x, y, z) (B:shared/ZombieActions/ZAGoTo.lua:42), hoechstens je
+-- lureRepathMs oder wenn der Baer weiter als 1,5 Kacheln zog. Waehrend unseres Bisses nichts. z:getBumpType(): B:client/BanditUpdate.lua:1890.
+local function steerMP(e, b, ms)
+    local z = e.z
+    local bt = z:getBumpType()
+    if bt == B.ZBITE or bt == B.ZBITE_LOW then return end
     if not hasAuth(z) or z:getTarget() ~= nil then return end
     local moved = e.px == nil or e.py == nil or B.DistXY(e.px, e.py, b.x, b.y) > 1.5
     if e.pAt ~= nil and ms - e.pAt >= 0 and ms - e.pAt < cfg("lureRepathMs", 1000) and not moved then return end
@@ -509,9 +745,159 @@ local function steerZombie(e, b, d, ms)
     e.pAt, e.px, e.py = ms, b.x, b.y
 end
 
--- Eintraege loslassen: Baer weg aus der Sicht, am Boden, faehrt mit, neue Kopie, Zombie tot oder weiter als 2 x lureR.
-local function sweep(byId)
+-- K8 (PLAN_KAMPF.md 2.8): Lenk-Zeilen nur hinter B.LogActive (Schalter FightLog), je Zombie und Art hoechstens je lureLogMs, je Takt
+-- hoechstens LOG_MAX gedruckte Zeilen. Drossel B.LogEvery der KAMPF-Haelfte (shared/BanditsNPCBear.lua, Rueckgabe true = gedruckt,
+-- schnittstelle.md Zusatz KAMPF 06:00); fehlt sie, dieselbe Drossel hier (Deckel 64 Schluessel wie B.ErrEvery), gedruckt ueber B.Log
+-- (Praefix [TC-BEAR]). Texte entstehen nur bei eingeschaltetem Log und nur im Takt (nichts je Bild).
+local LOG_MAX = 8
+local logAt, logN = {}, 0
+local WHY = { biting = "biting", bandittgt = "bandit target", nosight = "no sight", cap = "cap" }
+local WHY_D = { bandit = "bandit at ", player = "player at ", near = "near ", kept = "kept ", sees = "sees ", free = "free near ",
+    closer = "player closer by " }
+
+local function f1(v)
+    return string.format("%.1f", tonumber(v) or 0)
+end
+
+local function whyText(code, val)
+    if code == "state" then return "state " .. tostring(val) end
+    local pre = WHY_D[code]
+    if pre ~= nil then return pre .. f1(val) end
+    return WHY[code] or tostring(code)
+end
+
+local function logEvery(key, ms, msg, now)
+    if B.LogEvery then return B.LogEvery(key, ms, msg) == true end
+    local last = logAt[key]
+    if last ~= nil and now - last >= 0 and now - last < ms then return false end
+    if last == nil then
+        logN = logN + 1
+        if logN > 64 then
+            logAt = {}
+            logN = 1
+        end
+    end
+    logAt[key] = now
+    B.Log(msg)
+    return true
+end
+
+-- Ein Entscheid fuer B.FoeLureInfo (die ersten LOG_MAX je Takt) und fuer das Log. Rueckgabe: gedruckte Zeilen in diesem Takt.
+-- z:getPersistentOutfitID(): B22:server/BanditServerSpawner.lua:439.
+local function lureNote(ms, z, b, d, win, code, val, kind, logOn, lines)
+    local oid = nil
+    if #lastInfo < LOG_MAX then
+        oid = z:getPersistentOutfitID()
+        lastInfo[#lastInfo + 1] = { oid = oid, id = b.id, win = win, code = code, val = val, d = d, kind = kind or "none" }
+    end
+    if not logOn or lines >= LOG_MAX then return lines end
+    if oid == nil then oid = z:getPersistentOutfitID() end
+    local kt = kind or "none"
+    if kt == "ours" then kt = "this bear" end
+    local msg
+    if win then
+        msg = "lure: z " .. tostring(oid) .. " -> bear " .. tostring(b.id) .. " (" .. whyText(code, val) .. "), target was " .. kt
+    else
+        msg = "lure: z " .. tostring(oid) .. " stays (" .. whyText(code, val) .. "), target " .. kt .. ", bear " .. tostring(b.id) .. " at " .. f1(d)
+    end
+    local key = "lure:" .. (win and "w" or "s") .. tostring(oid)
+    if logEvery(key, cfg("lureLogMs", 2000), msg, ms) then lines = lines + 1 end
+    return lines
+end
+
+-- Zeilen fuer den Haken (Ziel zurueck vom Spieler / nach dem Vergessen) und eine Summe je lureLogMs.
+local function lureLogTail(ms, nCands, lines)
+    local every = cfg("lureLogMs", 2000)
+    for i = 1, #L do
+        if lines >= LOG_MAX then break end
+        local e = L[i]
+        if e.flips ~= nil and e.flips ~= e.logF then
+            local oid = e.z:getPersistentOutfitID()
+            local msg = "lure: z " .. tostring(oid) .. " flipped back " .. tostring(e.flips) .. "x, held " .. tostring(e.holds) .. "x (bear "
+                .. tostring(e.id) .. ")"
+            if logEvery("lure:f" .. tostring(oid), every, msg, ms) then
+                e.logF = e.flips
+                lines = lines + 1
+            end
+        end
+    end
+    if nCands == 0 and #L == 0 then return end
+    local nWin = 0
+    for i = 1, #L do
+        if L[i].win == true then nWin = nWin + 1 end
+    end
+    logEvery("lure:sum", every, "lure: " .. tostring(nCands) .. " zombies in reach, " .. tostring(nWin) .. " held of " .. tostring(#L)
+        .. ", hook " .. (hooked and "on" or "off") .. ", flips " .. tostring(flipsAll) .. ", holds " .. tostring(holdsAll), ms)
+end
+
+-- SP-Takt: Entscheid je Kandidat, Deckel lureMax gelenkte je Baer und lureTrackMax Eintraege gesamt ("cap"), Lenken, Log.
+-- Ein Zombie, den ein Spieler / Bandit behaelt, wird freigegeben (Ziel nil, wenn es noch der Baer war -- die Engine bzw. Bandits nimmt
+-- ihn im naechsten Bild); einer in einem Ausnahme-Zustand bleibt eingetragen, aber ungelenkt, bis der naechste Takt neu entscheidet.
+local function lureSP(ms, bears, cands, players, bandits, logOn)
+    local r = cfg("lureR", 10)
+    local perMax = math.floor(cfg("lureMax", 8))
+    local allMax = math.floor(cfg("lureTrackMax", 32))
+    local holdMs = cfg("lureHoldMs", 700)
+    local lines = 0
+    for i = 1, #cands do
+        local c = cands[i]
+        local best, bestD = nearestBear(c, bears, r)
+        if best ~= nil then
+            local z = c.z
+            local win, code, val, kind, sees = lureDecide(z, c, best, bestD, players, bandits)
+            local e = LZ[z]
+            if win and (e == nil or e.id ~= best.id) and (countWin(best.id) >= perMax or (e == nil and #L >= allMax)) then
+                win, code, val = false, "cap", nil
+            end
+            if win then
+                if e ~= nil and e.id ~= best.id then
+                    letGo(e)
+                    e.id, e.obj = best.id, best.obj
+                end
+                if e == nil then
+                    e = { z = z, id = best.id, obj = best.obj, at = ms, flips = 0, holds = 0, logF = 0 }
+                    lureAdd(e)
+                end
+                e.win, e.winTo, e.d, e.code, e.val, e.kind = true, ms + holdMs, bestD, code, val, kind
+                steerSP(e, best, bestD, sees)
+            elseif e ~= nil then
+                e.win, e.code, e.val, e.kind = false, code, val, kind
+                if code == "player" or code == "bandit" or code == "bandittgt" then lureDropE(e, true) end
+            end
+            lines = lureNote(ms, z, best, bestD, win, code, val, kind, logOn, lines)
+        end
+    end
+    return lines
+end
+
+-- MP-Takt (wie bisher): nur wenn der Baer naeher ist als jeder Spieler / Bandit.
+local function lureMP(ms, bears, cands, spots)
+    local r = cfg("lureR", 10)
+    local perMax = math.floor(cfg("lureMax", 8))
+    local allMax = math.floor(cfg("lureTrackMax", 32))
+    for i = 1, #cands do
+        local c = cands[i]
+        local best, bestD = nearestBear(c, bears, r)
+        if best ~= nil and nearestIsBear(c.x, c.y, bestD, spots) then
+            local e = LZ[c.z]
+            if e ~= nil and e.id ~= best.id then
+                letGo(e)
+                e.id, e.obj, e.pAt = best.id, best.obj, nil
+            elseif e == nil and #L < allMax and countFor(best.id) < perMax then
+                e = { z = c.z, id = best.id, obj = best.obj, at = ms }
+                lureAdd(e)
+            end
+            if e ~= nil and e.id == best.id then steerMP(e, best, ms) end
+        end
+    end
+end
+
+-- Eintraege loslassen: Baer weg aus der Sicht, am Boden, faehrt mit, neue Kopie, Zombie tot oder weiter als 2 x lureR (Ziel frei, wenn es
+-- noch der Baer ist). SP: ein Eintrag, der lureHoldMs nach seiner Frist nicht neu entschieden wurde (kein Kandidat mehr), wird vergessen --
+-- ohne das Ziel anzufassen (jagt er den Baeren, darf er weiter).
+local function sweep(byId, ms)
     local far = 2 * cfg("lureR", 10)
+    local hold = cfg("lureHoldMs", 700)
     local i = 1
     while i <= #L do
         local e = L[i]
@@ -522,8 +908,9 @@ local function sweep(byId)
             drop = dx * dx + dy * dy > far * far
         end
         if drop then
-            letGo(e)
-            table.remove(L, i)
+            lureDrop(i, true)
+        elseif e.winTo ~= nil and (ms - e.winTo > hold or ms - e.winTo < -60000) then
+            lureDrop(i, false)
         else
             i = i + 1
         end
@@ -532,13 +919,18 @@ end
 
 -- Baeren dieses Rechners: Sicht-Eintraege tame, ld, nicht ride, nicht dn, mit lebender Kopie (U.CubObj). getX/getY/getZ am Tier:
 -- V:client/TimedActions/ISContextualActions.lua:100.
+-- Nachbesserung (kampf/NACHBESSERUNG.md S3/C10, Frage F2/FK2): ein Baer, der gerade NICHT kaempft -- passiv (Sicht pas) oder im Rueckzug (Sicht
+-- fst "retreat": passiv, verletzt, schlaftrunken, ohne Vertrauen, zu muede, Deckel; server/BanditsNPCBearFight.lua B.FightState) -- lockt
+-- keine Zombies an (er wehrt sich nicht; sonst wird er zerbissen). Fallen seine Eintraege weg, gibt sweep sie frei (Ziel nil, wenn noch er).
+-- Verschnaufen (fst "rest") lockt weiter: das ist eine Pause mitten im Kampf.
 local function lureBears()
     local out, byId = {}, {}
     local v = B.View
     local ui = B.UI
     if type(v) ~= "table" or type(v.cubs) ~= "table" or not (ui and ui.CubObj) then return out, byId end
     for id, c in pairs(v.cubs) do
-        if type(c) == "table" and c.st == "tame" and c.ld == true and c.ride ~= true and c.dn ~= true and #out < 16 then
+        if type(c) == "table" and c.st == "tame" and c.ld == true and c.ride ~= true and c.dn ~= true and c.pas ~= true
+            and c.fst ~= "retreat" and #out < 16 then
             local obj = ui.CubObj(id)
             if obj ~= nil then
                 local b = { id = id, obj = obj, x = obj:getX(), y = obj:getY(), z = obj:getZ() }
@@ -555,44 +947,48 @@ local function lureBody(ms)
     -- Sandbox-Kuerzung (Kevin 12.11.2026: "klar sollen die zombies und banditen den angreifen"): immer an; nur der feste Wert
     -- B.CFG.zombiesAttack == false (Probebefehl der Test-Mod) schaltet ab (vorher Sandbox BearZombiesAttack, Vorgabe an)
     if B.CFG.zombiesAttack == false then bears, byId = {}, {} end
-    sweep(byId)
+    sweep(byId, ms)
+    holdKeep = cfg("lurePlayerKeep", 2.0)
+    if B.IsSP() then lastInfo = {} end
     if #bears == 0 then return end
     local r = cfg("lureR", 10)
     local cands = lureCands(bears, r)
+    if B.IsSP() then
+        local logOn = B.LogActive() == true
+        local lines = 0
+        if #cands > 0 then lines = lureSP(ms, bears, cands, playerSpots(), banditSpots(), logOn) end
+        if logOn then lureLogTail(ms, #cands, lines) end
+        return
+    end
     if #cands == 0 then return end
     local spots = playerSpots()
     local bandits = banditSpots()
     for j = 1, #bandits do spots[#spots + 1] = bandits[j] end
-    local perMax = math.floor(cfg("lureMax", 6))
-    local allMax = math.floor(cfg("lureTrackMax", 32))
-    for i = 1, #cands do
-        local c = cands[i]
-        local best, bestD = nil, nil
-        for k = 1, #bears do
-            local b = bears[k]
-            local d = B.DistXY(c.x, c.y, b.x, b.y)
-            if d <= r and math.floor(c.zl) == math.floor(b.z) and (bestD == nil or d < bestD) then best, bestD = b, d end
-        end
-        if best ~= nil and nearestIsBear(c.x, c.y, bestD, spots) then
-            local e = tracked(c.z)
-            if e ~= nil and e.id ~= best.id then
-                letGo(e)
-                e.id, e.obj, e.pAt = best.id, best.obj, nil
-            elseif e == nil and #L < allMax and countFor(best.id) < perMax then
-                e = { z = c.z, id = best.id, obj = best.obj, at = ms }
-                L[#L + 1] = e
-            end
-            if e ~= nil and e.id == best.id then steerZombie(e, best, bestD, ms) end
-        end
-    end
+    lureMP(ms, bears, cands, spots)
 end
 
 function B.FoeLureTick()
     if isServer() then return end
     local ms = getTimestampMs()
+    holdNow = ms
     if lureAt ~= nil and ms - lureAt >= 0 and ms - lureAt < cfg("lureMs", 500) then return end
     lureAt = ms
     lureBody(ms)
+    hookSync()
+end
+
+-- Nur lesen (Probebefehl Lure der Test-Mod, schnittstelle.md ZOMBIES): Eintraege, gelenkte, Haken-Zaehler, die letzten Entscheide.
+function B.FoeLureInfo()
+    local nWin = 0
+    for i = 1, #L do
+        if L[i].win == true then nWin = nWin + 1 end
+    end
+    local last = {}
+    for i = 1, #lastInfo do
+        local q = lastInfo[i]
+        last[i] = { oid = q.oid, id = q.id, why = (q.win and "lured: " or "stays: ") .. whyText(q.code, q.val), d = q.d, tgt = q.kind }
+    end
+    return { n = #L, win = nWin, flips = flipsAll, holds = holdsAll, hook = hooked, last = last }
 end
 
 -- ---------------------------------------------------------------------------

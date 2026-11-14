@@ -19,6 +19,16 @@ if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: la
 -- Engine-Aufrufe hier (Fundstelle am Aufruf): getX/getY/getZ, isAlive, isProne, getCurrentSquare, isBlockedTo, isWindowTo, CanSee (SP),
 -- faceThisObject (SP), isExistInTheWorld, isDead, ZombRand, getTimestampMs, Events.OnTick.Add; Bewegung nur ueber B.MoveTo / B.Hold
 -- (server/BanditsNPCBearWorld.lua). Ladefolge: server/ alphabetisch (diese Datei zuerst); fremde Funktionen nur zur Laufzeit ueber B.X.
+-- Lauf baer-kampf (PLAN_KAMPF.md 2.1-2.4, 2.7, 2.8; Kevin 13.11. ~23:00 Punkte 1-7, begleiter/ENTSCHEIDUNGEN.md):
+--   K1 Aufrichten IMMER beim ersten Kontakt (EIN Entscheid je Kampf in begin, f.rearWant; Pause rearCdMs bleibt; Gegner schon bis rearDist
+--      dran -> sofort Angriff). K2 Anlauf AUF die (vorhergesagte) Lage, Liegende und Fallende werden zerfleischt (B.FoePosture, Foe.lua),
+--      "steckt fest" nur ausser Weite, die Sperre lebt in der Sitzung (s.fBlk). K3 Vorhalt, Laufbefehl nur bei Wanderung / Alter, Angriff
+--      sobald der Abstand zum Trefferzeitpunkt in Weite ist, Ausfallschritt im Schlag, Zielwechsel mit Hysterese, Pause nach dem Kill.
+--   K4 Sprint-Schub NUR im Anlauf und beim Leinen-Sprint (B.FightMoveTick, je Bild, nur Einzelspieler), danach ruhig zurueck (s.calmBack).
+--   K7 Sicht fuer bis zu sightMax Kandidaten, Leine 25, Leinen-Abbruch -> Sprint zum Besitzer (s.leashRun, server/BanditsNPCBearFollow.lua).
+--   K8 Kampf-Log je Entscheidung (B.LogEvery, nur mit dem Diagnose-Schalter B.LogActive).
+--   Neu am Tier: a:setX(Zahl) / a:setY(Zahl) nur in moveBear (Vanilla server/ClientCommands.lua:895-896, shared/Definitions/animal/
+--   ButcheringUtil.lua:575-576; Uebernahme-Regel setXY). Kachelwechsel nur mit B.FoeStepOk (shared/BanditsNPCBearFoe.lua, ZOMBIES).
 -- Statisch geprueft, nicht gespielt.
 --
 
@@ -29,6 +39,7 @@ local B = BanditsNPC.Bear
 B._fightN = B._fightN or 0          -- kaempfende Baeren (jeder Kampf-Takt neu gezaehlt; Riegel des OnTick)
 B._kp = B._kp or {}                 -- Kill-Zaehler (11.5): { { o, id, kind, at }, ... } getroffene Gegner (<= killMax)
 B._ftAt = B._ftAt or nil            -- Echtzeit des letzten Kampf-Takts
+B._mvOn = B._mvOn or false          -- Lauf baer-kampf: Bewegungs-Takt je Bild an (Kampf / Leinen-Sprint, nur SP; B.FightMoveTick)
 
 -- Treffer-Toene je Angriff (gespielt NCBearTest shared/NCBearFight.lua:170-172; Ton-Skripte Vanilla media/scripts/generated/sounds/
 -- weapons/sounds_melee_bluntlong.txt, sounds_melee_bladelong.txt, zombies/sounds_zombie_foley.txt). Hoechstens 2 je Angriff.
@@ -54,6 +65,44 @@ end
 
 local function r2(v)
     return math.floor((num(v) or 0) * 100 + 0.5) / 100
+end
+
+-- Lauf baer-kampf (PLAN_KAMPF.md 2.8, K8): Kampf-Log hinter dem Diagnose-Schalter (B.LogActive), je Schluessel hoechstens je fightLogMs (B.LogEvery,
+-- shared/BanditsNPCBear.lua). Wer eine Zeile baut, fragt vorher logOn() -- ohne Schalter kein Text, keine Uhr, nichts je Bild.
+local function logOn()
+    return B.LogActive ~= nil and B.LogActive() == true
+end
+
+local function logE(key, msg)
+    if B.LogEvery then B.LogEvery(key, cfg("fightLogMs", 1500), msg) else B.Log(msg) end
+end
+
+local function r1(v)
+    return math.floor((num(v) or 0) * 10 + 0.5) / 10
+end
+
+-- Lauftempo des Koerpers in Kacheln/s wie B.MoveTo (B.BodyNum mit dem Aussehen, shared/BanditsNPCBearStats.lua; grosser Koerper 3,17
+-- gemessen, kampf/werkzeug_plan/tempo_ausgabe.txt). Nur je Kampf-Takt, nie je Bild (B.LookNow fragt das Tier).
+local function runSpeedOf(rec)
+    local look = nil
+    if B.LookNow then look = B.LookNow(rec) end
+    local v = nil
+    if B.BodyNum then v = num(B.BodyNum(rec.body, "runSpeed", 1, look)) end
+    if v == nil or v <= 0 then v = cfg("runSpeedBig", 3.17) end
+    return v
+end
+
+-- Sprint-Faktor des Koerpers (K4): nur im Einzelspieler (PLAN_KAMPF.md 6), sonst 0 (B.FightSprintK, shared/BanditsNPCBearFightRules.lua).
+local function sprintK(rec)
+    if not B.IsSP() or B.FightSprintK == nil then return 0 end
+    return B.FightSprintK(runSpeedOf(rec))
+end
+
+-- Tempo, mit dem der Baer im Anlauf rechnet (Vorhalt): Sprint, wenn an, sonst das Lauftempo.
+local function chaseSpeed(rec, k)
+    local v = runSpeedOf(rec)
+    if (num(k) or 0) > 0 then v = v * (1 + k) end
+    return v
 end
 
 -- Laufende Kaempfe zaehlen (Sitzungen, hoechstens Zahl der Eintraege). Kein Zaehler, der weglaufen kann.
@@ -87,7 +136,7 @@ end
 -- max(fightLeash, BearRoamRadius + fightLeashRoamPad); sonst die Stelle des Kampfbeginns. players = B.Players() (Server-Liste).
 -- ---------------------------------------------------------------------------
 local function anchorOf(rec, f, players)
-    local leash = cfg("fightLeash", 14)
+    local leash = cfg("fightLeash", 25)                -- Nachbesserung C7: Rueckfall = Kevins Wert 25 (K7), nicht mehr 14
     local mode = B.ModeOf(rec)
     if mode == "follow" and rec.owner ~= nil then
         local _, e = B.PlayerByKey(rec.owner, players)
@@ -147,7 +196,33 @@ end
 -- (dann steht nichts mehr dazwischen), hebt B.FightUnmiss die Sperre sofort auf (server/BanditsNPCBearHurt.lua).
 local function missedNow(s, oid, ms)
     local t = s and s.missBl and num(s.missBl[oid]) or nil
-    return t ~= nil and t - ms > 0 and t - ms <= cfg("fightMissBlockMs", 8000)
+    return t ~= nil and t - ms > 0 and t - ms <= cfg("fightBlockLongMs", 120000)
+end
+
+-- Nachbesserung (kampf/NACHBESSERUNG.md C1): wird DASSELBE Ziel wieder gesperrt (Zaun, steckt fest), dauert die Sperre doppelt so lang wie die
+-- letzte (Grundfrist x 2^(n-1), hoechstens fightBlockLongMs) -- sonst rannte er alle 8 s wieder an denselben Zaun. Nach fightBlockForgetMs ohne
+-- Sperre zaehlt er neu; beisst ihn das Ziel (B.FightUnmiss), faellt alles weg. s.blkK[oid] = { n, at }, Deckel fightBlockMax wie s.missBl.
+local function blockSpan(s, oid, base, ms)
+    if type(s.blkK) ~= "table" then s.blkK, s.blkKN = {}, 0 end
+    local e = s.blkK[oid]
+    if e == nil then
+        s.blkKN = (num(s.blkKN) or 0) + 1
+        if s.blkKN > cfg("fightBlockMax", 32) then s.blkK, s.blkKN = {}, 1 end
+        e = { n = 0, at = ms }
+        s.blkK[oid] = e
+    elseif ms - e.at < 0 or ms - e.at > cfg("fightBlockForgetMs", 300000) then
+        e.n = 0
+    end
+    e.n = e.n + 1
+    e.at = ms
+    local cap = cfg("fightBlockLongMs", 120000)
+    local span = base
+    for _ = 2, e.n do
+        span = span * 2
+        if span >= cap then break end
+    end
+    if span > cap then span = cap end
+    return span, e.n
 end
 
 local function missNote(s, f, tgt, ms)
@@ -163,15 +238,22 @@ local function missNote(s, f, tgt, ms)
         s.missBlN = (num(s.missBlN) or 0) + 1
         if s.missBlN > cfg("fightBlockMax", 32) then s.missBl, s.missBlN = {}, 1 end
     end
-    s.missBl[tgt.oid] = ms + cfg("fightMissBlockMs", 8000)
+    local span, rep = blockSpan(s, tgt.oid, cfg("fightMissBlockMs", 8000), ms)
+    s.missBl[tgt.oid] = ms + span
     f.tgt, f.stuckAt, f.missOid, f.missN, f.missAt = nil, nil, nil, 0, nil
-    B.Log("fight: target " .. tostring(tgt.oid) .. " is in reach but cannot be struck (wall, window, fence) -- ignored for a while")
+    B.Log("fight: target " .. tostring(tgt.oid) .. " is in reach but cannot be struck (wall, window, fence) -- ignored for "
+        .. tostring(math.floor(span / 1000)) .. " s (" .. tostring(rep) .. ". time)")
     return true
 end
 
+-- Der Gegner traf den Baeren (server/BanditsNPCBearHurt.lua): nichts steht mehr dazwischen -> Sperren "kein Luftschlag" UND (Nachbesserung C1)
+-- "steckt fest" fallen weg, die Wiederholungs-Zaehlung auch -- er wehrt sich sofort.
 function B.FightUnmiss(id, oid)
     local s = id ~= nil and B._s and B._s[id] or nil
-    if type(s) == "table" and type(s.missBl) == "table" and oid ~= nil then s.missBl[oid] = nil end
+    if type(s) ~= "table" or oid == nil then return end
+    if type(s.missBl) == "table" then s.missBl[oid] = nil end
+    if type(s.fBlk) == "table" then s.fBlk[oid] = nil end
+    if type(s.blkK) == "table" then s.blkK[oid] = nil end
 end
 
 local function block(f, oid, ms)
@@ -186,39 +268,143 @@ local function block(f, oid, ms)
     f.blocked[oid] = ms + cfg("fightBlockMs", 20000)
 end
 
--- Ziel waehlen (2.2.2): aus B._foes[id] nach Abstand, Banditen um fightBanditBias bevorzugt, nicht gesperrt, innerhalb der Leine; Sicht nur
--- fuer die drei besten (SP CanSee, Bandits client/BanditUpdate.lua:1087 / :1203; am Server ohne Sicht-Frage). Rueckgabe { o, kind, oid } / nil.
-local function pickTarget(rec, a, f, ms, ax, ay, leash)
+-- Lauf baer-kampf (PLAN_KAMPF.md 2.2, K2): "steckt fest" sperrt das Ziel in der SITZUNG (s.fBlk, Deckel fightBlockMax, wie s.missBl) -- sonst
+-- naehme der naechste Kampf (leere Sperrliste) dasselbe haengende Ziel sofort wieder (genau Kevins Bild: er wartet, bis es aufsteht).
+local function stuckNow(s, oid, ms)
+    local t = s and s.fBlk and num(s.fBlk[oid]) or nil
+    return t ~= nil and t - ms > 0 and t - ms <= cfg("fightBlockLongMs", 120000)
+end
+
+local function stuckBlock(s, oid, ms)
+    if type(s.fBlk) ~= "table" then s.fBlk, s.fBlkN = {}, 0 end
+    if s.fBlk[oid] == nil then
+        s.fBlkN = (num(s.fBlkN) or 0) + 1
+        if s.fBlkN > cfg("fightBlockMax", 32) then s.fBlk, s.fBlkN = {}, 1 end
+    end
+    local span = blockSpan(s, oid, cfg("fightBlockMs", 20000), ms)      -- Nachbesserung C1: Wiederholung laenger
+    s.fBlk[oid] = ms + span
+    return span
+end
+
+-- Ziel waehlen (2.2.2): aus B._foes[id] nach Abstand, Banditen um fightBanditBias bevorzugt, nicht gesperrt, innerhalb der Leine; Sicht
+-- (SP CanSee, Bandits client/BanditUpdate.lua:1087 / :1203; am Server ohne Sicht-Frage). Rueckgabe { o, kind, oid } / nil.
+-- Lauf baer-kampf (PLAN_KAMPF.md 2.7, K7): Sicht fuer bis zu sightMax Kandidaten (vorher nur die drei naechsten -- standen die hinter einem
+-- Zaun, ging er nicht los, auch wenn ein vierter frei stand); why (wahlfrei, nur mit Log) zaehlt je verworfenem Kandidaten den Grund
+-- (out-of-leash, blocked, stuck, missblocked, level, no-sight). Die Gegnerliste ist ohnehin hoechstens foeListMax lang.
+-- Nachbesserung (kampf/NACHBESSERUNG.md S4, Frage FK3): steht ein Gegner bis fightOwnerNear am Besitzer (f.own = { x, y }, gleiche Ebene, aus
+-- B.Players() wie anchorOf), zaehlt er fightOwnerBias Kacheln naeher -- der Baer hilft zuerst dem, der beisst. Nur Abstaende.
+local function ownerBonus(f, ox, oy)
+    local own = f and f.own or nil
+    local b = cfg("fightOwnerBias", 3)
+    if own == nil or b <= 0 then return 0 end
+    if B.DistXY(own.x, own.y, ox, oy) <= cfg("fightOwnerNear", 2.0) then return b end
+    return 0
+end
+
+local function pickTarget(rec, a, f, ms, ax, ay, leash, why)
     local list = B._foes and B._foes[rec.id] or nil
     if type(list) ~= "table" or #list == 0 then return nil end
     local bx, by, bz = a:getX(), a:getY(), math.floor(a:getZ())
     local bias = cfg("fightBanditBias", 3)
     local ses = B._s and B._s[rec.id] or nil
     local best = {}
+    local function note(k)
+        if why then why[k] = (why[k] or 0) + 1 end
+    end
     for i = 1, #list do
         local fo = list[i]
         local o = fo.o
-        if o ~= nil and not blockedNow(f, fo.oid, ms) and not missedNow(ses, fo.oid, ms) and o:isAlive()
-            and math.floor(o:getZ()) == bz then
+        if o == nil or not o:isAlive() then
+            note("dead")
+        elseif blockedNow(f, fo.oid, ms) then
+            note("blocked")
+        elseif stuckNow(ses, fo.oid, ms) then
+            note("stuck")
+        elseif missedNow(ses, fo.oid, ms) then
+            note("missblocked")
+        elseif math.floor(o:getZ()) ~= bz then
+            note("level")
+        else
             local ox, oy = o:getX(), o:getY()
             if B.DistXY(ax, ay, ox, oy) <= leash then
                 local sc = B.DistXY(bx, by, ox, oy)
                 if fo.kind == "b" then sc = sc - bias end
+                sc = sc - ownerBonus(f, ox, oy)
                 best[#best + 1] = { fo = fo, s = sc }
-            elseif fo.oid ~= nil then
-                block(f, fo.oid, ms)
+            else
+                note("out-of-leash")
+                if fo.oid ~= nil then block(f, fo.oid, ms) end
             end
         end
     end
     if #best == 0 then return nil end
     if #best > 1 then table.sort(best, function(p, q) return p.s < q.s end) end
     local n = #best
-    if n > 3 then n = 3 end
+    local sm = math.floor(cfg("sightMax", 12))
+    if n > sm then n = sm end
     for i = 1, n do
         local o = best[i].fo.o
         if not B.IsSP() or a:CanSee(o) then return { o = o, kind = best[i].fo.kind, oid = best[i].fo.oid } end
+        note("no-sight")
     end
     return nil
+end
+
+-- Gruende als Text fuer das Log ("no-sight 2, stuck 1"; feste Reihenfolge).
+local WHY_ORDER = { "out-of-leash", "blocked", "stuck", "missblocked", "level", "no-sight", "dead" }
+local function whyText(why)
+    local t = {}
+    for i = 1, #WHY_ORDER do
+        local k = WHY_ORDER[i]
+        if why[k] then t[#t + 1] = k .. " " .. tostring(why[k]) end
+    end
+    if #t == 0 then return "none" end
+    return table.concat(t, ", ")
+end
+
+-- Naechster Gegner jetzt (lebendige Lage, hoechstens foeListMax Eintraege; je Kampfbeginn einmal). Rueckgabe Abstand oder nil.
+local function nearestFoeD(rec, a)
+    local list = B._foes and B._foes[rec.id] or nil
+    if type(list) ~= "table" then return nil end
+    local bx, by = a:getX(), a:getY()
+    local best = nil
+    for i = 1, #list do
+        local o = list[i].o
+        if o ~= nil and o:isAlive() then
+            local d = B.DistXY(bx, by, o:getX(), o:getY())
+            if best == nil or d < best then best = d end
+        end
+    end
+    return best
+end
+
+-- Nachbesserung (S1/S2, S4): Lage des Besitzers (gleiche Ebene wie der Baer) aus der Spieler-Liste B.Players() (Felder x / y / z, wie anchorOf)
+-- -- oder nil. Nur Zahlen.
+local function ownerPt(rec, a, players)
+    if rec.owner == nil or players == nil then return nil end
+    local _, e = B.PlayerByKey(rec.owner, players)
+    if e == nil or num(e.x) == nil or num(e.y) == nil then return nil end
+    if math.floor(num(e.z) or 0) ~= math.floor(a:getZ()) then return nil end
+    return { x = e.x, y = e.y }
+end
+
+-- Steht das Ziel? SP B.FoePosture (shared/BanditsNPCBearFoe.lua, Fundstellen dort), am MP-Server nur isProne (Bandits
+-- client/BanditUpdate.lua:275) -- wie choose.
+local function standing(o)
+    if B.IsSP() and B.FoePosture then return (B.FoePosture(o) or "up") == "up" end
+    return not o:isProne()
+end
+
+-- Nachbesserung (S1/S2, Frage FK1): Lagen aller Gegner beim Kampfbeginn (hoechstens foeListMax, B._foes), fuer das Tempo in rearCheck.
+local function foeSnap(rec)
+    local list = B._foes and B._foes[rec.id] or nil
+    local t = {}
+    if type(list) ~= "table" then return t end
+    for i = 1, #list do
+        local o = list[i].o
+        if o ~= nil and o:isAlive() then t[#t + 1] = { o = o, x = o:getX(), y = o:getY() } end
+    end
+    return t
 end
 
 -- ---------------------------------------------------------------------------
@@ -269,17 +455,108 @@ local function begin(rec, a, s, st, tgt, ms)
     s.standUntil = nil
     f.readyAt = stand
     s.fight = f
+    s.calmBack = nil
+    s.leashRun = nil
+    s.mvX, s.mvY = nil, nil
+    f.sprK = sprintK(rec)
+    f.hitN = 0
     countFights()
+    if B.IsSP() then B._mvOn = true end
     local allow = B.FightStageOf(st)
-    local rearReady = allow.rear and (s.rearAt == nil or ms - s.rearAt < 0 or ms - s.rearAt >= cfg("rearCdMs", 120000))
-    if not rearReady then
+    -- Lauf baer-kampf (PLAN_KAMPF.md 2.1, K1; Kevin 13.11. ~23:00 Punkt 1 "das erste mal ... bevor er in den kampf stuermt"): EIN Entscheid je
+    -- Kampf -- ausgewachsen, Pause rearCdMs frei und kein Gegner schon bis rearDist dran -> er richtet sich auf (der erste Angriff, choose);
+    -- sonst Knurren und sofort Angriff. Kein Wurf je Takt mehr (rearChance 100).
+    local cd = num(s.rearAt)
+    local rearWhy = nil
+    if not allow.rear then
+        rearWhy = "stage " .. tostring(allow.stage)
+    elseif cd ~= nil and ms - cd >= 0 and ms - cd < cfg("rearCdMs", 120000) then
+        rearWhy = "cooldown " .. tostring(math.ceil((cfg("rearCdMs", 120000) - (ms - cd)) / 1000)) .. " s"
+    else
+        local near = nearestFoeD(rec, a)
+        if near ~= nil and near <= cfg("rearDist", 2.5) then
+            rearWhy = "foe at " .. tostring(r1(near)) .. " <= " .. tostring(cfg("rearDist", 2.5))
+        elseif tgt.o ~= nil and not standing(tgt.o) then
+            -- Nachbesserung S2: liegt / faellt das erste Ziel, zerfleischt er es sofort (sonst steht es waehrend der 3 s wieder auf)
+            rearWhy = "target down"
+        end
+    end
+    f.rearWant = rearWhy == nil
+    if f.rearWant then
+        -- Nachbesserung S1: erst schauen (rearCheck im Kampf-Takt), dann aufrichten oder nicht
+        f.rearLook = ms
+        f.rearSnap = foeSnap(rec)
+    else
         growl(rec, a, ms)
         f.growled = true
     end
     touchFst(rec, s)
     B.Log("fight: " .. tostring(rec.id) .. " (" .. tostring(allow.stage) .. ") attacks a " .. tostring(tgt.kind) .. " (outfit "
         .. tostring(tgt.oid) .. ")")
+    if logOn() then
+        local rw = "planned (looking)"
+        if rearWhy ~= nil then rw = "no (" .. rearWhy .. ")" end
+        logE("rear:" .. tostring(rec.id), "fight: " .. tostring(rec.id) .. " rear " .. rw)
+    end
     return true
+end
+
+-- Nachbesserung (kampf/NACHBESSERUNG.md S1/S2, Frage FK1; Kevin Punkt 1 "bevor er in den kampf stuermt", "steht ein Zombie schon direkt dran
+-- greift er sofort an"): nach dem Kampfbeginn haelt er rearLookMs still und schaut. Dann richtet er sich NICHT auf, wenn ein Gegner schon bis
+-- rearDist dran ist, das erste Ziel liegt / faellt, oder ein Gegner ihn (bis rearDist) bzw. den Besitzer (bis rearOwnerPad) schneller erreicht
+-- als der Aufricht-Clip dauert (rearSafeS; Tempo = Weg seit dem Kampfbeginn / Zeit, je Gegner aus foeSnap -- ohne Richtung, also eher
+-- vorsichtig). Rueckgabe true = er schaut noch (der Aufrufer haelt ihn). Das Log sagt "rear yes" bzw. "rear no (Grund)" (eigener Schluessel,
+-- C4). Nur Zahlen (getX/getY, isAlive wie oben).
+local function rearCheck(rec, a, f, ms)
+    local why = nil
+    local rd = cfg("rearDist", 2.5)
+    local near = nearestFoeD(rec, a)
+    local o = f.tgt and f.tgt.o or nil
+    local t0 = num(f.rearLook) or ms
+    local dt = ms - t0
+    if near ~= nil and near <= rd then
+        why = "foe at " .. tostring(r1(near)) .. " <= " .. tostring(rd)
+    elseif o ~= nil and not standing(o) then
+        why = "target down"
+    elseif dt >= 0 and dt < cfg("rearLookMs", 400) then
+        return true
+    else
+        local T = cfg("rearSafeS", 3.0)
+        local snap = f.rearSnap
+        if T > 0 and dt > 0 and type(snap) == "table" then
+            local bx, by = a:getX(), a:getY()
+            local own = f.own
+            local pad = cfg("rearOwnerPad", 2.0)
+            for i = 1, #snap do
+                local e = snap[i]
+                local z = e.o
+                if z ~= nil and z:isAlive() then
+                    local zx, zy = z:getX(), z:getY()
+                    local v = B.DistXY(e.x, e.y, zx, zy) / dt * 1000
+                    local dB = B.DistXY(bx, by, zx, zy)
+                    if dB - rd <= v * T then
+                        why = "foe reaches the bear (" .. tostring(r1(dB)) .. " at " .. tostring(r1(v)) .. " t/s)"
+                        break
+                    end
+                    if own ~= nil then
+                        local dO = B.DistXY(own.x, own.y, zx, zy)
+                        if dO - pad <= v * T then
+                            why = "foe reaches the owner (" .. tostring(r1(dO)) .. " at " .. tostring(r1(v)) .. " t/s)"
+                            break
+                        end
+                    end
+                end
+            end
+        end
+    end
+    f.rearLook, f.rearSnap = nil, nil
+    if why ~= nil then f.rearWant = false end
+    if logOn() then
+        local rw = "yes"
+        if why ~= nil then rw = "no (" .. why .. ")" end
+        logE("rearL:" .. tostring(rec.id), "fight: " .. tostring(rec.id) .. " rear " .. rw)
+    end
+    return false
 end
 
 -- ---------------------------------------------------------------------------
@@ -322,6 +599,9 @@ function B.FightStep(rec, a, env, ms, players)
         woke = woke, noTrust = noFight == "trust", tired = noFight == "tired",
     })
     if d.why == "hurt" then s.fleeOn = true end
+    -- Lauf baer-kampf (K6): auch passiv / ohne Vertrauen / zu muede / Pause -- wer unter der Flucht-Schwelle ist, flieht (B.GuardStep fragt
+    -- s.fleeOn; der grosse Baer versteckt sich nie mehr hinter dem Besitzer)
+    if d.act ~= "fight" and fleeHp > 0 and hpPts < fleeHp then s.fleeOn = true end
     -- F3: Grund des Rueckzugs fuer die Sicht (fsy) und die Meldung an den Besitzer (Kevin: "sagt das er zu muede ist" / "weigert er sich
     -- zu kaempfen und das steht dann da auch") -- gedrosselt in B.NeedRefuseSay (server/BanditsNPCBearNeeds.lua)
     local fsy = nil
@@ -342,6 +622,11 @@ function B.FightStep(rec, a, env, ms, players)
         if d.act == "retreat" or d.act == "rest" then s.fstNow = d.act end
         touchFst(rec, s)
         huff(rec, a, s, ms)
+        -- K8: Entscheid mit Gegner in der Liste, aber kein Kampf (passiv, verschnauft, zu muede, Junges ...)
+        if logOn() and type(foes) == "table" and #foes > 0 then
+            logE("fd:" .. tostring(rec.id), "fight: " .. tostring(rec.id) .. " decide " .. tostring(d.act) .. " (" .. tostring(d.why)
+                .. ") with foe at " .. tostring(r1(foes[1].d)))
+        end
         return false
     end
     s.fstNow = nil
@@ -350,20 +635,47 @@ function B.FightStep(rec, a, env, ms, players)
         return true
     end
     local ax, ay = a:getX(), a:getY()
+    local pl = players or B.Players()
     local tmp = { sx = ax, sy = ay, blocked = {} }
-    local bx, by, leash = anchorOf(rec, tmp, players or B.Players())
+    tmp.own = ownerPt(rec, a, pl)                   -- Nachbesserung S4: Besitzer-Bonus schon bei der ersten Zielwahl
+    local bx, by, leash = anchorOf(rec, tmp, pl)
     -- Nachbesserung F2 B1: steht der Baer selbst nicht mindestens fightLeashPad innerhalb der Leine, beginnt kein Kampf (der Kampf-Takt
     -- beendete ihn sofort mit "leash", und Folgen kaeme nie an die Reihe) -- erst holen ihn Folgen bzw. die Zombie-Wache zurueck
-    if B.DistXY(bx, by, ax, ay) > leash - cfg("fightLeashPad", 2) then
+    local ld = B.DistXY(bx, by, ax, ay)
+    -- Lauf baer-kampf (K7, Kevin Punkt 7): waehrend des Leinen-Sprints ("bis er wieder in normaler Folge-Naehe ist") kein neuer Kampf --
+    -- B.FollowStep beendet den Sprint in Folge-Naehe (s.leashRun weg), Frist fightLeashRunMs
+    local lr = num(s.leashRun)
+    if lr ~= nil and lr - ms > 0 and lr - ms <= cfg("fightLeashRunMs", 20000) and B.ModeOf(rec) == "follow" then
         touchFst(rec, s)
-        huff(rec, a, s, ms)
+        if logOn() then
+            logE("nt:" .. tostring(rec.id), "fight: " .. tostring(rec.id) .. " no target: leash run (owner at " .. tostring(r1(ld)) .. ")")
+        end
         return false
     end
-    local tgt = pickTarget(rec, a, tmp, ms, bx, by, leash)
+    if ld > leash - cfg("fightLeashPad", 2) then
+        touchFst(rec, s)
+        huff(rec, a, s, ms)
+        if logOn() then
+            logE("nt:" .. tostring(rec.id), "fight: " .. tostring(rec.id) .. " no target: leash (anchor at " .. tostring(r1(ld)) .. " > "
+                .. tostring(leash - cfg("fightLeashPad", 2)) .. ")")
+        end
+        return false
+    end
+    local why = nil
+    if logOn() then why = {} end
+    local tgt = pickTarget(rec, a, tmp, ms, bx, by, leash, why)
     if tgt == nil then
         touchFst(rec, s)
         huff(rec, a, s, ms)
+        if why then
+            logE("nt:" .. tostring(rec.id), "fight: " .. tostring(rec.id) .. " no target: " .. whyText(why) .. " (" .. tostring(#foes)
+                .. " foes)")
+        end
         return false
+    end
+    if why then
+        logE("pk:" .. tostring(rec.id), "fight: " .. tostring(rec.id) .. " pick " .. tostring(tgt.kind) .. " " .. tostring(tgt.oid) .. " at "
+            .. tostring(r1(B.DistXY(ax, ay, tgt.o:getX(), tgt.o:getY()))) .. " (" .. tostring(#foes) .. " foes)")
     end
     return begin(rec, a, s, st, tgt, ms)
 end
@@ -375,9 +687,14 @@ function B.FightDrop(id, why)
     if id == nil then return end
     local s = B._s and B._s[id] or nil
     if type(s) ~= "table" or type(s.fight) ~= "table" then return end
+    local f = s.fight
     s.fight = nil
     local ms = getTimestampMs()
     if why == "long" then s.restUntil = ms + cfg("fightRestMs", 20000) end
+    -- Lauf baer-kampf (PLAN_KAMPF.md 2.4, K4; Kevin Punkt 4 "nach dem Kampf ruhig zurueck"): fightCalmBackMs lang geht er beim Folgen bis
+    -- fightCalmWalkMax Kacheln (B.FollowDecide c.calm). Leine: stattdessen der Sprint zum Besitzer (s.leashRun, tickBear).
+    if why ~= "leash" then s.calmBack = ms + cfg("fightCalmBackMs", 8000) end
+    s.mvX, s.mvY = nil, nil
     local reg = B.Reg and B.Reg() or nil
     local rec = reg and reg.cubs[id] or nil
     local a = s.obj
@@ -390,7 +707,11 @@ function B.FightDrop(id, why)
         end
         touchFst(rec, s)
     end
-    B.Log("fight: " .. tostring(id) .. " ends (" .. tostring(why) .. ")")
+    local took = ""
+    if num(f.startAt) ~= nil and ms - f.startAt >= 0 then
+        took = " after " .. tostring(r1((ms - f.startAt) / 1000)) .. " s, " .. tostring(math.floor(num(f.hitN) or 0)) .. " hits"
+    end
+    B.Log("fight: " .. tostring(id) .. " ends (" .. tostring(why) .. ")" .. took)
 end
 
 -- Zustand fuer die Sicht (4.7): "fight" (Kampf laeuft), "retreat" (passiv / zu wenig Leben / Deckel), "rest" (verschnauft) oder nil.
@@ -569,12 +890,28 @@ end
 -- Tier -> Figur; gespielt NCBearTest shared/NCBearFight.lua:428; im MP keine Drehung), Fx "act" (Bild an jeder Kopie), Ausdauer -
 -- staAttackCost (B.StaUse), Kondition +xpConFight. Uhr: hitAt = Dauer x hitPc, endAt = Dauer (B.ClipMs / B.ClipHitMs, Koerper "big").
 -- ---------------------------------------------------------------------------
-local function enterAct(rec, a, s, f, act, ms)
+-- Lauf baer-kampf (PLAN_KAMPF.md 2.3, K3 "kurzer Ausfallschritt im Schlag"): steht das Ziel weiter als 0,6 x Weite, schiebt sich der Baer bis
+-- zum Treffer um bis zu f.lgMax heran (approach: fightLunge x Groesse, bei einem fliehenden Ziel mehr -- je Bild in B.FightMoveTick, nur
+-- Einzelspieler). sz = gezeigte Groesse, d = Abstand jetzt.
+local function enterAct(rec, a, s, f, act, ms, sz, d)
     local dur = B.ClipMs(act, 0, "big") or 1500
     local hit = B.ClipHitMs(act, "big")
     f.ph, f.act, f.t0, f.endAt, f.hitDone = "act", act, ms, ms + dur, false
     f.hitAt = nil
     if hit ~= nil then f.hitAt = ms + hit end
+    f.lgLeft = 0
+    local reach = B.FightReach(act, sz)
+    f.lgStop = 0.6 * reach
+    if B.IsSP() and f.hitAt ~= nil and reach > 0 and (num(d) or 0) > 0.6 * reach and (num(f.lgMax) or 0) > 0 then
+        f.lgLeft = f.lgMax
+        B._mvOn = true
+    end
+    f.lgUsed = (num(f.lgLeft) or 0) > 0             -- Nachbesserung C1: verfehlt dieser Hieb, Ausfall eine Weile aus (tickBear)
+    f.ordAt, f.spAt = nil, nil
+    if logOn() then
+        logE("act:" .. tostring(rec.id), "fight: " .. tostring(rec.id) .. " act " .. tostring(act) .. " at d " .. tostring(r1(d)) .. " (hit-d "
+            .. tostring(r1(f.lastDH)) .. ", " .. tostring(f.lastPst or "up") .. ", lunge " .. tostring(r1(f.lgLeft)) .. ")")
+    end
     f.last = act
     if act == "slam" then f.slamAt = ms end
     if act == "rear" then s.rearAt = ms end
@@ -594,14 +931,18 @@ end
 
 -- Welcher Angriff jetzt? B.FightForce (Probeweg) geht vor, sobald er in Weite ist. Sonst B.FightChoose (nur in Weite bzw. als erster
 -- Angriff fuer das Aufrichten; die Wuerfe nur dann). Nachbarn fuer den Doppelschlag: weitere Gegner in slamReach x sz im Kegel.
-local function choose(rec, s, f, st, o, d, ms)
+-- Lauf baer-kampf (PLAN_KAMPF.md 2.1-2.3): d = Abstand jetzt (Aufricht-Frage), dh = Abstand zum Trefferzeitpunkt (Weiten, K3); Aufrichten nur
+-- beim ersten Angriff UND f.rearWant (begin) -- ist der Gegner jetzt schon bis rearDist dran, entfaellt es (sofort Angriff), und nach dem
+-- ersten Versuch gilt es nie wieder in diesem Kampf (ein Entscheid, kein Wurf je Takt). Liegt ODER faellt das Ziel (SP B.FoePosture,
+-- shared/BanditsNPCBearFoe.lua; sonst o:isProne()), zerfleischt er (K2).
+local function choose(rec, s, f, st, o, d, dh, ms)
     local allow = B.FightStageOf(st)
     local sz = num(st.sz) or 1
     local force = s.force
     if force ~= nil then
         if allow[ALLOW[force] or ""] ~= true then
             s.force = nil
-        elseif force == "rear" or d <= B.FightReach(force, sz) then
+        elseif force == "rear" or dh <= B.FightReach(force, sz) then
             s.force = nil
             return force
         else
@@ -609,10 +950,20 @@ local function choose(rec, s, f, st, o, d, ms)
         end
     end
     local maxR = B.FightReach("slam", sz)
-    local r1 = B.FightReach("swipeL", sz)
-    if r1 > maxR then maxR = r1 end
-    local rearTry = allow.rear and f.first == true
-    if d > maxR and not rearTry then return nil end
+    local rs = B.FightReach("swipeL", sz)
+    if rs > maxR then maxR = rs end
+    local rearTry = allow.rear and f.first == true and f.rearWant == true
+    if rearTry and d <= cfg("rearDist", 2.5) then
+        rearTry = false
+        f.rearWant = false
+        -- Nachbesserung C4: eigener Schluessel -- sonst drosselt die Zeile von begin ("rear:") dieses Nein weg
+        if logOn() then
+            logE("rearC:" .. tostring(rec.id), "fight: " .. tostring(rec.id) .. " rear no (foe at " .. tostring(r1(d)) .. " <= "
+                .. tostring(cfg("rearDist", 2.5)) .. ")")
+        end
+    end
+    if dh > maxR and not rearTry then return nil end
+    if rearTry then f.rearWant = false end
     local slamN = 0
     local list = B._foes and B._foes[rec.id] or nil
     if allow.slam and type(list) == "table" then
@@ -627,60 +978,233 @@ local function choose(rec, s, f, st, o, d, ms)
             end
         end
     end
+    -- Haltung: Einzelspieler B.FoePosture (isProne + getActionStateName, Fundstellen dort) -- am MP-Server nur isProne (schnittstelle.md)
+    local pst = "up"
+    if B.IsSP() and B.FoePosture then
+        pst = B.FoePosture(o) or "up"
+    elseif o:isProne() then
+        pst = "down"
+    end
+    f.lastPst = pst
     return B.FightChoose({
-        allow = allow, last = f.last, prone = o:isProne(), d = d, sz = sz,
+        allow = allow, last = f.last, prone = pst ~= "up", d = dh, dRear = d, sz = sz,
         slamReady = f.slamAt == nil or ms - f.slamAt < 0 or ms - f.slamAt >= cfg("slamCdMs", 10000), slamN = slamN,
-        rearReady = rearTry and (s.rearAt == nil or ms - s.rearAt < 0 or ms - s.rearAt >= cfg("rearCdMs", 120000)),
+        rearReady = rearTry,
         first = f.first, rnd = ZombRand(100), rnd2 = ZombRand(100),
     })
 end
 
--- Anlauf (2.2.3 "approach"): bis fightArrive x sz vor das Ziel rennen (B.MoveTo, Drossel fightRepathMs); kein Fortschritt in fightStuckMs ->
--- Ziel sperren, naechstes; fightStuckMax Sperren -> Ende.
+-- Lauf baer-kampf (PLAN_KAMPF.md 2.3, K3): Tempo des Ziels aus zwei Lagen im Abstand >= 300 ms (Kacheln/s; Deckel VMAX gegen das
+-- Wegfliegen beim Umwerfen, ~1,6 x Sprinter); neues Ziel / alte Messung (> 2 s) -> neu, Tempo 0. Nur Zahlen (getX/getY kommen vom Aufrufer).
+local VMAX = 6
+local function trackFoe(f, o, ox, oy, ms)
+    local tp = f.tp
+    if type(tp) ~= "table" or tp.o ~= o or ms - tp.at < 0 or ms - tp.at > 2000 then
+        f.tp = { o = o, x = ox, y = oy, at = ms }
+        f.tvx, f.tvy = 0, 0
+        return
+    end
+    local dt = ms - tp.at
+    if dt < 300 then return end
+    local vx, vy = (ox - tp.x) / dt * 1000, (oy - tp.y) / dt * 1000
+    local v = math.sqrt(vx * vx + vy * vy)
+    if v > VMAX then vx, vy = vx / v * VMAX, vy / v * VMAX end
+    f.tvx, f.tvy = vx, vy
+    tp.x, tp.y, tp.at = ox, oy, ms
+end
+
+-- Neues Ziel: Messungen und Laufbefehl neu.
+local function setTarget(f, tgt)
+    f.tgt, f.stuckAt, f.tp, f.tvx, f.tvy, f.ox, f.oy, f.ordAt = tgt, nil, nil, 0, 0, nil, nil, nil
+    f.ozx, f.ozy, f.ovx, f.ovy = nil, nil, nil, nil
+end
+
+-- K3 "kein Hin- und Herrennen": ein anderer Gegner nimmt das Ziel nur, wenn er fightSwitchGain Kacheln naeher ist (frische Liste B._foes,
+-- lebende Lage, gleiche Ebene, in der Leine, nicht gesperrt, SP mit Sicht wie pickTarget).
+-- Nachbesserung (S4, Frage FK3): Abstand mit Besitzer-Bonus (ownerBonus) fuer das Ziel UND die Kandidaten; der beste der Liste (hoechstens
+-- foeListMax, nur Zahlen), CanSee nur fuer ihn (hoechstens einmal je Takt).
+local function switchMaybe(rec, a, s, f, ms, ax, ay, leash, d)
+    local list = B._foes and B._foes[rec.id] or nil
+    if type(list) ~= "table" or #list == 0 or type(f.tgt) ~= "table" or f.tgt.o == nil then return end
+    local cur = f.tgt.o
+    local bx, by, bz = a:getX(), a:getY(), math.floor(a:getZ())
+    local curS = d - ownerBonus(f, cur:getX(), cur:getY())
+    local best, bestS, bestD = nil, nil, nil
+    for i = 1, #list do
+        local fo = list[i]
+        local o = fo.o
+        if o ~= nil and o ~= cur and o:isAlive() and math.floor(o:getZ()) == bz and not blockedNow(f, fo.oid, ms)
+            and not stuckNow(s, fo.oid, ms) and not missedNow(s, fo.oid, ms) then
+            local ox, oy = o:getX(), o:getY()
+            if B.DistXY(ax, ay, ox, oy) <= leash then
+                local d2 = B.DistXY(bx, by, ox, oy)
+                local sc = d2 - ownerBonus(f, ox, oy)
+                if bestS == nil or sc < bestS then best, bestS, bestD = fo, sc, d2 end
+            end
+        end
+    end
+    if best == nil or bestS + cfg("fightSwitchGain", 2.0) > curS then return end
+    if B.IsSP() and not a:CanSee(best.o) then return end
+    if logOn() then
+        local tag = ""
+        if ownerBonus(f, best.o:getX(), best.o:getY()) > 0 then tag = ", at the owner" end
+        logE("sw:" .. tostring(rec.id), "fight: " .. tostring(rec.id) .. " switch to " .. tostring(best.oid) .. " at " .. tostring(r1(bestD))
+            .. tag .. " (target was at " .. tostring(r1(d)) .. ")")
+    end
+    setTarget(f, { o = best.o, kind = best.kind, oid = best.oid })
+end
+
+-- K4/K8: gemessenes Tempo im Anlauf (Weg je >= 1 s, nur zusammenhaengender Anlauf; der Angriff setzt f.spAt zurueck). Letzte 8 fuer die
+-- Diagnose (B._spd).
+B._spd = B._spd or {}
+local function speedNote(rec, f, bx, by, ms)
+    local at = num(f.spAt)
+    if at == nil or ms - at < 0 or ms - at > 3000 then
+        f.spX, f.spY, f.spAt = bx, by, ms
+        return
+    end
+    if ms - at < 1000 then return end
+    local v = B.DistXY(f.spX, f.spY, bx, by) / (ms - at) * 1000
+    f.spV = v
+    f.spX, f.spY, f.spAt = bx, by, ms
+    local t = B._spd
+    if #t >= 8 then table.remove(t, 1) end
+    t[#t + 1] = { id = rec.id, v = v, at = ms, k = num(f.sprK) or 0 }
+end
+
+-- Anlauf (2.2.3 "approach"): zum Ziel rennen (B.MoveTo); kein Fortschritt in fightStuckMs -> Ziel sperren, naechstes; fightStuckMax
+-- Sperren -> Ende.
+-- Lauf baer-kampf (PLAN_KAMPF.md 2.2, 2.3; Kevin Punkte 2 und 3): Ziel tot -> fightKillPauseMs verschnaufen; sonst ggf. Zielwechsel
+-- (Hysterese). Vorhalt: Ziel = Lage + Tempo x min(d / Tempo des Baeren, fightLeadMs), fightArrive x sz davor (Vorgabe 0 = AUF die Lage).
+-- Angriff, sobald der Abstand zum TREFFERZEITPUNKT (B.FightHitD: Ziel nach der Ausholzeit, Ausfallschritt abgezogen) in Weite ist. Neuer
+-- Laufbefehl nur, wenn der Zielpunkt um fightRepathDist wanderte, der letzte fightRenewMs alt ist oder er still gehalten wurde (vorher je
+-- 750 ms neu -- jede neue Wegsuche liess ihn stocken). "Steckt fest" nur ausserhalb der Weite (rMax + 0,5): ein Liegender in Weite wird nie
+-- gesperrt; die Sperre lebt in der Sitzung (stuckBlock).
 local function approach(rec, a, s, f, st, ms, ax, ay, leash)
     local tgt = f.tgt
     if not tgtOk(rec, a, tgt, ax, ay, leash) then
-        tgt = pickTarget(rec, a, f, ms, ax, ay, leash)
-        f.tgt, f.stuckAt = tgt, nil
-        if tgt == nil then
-            f.ph, f.t0 = "seek", ms
+        if type(tgt) == "table" and tgt.o ~= nil and not tgt.o:isAlive() and cfg("fightKillPauseMs", 800) > 0 then
+            setTarget(f, nil)
+            f.ph, f.t0, f.pauseMs = "pause", ms, cfg("fightKillPauseMs", 800)
             s.held = nil
             holdOn(rec, a, s, ms)
             return
         end
+        local why = nil
+        if logOn() then why = {} end
+        tgt = pickTarget(rec, a, f, ms, ax, ay, leash, why)
+        setTarget(f, tgt)
+        if tgt == nil then
+            f.ph, f.t0 = "seek", ms
+            s.held = nil
+            holdOn(rec, a, s, ms)
+            if why then logE("nt:" .. tostring(rec.id), "fight: " .. tostring(rec.id) .. " no target: " .. whyText(why) .. " (seek)") end
+            return
+        end
     end
-    local o = tgt.o
     local bx, by = a:getX(), a:getY()
+    local d = B.DistXY(bx, by, tgt.o:getX(), tgt.o:getY())
+    switchMaybe(rec, a, s, f, ms, ax, ay, leash, d)
+    tgt = f.tgt
+    local o = tgt.o
     local ox, oy = o:getX(), o:getY()
-    local d = B.DistXY(bx, by, ox, oy)
+    d = B.DistXY(bx, by, ox, oy)
+    trackFoe(f, o, ox, oy, ms)
+    -- Liegt er (am MP-Server nur so belegt), bewegt er sich nicht von selbst: kein Vorhalt (das Wegfliegen schiebt ihn hoechstens knockPush)
+    local vx, vy = num(f.tvx) or 0, num(f.tvy) or 0
+    if o:isProne() then vx, vy = 0, 0 end
     -- Nachbesserung F2 B3: in Weite, aber nicht treffbar (Wand, Fenster, Zaun) -> kein Luftschlag; nach fightMissMax Faellen gesperrt
     local sz = num(st.sz) or 1
     local rMax = B.FightReach("slam", sz)
-    local r1 = B.FightReach("swipeL", sz)
-    if r1 > rMax then rMax = r1 end
-    if d <= rMax + 0.25 and not canStrike(a, o) then
-        missNote(s, f, tgt, ms)
+    local rs = B.FightReach("swipeL", sz)
+    if rs > rMax then rMax = rs end
+    -- Nachbesserung C1: EINE Grenze "in Weite" (rMax + 0,5) fuer "kein Luftschlag" und fuer den Angriff aus dem Ausfall -- vorher sperrte
+    -- "kein Luftschlag" nur bis rMax + 0,25 und "steckt fest" galt erst ab rMax + 0,5: dazwischen stand er vor einem Zaun bis fightMaxMs
+    local near = d <= rMax + 0.5
+    if near and not canStrike(a, o) then
+        if missNote(s, f, tgt, ms) and logOn() then
+            logE("sk:" .. tostring(rec.id), "fight: " .. tostring(rec.id) .. " skip " .. tostring(tgt.oid) .. ": wall")
+        end
         return
     end
-    local act = choose(rec, s, f, st, o, d, ms)
+    -- Ausfallschritt (nur SP): fightLunge x Groesse; flieht das Ziel (Tempo-Anteil vom Baeren weg), folgt der Ausfall ihm in der Ausholzeit
+    -- mit fightLungeChase x diesem Anteil, hoechstens so weit, wie der Baer in der Ausholzeit rennt (chaseSpeed). Nachbesserung C3: Vorgabe
+    -- fightLungeChase 0 = nur der kurze Ausfall (Frage F6). Nachbesserung C1: nach einem verfehlten Hieb aus dem Ausfall kein Ausfall bis f.lgOff.
+    local hitS = (B.ClipHitMs("swipeL", "big") or 600) / 1000
+    local lunge, lgV = 0, 0
+    local lgOff = num(f.lgOff)
+    if B.IsSP() and (lgOff == nil or ms - lgOff >= 0 or lgOff - ms > cfg("fightLungeOffMs", 3000)) then
+        lunge = cfg("fightLunge", 0.5) * sz
+        local away = 0
+        if d > 0.001 then away = (vx * (ox - bx) + vy * (oy - by)) / d end
+        if away > 0 and cfg("fightLungeChase", 0) > 0 then
+            local vc = chaseSpeed(rec, f.sprK)
+            local cap = vc * hitS
+            if cap < lunge then cap = lunge end
+            lunge = lunge + away * hitS * cfg("fightLungeChase", 0)
+            if lunge > cap then lunge = cap end
+            lgV = vc
+        end
+    end
+    f.lgMax, f.lgV = lunge, lgV
+    local dh = B.FightHitD(bx, by, ox, oy, vx, vy, hitS, lunge, rs)
+    f.lastDH = dh
+    local act = choose(rec, s, f, st, o, d, dh, ms)
+    -- Angriff aus dem Ausfall (noch ausser Weite rMax + 0,5): nur, wenn nichts dazwischen ist (canStrike) -- sonst weiter anlaufen, ohne Sperre
+    -- (in Weite sperrt "kein Luftschlag" oben; weiter weg greift "steckt fest" unten, wenn er nicht naeher kommt)
+    if act ~= nil and act ~= "rear" and not near and not canStrike(a, o) then act = nil end
     if act ~= nil then
-        enterAct(rec, a, s, f, act, ms)
+        enterAct(rec, a, s, f, act, ms, sz, d)
         return
     end
-    local tx, ty = ox, oy
-    if d > 0.001 then
-        local back = cfg("fightArrive", 1.1) * (num(st.sz) or 1)
-        tx, ty = ox - (ox - bx) / d * back, oy - (oy - by) / d * back
+    -- K3 Vorhalt und Laufbefehl
+    local tx, ty, lead = B.FightLeadPt(ox, oy, vx, vy, d, chaseSpeed(rec, f.sprK), cfg("fightLeadMs", 800) / 1000)
+    local back = cfg("fightArrive", 0) * sz
+    local dt = B.DistXY(bx, by, tx, ty)
+    if back > 0 and dt > 0.001 then
+        if back > dt then back = dt end
+        tx, ty = tx - (tx - bx) / dt * back, ty - (ty - by) / dt * back
     end
     f.mx, f.my = tx, ty
-    B.MoveTo(rec, a, tx, ty, rec.z, { minMs = cfg("fightRepathMs", 750), watch = false })
-    if f.stuckAt == nil or ms - f.stuckAt < 0 then
+    -- Neuer Laufbefehl (K3 "Wegsuche nicht alle 750 ms neu starten"): der alte gilt, solange das Ziel dort ist, wo es beim Befehl hinlief
+    -- (Lage + Tempo x Alter; Abweichung < fightRepathDist), er juenger als fightRenewMs ist und der Baer seinen Laufpunkt noch nicht erreicht hat
+    -- (bis rMax dran und mindestens fightRepathMs alt -> neuer Punkt). Ein gerade fliehender Zombie bekommt so hoechstens alle ~1,5-2 s einen
+    -- neuen Weg statt bei jeder Kachel; ein haken schlagender sofort.
+    local age = nil
+    if num(f.ordAt) ~= nil and ms - f.ordAt >= 0 then age = ms - f.ordAt end
+    local dev = 0
+    if age ~= nil and f.ozx ~= nil then
+        dev = B.DistXY(f.ozx + (num(f.ovx) or 0) * age / 1000, f.ozy + (num(f.ovy) or 0) * age / 1000, ox, oy)
+    end
+    local reached = age ~= nil and f.ox ~= nil and age >= cfg("fightRepathMs", 750) and B.DistXY(bx, by, f.ox, f.oy) <= rMax
+    local order = "kept"
+    if s.held or f.ox == nil or age == nil or age >= cfg("fightRenewMs", 2000) or dev >= cfg("fightRepathDist", 1.0) or reached then
+        if B.MoveTo(rec, a, tx, ty, rec.z, { force = true, watch = false }) then
+            f.ox, f.oy, f.ordAt = tx, ty, ms
+            f.ozx, f.ozy, f.ovx, f.ovy = ox, oy, vx, vy
+            order = "new"
+        end
+    end
+    speedNote(rec, f, bx, by, ms)
+    if logOn() then
+        logE("run:" .. tostring(rec.id), "fight: " .. tostring(rec.id) .. " run to " .. tostring(r1(tx)) .. "," .. tostring(r1(ty)) .. " (lead "
+            .. tostring(r1(vx * lead)) .. "," .. tostring(r1(vy * lead)) .. ", order " .. order .. ", d " .. tostring(r1(d)) .. ") speed "
+            .. tostring(r1(f.spV)) .. " t/s")
+    end
+    -- Nachbesserung C1: die Uhr "steckt fest" beginnt neu nach einem eigenen TREFFER (f.hitLast juenger als fightStuckMs; z. B. das Ziel flog
+    -- nach dem Hieb weg), nicht mehr allein, weil er in Weite steht -- in Weite ohne Treffer und ohne Fortschritt wird das Ziel gesperrt.
+    local hl = num(f.hitLast)
+    local hitRecent = hl ~= nil and ms - hl >= 0 and ms - hl < cfg("fightStuckMs", 3000)
+    if f.stuckAt == nil or ms - f.stuckAt < 0 or hitRecent then
         f.stuckAt, f.stuckD = ms, d
     elseif ms - f.stuckAt >= cfg("fightStuckMs", 3000) then
         if (num(f.stuckD) or d) - d < cfg("fightStuckGain", 0.5) then
-            if tgt.oid ~= nil then block(f, tgt.oid, ms) end
+            if tgt.oid ~= nil then stuckBlock(s, tgt.oid, ms) end
+            if logOn() then
+                logE("sk:" .. tostring(rec.id), "fight: " .. tostring(rec.id) .. " skip " .. tostring(tgt.oid) .. ": stuck at d " .. tostring(r1(d)))
+            end
             f.stuckN = (f.stuckN or 0) + 1
-            f.tgt = nil
+            setTarget(f, nil)
             if f.stuckN >= cfg("fightStuckMax", 3) then
                 B.FightDrop(rec.id, "stuck")
                 return
@@ -701,20 +1225,53 @@ local function tickBear(rec, a, s, f, ms, players)
         f.readyAt = nil
     end
     local ax, ay, leash = anchorOf(rec, f, players)
-    if B.DistXY(ax, ay, a:getX(), a:getY()) > leash then
+    local ld = B.DistXY(ax, ay, a:getX(), a:getY())
+    if ld > leash then
+        -- Lauf baer-kampf (PLAN_KAMPF.md 2.7, K7; Kevin Punkt 7 "wenn ich 25 kacheln weg bin in fullspeed zu mir sprinten"): beim Folgen
+        -- sprintet er zum Besitzer, bis er in Folge-Naehe ist (server/BanditsNPCBearFollow.lua; Sprint-Schub B.FightMoveTick, nur SP),
+        -- hoechstens fightLeashRunMs
+        if B.ModeOf(rec) == "follow" then
+            s.leashRun = ms + cfg("fightLeashRunMs", 20000)
+            s.leashK = sprintK(rec)
+            s.mvX, s.mvY = nil, nil
+            if B.IsSP() then B._mvOn = true end
+            if logOn() then
+                logE("lr:" .. tostring(rec.id), "fight: " .. tostring(rec.id) .. " leash run, owner at " .. tostring(r1(ld)) .. " > "
+                    .. tostring(leash))
+            end
+        end
         B.FightDrop(rec.id, "leash")
         return
     end
+    f.own = ownerPt(rec, a, players)                -- Nachbesserung S1/S4: Besitzer-Lage je Takt (B.Players(), schon geholt)
     local st = B.StatsOf(rec)
     if f.ph == "act" then
         holdOn(rec, a, s, ms)
         if not f.hitDone and f.hitAt ~= nil and ms >= f.hitAt then
             f.hitDone = true
+            f.lgLeft = 0
             local n, wall = strike(rec, a, f, st, ms)
             if n > 0 then
                 f.hitLast, f.missOid, f.missN, f.missAt = ms, nil, 0, nil
+                f.hitN = (num(f.hitN) or 0) + 1
             elseif wall then
                 missNote(s, f, f.tgt, ms)
+            elseif f.lgUsed == true and f.act ~= "rear" then
+                -- Nachbesserung C1: Hieb aus dem Ausfall ins Leere (Ziel nicht erreicht, z. B. Ausfall an einem Hindernis gestoppt) -> eine Weile
+                -- ohne Ausfall: er laeuft hin (dann greift "steckt fest", wenn er nicht naeher kommt) statt Hieb um Hieb in die Luft
+                f.lgOff = ms + cfg("fightLungeOffMs", 3000)
+            end
+            -- K8: Treffer oder Fehlschlag (Abstand beim Treffer zur Weite + 0,25 wie strike)
+            if logOn() and f.act ~= "rear" then
+                local o = f.tgt and f.tgt.o or nil
+                local hd = -1
+                if o ~= nil then hd = B.DistXY(a:getX(), a:getY(), o:getX(), o:getY()) end
+                local res = "hit " .. tostring(n)
+                if n == 0 then
+                    res = "miss (d " .. tostring(r1(hd)) .. " > " .. tostring(r1(B.FightReach(f.act, num(st.sz) or 1) + 0.25)) .. ")"
+                    if wall then res = "miss (wall, d " .. tostring(r1(hd)) .. ")" end
+                end
+                logE("hit:" .. tostring(rec.id), "fight: " .. tostring(rec.id) .. " " .. tostring(f.act) .. " " .. res)
             end
         end
         if ms >= f.endAt or ms - f.t0 < 0 then f.ph, f.t0 = "pause", ms end
@@ -722,8 +1279,10 @@ local function tickBear(rec, a, s, f, ms, players)
     end
     if f.ph == "pause" then
         holdOn(rec, a, s, ms)
-        if ms - f.t0 >= 0 and ms - f.t0 < cfg("fightPauseMs", 350) then return end
-        f.ph, f.t0 = "approach", ms
+        -- K3: nach dem Kill f.pauseMs (fightKillPauseMs), sonst fightPauseMs
+        local pm = num(f.pauseMs) or cfg("fightPauseMs", 350)
+        if ms - f.t0 >= 0 and ms - f.t0 < pm then return end
+        f.ph, f.t0, f.pauseMs = "approach", ms, nil
     end
     if f.ph == "seek" then
         holdOn(rec, a, s, ms)
@@ -732,7 +1291,13 @@ local function tickBear(rec, a, s, f, ms, players)
             if ms - f.t0 < 0 or ms - f.t0 >= cfg("fightSeekMs", 3000) then B.FightDrop(rec.id, "seek") end
             return
         end
-        f.tgt, f.ph, f.t0, f.stuckAt = tgt, "approach", ms, nil
+        setTarget(f, tgt)
+        f.ph, f.t0 = "approach", ms
+    end
+    -- Nachbesserung S1/S2: vor dem ersten Angriff kurz schauen, ob das Aufrichten jetzt passt (rearCheck); solange haelt er still
+    if f.first == true and f.rearWant == true and f.rearLook ~= nil and type(f.tgt) == "table" and rearCheck(rec, a, f, ms) then
+        holdOn(rec, a, s, ms)
+        return
     end
     approach(rec, a, s, f, st, ms, ax, ay, leash)
 end
@@ -782,6 +1347,107 @@ function B.FightTick()
     if not ok then B.ErrEvery("fight", 60000, "fight tick: " .. tostring(err)) end
 end
 
+-- ---------------------------------------------------------------------------
+-- Lauf baer-kampf (PLAN_KAMPF.md 2.3, 2.4; K3 Ausfallschritt, K4 Sprint): je BILD, nur Einzelspieler, nur solange ein Baer kaempft oder zum
+-- Besitzer sprintet (B._mvOn; sonst kein Aufruf). Je Baer hoechstens getX/getY/getZ, isDead, setX/setY und bei einem Kachelwechsel
+-- B.FoeStepOk. Sprint: Zusatzweg = eigene Bewegung dieses Bildes x k (B.FightSprintStep, Deckel sprintStepMax) -- nur im Anlauf (nicht
+-- gehalten) bzw. beim Leinen-Sprint (rennend, nicht gehend), nur bei echter Laufbewegung (mindestens halbes Lauftempo: kein Schieben durch
+-- Zombies, kein Gehen; hoechstens 3 x fightSprint: kein Versetzen) und nur, wenn das Bild <= 50 ms dauerte (Ruckler / Pause schieben nicht).
+-- Gemerkt wird die Lage NACH dem eigenen Schritt (sonst schaukelte sich der Schub auf). Ausfallschritt: im Angriff bis zum Treffer je Bild
+-- fightLungeStep Richtung Ziel, zusammen hoechstens f.lgLeft, nie naeher als 0,6 x Weite (f.lgStop).
+-- Ehrlich (Frage F1 fuer Kevin): die Beine laufen im Takt des Renn-Clips, der Koerper gleitet im Sprint ~45 % schneller.
+-- ---------------------------------------------------------------------------
+-- Darf der Koerper von (x0, y0) nach (x1, y1)? Gleiche Kachel ja; sonst nur mit B.FoeStepOk (Wand, Tuer, Fenster, Zaun, Wasser, Treppe --
+-- shared/BanditsNPCBearFoe.lua, ZOMBIES); fehlt die Funktion, kein Kachelwechsel.
+local function stepOk(x0, y0, x1, y1, zl)
+    if math.floor(x0) == math.floor(x1) and math.floor(y0) == math.floor(y1) then return true end
+    if B.FoeStepOk == nil then return false end
+    return B.FoeStepOk(x0, y0, x1, y1, zl) == true
+end
+
+-- Die EINE Stelle, die die Lage des Baeren setzt (Uebernahme-Regel setXY): a:setX(Zahl) / a:setY(Zahl) am Tier wie Vanilla
+-- server/ClientCommands.lua:895-896 und shared/Definitions/animal/ButcheringUtil.lua:575-576; a:getZ() am Tier: Vanilla
+-- client/TimedActions/ISContextualActions.lua:100. Rueckgabe true, wenn gesetzt.
+local function moveBear(a, x, y, nx, ny)
+    if not stepOk(x, y, nx, ny, math.floor(a:getZ())) then return false end
+    a:setX(nx)
+    a:setY(ny)
+    return true
+end
+
+local function moveOne(s, f, a, run, okDt, dtS, ms)
+    local x, y = a:getX(), a:getY()
+    local px, py = num(s.mvX), num(s.mvY)
+    s.mvX, s.mvY = x, y
+    if type(f) == "table" and f.ph == "act" then
+        local left = num(f.lgLeft) or 0
+        local o = f.tgt and f.tgt.o or nil
+        if left > 0 and o ~= nil and okDt and num(f.hitAt) ~= nil and ms < f.hitAt then
+            -- je Bild fightLungeStep; folgt er einem fliehenden Ziel, mindestens sein Renntempo (f.lgV) x Bilddauer
+            local step = cfg("fightLungeStep", 0.06)
+            local fast = (num(f.lgV) or 0) * dtS
+            if fast > step then step = fast end
+            local ex, ey, l = B.FightLungeStep(x, y, o:getX(), o:getY(), left, step, num(f.lgStop) or 0)
+            if l > 0 and moveBear(a, x, y, x + ex, y + ey) then
+                f.lgLeft = left - l
+                s.mvX, s.mvY = x + ex, y + ey
+            else
+                f.lgLeft = 0
+            end
+        end
+        return
+    end
+    local k = 0
+    if type(f) == "table" then
+        if f.ph == "approach" and f.readyAt == nil and not s.held then k = num(f.sprK) or 0 end
+    elseif run and s.walk ~= true and not s.held then
+        k = num(s.leashK) or 0
+    end
+    if k <= 0 or px == nil or py == nil or not okDt or dtS <= 0 then return end
+    local dx, dy = x - px, y - py
+    local v = math.sqrt(dx * dx + dy * dy) / dtS
+    local fs = cfg("fightSprint", 4.6)
+    if v < 0.5 * fs / (1 + k) or v > 3 * fs then return end
+    local ex, ey = B.FightSprintStep(dx, dy, k, cfg("sprintStepMax", 0.08))
+    if (ex ~= 0 or ey ~= 0) and moveBear(a, x, y, x + ex, y + ey) then s.mvX, s.mvY = x + ex, y + ey end
+end
+
+local function moveTickBody()
+    if not B.IsSP() then
+        B._mvOn = false
+        return
+    end
+    local ms = getTimestampMs()                 -- Vanilla server/Foraging/forageServer.lua:456
+    local last = num(B._mvAt)
+    B._mvAt = ms
+    local okDt = last ~= nil and ms - last > 0 and ms - last <= 50
+    local dtS = 0
+    if okDt then dtS = (ms - last) / 1000 end
+    local busy = false
+    for _, s in pairs(B._s) do
+        if type(s) == "table" then
+            local f = s.fight
+            local lr = num(s.leashRun)
+            local run = lr ~= nil and lr - ms > 0 and lr - ms <= cfg("fightLeashRunMs", 20000)
+            if lr ~= nil and not run then s.leashRun = nil end
+            local a = s.obj
+            if a ~= nil and (type(f) == "table" or run) and not a:isDead() then
+                busy = true
+                moveOne(s, f, a, run, okDt, dtS, ms)
+            end
+        end
+    end
+    if not busy then B._mvOn = false end
+end
+
+function B.FightMoveTick()
+    local ok, err = pcall(moveTickBody)
+    if not ok then
+        B._mvOn = false
+        B.ErrEvery("fightmove", 60000, "fight move tick: " .. tostring(err))
+    end
+end
+
 -- F3: + fsy (Grund des Rueckzugs), mdmgK (Schaden-Faktor durch Hunger / Durst).
 -- Sicht (4.7, 11.2, 11.5, 11.7) -- aus viewEntry, nur gezaehmt/vermisst: fst (Kampfzustand), mdmg / mdmgB / mdmgM / mdmgS / mdmgF (Schaden
 -- je Treffer, Groessen-Anteil, Kaempfen-Bonus %), kZ / kB (Kills), fleeP (Flucht-Schwelle in Lebenspunkten, aufgerundet; fehlt = nie).
@@ -811,6 +1477,8 @@ end
 
 -- Events.OnTick.Add: Vanilla server/Foraging/forageServer.lua:502. Je Bild nur ein paar Zahlenvergleiche; Arbeit nur mit Kampf, Gegnern
 -- in der Naehe, laufenden Gegner-Angriffen oder offenen Kill-Pruefungen. Ueber eine kleine Huelle (spaeter ersetzte B.FightTick gilt).
+-- Lauf baer-kampf: + B.FightMoveTick je Bild, nur solange B._mvOn (Kampf oder Leinen-Sprint im Einzelspieler).
 Events.OnTick.Add(function()
     if (B._fightN or 0) > 0 or (B._foeN or 0) > 0 or #(B._fa or {}) > 0 or #B._kp > 0 then B.FightTick() end
+    if B._mvOn then B.FightMoveTick() end
 end)

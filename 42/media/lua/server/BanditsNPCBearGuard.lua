@@ -20,6 +20,8 @@ if isClient() then return end      -- Vanilla server/Traps/STrapSystem.lua:1: la
 -- (B.GuardScan -> B.ZedNear, server/BanditsNPCBearWorld.lua). Das gezaehmte Junge mit erreichbarem Besitzer VERSTECKT sich hinter
 -- ihm (dem Zombie abgewandt), sonst und fuer wilde / scheue / angefuetterte: fliehen (B.GuardStep, Regeln B.GuardDecide in
 -- shared/BanditsNPCBearRules.lua). Zombies greifen in B1c nicht an (B5a).
+-- Lauf baer-kampf (PLAN_KAMPF.md 2.6, K6): ein GROSSER Koerper mit Kampf-Stufe versteckt sich nie (Kevins Log "b2 hides behind its owner");
+-- verletzt oder schlaftrunken flieht er, sonst gilt sein Befehl weiter (B.GuardStep false). Das Junge unveraendert.
 --
 -- Engine-Aufrufe hier (Fundstelle je am Aufruf): getStress, getActionStateName, getVariableBoolean, getX/getY, isExistInTheWorld,
 -- isDead, Events.OnTick.Add. Bewegung nur ueber B.MoveTo / B.Hold (World.lua). Ladefolge: diese Datei laedt nach ...Follow und vor
@@ -313,6 +315,31 @@ function B.GuardStep(rec, a, env, ms, players)
     local cx, cy = a:getX(), a:getY()
     local zz = nil
     if z then zz = { x = z.x, y = z.y, d = B.DistXY(cx, cy, z.x, z.y) } end
+    -- Lauf baer-kampf (PLAN_KAMPF.md 2.6, K6; Kevins Kampf-Log 13.11. ~22:33 "guard: b2 hides behind its owner from a zombie at 6"): NUR das
+    -- Junge versteckt sich (es kaempft nie). Ein grosser Koerper mit Kampf-Stufe (Halbstark und groesser, B.FightStageOf(...).swipe) versteckt
+    -- sich NIE: verletzt (s.fleeOn, B.FightStep "hurt") oder schlaftrunken (s.fsy "woke") flieht er (GuardDecide ohne Besitzer -> "flee");
+    -- sonst (kein Ziel in diesem Takt, passiv, ohne Vertrauen, zu muede, Pause, Leine, Deckel) gilt der Befehl weiter (false). Frage F2.
+    if rec.st == "tame" and B.BodyNow and B.FightStageOf and B.StatsOf then
+        local bd = B.BodyNow(rec)
+        if bd == "big" and B.FightStageOf(B.StatsOf(rec)).swipe == true then
+            if s.fleeOn == true or s.fsy == "woke" then
+                o = nil
+            else
+                if g.on == true then
+                    g.on, g.mode, g.safeAt, g.zx, g.zy = nil, nil, nil, nil, nil
+                    B.Touch(rec)
+                    B.Log("guard: " .. tostring(rec.id) .. " is safe again")
+                end
+                g.tx, g.ty, g.orderAt = nil, nil, nil
+                if zz ~= nil and B.LogEvery and B.LogActive() then
+                    B.LogEvery("gd:" .. tostring(rec.id), tonumber(cfg.fightLogMs) or 1500, "guard: " .. tostring(rec.id)
+                        .. " big body does not hide (" .. tostring(s.fstNow) .. "/" .. tostring(s.fsy) .. ", zombie at "
+                        .. tostring(B.Round1(zz.d)) .. ")")
+                end
+                return false
+            end
+        end
+    end
     local wasOn = g.on == true
     local prevMode = g.mode
     local gap = 0

@@ -19,6 +19,8 @@
 -- F3 (PLAN_F3.md 3.1, 6.3, 14.3; Kevins Antworten 13.11.2026): B.CLIPS + die acht Schlaf-Schluessel (Knoten und Clips kommen erst mit F3b --
 -- benutzt nur, wenn B.CFG.sleepClips == true); B.MeleeDamage x Hunger/Durst-Faktor (B.NeedK, shared/BanditsNPCBearNeedRules.lua);
 -- B.FightDecide kennt c.woke (schlaftrunken), c.noTrust (weigert sich), c.tired (zu muede) -> Rueckzug mit Grund.
+-- Lauf baer-kampf (PLAN_KAMPF.md 2.1-2.4): maulReach 1,4, rearChance 100 (B.FightChoose + c.dRear), reine Formeln fuer Vorhalt (B.FightLeadPt),
+-- Abstand zum Trefferzeitpunkt (B.FightHitD), Sprint (B.FightSprintK, B.FightSprintStep) und Ausfallschritt (B.FightLungeStep).
 -- Ladefolge: nach ...Bear / ...Crew / ...Defs (alphabetisch, ...FightRules < ...Foe < ...Food); nichts Fremdes auf Dateiebene.
 -- Statisch geprueft, nicht gespielt.
 --
@@ -160,7 +162,8 @@ end
 -- ---------------------------------------------------------------------------
 local REACH_KEY = { swipeL = "swipeReach", swipeR = "swipeReach", bite = "biteReach", maul = "maulReach", slam = "slamReach" }
 local HALF_KEY = { swipeL = "swipeHalf", swipeR = "swipeHalf", bite = "biteHalf", maul = "maulHalf", slam = "slamHalf" }
-local REACH_DEF = { swipeReach = 1.4, biteReach = 1.4, maulReach = 1.1, slamReach = 1.5 }
+-- Lauf baer-kampf (PLAN_KAMPF.md 2.2, K2): maulReach 1,1 -> 1,4 (wie Biss; die kleinste Weite liess liegende Zombies liegen)
+local REACH_DEF = { swipeReach = 1.4, biteReach = 1.4, maulReach = 1.4, slamReach = 1.5 }
 local HALF_DEF = { swipeHalf = 55, biteHalf = 30, maulHalf = 30, slamHalf = 80 }
 
 -- Weite eines Angriffs in Kacheln bei gezeigter Groesse sz (rear / unbekannt: 0).
@@ -205,16 +208,25 @@ end
 -- Aufrufer (Aufrichten), rnd2 0..99 (wahlfrei, Zusatz schnittstelle_aenderungen.md "F2 KERN": Gewichts-Wurf; fehlt er, gilt rnd).
 -- Aufrichten nur als erster Angriff (first), frei (rearReady), Ziel weiter als rearDist und rnd < rearChance. Sonst gewichteter Zufall
 -- aus den Angriffen in Weite: nie last; liegt das Ziel (prone), Zerfleischen statt Biss. Alle Gewichte 0: Hiebe im Wechsel. Rueckgabe: Name / nil.
+-- Lauf baer-kampf (PLAN_KAMPF.md 2.1-2.3): rearChance 100 (Kevin: IMMER beim ersten Kontakt; der Aufrufer entscheidet EINMAL je Kampf, ob
+-- rearReady gilt); c.dRear (wahlfrei) = der JETZIGE Abstand fuer die Aufricht-Frage, wenn c.d der Abstand zum Trefferzeitpunkt ist (Vorhalt,
+-- Ausfallschritt); fehlt er, gilt c.d. c.prone = liegt ODER faellt (der Aufrufer fragt B.FoePosture) -> Zerfleischen.
 function B.FightChoose(c)
     if type(c) ~= "table" then return nil end
     local allow = c.allow
     if type(allow) ~= "table" then return nil end
     local d = num(c.d) or 999
+    local dr = num(c.dRear) or d
     local sz = num(c.sz) or 1
     local rnd = num(c.rnd) or 0
-    if allow.rear and c.first == true and c.rearReady == true and d > cfg("rearDist", 2.5) and rnd < cfg("rearChance", 50)
+    if allow.rear and c.first == true and c.rearReady == true and dr > cfg("rearDist", 2.5) and rnd < cfg("rearChance", 100)
         and c.last ~= "rear" then
         return "rear"
+    end
+    -- Nachbesserung (kampf/NACHBESSERUNG.md S6; Kevin Punkt 2 "liegende Ziele werden zerfleischt"): liegt / faellt das Ziel in Maul-Weite, ist
+    -- der Angriff das Zerfleischen -- ausser es war gerade der letzte (nie zweimal derselbe Clip); dann die Hiebe wie bisher.
+    if allow.maul and c.prone == true and d <= B.FightReach("maul", sz) and c.last ~= "maul" and cfg("wMaul", 70) > 0 then
+        return "maul"
     end
     local list = {}
     local sum = 0
@@ -248,6 +260,73 @@ function B.FightChoose(c)
         r = r - list[i][2]
     end
     return list[#list][1]
+end
+
+-- ---------------------------------------------------------------------------
+-- Lauf baer-kampf: Einholen und Tempo als reine Formeln (PLAN_KAMPF.md 2.3, 2.4; Kevin 13.11. ~23:00 Punkte 3 und 4). Keine Engine.
+-- ---------------------------------------------------------------------------
+-- Vorhalt (K3 "wohin der Zombie laeuft"): Lage (zx, zy), Tempo (vx, vy) in Kacheln/s, Abstand d, Baer-Tempo vB Kacheln/s, Deckel leadS
+-- Sekunden. lead = min(d / vB, leadS) (vB <= 0 -> leadS). Rueckgabe: Zielpunkt x, y und lead (s).
+function B.FightLeadPt(zx, zy, vx, vy, d, vB, leadS)
+    local lead = num(leadS) or 0
+    if lead < 0 then lead = 0 end
+    local v = num(vB) or 0
+    if v > 0 then
+        local t = (num(d) or 0) / v
+        if t < lead then lead = t end
+    end
+    if lead < 0 then lead = 0 end
+    return zx + (num(vx) or 0) * lead, zy + (num(vy) or 0) * lead, lead
+end
+
+-- Abstand zum Trefferzeitpunkt (K3 "angreifen, sobald in Weite"): der Zombie nach hitS Sekunden (Lage + Tempo x hitS) zum Baeren; mit
+-- Ausfallschritt lunge (Kacheln, 0 = keiner) um bis zu lunge kuerzer, aber nie unter 0,6 x reach (so nah beginnt kein Ausfall).
+function B.FightHitD(bx, by, zx, zy, vx, vy, hitS, lunge, reach)
+    local t = num(hitS) or 0
+    local px, py = zx + (num(vx) or 0) * t, zy + (num(vy) or 0) * t
+    local dx, dy = px - bx, py - by
+    local dp = math.sqrt(dx * dx + dy * dy)
+    local l = num(lunge) or 0
+    local edge = 0.6 * (num(reach) or 0)
+    if l > 0 and dp > edge then
+        dp = dp - l
+        if dp < edge then dp = edge end
+    end
+    return dp
+end
+
+-- Sprint-Faktor (K4): fightSprint / Lauftempo des Koerpers - 1, nie unter 0 (fightSprint 0 = aus; langsamer als das Clip-Tempo: 0).
+function B.FightSprintK(runSpeed)
+    local fs = cfg("fightSprint", 4.6)
+    local rs = num(runSpeed) or 0
+    if fs <= 0 or rs <= 0 or fs <= rs then return 0 end
+    return fs / rs - 1
+end
+
+-- Sprint-Schub (K4) eines Bildes: eigene Bewegung dieses Bildes (dx, dy) x k, Laenge hoechstens stepMax. k <= 0 / keine Bewegung -> 0, 0.
+function B.FightSprintStep(dx, dy, k, stepMax)
+    local kk = num(k) or 0
+    local m = num(stepMax) or 0
+    if kk <= 0 or m <= 0 then return 0, 0 end
+    local ex, ey = (num(dx) or 0) * kk, (num(dy) or 0) * kk
+    local l = math.sqrt(ex * ex + ey * ey)
+    if l < 0.000001 then return 0, 0 end
+    if l > m then ex, ey = ex / l * m, ey / l * m end
+    return ex, ey
+end
+
+-- Ausfallschritt (K3) eines Bildes: von (bx, by) Richtung Ziel (zx, zy), hoechstens step und left, nie naeher als stopD (0,6 x Weite).
+-- Rueckgabe: Schritt ex, ey und seine Laenge (0 = keiner).
+function B.FightLungeStep(bx, by, zx, zy, left, step, stopD)
+    local dx, dy = zx - bx, zy - by
+    local d = math.sqrt(dx * dx + dy * dy)
+    local room = d - (num(stopD) or 0)
+    local l = num(left) or 0
+    local m = num(step) or 0
+    if d < 0.000001 or room <= 0 or l <= 0 or m <= 0 then return 0, 0, 0 end
+    if l < m then m = l end
+    if room < m then m = room end
+    return dx / d * m, dy / d * m, m
 end
 
 -- ---------------------------------------------------------------------------
