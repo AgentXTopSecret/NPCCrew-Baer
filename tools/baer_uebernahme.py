@@ -126,6 +126,18 @@ selbst trinken, Look-Sperre mit Restzeit; dazu (OBERFLAECHE) Schild folgt der Po
     Funktion (Regel global) -- lokale Hilfen darum VOR ihrem ersten Aufrufer als "local function" schreiben (server/BanditsNPCBearNeeds.lua counts).
     TagPose (erzeugte Daten) kommt jetzt aus _arbeit/baer_zaehmen/k1/werkzeug_nach/tagpose_schirm.py (Bildschirm-Hoehe, Befund P2).
 
+Lauf baer-kampf (K1-K8, _arbeit/baer_zaehmen/kampf/PLAN_KAMPF.md 4; Kevins Worte baer/begleiter/ENTSCHEIDUNGEN.md "Kevin 13.11. ~23:00, Kampf-Fehler"):
+Bruellen beim ersten Kontakt, Liegende zerfleischen, Einholen (Vorhalt, Ausfallschritt), Sprint im Angriff, Zombies greifen den Baeren an, kein
+Verstecken des grossen Baeren, Leine 25 mit Sprint zurueck, Kampf-Log.
+  * Keine neue Datei, keine neuen Texte, keine Modell-/AnimSet-Datei. Neue Werkbank-Befehle NCBear_FightSpeed / NCBear_Lure leben nur in
+    client/NCBearBenchFight.lua (BENCH_ANY).
+  * Neue Tier-Regel setXY (wie die F3-Regel getForwardDirection): setX / setY am Baeren nur in moveBear (server/BanditsNPCBearFight.lua: a:setX/setY
+    am Tier wie V:server/ClientCommands.lua:895-896, nur SP, Kachelwechsel nur mit B.FoeStepOk), am Zombie nur in B.FoePushTick (F2), sonst nur an
+    UI-Elementen (Inventar-Fenster, Baeren-Fenster, Markierung -- je Funktion einzeln erlaubt). Blickrichtung des Baeren weiter nicht ueber
+    getForwardDirection (Regel bleibt). NAEHTE.md: Absatz "Kampf-Lauf" (Haken Events.OnZombieUpdate nur waehrend des Lockens, SP).
+  * Nachbesserung (_arbeit/baer_zaehmen/kampf/NACHBESSERUNG.md): nur Stellwerte und Logik in denselben vier Kern-Dateien (Fight, FightRules, Foe,
+    BanditsNPCBear.lua) -- keine neue Datei, kein neuer Engine-Aufruf, keine neue Regel; Trockenlauf + --probe gruen.
+
 Grundregel (Werkstatt-CLAUDE.md Abschnitt 0, Kevin 08.11.2026): alles wird FUER NPC Crew gebaut und soll am Ende "einfach copy paste"
 hinueber; keine Cheat- oder Testmenues kommen mit. Plan: _arbeit/baer_zaehmen/PLAN_ZAEHMEN.md Abschnitt 12 (B1b: PLAN_B1B.md 7),
 Naehte: baer/NAEHTE.md.
@@ -523,6 +535,21 @@ TIER_RULES = [
     ("getForwardDirection", re.compile(r"(?i)\bgetForwardDirection\b"),
      {("42/media/lua/client/ISUI/BanditsNPCBearZz.lua", "aim"), ("42/media/lua/shared/BanditsNPCBearFoe.lua", "knock")},
      "Blickrichtung (getForwardDirection) nur in aim (z Z z, Kevins Jar-Ausnahme 13.11.) und knock (am Zombie)"),
+    # Lauf baer-kampf (_arbeit/baer_zaehmen/kampf/PLAN_KAMPF.md 4; Kevin 13.11. ~23:00 Punkte 3/4): die Lage eines KOERPERS setzt nur, wer es
+    # darf -- am Baeren moveBear (Ausfallschritt / Sprint-Schub, server/BanditsNPCBearFight.lua; a:setX/setY am Tier wie V:server/
+    # ClientCommands.lua:895-896, nur SP, Kachelwechsel nur mit B.FoeStepOk), am Zombie B.FoePushTick (F2, Zurueckfliegen; B:shared/
+    # ZombieActions/ZAMove.lua:11/:17). Die uebrigen Treffer sind UI-Elemente (ISUIElement:setX/setY, V:client/ISUI/ISUIElement.lua:195-245):
+    # Inventar-Fenster und Bildschirm-Markierung. Jedes Vorkommen von setX / setY im Code-Teil zaehlt; eine neue Stelle ist ein Fehler.
+    ("setXY", re.compile(r"\bset[XY]\b"),
+     {("42/media/lua/server/BanditsNPCBearFight.lua", "moveBear"), ("42/media/lua/shared/BanditsNPCBearFoe.lua", "B.FoePushTick"),
+      ("42/media/lua/client/ISUI/BanditsNPCBearInvWindow.lua", "put"), ("42/media/lua/client/ISUI/BanditsNPCBearInvWindow.lua", "clampPos"),
+      ("42/media/lua/client/ISUI/BanditsNPCBearInvWindow.lua", "Inv:RestoreLayout"),
+      ("42/media/lua/client/ISUI/BanditsNPCBearInvWindow.lua", "U.InvOpen"),
+      ("42/media/lua/client/ISUI/BanditsNPCBearMarker.lua", "U.MarkerLayout"),
+      ("42/media/lua/client/ISUI/BanditsNPCBearWindow.lua", "put"), ("42/media/lua/client/ISUI/BanditsNPCBearWindow.lua", "clampPos"),
+      ("42/media/lua/client/ISUI/BanditsNPCBearWindow.lua", "Win:RestoreLayout"),
+      ("42/media/lua/client/ISUI/BanditsNPCBearWindow.lua", "U.WinOpen")},
+     "Lage setzen (setX / setY) am Baeren nur in moveBear (Kampf-Lauf), am Zombie nur in B.FoePushTick, sonst nur an UI-Elementen"),
     # F3 (Kevin 13.11.2026, Antwort 6c: KEINE Uhrzeiten -- kein Nachtfenster, kein Mittagsschlaf): die Tagesstunde fragt niemand
     # F4: einzige Ausnahme ist die WECKZEIT eines Weckers, der im Baeren-Inventar reist (INV.alarmRead, shared/BanditsNPCBearInvRules.lua)
     ("getHour", re.compile(r"\bgetHour\b"), {("42/media/lua/shared/BanditsNPCBearInvRules.lua", "INV.alarmRead")},

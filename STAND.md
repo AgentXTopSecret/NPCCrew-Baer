@@ -1,5 +1,11 @@
 # Baer -- Stand und alles, was ansteht (10.11.2026 11:00)
 
+> **14.11. ~07:45: KAMPF-LAUF FERTIG UND EINGEBAUT** (baer-kampf wf_e4deb121-276, 7 Agenten; Gegenpruefer: bereit fuer SP-Test, kein Blocker). `tools/einbau_kampf.py`:
+> 10 Dateien ueberschrieben (inkl. mod.info), keine Modell-Datei; Zips `NCBearTest_vor_kampf_2026-11-14_074315.zip` / `_mit_`. Test `spiel/anleitung_kampf.md`
+> (mit NCBear_FightLog(true)), Bericht `spiel/kampf_gegen_bericht.md` mit 15 Fragen an Kevin (FK1 Bruellen mit Sprintern fast nie, F1 Fuesse gleiten im Sprint,
+> FK4 fliehende Sprinter -> Sprung-Hieb, F5 Sprint/Lenken nur SP, Kollision ...). Ursachen laut Plan: K5 Ziel-Sperre in Foe.lua + Engine-Repath-Sperre; K2 Ankunft = Maul-Weite;
+> K6 Guard kannte keinen Koerper; K7 Sicht nur fuer 3 Naechste. Tempo gemessen: Baer 3,17 / Sprinter 3,63 Kacheln/s -> Sprint-Schub 4,6 nur im Angriff (SP).
+
 > **14.11. ~05:25: K1 FERTIG UND EINGEBAUT** (Lauf baer-k1 wf_2ca8b148-ff7, 8 Agenten, ~3 h; Gegenpruefer: bereit fuer SP-Test, kein Blocker). Spiel war zu;
 > `tools/einbau_k1.py`: 152 Dateien (2 neu, 47 ueberschrieben inkl. beider mod.info aus `k1/mod_info_vorschlag_k1.txt`, 103 gleich), keine Modell-Datei;
 > Zips `NCBearTest_vor_k1_2026-11-14_052031.zip` / `_mit_`; Test-Mod-Commit 68f9181. Test `spiel/anleitung_k1.md`, Bericht `spiel/k1_gegen_bericht.md`
