@@ -1113,7 +1113,11 @@ local function smackWork(bandit, task)
     return false
 end
 
+-- Bandits-Update 14.11.2026: die Angriffs-Bilder (zsattack*) setzen per Animations-Ereignis BanditHit=true; Bandits' eigene Aufgaben setzen es beim
+-- Treffer zurueck (B:shared/ZombieActions/ZASmack.lua:600-601). Unser Hieb liest es nicht -- also hier zuruecksetzen, sonst traefe Bandits' naechster
+-- echter Hieb dieses Banditen sofort beim Ausholen. bandit:setVariable("BanditHit", false): B:shared/ZombieActions/ZASmack.lua:601.
 local function smackDone(bandit, task)
+    bandit:setVariable("BanditHit", false)
     return true
 end
 
