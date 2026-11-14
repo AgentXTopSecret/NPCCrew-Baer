@@ -882,3 +882,8 @@ Kevin ~12:25 nach dem Vergleichsblatt (plaene/hp_entwurf/KEVIN_hp_vorlagen.png/.
    Heilen gruene Kreuze + "+12" + Pflaster-Symbol bei Verband, Treffer Wackeln + Blitz + rote "-28" + Nachlauf, Hunger/Durst oranger Puls + Keule/Tropfen + kleine "-4",
    fast leer schneller roter Puls; Groesse waechst mit der Schrifthoehe). Bau-Grundlage `../_arbeit/baer_hp_entwurf/B/` (zeichne.py, BESCHREIBUNG.md, tex/). Server: Feld
    fx.pts im Ereignis "hurt". Bau als naechster Funktions-Lauf NACH den Talenten (beide aendern server/BanditsNPCBearHurt.lua und die Kopf-Anzeigen).
+
+### 14.11.2026 ~13:00 -- Bandits-Update (Meldung der NPC-Crew-Sitzung, Kevins Auftrag "bitte pruefen, ob euer Projekt etwas fixen muss")
+Geprueft: der Baer nutzt keins von attackTime/ZAPush/ZADestroy/ZAShoot/GetGameMode/BanditUpdatePart/Banditize/Zombify/BanditPlayer. Betroffen nur unsere eigene Bandits-Aufgabe
+BNBearSmack (shared/BanditsNPCBearFoe.lua): sie spielt die zsattack*-Bilder, die jetzt BanditHit=true setzen; Bandits setzt es nur in seinen eigenen Aufgaben zurueck -> der naechste
+echte Hieb des Banditen haette sofort beim Ausholen getroffen. Fix: smackDone setzt BanditHit false (Beleg ZASmack.lua:601), Test-Mod-Commit nach 4123393, auch im HP-B-Staging.
