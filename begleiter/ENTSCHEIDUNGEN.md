@@ -851,3 +851,9 @@ Kevin ~05:05, woertlich: *"achso ich hab mir noch ueberleg ich wil lab 10% wachs
    **9 Talente:** die 8 von 02:50 + **9 Kritischer Treffer** (25 % Chance je Treffer auf doppelten Schaden; Zahl ueber dem Zombie bei Krit gross in Gold, "Schaden zeigen").
 Kevin ~05:07, woertlich: *"genau also am ende genau 3 punkte zum verteilen"* -> **BERICHTIGT: genau 3 Talentpunkte**: 1. bei 10 % Wachstum, 2. beim Sprung zu halbstark/kampfbereit,
    3. bei ausgewachsen (Tag 100). Hoechstens 3, nie mehr (Aussehen-Wechsel, Unstuck, Koerper-Tausch, Absturz); nach 3 aktiven Talenten gesperrt, auch wenn ein Fehler mehr Punkte gaebe.
+
+### 14.11.2026 ~10:20 -- Kevins Antworten zum Plan TALENTE (plaene/PLAN_TALENTE.md, Auswahl-Dialog; Kevin: "stell mir fragen damit du weiter arbeiten kannst")
+ 1 Baum-Form: *"Freie Wahl"* (irgendwelche 3 von 9, keine Reihen). 2 Verteilung: *"alles frei waehlbar"*. 3 Schwere Pranke: *"Fliegen doppelt so weit"*.
+ 4 Angler: *"Gesperrt bis F5"* (danach 2 Fische je Fang). 5 Werte: *"So wie besprochen"*. 6 Reset: *"Alle auf einmal"* (Sandbox Reset Vorgabe aus, Tage 0-30, Vorgabe 1).
+ 7 Dickes Fell: *"Prozent bleibt"*. 8 Bestaetigen: *"Ja/Nein-Fenster"* (Vanilla ISModalDialog).
+-> Plan TALENTE damit fertig entschieden (freie Wahl statt Reihen-Baum: Fenster zeigt 9 Kacheln, 3 Punkte frei verteilbar; Punkte kommen bei 10 % / halbstark / ausgewachsen).
