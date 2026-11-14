@@ -837,3 +837,5 @@ Claudes Skill-Vorschlag (8, an Kevin): 1 Genuegsam (Hunger/Durst halten +50 %: 2
 Kevin ~02:55, woertlich: *"die icon sollen aber recht gut sichtbar sein also wie in anderen spielen wo man skills vergeben kann"* -> Skill-Icons gross und klar (eigene
    Zeichnung, kraeftige Umrisse, je Skill ein eindeutiges Motiv; aktiv = hell leuchtend, nicht vergeben = gedimmt/grau, gesperrt = mit Schloss), Skill-Baum wie in
    Rollenspielen; vor dem Bau ein ENTWURF-Bild mit echten Spielschriften (Regel UI-Bilder).
+   Nachtrag ~02:56, woertlich: *"hochaufloesend und huebsch aussehen"* -> Icons hochaufloesend (Vorschlag: 128 px Quelle, im 4K-Fenster gestochen scharf; Vorbild Kevins
+   Herz-Entwurf "Goldrand" aus F3), sauber gezeichnet, nicht pixelig.
