@@ -849,3 +849,5 @@ Kevin ~05:05, woertlich: *"achso ich hab mir noch ueberleg ich wil lab 10% wachs
    Antworten (Auswahl-Dialog): 2. Punkt *"Bei ausgewachsen"*; Name *"Talentpunkt"* (DE "Talente"/"Talentpunkt", EN "Perks"/"Perk point"); Krit *"9 Skills"*.
 -> **Fest (I9 geaendert):** 1. Talentpunkt bei 10 % Wachstum (Junges), 2. Talentpunkt bei ausgewachsen (Tag 100); hoechstens 2, Sperren wie 02:45. Reiter heisst "Talente".
    **9 Talente:** die 8 von 02:50 + **9 Kritischer Treffer** (25 % Chance je Treffer auf doppelten Schaden; Zahl ueber dem Zombie bei Krit gross in Gold, "Schaden zeigen").
+Kevin ~05:07, woertlich: *"genau also am ende genau 3 punkte zum verteilen"* -> **BERICHTIGT: genau 3 Talentpunkte**: 1. bei 10 % Wachstum, 2. beim Sprung zu halbstark/kampfbereit,
+   3. bei ausgewachsen (Tag 100). Hoechstens 3, nie mehr (Aussehen-Wechsel, Unstuck, Koerper-Tausch, Absturz); nach 3 aktiven Talenten gesperrt, auch wenn ein Fehler mehr Punkte gaebe.
